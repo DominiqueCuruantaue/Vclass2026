@@ -177,24 +177,157 @@ function formatDuration(seconds) {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+}
+
+function formatRelativeTime(dateString) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diff = now - date;
+  
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  
+  if (minutes < 1) return 'Agora';
+  if (minutes < 60) return `Há ${minutes}min`;
+  if (hours < 24) return `Há ${hours}h`;
+  if (days < 7) return `Há ${days}d`;
+  return formatDate(dateString);
+}
+
 function showNotification(message, type = 'info') {
-  // Simple notification system
+  // Enhanced notification system with animations
   const notification = document.createElement('div');
-  notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+  notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 ${
     type === 'success' ? 'bg-green-500' :
     type === 'error' ? 'bg-red-500' :
     type === 'warning' ? 'bg-yellow-500' :
     'bg-blue-500'
   } text-white`;
-  notification.textContent = message;
   
+  const icon = type === 'success' ? 'fa-check-circle' :
+               type === 'error' ? 'fa-exclamation-circle' :
+               type === 'warning' ? 'fa-exclamation-triangle' :
+               'fa-info-circle';
+  
+  notification.innerHTML = `
+    <div class="flex items-center space-x-2">
+      <i class="fas ${icon}"></i>
+      <span>${message}</span>
+    </div>
+  `;
+  
+  notification.style.transform = 'translateX(400px)';
   document.body.appendChild(notification);
   
   setTimeout(() => {
-    notification.style.opacity = '0';
+    notification.style.transform = 'translateX(0)';
+  }, 10);
+  
+  setTimeout(() => {
+    notification.style.transform = 'translateX(400px)';
     setTimeout(() => notification.remove(), 300);
   }, 3000);
 }
+
+// Loading overlay
+function showLoading(message = 'Carregando...') {
+  const overlay = document.createElement('div');
+  overlay.id = 'loading-overlay';
+  overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+  overlay.innerHTML = `
+    <div class="bg-white rounded-lg p-8 flex flex-col items-center space-y-4">
+      <i class="fas fa-spinner fa-spin text-4xl text-purple-600"></i>
+      <p class="text-gray-700 font-medium">${message}</p>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function hideLoading() {
+  const overlay = document.getElementById('loading-overlay');
+  if (overlay) {
+    overlay.remove();
+  }
+}
+
+// Progress bar for video/content
+function updateProgressBar(elementId, percentage) {
+  const element = document.getElementById(elementId);
+  if (element) {
+    element.style.width = `${Math.min(100, Math.max(0, percentage))}%`;
+  }
+}
+
+// Debounce helper for search/input
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+// Storage helpers
+const storage = {
+  set: (key, value) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      console.error('Storage set error:', error);
+    }
+  },
+  get: (key, defaultValue = null) => {
+    try {
+      const item = localStorage.getItem(key);
+      return item ? JSON.parse(item) : defaultValue;
+    } catch (error) {
+      console.error('Storage get error:', error);
+      return defaultValue;
+    }
+  },
+  remove: (key) => {
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.error('Storage remove error:', error);
+    }
+  },
+  clear: () => {
+    try {
+      localStorage.clear();
+    } catch (error) {
+      console.error('Storage clear error:', error);
+    }
+  }
+};
+
+// Analytics/tracking helpers
+const analytics = {
+  trackPageView: (pageName) => {
+    console.log('Page view:', pageName);
+    // Add real analytics here (Google Analytics, etc.)
+  },
+  trackEvent: (category, action, label) => {
+    console.log('Event:', { category, action, label });
+    // Add real analytics here
+  },
+  trackVideoProgress: (lessonId, percentage) => {
+    console.log('Video progress:', { lessonId, percentage });
+    // Send to backend
+  }
+};
 
 // Export for use in other files
 window.VClass = {
@@ -204,7 +337,15 @@ window.VClass = {
   isAuthenticated,
   getCurrentUser,
   formatDuration,
-  showNotification
+  formatDate,
+  formatRelativeTime,
+  showNotification,
+  showLoading,
+  hideLoading,
+  updateProgressBar,
+  debounce,
+  storage,
+  analytics
 };
 
 console.log('VClass API client loaded');

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Perfil - VClass</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/styles.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-8">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-graduation-cap text-2xl text-purple-600"></i>
+                        <span class="text-xl font-bold text-gray-900">VClass</span>
+                    </div>
+                    <div class="hidden md:flex space-x-4">
+                        <a href="/dashboard.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
+                            <i class="fas fa-home mr-1"></i> Dashboard
+                        </a>
+                        <a href="/browse.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
+                            <i class="fas fa-book mr-1"></i> Conteúdo
+                        </a>
+                        <a href="/progress.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
+                            <i class="fas fa-chart-line mr-1"></i> Progresso
+                        </a>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/profile.html" class="px-3 py-2 text-sm text-purple-600 bg-purple-50 rounded-lg font-medium">
+                        <i class="fas fa-user mr-1"></i> <span id="nav-user-name"></span>
+                    </a>
+                    <button onclick="VClass.logout()" class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
+                        <i class="fas fa-sign-out-alt mr-1"></i> Sair
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <!-- Header -->
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                    <i class="fas fa-user-circle text-purple-600 mr-2"></i>
+                    Meu Perfil
+                </h1>
+                <p class="text-gray-600">Gerencie suas informações pessoais e preferências</p>
+            </div>
+
+            <!-- Profile Card -->
+            <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+                <div class="bg-gradient-to-r from-purple-600 to-purple-800 h-32"></div>
+                <div class="px-6 pb-6">
+                    <div class="flex items-end -mt-16 mb-6">
+                        <div class="w-32 h-32 rounded-full border-4 border-white bg-purple-100 flex items-center justify-center">
+                            <i class="fas fa-user text-5xl text-purple-600"></i>
+                        </div>
+                        <div class="ml-6 mb-2">
+                            <h2 id="profile-name" class="text-2xl font-bold text-gray-900"></h2>
+                            <p id="profile-email" class="text-gray-600"></p>
+                            <span id="profile-role" class="inline-block px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium mt-2"></span>
+                        </div>
+                    </div>
+
+                    <!-- Stats Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="text-center p-4 bg-gray-50 rounded-lg">
+                            <p class="text-3xl font-bold text-purple-600" id="profile-lessons">0</p>
+                            <p class="text-sm text-gray-600">Aulas Concluídas</p>
+                        </div>
+                        <div class="text-center p-4 bg-gray-50 rounded-lg">
+                            <p class="text-3xl font-bold text-green-600" id="profile-exercises">0</p>
+                            <p class="text-sm text-gray-600">Exercícios Feitos</p>
+                        </div>
+                        <div class="text-center p-4 bg-gray-50 rounded-lg">
+                            <p class="text-3xl font-bold text-orange-600" id="profile-score">0%</p>
+                            <p class="text-sm text-gray-600">Pontuação Média</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Information -->
+            <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Informações Pessoais
+                </h3>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
+                            <input type="text" id="edit-name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" disabled>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input type="email" id="edit-email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-50" disabled>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">País</label>
+                            <input type="text" id="edit-country" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" disabled>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Data de Registro</label>
+                            <input type="text" id="edit-registered" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50" disabled>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-6 flex space-x-3">
+                    <button onclick="enableEdit()" id="edit-btn" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                        <i class="fas fa-edit mr-2"></i>Editar Perfil
+                    </button>
+                    <button onclick="saveProfile()" id="save-btn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition hidden">
+                        <i class="fas fa-save mr-2"></i>Salvar Alterações
+                    </button>
+                    <button onclick="cancelEdit()" id="cancel-btn" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition hidden">
+                        <i class="fas fa-times mr-2"></i>Cancelar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Change Password -->
+            <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">
+                    <i class="fas fa-lock mr-2"></i>
+                    Alterar Senha
+                </h3>
+                <form id="password-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Senha Atual</label>
+                        <input type="password" id="current-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" required>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nova Senha</label>
+                            <input type="password" id="new-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Confirmar Nova Senha</label>
+                            <input type="password" id="confirm-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                        <i class="fas fa-key mr-2"></i>Alterar Senha
+                    </button>
+                </form>
+            </div>
+
+            <!-- Preferences -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">
+                    <i class="fas fa-cog mr-2"></i>
+                    Preferências
+                </h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between py-3 border-b border-gray-200">
+                        <div>
+                            <p class="font-medium text-gray-900">Notificações por Email</p>
+                            <p class="text-sm text-gray-600">Receber updates sobre novas aulas e conteúdo</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" class="sr-only peer" checked>
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between py-3 border-b border-gray-200">
+                        <div>
+                            <p class="font-medium text-gray-900">Reprodução Automática</p>
+                            <p class="text-sm text-gray-600">Iniciar próxima aula automaticamente</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between py-3">
+                        <div>
+                            <p class="font-medium text-gray-900">Modo Escuro</p>
+                            <p class="text-sm text-gray-600">Tema escuro para melhor visualização noturna</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        // Check authentication
+        if (!VClass.isAuthenticated()) {
+            window.location.href = '/login.html';
+        }
+
+        const user = VClass.getCurrentUser();
+        let originalData = {};
+
+        function loadProfile() {
+            if (user) {
+                // Navigation
+                document.getElementById('nav-user-name').textContent = user.name;
+
+                // Profile header
+                document.getElementById('profile-name').textContent = user.name;
+                document.getElementById('profile-email').textContent = user.email;
+                document.getElementById('profile-role').textContent = translateRole(user.role);
+
+                // Edit fields
+                document.getElementById('edit-name').value = user.name;
+                document.getElementById('edit-email').value = user.email;
+                document.getElementById('edit-country').value = user.country || 'Moçambique';
+                document.getElementById('edit-registered').value = VClass.formatDate(user.created_at);
+
+                // Save original data
+                originalData = {
+                    name: user.name,
+                    country: user.country || 'Moçambique'
+                };
+
+                // Load stats
+                loadStats();
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const result = await VClass.api.progress.getDashboard();
+                if (result.success && result.data.stats) {
+                    document.getElementById('profile-lessons').textContent = result.data.stats.completedLessons || 0;
+                    document.getElementById('profile-exercises').textContent = result.data.stats.totalExercises || 0;
+                    document.getElementById('profile-score').textContent = Math.round(result.data.stats.averageScore || 0) + '%';
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        function translateRole(role) {
+            const roles = {
+                'student': 'Estudante',
+                'teacher': 'Professor',
+                'admin': 'Administrador'
+            };
+            return roles[role] || role;
+        }
+
+        function enableEdit() {
+            document.getElementById('edit-name').disabled = false;
+            document.getElementById('edit-country').disabled = false;
+            document.getElementById('edit-btn').classList.add('hidden');
+            document.getElementById('save-btn').classList.remove('hidden');
+            document.getElementById('cancel-btn').classList.remove('hidden');
+        }
+
+        function cancelEdit() {
+            document.getElementById('edit-name').value = originalData.name;
+            document.getElementById('edit-country').value = originalData.country;
+            document.getElementById('edit-name').disabled = true;
+            document.getElementById('edit-country').disabled = true;
+            document.getElementById('edit-btn').classList.remove('hidden');
+            document.getElementById('save-btn').classList.add('hidden');
+            document.getElementById('cancel-btn').classList.add('hidden');
+        }
+
+        async function saveProfile() {
+            const name = document.getElementById('edit-name').value;
+            const country = document.getElementById('edit-country').value;
+
+            VClass.showLoading('Salvando alterações...');
+
+            // Simulate API call (implement real endpoint)
+            setTimeout(() => {
+                VClass.hideLoading();
+                
+                // Update local storage
+                user.name = name;
+                user.country = country;
+                localStorage.setItem('user', JSON.stringify(user));
+                
+                // Update display
+                document.getElementById('profile-name').textContent = name;
+                document.getElementById('nav-user-name').textContent = name;
+                
+                originalData = { name, country };
+                
+                document.getElementById('edit-name').disabled = true;
+                document.getElementById('edit-country').disabled = true;
+                document.getElementById('edit-btn').classList.remove('hidden');
+                document.getElementById('save-btn').classList.add('hidden');
+                document.getElementById('cancel-btn').classList.add('hidden');
+                
+                VClass.showNotification('Perfil atualizado com sucesso!', 'success');
+            }, 1000);
+        }
+
+        // Password form
+        document.getElementById('password-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const currentPassword = document.getElementById('current-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            if (newPassword !== confirmPassword) {
+                VClass.showNotification('As senhas não coincidem', 'error');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                VClass.showNotification('A senha deve ter pelo menos 6 caracteres', 'error');
+                return;
+            }
+
+            VClass.showLoading('Alterando senha...');
+
+            // Simulate API call (implement real endpoint)
+            setTimeout(() => {
+                VClass.hideLoading();
+                VClass.showNotification('Senha alterada com sucesso!', 'success');
+                document.getElementById('password-form').reset();
+            }, 1000);
+        });
+
+        // Load profile on page load
+        loadProfile();
+    </script>
+</body>
+</html>
