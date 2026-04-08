@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explorar Conteúdo - VClass</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/styles.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-8">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-graduation-cap text-2xl text-purple-600"></i>
+                        <span class="text-xl font-bold text-gray-900">VClass</span>
+                    </div>
+                    <div class="hidden md:flex space-x-4">
+                        <a href="/dashboard.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
+                            <i class="fas fa-home mr-1"></i> Dashboard
+                        </a>
+                        <a href="/browse.html" class="px-3 py-2 rounded-md text-sm font-medium text-purple-600 bg-purple-50">
+                            <i class="fas fa-book mr-1"></i> Conteúdo
+                        </a>
+                        <a href="/my-progress.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
+                            <i class="fas fa-chart-line mr-1"></i> Progresso
+                        </a>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="user-name" class="text-sm text-gray-700"></span>
+                    <button onclick="VClass.logout()" class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md">
+                        <i class="fas fa-sign-out-alt mr-1"></i> Sair
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Breadcrumb -->
+        <nav class="flex mb-6" aria-label="Breadcrumb">
+            <ol id="breadcrumb" class="inline-flex items-center space-x-1 md:space-x-3">
+                <li class="inline-flex items-center">
+                    <a href="/browse.html" class="text-gray-700 hover:text-purple-600">
+                        <i class="fas fa-home mr-1"></i> Início
+                    </a>
+                </li>
+            </ol>
+        </nav>
+
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 id="page-title" class="text-3xl font-bold text-gray-900 mb-2">
+                Explorar Conteúdo
+            </h1>
+            <p id="page-subtitle" class="text-gray-600">
+                Selecione o país e série para começar
+            </p>
+        </div>
+
+        <!-- Content Container -->
+        <div id="content-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Loading -->
+            <div class="bg-white p-6 rounded-lg shadow-md animate-pulse">
+                <div class="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+                <div class="h-20 bg-gray-200 rounded"></div>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md animate-pulse">
+                <div class="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+                <div class="h-20 bg-gray-200 rounded"></div>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md animate-pulse">
+                <div class="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+                <div class="h-20 bg-gray-200 rounded"></div>
+            </div>
+        </div>
+
+        <!-- Back Button -->
+        <div id="back-button-container" class="mt-8" style="display: none;">
+            <button onclick="goBack()" class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+                <i class="fas fa-arrow-left mr-2"></i> Voltar
+            </button>
+        </div>
+    </main>
+
+    <script src="/static/app.js"></script>
+    <script>
+        // Check authentication
+        if (!VClass.isAuthenticated()) {
+            window.location.href = '/login.html';
+        }
+
+        const user = VClass.getCurrentUser();
+        if (user) {
+            document.getElementById('user-name').textContent = user.full_name;
+        }
+
+        // Navigation state
+        const nav = {
+            history: [],
+            current: 'countries'
+        };
+
+        // Load initial content (countries)
+        async function init() {
+            loadCountries();
+        }
+
+        // Load countries
+        async function loadCountries() {
+            nav.current = 'countries';
+            updateBreadcrumb(['Países']);
+            updateHeader('Selecionar País', 'Escolha o país do sistema educacional');
+            document.getElementById('back-button-container').style.display = 'none';
+
+            try {
+                const result = await VClass.api.content.getCountries();
+                
+                if (result.success) {
+                    renderCountries(result.data);
+                }
+            } catch (error) {
+                console.error('Error loading countries:', error);
+            }
+        }
+
+        function renderCountries(countries) {
+            const container = document.getElementById('content-container');
+            
+            container.innerHTML = countries.map(country => `
+                <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition cursor-pointer card-hover"
+                     onclick="selectCountry('${country.id}', '${country.name}')">
+                    <div class="flex items-center space-x-4">
+                        <div class="text-4xl">${country.flag_url || '🌍'}</div>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900">${country.name}</h3>
+                            <p class="text-sm text-gray-600">${country.code}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Select country and load education systems (then grades)
+        async function selectCountry(countryId, countryName) {
+            nav.history.push({type: 'countries'});
+            nav.current = 'grades';
+            
+            updateBreadcrumb(['Países', countryName]);
+            updateHeader(`${countryName} - Séries`, 'Escolha a série/ano');
+            document.getElementById('back-button-container').style.display = 'block';
+
+            try {
+                // Get education systems
+                const sysResult = await VClass.api.content.getGrades(countryId);
+                
+                // For now, assume first education system
+                // In production, let user select if multiple systems exist
+                
+                const result = await VClass.api.content.getGrades(countryId);
+                
+                if (result.success && result.data.length > 0) {
+                    // Get grades for first education system
+                    const eduSystemId = result.data[0].education_system_id;
+                    const gradesResult = await VClass.api.content.getGrades(eduSystemId);
+                    
+                    if (gradesResult.success) {
+                        renderGrades(gradesResult.data, countryName);
+                    }
+                } else {
+                    // Fallback: load directly
+                    const directResult = await fetch(`/api/content/grades/${countryId}`);
+                    const data = await directResult.json();
+                    if (data.success) {
+                        renderGrades(data.data, countryName);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading grades:', error);
+            }
+        }
+
+        function renderGrades(grades, countryName) {
+            const container = document.getElementById('content-container');
+            
+            container.innerHTML = grades.map(grade => `
+                <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition cursor-pointer card-hover"
+                     onclick="selectGrade('${grade.id}', '${grade.name}', '${countryName}')">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
+                            <span class="text-2xl font-bold text-purple-600">${grade.level}</span>
+                        </div>
+                        <i class="fas fa-arrow-right text-gray-400"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">${grade.name}</h3>
+                    <p class="text-sm text-gray-600">${grade.description || 'Clique para ver disciplinas'}</p>
+                </div>
+            `).join('');
+        }
+
+        // Select grade and load subjects
+        async function selectGrade(gradeId, gradeName, countryName) {
+            nav.history.push({type: 'grades', gradeId, gradeName, countryName});
+            nav.current = 'subjects';
+            
+            updateBreadcrumb(['Países', countryName, gradeName]);
+            updateHeader(`${gradeName} - Disciplinas`, 'Escolha a disciplina');
+
+            try {
+                const result = await VClass.api.content.getSubjects(gradeId);
+                
+                if (result.success) {
+                    renderSubjects(result.data, gradeId, gradeName, countryName);
+                }
+            } catch (error) {
+                console.error('Error loading subjects:', error);
+            }
+        }
+
+        function renderSubjects(subjects, gradeId, gradeName, countryName) {
+            const container = document.getElementById('content-container');
+            
+            container.innerHTML = subjects.map(subject => `
+                <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition cursor-pointer card-hover"
+                     onclick="selectSubject('${subject.grade_subject_id}', '${subject.name}', '${gradeName}', '${countryName}')">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-16 h-16 rounded-full flex items-center justify-center" 
+                             style="background-color: ${subject.color}20">
+                            <i class="fas fa-${getSubjectIcon(subject.name)} text-2xl" style="color: ${subject.color}"></i>
+                        </div>
+                        <i class="fas fa-arrow-right text-gray-400"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">${subject.name}</h3>
+                    <p class="text-sm text-gray-600">${subject.description || 'Ver capítulos e lições'}</p>
+                </div>
+            `).join('');
+        }
+
+        // Get icon for subject
+        function getSubjectIcon(subjectName) {
+            const icons = {
+                'Matemática': 'calculator',
+                'Português': 'book',
+                'Física': 'atom',
+                'Química': 'flask',
+                'Biologia': 'leaf',
+                'História': 'landmark',
+                'Geografia': 'globe',
+                'Inglês': 'language'
+            };
+            return icons[subjectName] || 'book';
+        }
+
+        // Select subject and navigate to chapters page
+        function selectSubject(gradeSubjectId, subjectName, gradeName, countryName) {
+            // Navigate to chapters page with parameters
+            window.location.href = `/chapters.html?gs=${gradeSubjectId}&subject=${encodeURIComponent(subjectName)}&grade=${encodeURIComponent(gradeName)}&country=${encodeURIComponent(countryName)}`;
+        }
+
+        // Go back
+        function goBack() {
+            if (nav.history.length > 0) {
+                const prev = nav.history.pop();
+                
+                if (prev.type === 'countries') {
+                    loadCountries();
+                } else if (prev.type === 'grades') {
+                    selectCountry(prev.countryId, prev.countryName);
+                }
+            }
+        }
+
+        // Update breadcrumb
+        function updateBreadcrumb(items) {
+            const breadcrumb = document.getElementById('breadcrumb');
+            breadcrumb.innerHTML = items.map((item, index) => {
+                if (index === 0) {
+                    return `
+                        <li class="inline-flex items-center">
+                            <a href="/browse.html" class="text-gray-700 hover:text-purple-600">
+                                <i class="fas fa-home mr-1"></i> ${item}
+                            </a>
+                        </li>
+                    `;
+                }
+                return `
+                    <li>
+                        <div class="flex items-center">
+                            <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
+                            <span class="text-gray-700">${item}</span>
+                        </div>
+                    </li>
+                `;
+            }).join('');
+        }
+
+        // Update header
+        function updateHeader(title, subtitle) {
+            document.getElementById('page-title').textContent = title;
+            document.getElementById('page-subtitle').textContent = subtitle;
+        }
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>
