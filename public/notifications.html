@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notificações - VClass</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/styles.css" rel="stylesheet">
+    <style>
+        .notification-card {
+            transition: all 0.3s ease;
+        }
+        .notification-card:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .notification-unread {
+            border-left: 4px solid #9333ea;
+            background: linear-gradient(to right, #faf5ff, white);
+        }
+        .notification-badge {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center space-x-8">
+                    <a href="/dashboard.html" class="flex items-center space-x-2">
+                        <i class="fas fa-graduation-cap text-2xl text-purple-600"></i>
+                        <span class="text-xl font-bold text-gray-900">VClass</span>
+                    </a>
+                    <div class="hidden md:flex space-x-4">
+                        <a href="/dashboard.html" class="px-3 py-2 text-gray-700 hover:text-purple-600">
+                            <i class="fas fa-home mr-1"></i> Dashboard
+                        </a>
+                        <a href="/browse.html" class="px-3 py-2 text-gray-700 hover:text-purple-600">
+                            <i class="fas fa-book mr-1"></i> Conteúdo
+                        </a>
+                        <a href="/progress.html" class="px-3 py-2 text-gray-700 hover:text-purple-600">
+                            <i class="fas fa-chart-line mr-1"></i> Progresso
+                        </a>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/notifications.html" class="relative p-2 text-purple-600">
+                        <i class="fas fa-bell text-xl"></i>
+                        <span class="notification-badge absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+                    </a>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm text-gray-700" id="user-name">Carregando...</span>
+                        <button onclick="VClass.logout()" class="text-sm text-red-600 hover:text-red-700">
+                            <i class="fas fa-sign-out-alt"></i> Sair
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                <i class="fas fa-bell text-purple-600 mr-2"></i>
+                Notificações
+            </h1>
+            <p class="text-gray-600">Fique por dentro de tudo o que está acontecendo</p>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+            <div class="flex flex-wrap gap-2">
+                <button onclick="filterNotifications('all')" 
+                        class="filter-btn px-4 py-2 rounded-lg bg-purple-600 text-white font-medium" 
+                        data-filter="all">
+                    <i class="fas fa-list mr-1"></i> Todas <span id="count-all" class="ml-1">(0)</span>
+                </button>
+                <button onclick="filterNotifications('unread')" 
+                        class="filter-btn px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-medium hover:bg-gray-200" 
+                        data-filter="unread">
+                    <i class="fas fa-envelope mr-1"></i> Não Lidas <span id="count-unread" class="ml-1">(0)</span>
+                </button>
+                <button onclick="filterNotifications('lessons')" 
+                        class="filter-btn px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-medium hover:bg-gray-200" 
+                        data-filter="lessons">
+                    <i class="fas fa-video mr-1"></i> Lições
+                </button>
+                <button onclick="filterNotifications('exercises')" 
+                        class="filter-btn px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-medium hover:bg-gray-200" 
+                        data-filter="exercises">
+                    <i class="fas fa-tasks mr-1"></i> Exercícios
+                </button>
+                <button onclick="filterNotifications('achievements')" 
+                        class="filter-btn px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-medium hover:bg-gray-200" 
+                        data-filter="achievements">
+                    <i class="fas fa-trophy mr-1"></i> Conquistas
+                </button>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex justify-between items-center mb-6">
+            <button onclick="markAllAsRead()" class="text-sm text-purple-600 hover:text-purple-700 font-medium">
+                <i class="fas fa-check-double mr-1"></i> Marcar todas como lidas
+            </button>
+            <button onclick="clearAllNotifications()" class="text-sm text-red-600 hover:text-red-700 font-medium">
+                <i class="fas fa-trash mr-1"></i> Limpar todas
+            </button>
+        </div>
+
+        <!-- Notifications List -->
+        <div id="notifications-container" class="space-y-4">
+            <!-- Loading -->
+            <div class="animate-pulse space-y-4">
+                <div class="h-24 bg-gray-200 rounded-lg"></div>
+                <div class="h-24 bg-gray-200 rounded-lg"></div>
+                <div class="h-24 bg-gray-200 rounded-lg"></div>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden text-center py-12">
+            <i class="fas fa-bell-slash text-6xl text-gray-300 mb-4"></i>
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">Nenhuma notificação</h3>
+            <p class="text-gray-600 mb-6">Você está em dia com tudo!</p>
+            <a href="/browse.html" class="inline-flex items-center px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                <i class="fas fa-search mr-2"></i>
+                Explorar Conteúdo
+            </a>
+        </div>
+    </main>
+
+    <script src="/static/app.js"></script>
+    <script>
+        // Check authentication
+        if (!VClass.isAuthenticated()) {
+            window.location.href = '/login.html';
+        }
+
+        const user = VClass.getCurrentUser();
+        if (user) {
+            document.getElementById('user-name').textContent = user.full_name;
+        }
+
+        // Mock notifications data
+        let notifications = [
+            {
+                id: '1',
+                type: 'achievement',
+                title: '🏆 Nova Conquista Desbloqueada!',
+                message: 'Você completou 10 lições de Matemática. Continue assim!',
+                read: false,
+                timestamp: new Date(Date.now() - 3600000).toISOString(),
+                icon: 'fa-trophy',
+                color: 'text-yellow-600',
+                bgColor: 'bg-yellow-50'
+            },
+            {
+                id: '2',
+                type: 'lesson',
+                title: 'Nova Lição Disponível',
+                message: 'A lição "Trigonometria Avançada" está agora disponível',
+                read: false,
+                timestamp: new Date(Date.now() - 7200000).toISOString(),
+                icon: 'fa-video',
+                color: 'text-blue-600',
+                bgColor: 'bg-blue-50'
+            },
+            {
+                id: '3',
+                type: 'exercise',
+                title: 'Exercício Corrigido',
+                message: 'Seu exercício de Física foi corrigido. Pontuação: 85%',
+                read: false,
+                timestamp: new Date(Date.now() - 10800000).toISOString(),
+                icon: 'fa-check-circle',
+                color: 'text-green-600',
+                bgColor: 'bg-green-50'
+            },
+            {
+                id: '4',
+                type: 'achievement',
+                title: '🎯 Sequência de Estudos!',
+                message: 'Você estudou por 5 dias consecutivos. Parabéns!',
+                read: true,
+                timestamp: new Date(Date.now() - 86400000).toISOString(),
+                icon: 'fa-fire',
+                color: 'text-orange-600',
+                bgColor: 'bg-orange-50'
+            },
+            {
+                id: '5',
+                type: 'lesson',
+                title: 'Lembrete de Estudo',
+                message: 'Você tem 3 lições pendentes em Química',
+                read: true,
+                timestamp: new Date(Date.now() - 172800000).toISOString(),
+                icon: 'fa-clock',
+                color: 'text-purple-600',
+                bgColor: 'bg-purple-50'
+            },
+            {
+                id: '6',
+                type: 'exercise',
+                title: 'Prazo Aproximando',
+                message: 'O exercício de Português vence em 2 dias',
+                read: true,
+                timestamp: new Date(Date.now() - 259200000).toISOString(),
+                icon: 'fa-exclamation-triangle',
+                color: 'text-red-600',
+                bgColor: 'bg-red-50'
+            }
+        ];
+
+        let currentFilter = 'all';
+
+        function loadNotifications() {
+            updateCounts();
+            renderNotifications();
+        }
+
+        function updateCounts() {
+            const total = notifications.length;
+            const unread = notifications.filter(n => !n.read).length;
+            
+            document.getElementById('count-all').textContent = `(${total})`;
+            document.getElementById('count-unread').textContent = `(${unread})`;
+        }
+
+        function renderNotifications() {
+            const container = document.getElementById('notifications-container');
+            const emptyState = document.getElementById('empty-state');
+            
+            let filtered = notifications;
+            
+            // Apply filter
+            if (currentFilter === 'unread') {
+                filtered = notifications.filter(n => !n.read);
+            } else if (currentFilter === 'lessons') {
+                filtered = notifications.filter(n => n.type === 'lesson');
+            } else if (currentFilter === 'exercises') {
+                filtered = notifications.filter(n => n.type === 'exercise');
+            } else if (currentFilter === 'achievements') {
+                filtered = notifications.filter(n => n.type === 'achievement');
+            }
+            
+            if (filtered.length === 0) {
+                container.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            
+            container.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+            
+            container.innerHTML = filtered.map(notif => `
+                <div class="notification-card ${notif.read ? '' : 'notification-unread'} bg-white rounded-lg shadow-sm p-4 cursor-pointer"
+                     onclick="markAsRead('${notif.id}')">
+                    <div class="flex items-start space-x-4">
+                        <div class="${notif.bgColor} w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0">
+                            <i class="fas ${notif.icon} ${notif.color} text-xl"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-start justify-between">
+                                <h3 class="font-semibold text-gray-900">${notif.title}</h3>
+                                ${!notif.read ? '<span class="w-2 h-2 bg-purple-600 rounded-full"></span>' : ''}
+                            </div>
+                            <p class="text-gray-600 text-sm mt-1">${notif.message}</p>
+                            <p class="text-xs text-gray-400 mt-2">
+                                <i class="fas fa-clock mr-1"></i>
+                                ${VClass.formatRelativeTime(notif.timestamp)}
+                            </p>
+                        </div>
+                        <button onclick="deleteNotification(event, '${notif.id}')" 
+                                class="text-gray-400 hover:text-red-600 ml-4">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterNotifications(filter) {
+            currentFilter = filter;
+            
+            // Update button styles
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if (btn.dataset.filter === filter) {
+                    btn.className = 'filter-btn px-4 py-2 rounded-lg bg-purple-600 text-white font-medium';
+                } else {
+                    btn.className = 'filter-btn px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-medium hover:bg-gray-200';
+                }
+            });
+            
+            renderNotifications();
+        }
+
+        function markAsRead(id) {
+            const notif = notifications.find(n => n.id === id);
+            if (notif && !notif.read) {
+                notif.read = true;
+                VClass.storage.set('notifications', notifications);
+                updateCounts();
+                renderNotifications();
+                VClass.showNotification('Notificação marcada como lida', 'success');
+            }
+        }
+
+        function markAllAsRead() {
+            notifications.forEach(n => n.read = true);
+            VClass.storage.set('notifications', notifications);
+            updateCounts();
+            renderNotifications();
+            VClass.showNotification('Todas as notificações foram marcadas como lidas', 'success');
+        }
+
+        function deleteNotification(event, id) {
+            event.stopPropagation();
+            notifications = notifications.filter(n => n.id !== id);
+            VClass.storage.set('notifications', notifications);
+            updateCounts();
+            renderNotifications();
+            VClass.showNotification('Notificação removida', 'success');
+        }
+
+        function clearAllNotifications() {
+            if (confirm('Tem certeza que deseja limpar todas as notificações?')) {
+                notifications = [];
+                VClass.storage.set('notifications', notifications);
+                updateCounts();
+                renderNotifications();
+                VClass.showNotification('Todas as notificações foram removidas', 'success');
+            }
+        }
+
+        // Load notifications on page load
+        loadNotifications();
+
+        // Load from storage
+        const stored = VClass.storage.get('notifications');
+        if (stored) {
+            notifications = stored;
+            loadNotifications();
+        }
+    </script>
+</body>
+</html>

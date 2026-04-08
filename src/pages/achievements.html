@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conquistas - VClass</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/styles.css" rel="stylesheet">
+    <style>
+        .achievement-card {
+            transition: all 0.3s ease;
+        }
+        .achievement-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        }
+        .achievement-locked {
+            opacity: 0.5;
+            filter: grayscale(100%);
+        }
+        .achievement-shine {
+            position: relative;
+            overflow: hidden;
+        }
+        .achievement-shine::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+            transform: rotate(45deg);
+            animation: shine 3s infinite;
+        }
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center space-x-8">
+                    <a href="/dashboard.html" class="flex items-center space-x-2">
+                        <i class="fas fa-graduation-cap text-2xl text-purple-600"></i>
+                        <span class="text-xl font-bold text-gray-900">VClass</span>
+                    </a>
+                    <div class="hidden md:flex space-x-4">
+                        <a href="/dashboard.html" class="px-3 py-2 text-gray-700 hover:text-purple-600">
+                            <i class="fas fa-home mr-1"></i> Dashboard
+                        </a>
+                        <a href="/browse.html" class="px-3 py-2 text-gray-700 hover:text-purple-600">
+                            <i class="fas fa-book mr-1"></i> Conteúdo
+                        </a>
+                        <a href="/achievements.html" class="px-3 py-2 text-purple-600 border-b-2 border-purple-600">
+                            <i class="fas fa-trophy mr-1"></i> Conquistas
+                        </a>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm text-gray-700" id="user-name">Carregando...</span>
+                        <button onclick="VClass.logout()" class="text-sm text-red-600 hover:text-red-700">
+                            <i class="fas fa-sign-out-alt"></i> Sair
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header with Stats -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                <i class="fas fa-trophy text-yellow-500 mr-2"></i>
+                Suas Conquistas
+            </h1>
+            <p class="text-gray-600 mb-6">Continue estudando para desbloquear novas conquistas!</p>
+            
+            <!-- Overall Progress -->
+            <div class="bg-gradient-to-r from-purple-600 to-purple-800 rounded-lg shadow-lg p-6 text-white">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="text-center">
+                        <div class="text-4xl font-bold" id="total-achievements">0</div>
+                        <div class="text-sm text-purple-200">Conquistas Desbloqueadas</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-4xl font-bold" id="total-points">0</div>
+                        <div class="text-sm text-purple-200">Pontos Totais</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-4xl font-bold" id="completion-percent">0%</div>
+                        <div class="text-sm text-purple-200">Progresso</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-4xl font-bold" id="rank-level">Iniciante</div>
+                        <div class="text-sm text-purple-200">Nível Atual</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Categories -->
+        <div class="flex flex-wrap gap-2 mb-6">
+            <button onclick="filterAchievements('all')" 
+                    class="category-btn px-4 py-2 rounded-lg bg-purple-600 text-white font-medium" 
+                    data-category="all">
+                Todas
+            </button>
+            <button onclick="filterAchievements('lessons')" 
+                    class="category-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300" 
+                    data-category="lessons">
+                Lições
+            </button>
+            <button onclick="filterAchievements('exercises')" 
+                    class="category-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300" 
+                    data-category="exercises">
+                Exercícios
+            </button>
+            <button onclick="filterAchievements('streak')" 
+                    class="category-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300" 
+                    data-category="streak">
+                Sequência
+            </button>
+            <button onclick="filterAchievements('special')" 
+                    class="category-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300" 
+                    data-category="special">
+                Especiais
+            </button>
+        </div>
+
+        <!-- Achievements Grid -->
+        <div id="achievements-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Loading -->
+            <div class="col-span-full animate-pulse space-y-4">
+                <div class="h-40 bg-gray-200 rounded-lg"></div>
+                <div class="h-40 bg-gray-200 rounded-lg"></div>
+                <div class="h-40 bg-gray-200 rounded-lg"></div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/app.js"></script>
+    <script>
+        // Check authentication
+        if (!VClass.isAuthenticated()) {
+            window.location.href = '/login.html';
+        }
+
+        const user = VClass.getCurrentUser();
+        if (user) {
+            document.getElementById('user-name').textContent = user.full_name;
+        }
+
+        // Mock achievements data
+        const achievements = [
+            {
+                id: '1',
+                category: 'lessons',
+                title: 'Primeiro Passo',
+                description: 'Complete sua primeira lição',
+                icon: 'fa-star',
+                color: 'bg-blue-500',
+                points: 10,
+                unlocked: true,
+                progress: 1,
+                target: 1,
+                unlockedAt: new Date(Date.now() - 86400000).toISOString()
+            },
+            {
+                id: '2',
+                category: 'lessons',
+                title: 'Estudante Dedicado',
+                description: 'Complete 10 lições',
+                icon: 'fa-book-open',
+                color: 'bg-purple-500',
+                points: 50,
+                unlocked: true,
+                progress: 12,
+                target: 10,
+                unlockedAt: new Date(Date.now() - 3600000).toISOString()
+            },
+            {
+                id: '3',
+                category: 'lessons',
+                title: 'Mestre do Conhecimento',
+                description: 'Complete 50 lições',
+                icon: 'fa-graduation-cap',
+                color: 'bg-yellow-500',
+                points: 200,
+                unlocked: false,
+                progress: 12,
+                target: 50
+            },
+            {
+                id: '4',
+                category: 'exercises',
+                title: 'Solucionador',
+                description: 'Complete seu primeiro exercício',
+                icon: 'fa-check-circle',
+                color: 'bg-green-500',
+                points: 10,
+                unlocked: true,
+                progress: 1,
+                target: 1,
+                unlockedAt: new Date(Date.now() - 172800000).toISOString()
+            },
+            {
+                id: '5',
+                category: 'exercises',
+                title: 'Pontuação Perfeita',
+                description: 'Obtenha 100% em 5 exercícios',
+                icon: 'fa-medal',
+                color: 'bg-yellow-500',
+                points: 100,
+                unlocked: false,
+                progress: 2,
+                target: 5
+            },
+            {
+                id: '6',
+                category: 'exercises',
+                title: 'Expert em Matemática',
+                description: 'Complete 20 exercícios de Matemática',
+                icon: 'fa-calculator',
+                color: 'bg-purple-500',
+                points: 150,
+                unlocked: false,
+                progress: 8,
+                target: 20
+            },
+            {
+                id: '7',
+                category: 'streak',
+                title: 'Consistência',
+                description: 'Estude por 3 dias consecutivos',
+                icon: 'fa-fire',
+                color: 'bg-orange-500',
+                points: 30,
+                unlocked: true,
+                progress: 5,
+                target: 3,
+                unlockedAt: new Date(Date.now() - 259200000).toISOString()
+            },
+            {
+                id: '8',
+                category: 'streak',
+                title: 'Dedicação Total',
+                description: 'Estude por 7 dias consecutivos',
+                icon: 'fa-fire-alt',
+                color: 'bg-red-500',
+                points: 100,
+                unlocked: false,
+                progress: 5,
+                target: 7
+            },
+            {
+                id: '9',
+                category: 'streak',
+                title: 'Maratona de Estudos',
+                description: 'Estude por 30 dias consecutivos',
+                icon: 'fa-crown',
+                color: 'bg-yellow-500',
+                points: 500,
+                unlocked: false,
+                progress: 5,
+                target: 30
+            },
+            {
+                id: '10',
+                category: 'special',
+                title: 'Explorador',
+                description: 'Visualize lições de 3 disciplinas diferentes',
+                icon: 'fa-compass',
+                color: 'bg-teal-500',
+                points: 50,
+                unlocked: true,
+                progress: 3,
+                target: 3,
+                unlockedAt: new Date(Date.now() - 432000000).toISOString()
+            },
+            {
+                id: '11',
+                category: 'special',
+                title: 'Madrugador',
+                description: 'Estude antes das 7h da manhã',
+                icon: 'fa-sun',
+                color: 'bg-yellow-400',
+                points: 75,
+                unlocked: false,
+                progress: 0,
+                target: 1
+            },
+            {
+                id: '12',
+                category: 'special',
+                title: 'Coruja Noturna',
+                description: 'Estude depois das 23h',
+                icon: 'fa-moon',
+                color: 'bg-indigo-500',
+                points: 75,
+                unlocked: false,
+                progress: 0,
+                target: 1
+            }
+        ];
+
+        let currentCategory = 'all';
+
+        function loadAchievements() {
+            updateStats();
+            renderAchievements();
+        }
+
+        function updateStats() {
+            const unlocked = achievements.filter(a => a.unlocked).length;
+            const total = achievements.length;
+            const points = achievements.filter(a => a.unlocked).reduce((sum, a) => sum + a.points, 0);
+            const percent = Math.round((unlocked / total) * 100);
+            
+            // Determine rank
+            let rank = 'Iniciante';
+            if (points >= 500) rank = 'Mestre';
+            else if (points >= 200) rank = 'Especialista';
+            else if (points >= 100) rank = 'Avançado';
+            
+            document.getElementById('total-achievements').textContent = `${unlocked}/${total}`;
+            document.getElementById('total-points').textContent = points;
+            document.getElementById('completion-percent').textContent = `${percent}%`;
+            document.getElementById('rank-level').textContent = rank;
+        }
+
+        function renderAchievements() {
+            const container = document.getElementById('achievements-container');
+            
+            let filtered = achievements;
+            if (currentCategory !== 'all') {
+                filtered = achievements.filter(a => a.category === currentCategory);
+            }
+            
+            container.innerHTML = filtered.map(achievement => {
+                const progressPercent = Math.min(100, Math.round((achievement.progress / achievement.target) * 100));
+                
+                return `
+                    <div class="achievement-card ${achievement.unlocked ? 'achievement-shine' : 'achievement-locked'} bg-white rounded-lg shadow-md p-6">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="${achievement.color} w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl">
+                                <i class="fas ${achievement.icon}"></i>
+                            </div>
+                            ${achievement.unlocked 
+                                ? '<span class="text-green-600 font-bold"><i class="fas fa-check-circle"></i> Desbloqueado</span>'
+                                : '<span class="text-gray-400 font-bold"><i class="fas fa-lock"></i> Bloqueado</span>'
+                            }
+                        </div>
+                        
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">${achievement.title}</h3>
+                        <p class="text-gray-600 text-sm mb-4">${achievement.description}</p>
+                        
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm text-gray-600">Progresso</span>
+                            <span class="text-sm font-semibold text-gray-900">${achievement.progress}/${achievement.target}</span>
+                        </div>
+                        
+                        <div class="w-full bg-gray-200 rounded-full h-2 mb-4">
+                            <div class="${achievement.color} h-2 rounded-full transition-all" style="width: ${progressPercent}%"></div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-purple-600 font-bold">
+                                <i class="fas fa-coins mr-1"></i>
+                                ${achievement.points} pontos
+                            </span>
+                            ${achievement.unlocked 
+                                ? `<span class="text-gray-500">${VClass.formatRelativeTime(achievement.unlockedAt)}</span>`
+                                : `<span class="text-gray-500">${progressPercent}% completo</span>`
+                            }
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterAchievements(category) {
+            currentCategory = category;
+            
+            // Update button styles
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                if (btn.dataset.category === category) {
+                    btn.className = 'category-btn px-4 py-2 rounded-lg bg-purple-600 text-white font-medium';
+                } else {
+                    btn.className = 'category-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300';
+                }
+            });
+            
+            renderAchievements();
+        }
+
+        // Load achievements on page load
+        loadAchievements();
+    </script>
+</body>
+</html>

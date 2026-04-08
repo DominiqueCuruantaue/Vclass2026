@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suporte - VClass</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/styles.css" rel="stylesheet">
+    <style>
+        .chat-bubble-user {
+            background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+            color: white;
+            border-radius: 18px 18px 4px 18px;
+        }
+        .chat-bubble-bot {
+            background: #f3f4f6;
+            color: #1f2937;
+            border-radius: 18px 18px 18px 4px;
+        }
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #9ca3af;
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: typing 1.4s infinite;
+        }
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+        .chat-container {
+            height: calc(100vh - 250px);
+            min-height: 400px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center space-x-8">
+                    <a href="/dashboard.html" class="flex items-center space-x-2">
+                        <i class="fas fa-graduation-cap text-2xl text-purple-600"></i>
+                        <span class="text-xl font-bold text-gray-900">VClass</span>
+                    </a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/dashboard.html" class="text-sm text-gray-700 hover:text-purple-600">
+                        <i class="fas fa-arrow-left mr-1"></i> Voltar ao Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-purple-600 to-purple-800 px-6 py-4 text-white">
+                <div class="flex items-center space-x-3">
+                    <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center">
+                        <i class="fas fa-robot text-purple-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold">Assistente VClass</h1>
+                        <p class="text-sm text-purple-200">
+                            <span class="inline-block w-2 h-2 bg-green-400 rounded-full mr-1 animate-pulse"></span>
+                            Online - Pronto para ajudar
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="border-b border-gray-200 px-6 py-3 bg-gray-50">
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="sendQuickMessage('Como funciona a plataforma?')" 
+                            class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-full hover:bg-gray-100">
+                        📚 Como funciona?
+                    </button>
+                    <button onclick="sendQuickMessage('Tenho dúvidas sobre exercícios')" 
+                            class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-full hover:bg-gray-100">
+                        ✏️ Dúvidas sobre exercícios
+                    </button>
+                    <button onclick="sendQuickMessage('Como acompanhar meu progresso?')" 
+                            class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-full hover:bg-gray-100">
+                        📈 Acompanhar progresso
+                    </button>
+                    <button onclick="sendQuickMessage('Preciso de ajuda técnica')" 
+                            class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-full hover:bg-gray-100">
+                        🛠️ Ajuda técnica
+                    </button>
+                </div>
+            </div>
+
+            <!-- Chat Container -->
+            <div id="chat-container" class="chat-container overflow-y-auto px-6 py-4 space-y-4">
+                <!-- Welcome Message -->
+                <div class="flex items-start space-x-3">
+                    <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-robot text-purple-600"></i>
+                    </div>
+                    <div class="chat-bubble-bot px-4 py-3 max-w-md">
+                        <p class="text-sm">
+                            Olá! 👋 Sou o assistente virtual do VClass. Como posso ajudá-lo hoje?
+                            <br><br>
+                            Você pode me perguntar sobre:
+                            <br>• Funcionamento da plataforma
+                            <br>• Dúvidas sobre lições e exercícios
+                            <br>• Acompanhamento de progresso
+                            <br>• Problemas técnicos
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="border-t border-gray-200 px-6 py-4 bg-gray-50">
+                <div class="flex items-center space-x-3">
+                    <button class="p-2 text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-paperclip text-xl"></i>
+                    </button>
+                    <input type="text" 
+                           id="message-input"
+                           placeholder="Digite sua mensagem..."
+                           class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                           onkeypress="if(event.key === 'Enter') sendMessage()">
+                    <button onclick="sendMessage()" 
+                            class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium">
+                        <i class="fas fa-paper-plane mr-2"></i>
+                        Enviar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/app.js"></script>
+    <script>
+        const chatContainer = document.getElementById('chat-container');
+        const messageInput = document.getElementById('message-input');
+
+        // Auto-responses database
+        const responses = {
+            'plataforma': {
+                keywords: ['como funciona', 'plataforma', 'usar', 'começar'],
+                response: 'A VClass é uma plataforma de educação digital que oferece:' +
+                         '<br><br>📚 <b>Lições em vídeo</b> organizadas por disciplina' +
+                         '<br>✏️ <b>Exercícios interativos</b> com correção automática' +
+                         '<br>📊 <b>Acompanhamento de progresso</b> em tempo real' +
+                         '<br>🏆 <b>Sistema de conquistas</b> para motivar seus estudos' +
+                         '<br><br>Para começar, acesse o menu "Conteúdo" e escolha sua disciplina!'
+            },
+            'exercícios': {
+                keywords: ['exercício', 'dúvida', 'questão', 'responder', 'correção'],
+                response: 'Sobre os exercícios:' +
+                         '<br><br>✓ Cada lição possui exercícios práticos' +
+                         '<br>✓ As respostas são corrigidas automaticamente' +
+                         '<br>✓ Você recebe feedback imediato' +
+                         '<br>✓ Pode refazer exercícios para melhorar sua nota' +
+                         '<br><br>Dica: Revise o conteúdo da lição antes de fazer os exercícios!'
+            },
+            'progresso': {
+                keywords: ['progresso', 'acompanhar', 'desempenho', 'estatísticas', 'notas'],
+                response: 'Para acompanhar seu progresso:' +
+                         '<br><br>📊 Acesse a aba <b>"Progresso"</b> no menu' +
+                         '<br>📈 Veja gráficos detalhados por disciplina' +
+                         '<br>📝 Consulte seu histórico de atividades' +
+                         '<br>🎯 Acompanhe suas médias e tempo de estudo' +
+                         '<br><br>Seu progresso é atualizado em tempo real!'
+            },
+            'técnica': {
+                keywords: ['erro', 'problema', 'não funciona', 'bug', 'técnica', 'vídeo', 'carrega'],
+                response: 'Para problemas técnicos:' +
+                         '<br><br>🔄 Tente recarregar a página (F5)' +
+                         '<br>🌐 Verifique sua conexão com a internet' +
+                         '<br>🔍 Limpe o cache do navegador' +
+                         '<br>📱 Teste em outro dispositivo ou navegador' +
+                         '<br><br>Se o problema persistir, entre em contato:' +
+                         '<br>📧 suporte@vclass.mz' +
+                         '<br>📞 +258 84 123 4567'
+            },
+            'default': {
+                response: 'Desculpe, não entendi sua pergunta. 🤔' +
+                         '<br><br>Tente usar as sugestões rápidas acima ou reformule sua pergunta.' +
+                         '<br><br>Se preferir, entre em contato direto:' +
+                         '<br>📧 suporte@vclass.mz'
+            }
+        };
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, 'user');
+            messageInput.value = '';
+
+            // Show typing indicator
+            showTypingIndicator();
+
+            // Simulate bot response delay
+            setTimeout(() => {
+                hideTypingIndicator();
+                const response = getBotResponse(message);
+                addMessage(response, 'bot');
+            }, 1500);
+        }
+
+        function sendQuickMessage(message) {
+            messageInput.value = message;
+            sendMessage();
+        }
+
+        function addMessage(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'flex items-start space-x-3';
+            
+            if (sender === 'user') {
+                messageDiv.className += ' flex-row-reverse space-x-reverse';
+                messageDiv.innerHTML = `
+                    <div class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0 text-white">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="chat-bubble-user px-4 py-3 max-w-md">
+                        <p class="text-sm">${text}</p>
+                    </div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-robot text-purple-600"></i>
+                    </div>
+                    <div class="chat-bubble-bot px-4 py-3 max-w-md">
+                        <p class="text-sm">${text}</p>
+                    </div>
+                `;
+            }
+            
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const indicator = document.createElement('div');
+            indicator.id = 'typing-indicator';
+            indicator.className = 'flex items-start space-x-3';
+            indicator.innerHTML = `
+                <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-robot text-purple-600"></i>
+                </div>
+                <div class="chat-bubble-bot px-4 py-3">
+                    <div class="typing-indicator">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            `;
+            chatContainer.appendChild(indicator);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+
+        function getBotResponse(message) {
+            const lowerMessage = message.toLowerCase();
+            
+            // Check each response category
+            for (const [key, data] of Object.entries(responses)) {
+                if (key === 'default') continue;
+                
+                for (const keyword of data.keywords) {
+                    if (lowerMessage.includes(keyword)) {
+                        return data.response;
+                    }
+                }
+            }
+            
+            return responses.default.response;
+        }
+
+        // Track analytics
+        VClass.analytics.trackPageView('Chat Support');
+    </script>
+</body>
+</html>

@@ -13,6 +13,9 @@ import progressHtml from '../pages/progress.html?raw'
 import profileHtml from '../pages/profile.html?raw'
 import libraryHtml from '../pages/library.html?raw'
 import helpHtml from '../pages/help.html?raw'
+import notificationsHtml from '../pages/notifications.html?raw'
+import achievementsHtml from '../pages/achievements.html?raw'
+import chatHtml from '../pages/chat.html?raw'
 
 // Serve HTML pages
 app.get('/login.html', (c) => c.html(loginHtml))
@@ -25,5 +28,8 @@ app.get('/progress.html', (c) => c.html(progressHtml))
 app.get('/profile.html', (c) => c.html(profileHtml))
 app.get('/library.html', (c) => c.html(libraryHtml))
 app.get('/help.html', (c) => c.html(helpHtml))
+app.get('/notifications.html', (c) => c.html(notificationsHtml))
+app.get('/achievements.html', (c) => c.html(achievementsHtml))
+app.get('/chat.html', (c) => c.html(chatHtml))
 
 export default app

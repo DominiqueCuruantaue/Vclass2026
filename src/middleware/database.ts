@@ -59,53 +59,69 @@ export const mockUsers = [
 ]
 
 export const mockDashboardData = {
-  stats: {
-    totalLessons: 45,
-    completedLessons: 12,
-    totalExercises: 28,
-    averageScore: 75.5
+  summary: {
+    lessons_completed: 12,
+    exercises_completed: 28,
+    avg_score: 75.5,
+    total_time_spent_seconds: 14400 // 4 hours in seconds
   },
   subjectProgress: [
     {
       subject_name: 'Matemática',
+      subject_color: '#9333ea',
       total_lessons: 15,
       completed_lessons: 5,
-      total_watch_time: 3600,
-      average_score: 80
+      progress_percent: 33
     },
     {
       subject_name: 'Português',
+      subject_color: '#3b82f6',
       total_lessons: 12,
       completed_lessons: 4,
-      total_watch_time: 2400,
-      average_score: 72
+      progress_percent: 33
     },
     {
       subject_name: 'Física',
+      subject_color: '#10b981',
       total_lessons: 18,
       completed_lessons: 3,
-      total_watch_time: 1800,
-      average_score: 75
+      progress_percent: 17
+    },
+    {
+      subject_name: 'Química',
+      subject_color: '#f59e0b',
+      total_lessons: 10,
+      completed_lessons: 0,
+      progress_percent: 0
     }
   ],
   recentActivity: [
     {
-      type: 'lesson_completed',
-      title: 'Equações do 2º Grau',
-      description: 'Matemática - Capítulo 3',
-      created_at: new Date(Date.now() - 3600000).toISOString()
+      progress_percent: 100,
+      updated_at: new Date(Date.now() - 3600000).toISOString(),
+      lesson: {
+        id: '1',
+        title: 'Equações do 2º Grau',
+        thumbnail_url: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=400'
+      }
     },
     {
-      type: 'exercise_submitted',
-      title: 'Exercício de Funções',
-      description: 'Pontuação: 85%',
-      created_at: new Date(Date.now() - 7200000).toISOString()
+      progress_percent: 85,
+      updated_at: new Date(Date.now() - 7200000).toISOString(),
+      lesson: {
+        id: '2',
+        title: 'Funções Quadráticas',
+        thumbnail_url: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400'
+      }
     },
     {
-      type: 'video_watched',
-      title: 'Introdução à Cinemática',
-      description: 'Física - Capítulo 1',
-      created_at: new Date(Date.now() - 86400000).toISOString()
+      progress_percent: 60,
+      updated_at: new Date(Date.now() - 86400000).toISOString(),
+      lesson: {
+        id: '3',
+        title: 'Introdução à Cinemática',
+        thumbnail_url: 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?w=400'
+      }
     }
   ]
 }
