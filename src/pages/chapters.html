@@ -391,7 +391,7 @@
             try {
                 const result = await VClass.api.progress.getSubjectProgress(gradeSubjectId);
 
-                if (result.success && result.data.summary) {
+                if (result.success && result.data && result.data.summary) {
                     const progress = result.data.summary.overallProgress || 0;
                     const completed = result.data.summary.completedLessons || 0;
                     const total = result.data.summary.totalLessons || 0;
@@ -402,9 +402,13 @@
                     document.getElementById('progress-circle').style.strokeDashoffset = offset;
                     document.getElementById('progress-text').textContent = `${progress}%`;
                     document.getElementById('completed-lessons').textContent = `${completed}/${total} Lições`;
+                } else {
+                    // Default values if progress not available (user not logged in)
+                    console.log('Progress not available - using defaults');
                 }
             } catch (error) {
-                console.error('Error loading progress:', error);
+                console.log('Could not load progress:', error.message || error);
+                // Progress API failed - this is OK, just skip it
             }
         }
 
