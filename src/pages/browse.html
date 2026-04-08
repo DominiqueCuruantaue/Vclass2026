@@ -148,7 +148,7 @@
 
         // Select country and load education systems (then grades)
         async function selectCountry(countryId, countryName) {
-            nav.history.push({type: 'countries'});
+            nav.history.push({type: 'countries', countryId, countryName});
             nav.current = 'grades';
             
             updateBreadcrumb(['Países', countryName]);
@@ -156,32 +156,39 @@
             document.getElementById('back-button-container').style.display = 'block';
 
             try {
-                // Get education systems
-                const sysResult = await VClass.api.content.getGrades(countryId);
+                // Get education systems for this country
+                const eduSystemResult = await VClass.api.content.getEducationSystems(countryId);
                 
-                // For now, assume first education system
-                // In production, let user select if multiple systems exist
-                
-                const result = await VClass.api.content.getGrades(countryId);
-                
-                if (result.success && result.data.length > 0) {
+                if (eduSystemResult.success && eduSystemResult.data.length > 0) {
                     // Get grades for first education system
-                    const eduSystemId = result.data[0].education_system_id;
+                    // In production, let user select if multiple systems exist
+                    const eduSystemId = eduSystemResult.data[0].id;
                     const gradesResult = await VClass.api.content.getGrades(eduSystemId);
                     
                     if (gradesResult.success) {
                         renderGrades(gradesResult.data, countryName);
                     }
                 } else {
-                    // Fallback: load directly
-                    const directResult = await fetch(`/api/content/grades/${countryId}`);
-                    const data = await directResult.json();
-                    if (data.success) {
-                        renderGrades(data.data, countryName);
-                    }
+                    // No education systems found
+                    const container = document.getElementById('content-container');
+                    container.innerHTML = `
+                        <div class="col-span-full text-center py-12">
+                            <i class="fas fa-exclamation-triangle text-6xl text-gray-300 mb-4"></i>
+                            <h3 class="text-xl font-semibold text-gray-900 mb-2">Nenhum sistema educacional encontrado</h3>
+                            <p class="text-gray-600">Este país ainda não possui séries cadastradas.</p>
+                        </div>
+                    `;
                 }
             } catch (error) {
                 console.error('Error loading grades:', error);
+                const container = document.getElementById('content-container');
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-12">
+                        <i class="fas fa-exclamation-circle text-6xl text-red-300 mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-2">Erro ao carregar séries</h3>
+                        <p class="text-gray-600">${error.message || 'Tente novamente mais tarde'}</p>
+                    </div>
+                `;
             }
         }
 

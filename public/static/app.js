@@ -29,6 +29,9 @@ const api = {
     getCountries: async () => {
       return await apiRequest('/content/countries', 'GET');
     },
+    getEducationSystems: async (countryId) => {
+      return await apiRequest(`/content/education-systems/${countryId}`, 'GET');
+    },
     getGrades: async (educationSystemId) => {
       return await apiRequest(`/content/grades/${educationSystemId}`, 'GET');
     },
