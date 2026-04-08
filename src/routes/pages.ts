@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 const app = new Hono()
 
 // Import HTML content as raw strings (will be handled by build)
+import homeHtml from '../pages/home.html?raw'
 import loginHtml from '../pages/login.html?raw'
 import registerHtml from '../pages/register.html?raw'
 import dashboardHtml from '../pages/dashboard.html?raw'
@@ -18,6 +19,8 @@ import achievementsHtml from '../pages/achievements.html?raw'
 import chatHtml from '../pages/chat.html?raw'
 
 // Serve HTML pages
+app.get('/', (c) => c.html(homeHtml))
+app.get('/home.html', (c) => c.html(homeHtml))
 app.get('/login.html', (c) => c.html(loginHtml))
 app.get('/register.html', (c) => c.html(registerHtml))
 app.get('/dashboard.html', (c) => c.html(dashboardHtml))
