@@ -9,6 +9,7 @@ import contentRoutes from './routes/content'
 import videoRoutes from './routes/video'
 import exercisesRoutes from './routes/exercises'
 import progressRoutes from './routes/progress'
+import pagesRoutes from './routes/pages'
 
 const app = new Hono()
 
@@ -18,6 +19,9 @@ app.use('/api/*', corsConfig)
 
 // Serve static files from public directory
 app.use('/static/*', serveStatic({ root: './public' }))
+
+// HTML Pages
+app.route('/', pagesRoutes)
 
 // API Routes
 app.route('/api/auth', authRoutes)
