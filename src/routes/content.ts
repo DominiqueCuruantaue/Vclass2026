@@ -1,0 +1,387 @@
+// Content Routes - Countries, Grades, Subjects, Chapters, Lessons
+import { Hono } from 'hono'
+import { initSupabase } from '../config/supabase'
+import { authMiddleware } from '../middleware/auth'
+import type { ApiResponse, PaginatedResponse } from '../types'
+
+const content = new Hono()
+
+/**
+ * GET /api/content/countries
+ * Get all active countries
+ */
+content.get('/countries', async (c) => {
+  try {
+    const supabaseUrl = c.env?.SUPABASE_URL
+    const supabaseKey = c.env?.SUPABASE_ANON_KEY
+    
+    if (!supabaseUrl || !supabaseKey) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Database configuration missing'
+      }, 500)
+    }
+    
+    const supabase = initSupabase(supabaseUrl, supabaseKey)
+    
+    const { data, error } = await supabase
+      .from('countries')
+      .select('*')
+      .eq('is_active', true)
+      .order('name')
+    
+    if (error) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Failed to fetch countries'
+      }, 500)
+    }
+    
+    return c.json<ApiResponse>({
+      success: true,
+      data
+    })
+    
+  } catch (error) {
+    console.error('Get countries error:', error)
+    return c.json<ApiResponse>({
+      success: false,
+      error: 'Internal server error'
+    }, 500)
+  }
+})
+
+/**
+ * GET /api/content/education-systems/:country_id
+ * Get education systems for a country
+ */
+content.get('/education-systems/:country_id', async (c) => {
+  try {
+    const country_id = c.req.param('country_id')
+    
+    const supabaseUrl = c.env?.SUPABASE_URL
+    const supabaseKey = c.env?.SUPABASE_ANON_KEY
+    
+    if (!supabaseUrl || !supabaseKey) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Database configuration missing'
+      }, 500)
+    }
+    
+    const supabase = initSupabase(supabaseUrl, supabaseKey)
+    
+    const { data, error } = await supabase
+      .from('education_systems')
+      .select('*')
+      .eq('country_id', country_id)
+    
+    if (error) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Failed to fetch education systems'
+      }, 500)
+    }
+    
+    return c.json<ApiResponse>({
+      success: true,
+      data
+    })
+    
+  } catch (error) {
+    console.error('Get education systems error:', error)
+    return c.json<ApiResponse>({
+      success: false,
+      error: 'Internal server error'
+    }, 500)
+  }
+})
+
+/**
+ * GET /api/content/grades/:education_system_id
+ * Get grades for an education system
+ */
+content.get('/grades/:education_system_id', async (c) => {
+  try {
+    const education_system_id = c.req.param('education_system_id')
+    
+    const supabaseUrl = c.env?.SUPABASE_URL
+    const supabaseKey = c.env?.SUPABASE_ANON_KEY
+    
+    if (!supabaseUrl || !supabaseKey) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Database configuration missing'
+      }, 500)
+    }
+    
+    const supabase = initSupabase(supabaseUrl, supabaseKey)
+    
+    const { data, error } = await supabase
+      .from('grades')
+      .select('*')
+      .eq('education_system_id', education_system_id)
+      .order('display_order')
+    
+    if (error) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Failed to fetch grades'
+      }, 500)
+    }
+    
+    return c.json<ApiResponse>({
+      success: true,
+      data
+    })
+    
+  } catch (error) {
+    console.error('Get grades error:', error)
+    return c.json<ApiResponse>({
+      success: false,
+      error: 'Internal server error'
+    }, 500)
+  }
+})
+
+/**
+ * GET /api/content/subjects/:grade_id
+ * Get subjects for a grade with relationship info
+ */
+content.get('/subjects/:grade_id', async (c) => {
+  try {
+    const grade_id = c.req.param('grade_id')
+    
+    const supabaseUrl = c.env?.SUPABASE_URL
+    const supabaseKey = c.env?.SUPABASE_ANON_KEY
+    
+    if (!supabaseUrl || !supabaseKey) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Database configuration missing'
+      }, 500)
+    }
+    
+    const supabase = initSupabase(supabaseUrl, supabaseKey)
+    
+    // Get subjects with grade_subjects relationship
+    const { data, error } = await supabase
+      .from('grade_subjects')
+      .select(`
+        id,
+        is_mandatory,
+        workload_hours,
+        subject:subjects (
+          id,
+          name,
+          description,
+          icon_url,
+          color
+        )
+      `)
+      .eq('grade_id', grade_id)
+    
+    if (error) {
+      console.error('Supabase error:', error)
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Failed to fetch subjects'
+      }, 500)
+    }
+    
+    // Flatten the structure
+    const subjects = data?.map(item => ({
+      grade_subject_id: item.id,
+      is_mandatory: item.is_mandatory,
+      workload_hours: item.workload_hours,
+      ...(item.subject as any)
+    })) || []
+    
+    return c.json<ApiResponse>({
+      success: true,
+      data: subjects
+    })
+    
+  } catch (error) {
+    console.error('Get subjects error:', error)
+    return c.json<ApiResponse>({
+      success: false,
+      error: 'Internal server error'
+    }, 500)
+  }
+})
+
+/**
+ * GET /api/content/chapters/:grade_subject_id
+ * Get chapters for a grade-subject
+ */
+content.get('/chapters/:grade_subject_id', async (c) => {
+  try {
+    const grade_subject_id = c.req.param('grade_subject_id')
+    
+    const supabaseUrl = c.env?.SUPABASE_URL
+    const supabaseKey = c.env?.SUPABASE_ANON_KEY
+    
+    if (!supabaseUrl || !supabaseKey) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Database configuration missing'
+      }, 500)
+    }
+    
+    const supabase = initSupabase(supabaseUrl, supabaseKey)
+    
+    const { data, error } = await supabase
+      .from('chapters')
+      .select('*')
+      .eq('grade_subject_id', grade_subject_id)
+      .order('display_order')
+    
+    if (error) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Failed to fetch chapters'
+      }, 500)
+    }
+    
+    return c.json<ApiResponse>({
+      success: true,
+      data
+    })
+    
+  } catch (error) {
+    console.error('Get chapters error:', error)
+    return c.json<ApiResponse>({
+      success: false,
+      error: 'Internal server error'
+    }, 500)
+  }
+})
+
+/**
+ * GET /api/content/lessons/:chapter_id
+ * Get lessons for a chapter (requires auth to check access)
+ */
+content.get('/lessons/:chapter_id', authMiddleware, async (c) => {
+  try {
+    const chapter_id = c.req.param('chapter_id')
+    const user = c.get('user')
+    
+    const supabaseUrl = c.env?.SUPABASE_URL
+    const supabaseKey = c.env?.SUPABASE_ANON_KEY
+    
+    if (!supabaseUrl || !supabaseKey) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Database configuration missing'
+      }, 500)
+    }
+    
+    const supabase = initSupabase(supabaseUrl, supabaseKey)
+    
+    // Build query based on user role
+    let query = supabase
+      .from('lessons')
+      .select('id, title, description, thumbnail_url, display_order, is_free, video_duration, views_count, status, created_at')
+      .eq('chapter_id', chapter_id)
+      .order('display_order')
+    
+    // Only show published lessons for students
+    if (user.role === 'student') {
+      query = query.eq('status', 'published')
+    }
+    
+    const { data, error } = await query
+    
+    if (error) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Failed to fetch lessons'
+      }, 500)
+    }
+    
+    return c.json<ApiResponse>({
+      success: true,
+      data
+    })
+    
+  } catch (error) {
+    console.error('Get lessons error:', error)
+    return c.json<ApiResponse>({
+      success: false,
+      error: 'Internal server error'
+    }, 500)
+  }
+})
+
+/**
+ * GET /api/content/lesson/:lesson_id
+ * Get single lesson details (requires auth)
+ */
+content.get('/lesson/:lesson_id', authMiddleware, async (c) => {
+  try {
+    const lesson_id = c.req.param('lesson_id')
+    const user = c.get('user')
+    
+    const supabaseUrl = c.env?.SUPABASE_URL
+    const supabaseKey = c.env?.SUPABASE_ANON_KEY
+    
+    if (!supabaseUrl || !supabaseKey) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Database configuration missing'
+      }, 500)
+    }
+    
+    const supabase = initSupabase(supabaseUrl, supabaseKey)
+    
+    const { data: lesson, error } = await supabase
+      .from('lessons')
+      .select('*')
+      .eq('id', lesson_id)
+      .single()
+    
+    if (error || !lesson) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Lesson not found'
+      }, 404)
+    }
+    
+    // Check access: free lessons or user's subscription/premium
+    // TODO: Check subscription status
+    if (!lesson.is_free && user.role === 'student') {
+      // For now, allow all authenticated users
+      // In production, check subscription here
+    }
+    
+    // Increment view count
+    await supabase
+      .from('lessons')
+      .update({ views_count: lesson.views_count + 1 })
+      .eq('id', lesson_id)
+    
+    // Get lesson attachments
+    const { data: attachments } = await supabase
+      .from('lesson_attachments')
+      .select('*')
+      .eq('lesson_id', lesson_id)
+    
+    return c.json<ApiResponse>({
+      success: true,
+      data: {
+        ...lesson,
+        attachments: attachments || []
+      }
+    })
+    
+  } catch (error) {
+    console.error('Get lesson error:', error)
+    return c.json<ApiResponse>({
+      success: false,
+      error: 'Internal server error'
+    }, 500)
+  }
+})
+
+export default content

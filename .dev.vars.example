@@ -1,0 +1,26 @@
+# VClass Development Environment Variables
+# Copy this file to .dev.vars and fill in your actual values
+
+# Supabase Configuration (REQUIRED)
+# Get these from your Supabase project settings
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-supabase-anon-key-here
+
+# JWT Secret (REQUIRED)
+# Generate a strong secret: openssl rand -base64 32
+JWT_SECRET=your-super-secret-jwt-key-change-this
+
+# Video Streaming (REQUIRED)
+# Bunny.net CDN URL or Cloudflare Stream URL
+BUNNY_CDN_URL=https://your-zone.b-cdn.net
+
+# Optional: Bunny.net API (for video upload)
+BUNNY_API_KEY=your-bunny-api-key
+BUNNY_LIBRARY_ID=your-library-id
+
+# Optional: Email Service (for future)
+SENDGRID_API_KEY=your-sendgrid-key
+
+# Optional: Payment Gateway (for future)
+STRIPE_SECRET_KEY=your-stripe-key
+STRIPE_WEBHOOK_SECRET=your-webhook-secret

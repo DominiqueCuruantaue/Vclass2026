@@ -1,0 +1,368 @@
+// Authentication Routes
+import { Hono } from 'hono'
+import { z } from 'zod'
+import { initSupabase } from '../config/supabase'
+import { hashPassword, verifyPassword, validatePassword } from '../utils/password'
+import { generateAccessToken, generateRefreshToken, verifyToken } from '../utils/jwt'
+import type { ApiResponse, AuthResponse } from '../types'
+
+const auth = new Hono()
+
+// Validation schemas
+const loginSchema = z.object({
+  email: z.string().email('Invalid email format'),
+  password: z.string().min(6, 'Password must be at least 6 characters')
+})
+
+const registerSchema = z.object({
+  email: z.string().email('Invalid email format'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  full_name: z.string().min(3, 'Full name must be at least 3 characters'),
+  role: z.enum(['student', 'teacher']), // Only students and teachers can self-register
+  country_id: z.string().uuid().optional(),
+  phone: z.string().optional()
+})
+
+/**
+ * POST /api/auth/register
+ * Register new user
+ */
+auth.post('/register', async (c) => {
+  try {
+    const body = await c.req.json()
+    const validation = registerSchema.safeParse(body)
+    
+    if (!validation.success) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: validation.error.errors[0].message
+      }, 400)
+    }
+    
+    const { email, password, full_name, role, country_id, phone } = validation.data
+    
+    // Validate password strength
+    const passwordValidation = validatePassword(password)
+    if (!passwordValidation.valid) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: passwordValidation.message
+      }, 400)
+    }
+    
+    // Get Supabase credentials from env
+    const supabaseUrl = c.env?.SUPABASE_URL
+    const supabaseKey = c.env?.SUPABASE_ANON_KEY
+    
+    if (!supabaseUrl || !supabaseKey) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Database configuration missing'
+      }, 500)
+    }
+    
+    const supabase = initSupabase(supabaseUrl, supabaseKey)
+    
+    // Check if email already exists
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .single()
+    
+    if (existingUser) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Email already registered'
+      }, 409)
+    }
+    
+    // Hash password
+    const password_hash = await hashPassword(password)
+    
+    // Insert new user
+    const { data: user, error } = await supabase
+      .from('users')
+      .insert({
+        email,
+        password_hash,
+        full_name,
+        role,
+        country_id,
+        phone,
+        is_active: true,
+        is_verified: false
+      })
+      .select('id, email, full_name, role, country_id, phone, avatar_url, is_verified, created_at')
+      .single()
+    
+    if (error || !user) {
+      console.error('Registration error:', error)
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Failed to create user'
+      }, 500)
+    }
+    
+    // Generate tokens
+    const accessToken = generateAccessToken({
+      sub: user.id,
+      email: user.email,
+      role: user.role
+    })
+    
+    const refreshToken = generateRefreshToken({
+      sub: user.id,
+      email: user.email,
+      role: user.role
+    })
+    
+    return c.json<ApiResponse<AuthResponse>>({
+      success: true,
+      data: {
+        user,
+        accessToken,
+        refreshToken
+      },
+      message: 'Registration successful'
+    }, 201)
+    
+  } catch (error) {
+    console.error('Register error:', error)
+    return c.json<ApiResponse>({
+      success: false,
+      error: 'Internal server error'
+    }, 500)
+  }
+})
+
+/**
+ * POST /api/auth/login
+ * Login user
+ */
+auth.post('/login', async (c) => {
+  try {
+    const body = await c.req.json()
+    const validation = loginSchema.safeParse(body)
+    
+    if (!validation.success) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: validation.error.errors[0].message
+      }, 400)
+    }
+    
+    const { email, password } = validation.data
+    
+    // Get Supabase credentials
+    const supabaseUrl = c.env?.SUPABASE_URL
+    const supabaseKey = c.env?.SUPABASE_ANON_KEY
+    
+    if (!supabaseUrl || !supabaseKey) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Database configuration missing'
+      }, 500)
+    }
+    
+    const supabase = initSupabase(supabaseUrl, supabaseKey)
+    
+    // Find user by email
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, email, password_hash, full_name, role, country_id, phone, avatar_url, is_active, is_verified')
+      .eq('email', email)
+      .single()
+    
+    if (error || !user) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Invalid email or password'
+      }, 401)
+    }
+    
+    // Check if user is active
+    if (!user.is_active) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Account is deactivated'
+      }, 403)
+    }
+    
+    // Verify password
+    const isValid = await verifyPassword(password, user.password_hash)
+    
+    if (!isValid) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Invalid email or password'
+      }, 401)
+    }
+    
+    // Update last login
+    await supabase
+      .from('users')
+      .update({ last_login_at: new Date().toISOString() })
+      .eq('id', user.id)
+    
+    // Remove password_hash from response
+    const { password_hash, ...userWithoutPassword } = user
+    
+    // Generate tokens
+    const accessToken = generateAccessToken({
+      sub: user.id,
+      email: user.email,
+      role: user.role
+    })
+    
+    const refreshToken = generateRefreshToken({
+      sub: user.id,
+      email: user.email,
+      role: user.role
+    })
+    
+    return c.json<ApiResponse<AuthResponse>>({
+      success: true,
+      data: {
+        user: userWithoutPassword,
+        accessToken,
+        refreshToken
+      },
+      message: 'Login successful'
+    })
+    
+  } catch (error) {
+    console.error('Login error:', error)
+    return c.json<ApiResponse>({
+      success: false,
+      error: 'Internal server error'
+    }, 500)
+  }
+})
+
+/**
+ * POST /api/auth/refresh
+ * Refresh access token
+ */
+auth.post('/refresh', async (c) => {
+  try {
+    const body = await c.req.json()
+    const { refreshToken } = body
+    
+    if (!refreshToken) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Refresh token required'
+      }, 400)
+    }
+    
+    // Verify refresh token
+    const decoded = verifyToken(refreshToken)
+    
+    if (!decoded) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Invalid or expired refresh token'
+      }, 401)
+    }
+    
+    // Generate new access token
+    const accessToken = generateAccessToken({
+      sub: decoded.sub,
+      email: decoded.email,
+      role: decoded.role
+    })
+    
+    return c.json<ApiResponse<{ accessToken: string }>>({
+      success: true,
+      data: { accessToken },
+      message: 'Token refreshed successfully'
+    })
+    
+  } catch (error) {
+    console.error('Refresh error:', error)
+    return c.json<ApiResponse>({
+      success: false,
+      error: 'Internal server error'
+    }, 500)
+  }
+})
+
+/**
+ * POST /api/auth/logout
+ * Logout user (client-side token removal)
+ */
+auth.post('/logout', async (c) => {
+  return c.json<ApiResponse>({
+    success: true,
+    message: 'Logged out successfully'
+  })
+})
+
+/**
+ * GET /api/auth/me
+ * Get current user info (requires auth)
+ */
+auth.get('/me', async (c) => {
+  try {
+    // Extract token
+    const authHeader = c.req.header('Authorization')
+    const token = authHeader?.split(' ')[1]
+    
+    if (!token) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'No token provided'
+      }, 401)
+    }
+    
+    const decoded = verifyToken(token)
+    
+    if (!decoded) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Invalid token'
+      }, 401)
+    }
+    
+    // Get user data
+    const supabaseUrl = c.env?.SUPABASE_URL
+    const supabaseKey = c.env?.SUPABASE_ANON_KEY
+    
+    if (!supabaseUrl || !supabaseKey) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Database configuration missing'
+      }, 500)
+    }
+    
+    const supabase = initSupabase(supabaseUrl, supabaseKey)
+    
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, email, full_name, role, country_id, phone, avatar_url, is_verified, created_at')
+      .eq('id', decoded.sub)
+      .single()
+    
+    if (error || !user) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'User not found'
+      }, 404)
+    }
+    
+    return c.json<ApiResponse>({
+      success: true,
+      data: user
+    })
+    
+  } catch (error) {
+    console.error('Get user error:', error)
+    return c.json<ApiResponse>({
+      success: false,
+      error: 'Internal server error'
+    }, 500)
+  }
+})
+
+export default auth

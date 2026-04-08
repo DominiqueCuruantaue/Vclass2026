@@ -6,29 +6,25 @@
   "compatibility_flags": [
     "nodejs_compat"
   ]
-  // "vars": {
-  //   "MY_VAR": "my-variable"
-  // },
+  
+  // Environment variables (set via wrangler secrets or .dev.vars)
+  // Required:
+  // - SUPABASE_URL: Your Supabase project URL
+  // - SUPABASE_ANON_KEY: Your Supabase anonymous key
+  // - JWT_SECRET: Secret for JWT token generation
+  // - BUNNY_CDN_URL: Bunny.net CDN URL for video streaming
+  
+  // Optional for future use:
   // "kv_namespaces": [
   //   {
-  //     "binding": "MY_KV_NAMESPACE",
-  //     "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  //     "binding": "CACHE",
+  //     "id": "your-kv-namespace-id"
   //   }
   // ],
   // "r2_buckets": [
   //   {
-  //     "binding": "MY_BUCKET",
-  //     "bucket_name": "my-bucket"
+  //     "binding": "STORAGE",
+  //     "bucket_name": "vclass-storage"
   //   }
-  // ],
-  // "d1_databases": [
-  //   {
-  //     "binding": "MY_DB",
-  //     "database_name": "my-database",
-  //     "database_id": ""
-  //   }
-  // ],
-  // "ai": {
-  //   "binding": "AI"
-  // }
+  // ]
 }
