@@ -2,7 +2,14 @@
 import { Hono } from 'hono'
 import { getSupabase } from '../config/supabase'
 import { authMiddleware } from '../middleware/auth'
-import { mockCountries } from '../middleware/database'
+import { 
+  mockCountries, 
+  mockEducationSystems, 
+  mockGrades, 
+  mockSubjects, 
+  mockChapters, 
+  mockLessons 
+} from '../middleware/database'
 import type { ApiResponse, PaginatedResponse } from '../types'
 
 const content = new Hono()
@@ -75,17 +82,25 @@ content.get('/education-systems/:country_id', async (c) => {
   try {
     const country_id = c.req.param('country_id')
     
-    const supabaseUrl = c.env?.SUPABASE_URL
-    const supabaseKey = c.env?.SUPABASE_ANON_KEY
-    
-    if (!supabaseUrl || !supabaseKey) {
+    // Check if database is configured
+    if (!isDatabaseConfigured(c.env)) {
+      // DEMO MODE: Return mock education systems
+      const systems = mockEducationSystems.filter(s => s.country_id === country_id)
       return c.json<ApiResponse>({
-        success: false,
-        error: 'Database configuration missing'
-      }, 500)
+        success: true,
+        data: systems,
+        message: 'Demo data (database not configured)'
+      })
     }
     
-    const supabase = initSupabase(supabaseUrl, supabaseKey)
+    const supabase = getSupabase(c.env)
+    
+    if (!supabase) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Database configuration error'
+      }, 500)
+    }
     
     const { data, error } = await supabase
       .from('education_systems')
@@ -121,17 +136,25 @@ content.get('/grades/:education_system_id', async (c) => {
   try {
     const education_system_id = c.req.param('education_system_id')
     
-    const supabaseUrl = c.env?.SUPABASE_URL
-    const supabaseKey = c.env?.SUPABASE_ANON_KEY
-    
-    if (!supabaseUrl || !supabaseKey) {
+    // Check if database is configured
+    if (!isDatabaseConfigured(c.env)) {
+      // DEMO MODE: Return mock grades
+      const grades = mockGrades.filter(g => g.education_system_id === education_system_id)
       return c.json<ApiResponse>({
-        success: false,
-        error: 'Database configuration missing'
-      }, 500)
+        success: true,
+        data: grades,
+        message: 'Demo data (database not configured)'
+      })
     }
     
-    const supabase = initSupabase(supabaseUrl, supabaseKey)
+    const supabase = getSupabase(c.env)
+    
+    if (!supabase) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Database configuration error'
+      }, 500)
+    }
     
     const { data, error } = await supabase
       .from('grades')
@@ -168,17 +191,25 @@ content.get('/subjects/:grade_id', async (c) => {
   try {
     const grade_id = c.req.param('grade_id')
     
-    const supabaseUrl = c.env?.SUPABASE_URL
-    const supabaseKey = c.env?.SUPABASE_ANON_KEY
-    
-    if (!supabaseUrl || !supabaseKey) {
+    // Check if database is configured
+    if (!isDatabaseConfigured(c.env)) {
+      // DEMO MODE: Return mock subjects
+      const subjects = mockSubjects.filter(s => s.grade_id === grade_id)
       return c.json<ApiResponse>({
-        success: false,
-        error: 'Database configuration missing'
-      }, 500)
+        success: true,
+        data: subjects,
+        message: 'Demo data (database not configured)'
+      })
     }
     
-    const supabase = initSupabase(supabaseUrl, supabaseKey)
+    const supabase = getSupabase(c.env)
+    
+    if (!supabase) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Database configuration error'
+      }, 500)
+    }
     
     // Get subjects with grade_subjects relationship
     const { data, error } = await supabase
@@ -235,17 +266,25 @@ content.get('/chapters/:grade_subject_id', async (c) => {
   try {
     const grade_subject_id = c.req.param('grade_subject_id')
     
-    const supabaseUrl = c.env?.SUPABASE_URL
-    const supabaseKey = c.env?.SUPABASE_ANON_KEY
-    
-    if (!supabaseUrl || !supabaseKey) {
+    // Check if database is configured
+    if (!isDatabaseConfigured(c.env)) {
+      // DEMO MODE: Return mock chapters
+      const chapters = mockChapters.filter(ch => ch.grade_subject_id === grade_subject_id)
       return c.json<ApiResponse>({
-        success: false,
-        error: 'Database configuration missing'
-      }, 500)
+        success: true,
+        data: chapters,
+        message: 'Demo data (database not configured)'
+      })
     }
     
-    const supabase = initSupabase(supabaseUrl, supabaseKey)
+    const supabase = getSupabase(c.env)
+    
+    if (!supabase) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Database configuration error'
+      }, 500)
+    }
     
     const { data, error } = await supabase
       .from('chapters')
@@ -283,17 +322,25 @@ content.get('/lessons/:chapter_id', authMiddleware, async (c) => {
     const chapter_id = c.req.param('chapter_id')
     const user = c.get('user')
     
-    const supabaseUrl = c.env?.SUPABASE_URL
-    const supabaseKey = c.env?.SUPABASE_ANON_KEY
-    
-    if (!supabaseUrl || !supabaseKey) {
+    // Check if database is configured
+    if (!isDatabaseConfigured(c.env)) {
+      // DEMO MODE: Return mock lessons
+      const lessons = mockLessons.filter(l => l.chapter_id === chapter_id)
       return c.json<ApiResponse>({
-        success: false,
-        error: 'Database configuration missing'
-      }, 500)
+        success: true,
+        data: lessons,
+        message: 'Demo data (database not configured)'
+      })
     }
     
-    const supabase = initSupabase(supabaseUrl, supabaseKey)
+    const supabase = getSupabase(c.env)
+    
+    if (!supabase) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Database configuration error'
+      }, 500)
+    }
     
     // Build query based on user role
     let query = supabase

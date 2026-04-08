@@ -131,18 +131,254 @@ export const mockCountries = [
     id: '22222222-2222-2222-2222-222222222222',
     name: 'Moçambique',
     code: 'MZ',
+    flag_url: '🇲🇿',
     is_active: true
   },
   {
     id: '55555555-5555-5555-5555-555555555555',
     name: 'Brasil',
     code: 'BR',
+    flag_url: '🇧🇷',
     is_active: true
   },
   {
     id: '66666666-6666-6666-6666-666666666666',
     name: 'Angola',
     code: 'AO',
+    flag_url: '🇦🇴',
     is_active: true
+  }
+]
+
+export const mockEducationSystems = [
+  {
+    id: 'es-11111111-1111-1111-1111-111111111111',
+    country_id: '22222222-2222-2222-2222-222222222222',
+    name: 'Sistema Nacional de Ensino',
+    description: 'Sistema educacional de Moçambique'
+  },
+  {
+    id: 'es-22222222-2222-2222-2222-222222222222',
+    country_id: '55555555-5555-5555-5555-555555555555',
+    name: 'Sistema Nacional Brasileiro',
+    description: 'Sistema educacional do Brasil'
+  },
+  {
+    id: 'es-33333333-3333-3333-3333-333333333333',
+    country_id: '66666666-6666-6666-6666-666666666666',
+    name: 'Sistema Nacional Angolano',
+    description: 'Sistema educacional de Angola'
+  }
+]
+
+export const mockGrades = [
+  // Moçambique
+  {
+    id: 'gr-10-moz',
+    education_system_id: 'es-11111111-1111-1111-1111-111111111111',
+    name: '10ª Classe',
+    level: 10,
+    description: 'Décima classe do ensino secundário',
+    display_order: 1
+  },
+  {
+    id: 'gr-11-moz',
+    education_system_id: 'es-11111111-1111-1111-1111-111111111111',
+    name: '11ª Classe',
+    level: 11,
+    description: 'Décima primeira classe do ensino secundário',
+    display_order: 2
+  },
+  {
+    id: 'gr-12-moz',
+    education_system_id: 'es-11111111-1111-1111-1111-111111111111',
+    name: '12ª Classe',
+    level: 12,
+    description: 'Décima segunda classe do ensino secundário',
+    display_order: 3
+  },
+  // Brasil
+  {
+    id: 'gr-1-br',
+    education_system_id: 'es-22222222-2222-2222-2222-222222222222',
+    name: '1º Ano do Ensino Médio',
+    level: 1,
+    description: 'Primeiro ano do ensino médio',
+    display_order: 1
+  },
+  {
+    id: 'gr-2-br',
+    education_system_id: 'es-22222222-2222-2222-2222-222222222222',
+    name: '2º Ano do Ensino Médio',
+    level: 2,
+    description: 'Segundo ano do ensino médio',
+    display_order: 2
+  },
+  // Angola
+  {
+    id: 'gr-10-ao',
+    education_system_id: 'es-33333333-3333-3333-3333-333333333333',
+    name: '10ª Classe',
+    level: 10,
+    description: 'Décima classe do ensino secundário',
+    display_order: 1
+  }
+]
+
+export const mockSubjects = [
+  // 10ª Classe Moçambique
+  {
+    id: 'gs-matematica-10',
+    grade_subject_id: 'gs-matematica-10',
+    grade_id: 'gr-10-moz',
+    name: 'Matemática',
+    description: 'Álgebra, Geometria e Funções',
+    color: '#9333ea',
+    display_order: 1
+  },
+  {
+    id: 'gs-portugues-10',
+    grade_subject_id: 'gs-portugues-10',
+    grade_id: 'gr-10-moz',
+    name: 'Português',
+    description: 'Gramática, Literatura e Redação',
+    color: '#3b82f6',
+    display_order: 2
+  },
+  {
+    id: 'gs-fisica-10',
+    grade_subject_id: 'gs-fisica-10',
+    grade_id: 'gr-10-moz',
+    name: 'Física',
+    description: 'Mecânica, Óptica e Termodinâmica',
+    color: '#10b981',
+    display_order: 3
+  },
+  {
+    id: 'gs-quimica-10',
+    grade_subject_id: 'gs-quimica-10',
+    grade_id: 'gr-10-moz',
+    name: 'Química',
+    description: 'Química Geral e Orgânica',
+    color: '#f59e0b',
+    display_order: 4
+  },
+  {
+    id: 'gs-biologia-10',
+    grade_subject_id: 'gs-biologia-10',
+    grade_id: 'gr-10-moz',
+    name: 'Biologia',
+    description: 'Citologia, Genética e Ecologia',
+    color: '#22c55e',
+    display_order: 5
+  }
+]
+
+export const mockChapters = [
+  // Matemática 10ª Classe
+  {
+    id: 'ch-mat-1',
+    grade_subject_id: 'gs-matematica-10',
+    title: 'Funções',
+    description: 'Introdução às funções matemáticas',
+    display_order: 1
+  },
+  {
+    id: 'ch-mat-2',
+    grade_subject_id: 'gs-matematica-10',
+    title: 'Equações',
+    description: 'Equações do 1º e 2º grau',
+    display_order: 2
+  },
+  {
+    id: 'ch-mat-3',
+    grade_subject_id: 'gs-matematica-10',
+    title: 'Geometria Plana',
+    description: 'Polígonos e áreas',
+    display_order: 3
+  },
+  // Português 10ª Classe
+  {
+    id: 'ch-port-1',
+    grade_subject_id: 'gs-portugues-10',
+    title: 'Classes Gramaticais',
+    description: 'Substantivos, verbos e adjetivos',
+    display_order: 1
+  },
+  {
+    id: 'ch-port-2',
+    grade_subject_id: 'gs-portugues-10',
+    title: 'Literatura Portuguesa',
+    description: 'Autores clássicos',
+    display_order: 2
+  },
+  // Física 10ª Classe
+  {
+    id: 'ch-fis-1',
+    grade_subject_id: 'gs-fisica-10',
+    title: 'Cinemática',
+    description: 'Movimento uniforme e variado',
+    display_order: 1
+  }
+]
+
+export const mockLessons = [
+  // Funções (Matemática)
+  {
+    id: 'lesson-1',
+    chapter_id: 'ch-mat-1',
+    title: 'Introdução às Funções',
+    description: 'Conceitos básicos de funções matemáticas',
+    thumbnail_url: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=400',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    duration_seconds: 1200,
+    display_order: 1,
+    is_free: true
+  },
+  {
+    id: 'lesson-2',
+    chapter_id: 'ch-mat-1',
+    title: 'Domínio e Contradomínio',
+    description: 'Entendendo domínio e contradomínio de funções',
+    thumbnail_url: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    duration_seconds: 900,
+    display_order: 2,
+    is_free: false
+  },
+  // Equações (Matemática)
+  {
+    id: 'lesson-3',
+    chapter_id: 'ch-mat-2',
+    title: 'Equações do 1º Grau',
+    description: 'Resolvendo equações do primeiro grau',
+    thumbnail_url: 'https://images.unsplash.com/photo-1596495577886-d920f1fb7238?w=400',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    duration_seconds: 1000,
+    display_order: 1,
+    is_free: true
+  },
+  {
+    id: 'lesson-4',
+    chapter_id: 'ch-mat-2',
+    title: 'Equações do 2º Grau',
+    description: 'Fórmula de Bhaskara e resolução',
+    thumbnail_url: 'https://images.unsplash.com/photo-1635372722656-389f87a941b7?w=400',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    duration_seconds: 1500,
+    display_order: 2,
+    is_free: false
+  },
+  // Cinemática (Física)
+  {
+    id: 'lesson-5',
+    chapter_id: 'ch-fis-1',
+    title: 'Movimento Uniforme',
+    description: 'Conceitos de velocidade constante',
+    thumbnail_url: 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?w=400',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    duration_seconds: 1100,
+    display_order: 1,
+    is_free: true
   }
 ]
