@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lição - VClass</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet">
+    <link href="/static/styles.css" rel="stylesheet">
+    <style>
+        .video-js {
+            width: 100%;
+            height: 500px;
+        }
+        @media (max-width: 768px) {
+            .video-js {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-8">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-graduation-cap text-2xl text-purple-600"></i>
+                        <span class="text-xl font-bold text-gray-900">VClass</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="user-name" class="text-sm text-gray-700"></span>
+                    <button onclick="VClass.logout()" class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md">
+                        <i class="fas fa-sign-out-alt mr-1"></i> Sair
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Breadcrumb -->
+        <nav class="flex mb-6" aria-label="Breadcrumb">
+            <ol id="breadcrumb" class="inline-flex items-center space-x-1 md:space-x-3 text-sm">
+                <!-- Will be populated by JS -->
+            </ol>
+        </nav>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Main Content -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Lesson Header -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h1 id="lesson-title" class="text-3xl font-bold text-gray-900 mb-2">Carregando...</h1>
+                    <p id="lesson-description" class="text-gray-600 mb-4">Carregando descrição...</p>
+                    <div class="flex items-center space-x-4 text-sm text-gray-500">
+                        <span><i class="fas fa-clock mr-1"></i> <span id="lesson-duration">--</span></span>
+                        <span><i class="fas fa-eye mr-1"></i> <span id="lesson-views">--</span> visualizações</span>
+                    </div>
+                </div>
+
+                <!-- Video Player -->
+                <div id="video-section" class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div id="video-container">
+                        <video id="lesson-video" class="video-js vjs-default-skin" controls preload="auto">
+                            <p class="vjs-no-js">
+                                Para assistir este vídeo, por favor ative o JavaScript ou use um navegador que suporte HTML5 video.
+                            </p>
+                        </video>
+                    </div>
+                    <div id="video-error" class="p-8 text-center hidden">
+                        <i class="fas fa-exclamation-circle text-4xl text-red-500 mb-4"></i>
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">Erro ao Carregar Vídeo</h3>
+                        <p class="text-gray-600 mb-4">Não foi possível carregar o vídeo desta lição.</p>
+                        <button onclick="loadVideo()" class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                            Tentar Novamente
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="border-b border-gray-200">
+                        <nav class="flex">
+                            <button onclick="showTab('content')" id="tab-content" class="tab-button px-6 py-4 font-medium text-purple-600 border-b-2 border-purple-600">
+                                <i class="fas fa-file-alt mr-2"></i>Conteúdo
+                            </button>
+                            <button onclick="showTab('exercises')" id="tab-exercises" class="tab-button px-6 py-4 font-medium text-gray-600 hover:text-gray-900">
+                                <i class="fas fa-tasks mr-2"></i>Exercícios
+                            </button>
+                            <button onclick="showTab('attachments')" id="tab-attachments" class="tab-button px-6 py-4 font-medium text-gray-600 hover:text-gray-900">
+                                <i class="fas fa-paperclip mr-2"></i>Anexos
+                            </button>
+                        </nav>
+                    </div>
+
+                    <!-- Tab Content -->
+                    <div id="content-tab" class="p-6">
+                        <div id="lesson-content" class="prose max-w-none">
+                            <div class="animate-pulse space-y-3">
+                                <div class="h-4 bg-gray-200 rounded w-full"></div>
+                                <div class="h-4 bg-gray-200 rounded w-5/6"></div>
+                                <div class="h-4 bg-gray-200 rounded w-4/6"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="exercises-tab" class="p-6 hidden">
+                        <div id="exercises-container">
+                            <p class="text-gray-600">Carregando exercícios...</p>
+                        </div>
+                    </div>
+
+                    <div id="attachments-tab" class="p-6 hidden">
+                        <div id="attachments-container">
+                            <p class="text-gray-600">Carregando anexos...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="space-y-6">
+                <!-- Progress Card -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">
+                        <i class="fas fa-chart-line text-purple-600 mr-2"></i>
+                        Seu Progresso
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-sm text-gray-600 mb-1">
+                                <span>Conclusão</span>
+                                <span id="progress-percent">0%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-3">
+                                <div id="progress-bar" class="bg-purple-600 h-3 rounded-full transition-all" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="text-sm text-gray-600">
+                            <p><i class="fas fa-clock mr-2"></i>Tempo gasto: <span id="time-spent">0min</span></p>
+                            <p class="mt-2"><i class="fas fa-calendar mr-2"></i>Status: <span id="lesson-status" class="font-semibold text-purple-600">Não iniciado</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">
+                        <i class="fas fa-compass text-purple-600 mr-2"></i>
+                        Navegação
+                    </h3>
+                    <div class="space-y-2">
+                        <button onclick="history.back()" class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-left">
+                            <i class="fas fa-arrow-left mr-2"></i>Voltar ao Capítulo
+                        </button>
+                        <a href="/dashboard.html" class="block w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-left">
+                            <i class="fas fa-home mr-2"></i>Ir para Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
+    <script src="/static/app.js"></script>
+    <script>
+        // Check authentication
+        if (!VClass.isAuthenticated()) {
+            window.location.href = '/login.html';
+        }
+
+        const user = VClass.getCurrentUser();
+        if (user) {
+            document.getElementById('user-name').textContent = user.full_name;
+        }
+
+        // Get URL parameters
+        const params = new URLSearchParams(window.location.search);
+        const lessonId = params.get('id');
+        const chapterName = params.get('chapter');
+        const subjectName = params.get('subject');
+        const gradeName = params.get('grade');
+        const countryName = params.get('country');
+
+        if (!lessonId) {
+            window.location.href = '/browse.html';
+        }
+
+        let player = null;
+        let progressInterval = null;
+
+        // Update breadcrumb
+        const breadcrumb = document.getElementById('breadcrumb');
+        breadcrumb.innerHTML = `
+            <li><a href="/browse.html" class="text-gray-700 hover:text-purple-600"><i class="fas fa-home mr-1"></i>Início</a></li>
+            <li><i class="fas fa-chevron-right text-gray-400 mx-2"></i><span class="text-gray-700">${countryName || 'País'}</span></li>
+            <li><i class="fas fa-chevron-right text-gray-400 mx-2"></i><span class="text-gray-700">${gradeName || 'Série'}</span></li>
+            <li><i class="fas fa-chevron-right text-gray-400 mx-2"></i><span class="text-gray-700">${subjectName || 'Disciplina'}</span></li>
+            <li><i class="fas fa-chevron-right text-gray-400 mx-2"></i><span class="text-gray-700">${chapterName || 'Capítulo'}</span></li>
+            <li><i class="fas fa-chevron-right text-gray-400 mx-2"></i><span class="text-purple-600 font-semibold">Lição</span></li>
+        `;
+
+        // Tab switching
+        function showTab(tab) {
+            // Hide all tabs
+            document.getElementById('content-tab').classList.add('hidden');
+            document.getElementById('exercises-tab').classList.add('hidden');
+            document.getElementById('attachments-tab').classList.add('hidden');
+
+            // Remove active from all buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('text-purple-600', 'border-b-2', 'border-purple-600');
+                btn.classList.add('text-gray-600');
+            });
+
+            // Show selected tab
+            document.getElementById(`${tab}-tab`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).classList.add('text-purple-600', 'border-b-2', 'border-purple-600');
+            document.getElementById(`tab-${tab}`).classList.remove('text-gray-600');
+
+            // Load content if needed
+            if (tab === 'exercises' && !window.exercisesLoaded) {
+                loadExercises();
+            }
+        }
+
+        // Load lesson details
+        async function loadLesson() {
+            try {
+                const result = await VClass.api.content.getLesson(lessonId);
+
+                if (result.success) {
+                    const lesson = result.data;
+
+                    // Update UI
+                    document.getElementById('lesson-title').textContent = lesson.title;
+                    document.getElementById('lesson-description').textContent = lesson.description || '';
+                    document.getElementById('lesson-duration').textContent = lesson.video_duration ? `${Math.floor(lesson.video_duration / 60)} min` : 'N/A';
+                    document.getElementById('lesson-views').textContent = lesson.views_count || 0;
+
+                    // Render content (Markdown to HTML - simplified)
+                    const contentDiv = document.getElementById('lesson-content');
+                    if (lesson.content) {
+                        contentDiv.innerHTML = lesson.content.replace(/\n/g, '<br>');
+                    } else {
+                        contentDiv.innerHTML = '<p class="text-gray-600">Nenhum conteúdo adicional disponível.</p>';
+                    }
+
+                    // Render attachments
+                    renderAttachments(lesson.attachments || []);
+
+                    // Load video if available
+                    if (lesson.video_id) {
+                        loadVideo();
+                    } else {
+                        document.getElementById('video-section').innerHTML = `
+                            <div class="p-8 text-center bg-gray-100">
+                                <i class="fas fa-video-slash text-4xl text-gray-400 mb-4"></i>
+                                <p class="text-gray-600">Esta lição não possui vídeo.</p>
+                            </div>
+                        `;
+                    }
+
+                    // Load progress
+                    loadProgress();
+                }
+            } catch (error) {
+                console.error('Error loading lesson:', error);
+            }
+        }
+
+        // Load video with token
+        async function loadVideo() {
+            try {
+                const result = await VClass.api.video.getToken(lessonId);
+
+                if (result.success) {
+                    const { streamUrl } = result.data;
+
+                    // Initialize video player
+                    player = videojs('lesson-video', {
+                        controls: true,
+                        autoplay: false,
+                        preload: 'auto',
+                        fluid: true,
+                        responsive: true
+                    });
+
+                    player.src({
+                        src: streamUrl,
+                        type: 'application/x-mpegURL'
+                    });
+
+                    // Track progress
+                    player.on('timeupdate', () => {
+                        if (player && !player.paused()) {
+                            updateProgress(player.currentTime(), player.duration());
+                        }
+                    });
+
+                    // Mark as completed when near end
+                    player.on('timeupdate', () => {
+                        const currentTime = player.currentTime();
+                        const duration = player.duration();
+                        if (duration > 0 && currentTime / duration > 0.9) {
+                            // 90% watched = completed
+                            saveProgress(currentTime, duration, 'completed');
+                        }
+                    });
+
+                    document.getElementById('video-error').classList.add('hidden');
+                    document.getElementById('video-container').classList.remove('hidden');
+                } else {
+                    showVideoError();
+                }
+            } catch (error) {
+                console.error('Error loading video:', error);
+                showVideoError();
+            }
+        }
+
+        function showVideoError() {
+            document.getElementById('video-container').classList.add('hidden');
+            document.getElementById('video-error').classList.remove('hidden');
+        }
+
+        function updateProgress(currentTime, duration) {
+            if (!progressInterval) {
+                progressInterval = setInterval(() => {
+                    if (player && !player.paused()) {
+                        saveProgress(player.currentTime(), duration, 'in_progress');
+                    }
+                }, 30000); // Save every 30 seconds
+            }
+        }
+
+        async function saveProgress(currentTime, duration, status) {
+            try {
+                await VClass.api.video.updateProgress(lessonId, {
+                    last_position: Math.floor(currentTime),
+                    time_spent: Math.floor(duration)
+                });
+
+                // Reload progress UI
+                loadProgress();
+            } catch (error) {
+                console.error('Error saving progress:', error);
+            }
+        }
+
+        async function loadProgress() {
+            try {
+                const result = await VClass.api.progress.getLessonProgress(lessonId);
+
+                if (result.success && result.data) {
+                    const progress = result.data;
+                    document.getElementById('progress-percent').textContent = `${progress.progress_percent}%`;
+                    document.getElementById('progress-bar').style.width = `${progress.progress_percent}%`;
+                    document.getElementById('time-spent').textContent = `${Math.floor(progress.time_spent / 60)}min`;
+                    
+                    const statusMap = {
+                        'not_started': 'Não iniciado',
+                        'in_progress': 'Em progresso',
+                        'completed': 'Concluído'
+                    };
+                    document.getElementById('lesson-status').textContent = statusMap[progress.status] || 'Não iniciado';
+
+                    // Resume video if in progress
+                    if (player && progress.last_position > 0) {
+                        player.currentTime(progress.last_position);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading progress:', error);
+            }
+        }
+
+        async function loadExercises() {
+            try {
+                const result = await VClass.api.exercises.getExercises(lessonId);
+                const container = document.getElementById('exercises-container');
+
+                if (result.success && result.data.length > 0) {
+                    container.innerHTML = `
+                        <div class="space-y-6">
+                            ${result.data.map((exercise, index) => `
+                                <div class="border border-gray-200 rounded-lg p-4">
+                                    <h4 class="font-bold text-gray-900 mb-3">
+                                        ${index + 1}. ${exercise.question}
+                                    </h4>
+                                    <div class="space-y-2">
+                                        ${exercise.options.map((option, oIndex) => `
+                                            <label class="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-purple-50 cursor-pointer">
+                                                <input type="radio" name="exercise-${exercise.id}" value="${option.id}" class="text-purple-600">
+                                                <span class="text-gray-700">${String.fromCharCode(65 + oIndex)}. ${option.option_text}</span>
+                                            </label>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `).join('')}
+                            <button onclick="submitExercises()" class="w-full px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold">
+                                <i class="fas fa-check mr-2"></i>Submeter Respostas
+                            </button>
+                        </div>
+                    `;
+                    window.exercisesLoaded = true;
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center py-8 text-gray-500">
+                            <i class="fas fa-clipboard-list text-4xl mb-2"></i>
+                            <p>Nenhum exercício disponível para esta lição.</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading exercises:', error);
+            }
+        }
+
+        function renderAttachments(attachments) {
+            const container = document.getElementById('attachments-container');
+
+            if (attachments.length > 0) {
+                container.innerHTML = `
+                    <div class="space-y-3">
+                        ${attachments.map(att => `
+                            <a href="${att.file_url}" target="_blank" class="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-purple-50 transition">
+                                <i class="fas fa-file-${getFileIcon(att.file_type)} text-2xl text-purple-600"></i>
+                                <div class="flex-1">
+                                    <h4 class="font-semibold text-gray-900">${att.title}</h4>
+                                    <p class="text-sm text-gray-600">${att.file_type} • ${(att.file_size / 1024).toFixed(2)} KB</p>
+                                </div>
+                                <i class="fas fa-download text-gray-400"></i>
+                            </a>
+                        `).join('')}
+                    </div>
+                `;
+            } else {
+                container.innerHTML = '<p class="text-gray-600 text-center py-8">Nenhum anexo disponível.</p>';
+            }
+        }
+
+        function getFileIcon(fileType) {
+            if (fileType?.includes('pdf')) return 'pdf';
+            if (fileType?.includes('word') || fileType?.includes('doc')) return 'word';
+            if (fileType?.includes('excel') || fileType?.includes('xls')) return 'excel';
+            if (fileType?.includes('powerpoint') || fileType?.includes('ppt')) return 'powerpoint';
+            return 'alt';
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (player) {
+                player.dispose();
+            }
+            if (progressInterval) {
+                clearInterval(progressInterval);
+            }
+        });
+
+        // Load lesson
+        loadLesson();
+    </script>
+</body>
+</html>
