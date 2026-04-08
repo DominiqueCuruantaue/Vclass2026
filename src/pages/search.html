@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Busca - VClass</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/styles.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-8">
+                    <a href="/" class="flex items-center space-x-2">
+                        <i class="fas fa-graduation-cap text-2xl text-purple-600"></i>
+                        <span class="text-xl font-bold text-gray-900">VClass</span>
+                    </a>
+                </div>
+                <div class="flex-1 max-w-2xl mx-8">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-4 top-4 text-gray-400"></i>
+                        <input type="text" id="search-input" placeholder="Pesquisar..." 
+                               class="global-search-input w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/dashboard.html" class="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
+                        <i class="fas fa-home mr-1"></i> Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8">
+        <!-- Search Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                <i class="fas fa-search text-purple-600 mr-2"></i>Resultados da Busca
+            </h1>
+            <p id="search-query" class="text-lg text-gray-600"></p>
+            <p id="results-count" class="text-sm text-gray-500 mt-2"></p>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading" class="text-center py-12">
+            <i class="fas fa-spinner fa-spin text-4xl text-purple-600 mb-4"></i>
+            <p class="text-gray-600">Buscando...</p>
+        </div>
+
+        <!-- Results Tabs -->
+        <div id="results-tabs" class="mb-6 hidden">
+            <div class="border-b border-gray-200">
+                <nav class="flex space-x-8">
+                    <button onclick="showTab('all')" class="tab-btn active py-4 px-1 border-b-2 border-purple-600 text-purple-600 font-medium text-sm">
+                        Todos (<span id="count-all">0</span>)
+                    </button>
+                    <button onclick="showTab('lessons')" class="tab-btn py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm">
+                        Lições (<span id="count-lessons">0</span>)
+                    </button>
+                    <button onclick="showTab('subjects')" class="tab-btn py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm">
+                        Disciplinas (<span id="count-subjects">0</span>)
+                    </button>
+                    <button onclick="showTab('library')" class="tab-btn py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm">
+                        Biblioteca (<span id="count-library">0</span>)
+                    </button>
+                    <button onclick="showTab('news')" class="tab-btn py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm">
+                        Notícias (<span id="count-news">0</span>)
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Results Container -->
+        <div id="results-container" class="hidden">
+            <!-- Disciplines Section -->
+            <div id="subjects-section" class="mb-12">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">
+                    <i class="fas fa-book text-blue-600 mr-2"></i>Disciplinas
+                </h2>
+                <div id="subjects-results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </div>
+
+            <!-- Lessons Section -->
+            <div id="lessons-section" class="mb-12">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">
+                    <i class="fas fa-video text-green-600 mr-2"></i>Lições
+                </h2>
+                <div id="lessons-results" class="space-y-4"></div>
+            </div>
+
+            <!-- Library Section -->
+            <div id="library-section" class="mb-12">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">
+                    <i class="fas fa-book-open text-purple-600 mr-2"></i>Biblioteca
+                </h2>
+                <div id="library-results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"></div>
+            </div>
+
+            <!-- News Section -->
+            <div id="news-section" class="mb-12">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">
+                    <i class="fas fa-newspaper text-orange-600 mr-2"></i>Notícias
+                </h2>
+                <div id="news-results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="text-center py-16 hidden">
+            <i class="fas fa-search text-7xl text-gray-300 mb-4"></i>
+            <h3 class="text-2xl font-bold text-gray-700 mb-2">Nenhum resultado encontrado</h3>
+            <p class="text-gray-600 mb-6">Tente usar palavras-chave diferentes ou verifique a ortografia</p>
+            <button onclick="document.getElementById('search-input').focus()" class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                Tentar Nova Busca
+            </button>
+        </div>
+
+        <!-- Search Tips -->
+        <div id="search-tips" class="bg-blue-50 border border-blue-200 rounded-lg p-6 mt-8 hidden">
+            <h3 class="text-lg font-bold text-blue-900 mb-3">
+                <i class="fas fa-lightbulb text-blue-600 mr-2"></i>Dicas de Busca
+            </h3>
+            <ul class="space-y-2 text-sm text-blue-800">
+                <li><i class="fas fa-check text-blue-600 mr-2"></i>Use palavras-chave específicas (ex: "Física", "Matemática")</li>
+                <li><i class="fas fa-check text-blue-600 mr-2"></i>Busque por tópicos (ex: "Cinemática", "Álgebra")</li>
+                <li><i class="fas fa-check text-blue-600 mr-2"></i>Pesquise nomes de livros ou autores</li>
+                <li><i class="fas fa-check text-blue-600 mr-2"></i>Tente termos relacionados se não encontrar resultados</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script src="/static/library-data.js"></script>
+    <script src="/static/search.js"></script>
+    <script>
+        // Get search query from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchQuery = urlParams.get('q');
+        let currentResults = null;
+        let currentTab = 'all';
+
+        if (!searchQuery) {
+            window.location.href = '/';
+        }
+
+        // Update search input
+        document.getElementById('search-input').value = searchQuery;
+        document.getElementById('search-query').textContent = `Buscando por: "${searchQuery}"`;
+
+        // Perform search
+        async function performSearch() {
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('results-container').classList.add('hidden');
+            document.getElementById('empty-state').classList.add('hidden');
+
+            try {
+                const results = await VClassSearch.searchAll(searchQuery);
+                currentResults = results;
+
+                document.getElementById('loading').classList.add('hidden');
+
+                if (results.total === 0) {
+                    document.getElementById('empty-state').classList.remove('hidden');
+                    document.getElementById('search-tips').classList.remove('hidden');
+                } else {
+                    document.getElementById('results-container').classList.remove('hidden');
+                    document.getElementById('results-tabs').classList.remove('hidden');
+                    displayResults(results);
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('empty-state').classList.remove('hidden');
+            }
+        }
+
+        function displayResults(results) {
+            // Update counts
+            document.getElementById('count-all').textContent = results.total;
+            document.getElementById('count-lessons').textContent = results.lessons.length;
+            document.getElementById('count-subjects').textContent = results.subjects.length;
+            document.getElementById('count-library').textContent = results.library.length;
+            document.getElementById('count-news').textContent = results.news.length;
+            document.getElementById('results-count').textContent = `${results.total} resultado(s) encontrado(s)`;
+
+            // Display subjects
+            if (results.subjects.length > 0) {
+                const subjectsHtml = results.subjects.map(subject => `
+                    <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition">
+                        <div class="flex items-center mb-3">
+                            <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-3" style="background-color: ${subject.color}20">
+                                <i class="fas fa-book text-xl" style="color: ${subject.color}"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900">${subject.name}</h3>
+                                <p class="text-sm text-gray-600">${subject.grade_name}</p>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-600 mb-3">${subject.description || ''}</p>
+                        <button onclick="window.location.href='/browse.html'" class="text-purple-600 hover:text-purple-700 font-medium text-sm">
+                            Ver Conteúdo <i class="fas fa-arrow-right ml-1"></i>
+                        </button>
+                    </div>
+                `).join('');
+                document.getElementById('subjects-results').innerHTML = subjectsHtml;
+            } else {
+                document.getElementById('subjects-section').classList.add('hidden');
+            }
+
+            // Display lessons
+            if (results.lessons.length > 0) {
+                const lessonsHtml = results.lessons.map(lesson => `
+                    <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition">
+                        <div class="flex items-start space-x-4">
+                            <div class="w-32 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+                                <img src="${lesson.thumbnail_url || 'https://via.placeholder.com/128x80'}" alt="${lesson.title}" class="w-full h-full object-cover">
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-lg font-bold text-gray-900 mb-2">${lesson.title}</h3>
+                                <p class="text-sm text-gray-600 mb-3 line-clamp-2">${lesson.description || ''}</p>
+                                <div class="flex items-center space-x-4 text-xs text-gray-500">
+                                    ${lesson.video_duration ? `<span><i class="fas fa-clock mr-1"></i>${Math.floor(lesson.video_duration / 60)} min</span>` : ''}
+                                    ${lesson.is_free ? '<span class="px-2 py-1 bg-green-100 text-green-800 rounded">GRÁTIS</span>' : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                document.getElementById('lessons-results').innerHTML = lessonsHtml;
+            } else {
+                document.getElementById('lessons-section').classList.add('hidden');
+            }
+
+            // Display library
+            if (results.library.length > 0) {
+                const libraryHtml = results.library.map(book => `
+                    <div class="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition">
+                        <div class="h-48 bg-gray-200 rounded-lg mb-3 overflow-hidden">
+                            <img src="${book.cover}" alt="${book.title}" class="w-full h-full object-cover">
+                        </div>
+                        <h3 class="text-sm font-bold text-gray-900 mb-1 line-clamp-1">${book.title}</h3>
+                        <p class="text-xs text-gray-600 mb-2">${book.author}</p>
+                        <div class="flex items-center justify-between text-xs text-gray-500">
+                            <span><i class="fas fa-file-pdf mr-1"></i>${book.pages}p</span>
+                            <span class="px-2 py-1 bg-purple-100 text-purple-700 rounded">${book.subject}</span>
+                        </div>
+                    </div>
+                `).join('');
+                document.getElementById('library-results').innerHTML = libraryHtml;
+            } else {
+                document.getElementById('library-section').classList.add('hidden');
+            }
+
+            // Display news (if available)
+            if (results.news && results.news.length > 0) {
+                // News display code here
+                document.getElementById('news-section').classList.remove('hidden');
+            } else {
+                document.getElementById('news-section').classList.add('hidden');
+            }
+        }
+
+        function showTab(tab) {
+            currentTab = tab;
+            
+            // Update tab styles
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-purple-600', 'text-purple-600');
+                btn.classList.add('border-transparent', 'text-gray-500');
+            });
+            event.target.classList.remove('border-transparent', 'text-gray-500');
+            event.target.classList.add('border-purple-600', 'text-purple-600');
+
+            // Show/hide sections
+            if (tab === 'all') {
+                document.getElementById('subjects-section').classList.remove('hidden');
+                document.getElementById('lessons-section').classList.remove('hidden');
+                document.getElementById('library-section').classList.remove('hidden');
+                document.getElementById('news-section').classList.remove('hidden');
+            } else {
+                document.getElementById('subjects-section').classList.add('hidden');
+                document.getElementById('lessons-section').classList.add('hidden');
+                document.getElementById('library-section').classList.add('hidden');
+                document.getElementById('news-section').classList.add('hidden');
+                document.getElementById(`${tab}-section`).classList.remove('hidden');
+            }
+        }
+
+        // Perform search on load
+        performSearch();
+    </script>
+</body>
+</html>

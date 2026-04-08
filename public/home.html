@@ -30,6 +30,38 @@
         .hero-overlay {
             background: linear-gradient(to right, rgba(30, 64, 175, 0.9), rgba(59, 130, 246, 0.7));
         }
+        
+        /* Hero Slider Styles */
+        .hero-slide {
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+            pointer-events: none;
+        }
+        .hero-slide.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .slider-dot {
+            cursor: pointer;
+        }
+        .slider-dot.active {
+            width: 2rem;
+            background-color: white !important;
+            opacity: 1 !important;
+        }
+        @keyframes fade-in {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .animate-fade-in {
+            animation: fade-in 0.8s ease-out;
+        }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -97,24 +129,100 @@
         </div>
     </div>
 
-    <!-- Hero Section with Background Image -->
-    <section class="relative bg-cover bg-center h-96" style="background-image: url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1600');">
-        <div class="hero-overlay absolute inset-0"></div>
-        <div class="relative container mx-auto px-6 h-full flex items-center">
-            <div class="text-white max-w-2xl">
-                <h2 class="text-5xl font-bold mb-4">Aprenda no Seu Ritmo</h2>
-                <p class="text-xl mb-6 text-blue-100">
-                    Acesso a aulas em vídeo, exercícios práticos e provas anteriores das classes 1ª a 12ª
-                </p>
-                <div class="flex space-x-4">
-                    <button onclick="window.location.href='/browse.html'" class="px-8 py-3 bg-white text-blue-600 rounded-lg font-semibold hover:bg-gray-100 transition shadow-lg">
-                        Explorar Conteúdo
-                    </button>
-                    <button onclick="scrollToClasses()" class="px-8 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition shadow-lg">
-                        Ver Classes
-                    </button>
+    <!-- Hero Slider/Carousel Section -->
+    <section class="relative h-96 overflow-hidden">
+        <!-- Slides Container -->
+        <div id="hero-slider" class="relative h-full">
+            <!-- Slide 1 -->
+            <div class="hero-slide active absolute inset-0 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1600');">
+                <div class="hero-overlay absolute inset-0"></div>
+                <div class="relative container mx-auto px-6 h-full flex items-center">
+                    <div class="text-white max-w-2xl">
+                        <h2 class="text-5xl font-bold mb-4 animate-fade-in">Aprenda no Seu Ritmo</h2>
+                        <p class="text-xl mb-6 text-blue-100">
+                            Acesso a aulas em vídeo, exercícios práticos e provas anteriores das classes 1ª a 12ª
+                        </p>
+                        <div class="flex space-x-4">
+                            <button onclick="window.location.href='/browse.html'" class="px-8 py-3 bg-white text-blue-600 rounded-lg font-semibold hover:bg-gray-100 transition shadow-lg">
+                                Explorar Conteúdo
+                            </button>
+                            <button onclick="scrollToClasses()" class="px-8 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition shadow-lg">
+                                Ver Classes
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
+
+            <!-- Slide 2 -->
+            <div class="hero-slide absolute inset-0 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=1600');">
+                <div class="hero-overlay absolute inset-0"></div>
+                <div class="relative container mx-auto px-6 h-full flex items-center">
+                    <div class="text-white max-w-2xl">
+                        <h2 class="text-5xl font-bold mb-4">Biblioteca Digital Completa</h2>
+                        <p class="text-xl mb-6 text-blue-100">
+                            Acesse mais de 124 livros, apostilas e exercícios das disciplinas de todas as classes
+                        </p>
+                        <div class="flex space-x-4">
+                            <button onclick="window.location.href='/library.html'" class="px-8 py-3 bg-white text-purple-600 rounded-lg font-semibold hover:bg-gray-100 transition shadow-lg">
+                                Ver Biblioteca
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 3 -->
+            <div class="hero-slide absolute inset-0 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1600');">
+                <div class="hero-overlay absolute inset-0"></div>
+                <div class="relative container mx-auto px-6 h-full flex items-center">
+                    <div class="text-white max-w-2xl">
+                        <h2 class="text-5xl font-bold mb-4">Mais de 500 Aulas em Vídeo</h2>
+                        <p class="text-xl mb-6 text-blue-100">
+                            Conteúdo de qualidade organizado por trimestre e disciplina para todas as classes
+                        </p>
+                        <div class="flex space-x-4">
+                            <button onclick="window.location.href='/browse.html'" class="px-8 py-3 bg-white text-green-600 rounded-lg font-semibold hover:bg-gray-100 transition shadow-lg">
+                                Começar Agora
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 4 -->
+            <div class="hero-slide absolute inset-0 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?w=1600');">
+                <div class="hero-overlay absolute inset-0"></div>
+                <div class="relative container mx-auto px-6 h-full flex items-center">
+                    <div class="text-white max-w-2xl">
+                        <h2 class="text-5xl font-bold mb-4">Prepare-se para os Exames</h2>
+                        <p class="text-xl mb-6 text-blue-100">
+                            Exercícios práticos e exames anteriores para você treinar e ter sucesso
+                        </p>
+                        <div class="flex space-x-4">
+                            <button onclick="window.location.href='/browse.html'" class="px-8 py-3 bg-white text-orange-600 rounded-lg font-semibold hover:bg-gray-100 transition shadow-lg">
+                                Ver Exercícios
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Arrows -->
+        <button onclick="previousSlide()" class="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-40 text-white p-3 rounded-full transition z-10">
+            <i class="fas fa-chevron-left text-2xl"></i>
+        </button>
+        <button onclick="nextSlide()" class="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-40 text-white p-3 rounded-full transition z-10">
+            <i class="fas fa-chevron-right text-2xl"></i>
+        </button>
+
+        <!-- Indicators/Dots -->
+        <div class="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-3 z-10">
+            <button onclick="goToSlide(0)" class="slider-dot active w-3 h-3 rounded-full bg-white transition"></button>
+            <button onclick="goToSlide(1)" class="slider-dot w-3 h-3 rounded-full bg-white bg-opacity-50 transition"></button>
+            <button onclick="goToSlide(2)" class="slider-dot w-3 h-3 rounded-full bg-white bg-opacity-50 transition"></button>
+            <button onclick="goToSlide(3)" class="slider-dot w-3 h-3 rounded-full bg-white bg-opacity-50 transition"></button>
         </div>
     </section>
 
@@ -502,9 +610,74 @@
     <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
     <script src="/static/app.js"></script>
     <script>
+        // Hero Slider Functionality
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.hero-slide');
+        const dots = document.querySelectorAll('.slider-dot');
+        const totalSlides = slides.length;
+        let autoSlideInterval;
+
+        function showSlide(index) {
+            // Remove active class from all slides and dots
+            slides.forEach(slide => slide.classList.remove('active'));
+            dots.forEach(dot => dot.classList.remove('active'));
+            
+            // Add active class to current slide and dot
+            slides[index].classList.add('active');
+            dots[index].classList.add('active');
+            
+            currentSlide = index;
+        }
+
+        function nextSlide() {
+            const next = (currentSlide + 1) % totalSlides;
+            showSlide(next);
+            resetAutoSlide();
+        }
+
+        function previousSlide() {
+            const prev = (currentSlide - 1 + totalSlides) % totalSlides;
+            showSlide(prev);
+            resetAutoSlide();
+        }
+
+        function goToSlide(index) {
+            showSlide(index);
+            resetAutoSlide();
+        }
+
+        function startAutoSlide() {
+            autoSlideInterval = setInterval(() => {
+                nextSlide();
+            }, 5000); // Change slide every 5 seconds
+        }
+
+        function resetAutoSlide() {
+            clearInterval(autoSlideInterval);
+            startAutoSlide();
+        }
+
+        // Original functions
         function scrollToClasses() {
             document.getElementById('classes').scrollIntoView({ behavior: 'smooth' });
         }
+
+        // Initialize slider
+        document.addEventListener('DOMContentLoaded', () => {
+            showSlide(0);
+            startAutoSlide();
+            
+            // Pause auto-slide on hover
+            const sliderContainer = document.getElementById('hero-slider');
+            if (sliderContainer) {
+                sliderContainer.addEventListener('mouseenter', () => {
+                    clearInterval(autoSlideInterval);
+                });
+                sliderContainer.addEventListener('mouseleave', () => {
+                    startAutoSlide();
+                });
+            }
+        });
 
         // Add animation on scroll
         const observerOptions = {

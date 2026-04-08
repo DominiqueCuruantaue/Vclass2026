@@ -18,6 +18,7 @@ import notificationsHtml from '../pages/notifications.html?raw'
 import achievementsHtml from '../pages/achievements.html?raw'
 import chatHtml from '../pages/chat.html?raw'
 import newsHtml from '../pages/news.html?raw'
+import searchHtml from '../pages/search.html?raw'
 
 // Serve HTML pages
 app.get('/', (c) => c.html(homeHtml))
@@ -36,5 +37,6 @@ app.get('/notifications.html', (c) => c.html(notificationsHtml))
 app.get('/achievements.html', (c) => c.html(achievementsHtml))
 app.get('/chat.html', (c) => c.html(chatHtml))
 app.get('/news.html', (c) => c.html(newsHtml))
+app.get('/search.html', (c) => c.html(searchHtml))
 
 export default app
