@@ -1,12 +1,20 @@
 // Authentication Routes
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { initSupabase } from '../config/supabase'
+import { getSupabase } from '../config/supabase'
 import { hashPassword, verifyPassword, validatePassword } from '../utils/password'
 import { generateAccessToken, generateRefreshToken, verifyToken } from '../utils/jwt'
+import { mockUsers } from '../middleware/database'
 import type { ApiResponse, AuthResponse } from '../types'
 
 const auth = new Hono()
+
+// Check if database is configured
+function isDatabaseConfigured(env?: any): boolean {
+  const hasUrl = !!(env?.SUPABASE_URL || process.env.SUPABASE_URL)
+  const hasKey = !!(env?.SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY)
+  return hasUrl && hasKey
+}
 
 // Validation schemas
 const loginSchema = z.object({
@@ -154,30 +162,66 @@ auth.post('/login', async (c) => {
     
     const { email, password } = validation.data
     
-    // Get Supabase credentials
-    const supabaseUrl = c.env?.SUPABASE_URL
-    const supabaseKey = c.env?.SUPABASE_ANON_KEY
+    // Check if database is configured
+    if (!isDatabaseConfigured(c.env)) {
+      // DEMO MODE: Use mock users
+      const demoUser = mockUsers.find(u => u.email === email)
+      
+      if (!demoUser || password !== 'password123') {
+        return c.json<ApiResponse>({
+          success: false,
+          error: 'Invalid credentials (Demo mode: use password123)'
+        }, 401)
+      }
+      
+      // Generate tokens for demo user
+      const accessToken = generateAccessToken({
+        sub: demoUser.id,
+        email: demoUser.email,
+        role: demoUser.role as 'student' | 'teacher' | 'admin'
+      })
+      
+      const refreshToken = generateRefreshToken({
+        sub: demoUser.id,
+        email: demoUser.email,
+        role: demoUser.role as 'student' | 'teacher' | 'admin'
+      })
+      
+      return c.json<ApiResponse<AuthResponse>>({
+        success: true,
+        data: {
+          user: {
+            ...demoUser,
+            name: demoUser.full_name
+          },
+          accessToken,
+          refreshToken
+        },
+        message: 'Login successful (Demo mode - database not configured)'
+      })
+    }
     
-    if (!supabaseUrl || !supabaseKey) {
+    // PRODUCTION MODE: Use Supabase
+    const supabase = getSupabase(c.env)
+    
+    if (!supabase) {
       return c.json<ApiResponse>({
         success: false,
-        error: 'Database configuration missing'
+        error: 'Database configuration error'
       }, 500)
     }
     
-    const supabase = initSupabase(supabaseUrl, supabaseKey)
-    
-    // Find user by email
+    // Get user by email
     const { data: user, error } = await supabase
       .from('users')
-      .select('id, email, password_hash, full_name, role, country_id, phone, avatar_url, is_active, is_verified')
+      .select('id, email, password_hash, full_name, role, country_id, phone, avatar_url, is_verified, is_active, created_at')
       .eq('email', email)
       .single()
     
     if (error || !user) {
       return c.json<ApiResponse>({
         success: false,
-        error: 'Invalid email or password'
+        error: 'Invalid credentials'
       }, 401)
     }
     
@@ -185,7 +229,7 @@ auth.post('/login', async (c) => {
     if (!user.is_active) {
       return c.json<ApiResponse>({
         success: false,
-        error: 'Account is deactivated'
+        error: 'Account is deactivated. Please contact support.'
       }, 403)
     }
     
@@ -195,18 +239,9 @@ auth.post('/login', async (c) => {
     if (!isValid) {
       return c.json<ApiResponse>({
         success: false,
-        error: 'Invalid email or password'
+        error: 'Invalid credentials'
       }, 401)
     }
-    
-    // Update last login
-    await supabase
-      .from('users')
-      .update({ last_login_at: new Date().toISOString() })
-      .eq('id', user.id)
-    
-    // Remove password_hash from response
-    const { password_hash, ...userWithoutPassword } = user
     
     // Generate tokens
     const accessToken = generateAccessToken({
@@ -221,10 +256,16 @@ auth.post('/login', async (c) => {
       role: user.role
     })
     
+    // Remove password_hash from response
+    const { password_hash, ...userWithoutPassword } = user
+    
     return c.json<ApiResponse<AuthResponse>>({
       success: true,
       data: {
-        user: userWithoutPassword,
+        user: {
+          ...userWithoutPassword,
+          name: user.full_name
+        },
         accessToken,
         refreshToken
       },
@@ -239,11 +280,6 @@ auth.post('/login', async (c) => {
     }, 500)
   }
 })
-
-/**
- * POST /api/auth/refresh
- * Refresh access token
- */
 auth.post('/refresh', async (c) => {
   try {
     const body = await c.req.json()
@@ -325,18 +361,36 @@ auth.get('/me', async (c) => {
       }, 401)
     }
     
-    // Get user data
-    const supabaseUrl = c.env?.SUPABASE_URL
-    const supabaseKey = c.env?.SUPABASE_ANON_KEY
-    
-    if (!supabaseUrl || !supabaseKey) {
+    // Check if database is configured
+    if (!isDatabaseConfigured(c.env)) {
+      // DEMO MODE: Return mock user
+      const demoUser = mockUsers.find(u => u.id === decoded.sub)
+      
+      if (!demoUser) {
+        return c.json<ApiResponse>({
+          success: false,
+          error: 'User not found (Demo mode)'
+        }, 404)
+      }
+      
       return c.json<ApiResponse>({
-        success: false,
-        error: 'Database configuration missing'
-      }, 500)
+        success: true,
+        data: {
+          ...demoUser,
+          name: demoUser.full_name
+        }
+      })
     }
     
-    const supabase = initSupabase(supabaseUrl, supabaseKey)
+    // PRODUCTION MODE: Use Supabase
+    const supabase = getSupabase(c.env)
+    
+    if (!supabase) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Database configuration error'
+      }, 500)
+    }
     
     const { data: user, error } = await supabase
       .from('users')
@@ -353,7 +407,10 @@ auth.get('/me', async (c) => {
     
     return c.json<ApiResponse>({
       success: true,
-      data: user
+      data: {
+        ...user,
+        name: user.full_name
+      }
     })
     
   } catch (error) {

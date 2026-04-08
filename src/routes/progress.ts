@@ -1,13 +1,21 @@
 // Student Progress & Dashboard Routes
 import { Hono } from 'hono'
-import { initSupabase } from '../config/supabase'
+import { getSupabase } from '../config/supabase'
 import { authMiddleware, requireStudent } from '../middleware/auth'
+import { mockDashboardData } from '../middleware/database'
 import type { ApiResponse } from '../types'
 
 const progress = new Hono()
 
 // Apply auth middleware
 progress.use('/*', authMiddleware)
+
+// Check if database is configured
+function isDatabaseConfigured(env?: any): boolean {
+  const hasUrl = !!(env?.SUPABASE_URL || process.env.SUPABASE_URL)
+  const hasKey = !!(env?.SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY)
+  return hasUrl && hasKey
+}
 
 /**
  * GET /api/progress/dashboard
@@ -17,17 +25,25 @@ progress.get('/dashboard', requireStudent, async (c) => {
   try {
     const user = c.get('user')
     
-    const supabaseUrl = c.env?.SUPABASE_URL
-    const supabaseKey = c.env?.SUPABASE_ANON_KEY
-    
-    if (!supabaseUrl || !supabaseKey) {
+    // Check if database is configured
+    if (!isDatabaseConfigured(c.env)) {
+      // DEMO MODE: Return mock data
       return c.json<ApiResponse>({
-        success: false,
-        error: 'Database configuration missing'
-      }, 500)
+        success: true,
+        data: mockDashboardData,
+        message: 'Demo data (database not configured)'
+      })
     }
     
-    const supabase = initSupabase(supabaseUrl, supabaseKey)
+    // PRODUCTION MODE: Use Supabase
+    const supabase = getSupabase(c.env)
+    
+    if (!supabase) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Database configuration error'
+      }, 500)
+    }
     
     // Get dashboard data from view
     const { data: dashboard, error } = await supabase
@@ -67,11 +83,11 @@ progress.get('/dashboard', requireStudent, async (c) => {
     return c.json<ApiResponse>({
       success: true,
       data: {
-        summary: dashboard || {
-          lessons_completed: 0,
-          exercises_completed: 0,
-          avg_score: 0,
-          total_time_spent_seconds: 0
+        stats: dashboard || {
+          totalLessons: 0,
+          completedLessons: 0,
+          totalExercises: 0,
+          averageScore: 0
         },
         recentActivity: recentLessons || [],
         subjectProgress: subjectProgress || []

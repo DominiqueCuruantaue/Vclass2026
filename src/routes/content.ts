@@ -1,10 +1,18 @@
 // Content Routes - Countries, Grades, Subjects, Chapters, Lessons
 import { Hono } from 'hono'
-import { initSupabase } from '../config/supabase'
+import { getSupabase } from '../config/supabase'
 import { authMiddleware } from '../middleware/auth'
+import { mockCountries } from '../middleware/database'
 import type { ApiResponse, PaginatedResponse } from '../types'
 
 const content = new Hono()
+
+// Check if database is configured
+function isDatabaseConfigured(env?: any): boolean {
+  const hasUrl = !!(env?.SUPABASE_URL || process.env.SUPABASE_URL)
+  const hasKey = !!(env?.SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY)
+  return hasUrl && hasKey
+}
 
 /**
  * GET /api/content/countries
@@ -12,17 +20,25 @@ const content = new Hono()
  */
 content.get('/countries', async (c) => {
   try {
-    const supabaseUrl = c.env?.SUPABASE_URL
-    const supabaseKey = c.env?.SUPABASE_ANON_KEY
-    
-    if (!supabaseUrl || !supabaseKey) {
+    // Check if database is configured
+    if (!isDatabaseConfigured(c.env)) {
+      // DEMO MODE: Return mock countries
       return c.json<ApiResponse>({
-        success: false,
-        error: 'Database configuration missing'
-      }, 500)
+        success: true,
+        data: mockCountries,
+        message: 'Demo data (database not configured)'
+      })
     }
     
-    const supabase = initSupabase(supabaseUrl, supabaseKey)
+    // PRODUCTION MODE: Use Supabase
+    const supabase = getSupabase(c.env)
+    
+    if (!supabase) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Database configuration error'
+      }, 500)
+    }
     
     const { data, error } = await supabase
       .from('countries')
