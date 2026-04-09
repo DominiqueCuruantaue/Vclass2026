@@ -6,290 +6,592 @@
     <title>Dashboard - VClass</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
     <link href="/static/styles.css" rel="stylesheet">
+    <style>
+        .stat-card { transition: transform 0.2s, box-shadow 0.2s; }
+        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px rgba(0,0,0,0.12); }
+        .stat-number { font-variant-numeric: tabular-nums; }
+        @keyframes countUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .count-animate { animation: countUp 0.5s ease forwards; }
+        .streak-flame { animation: flicker 1.5s ease-in-out infinite alternate; }
+        @keyframes flicker { from { transform: scale(1) rotate(-3deg); } to { transform: scale(1.1) rotate(3deg); } }
+        .progress-bar-fill { transition: width 1s cubic-bezier(0.4,0,0.2,1); }
+        .lesson-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+        .lesson-card { transition: transform 0.2s, box-shadow 0.2s; }
+        .badge { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 50%; font-size: 1.5rem; }
+        .nav-link-active { background: #f5f3ff; color: #7c3aed; font-weight: 600; }
+        .avatar-circle { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; color: white; }
+        .dropdown-menu { display: none; position: absolute; right: 0; top: calc(100% + 8px); background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); min-width: 220px; z-index: 100; overflow: hidden; }
+        .dropdown-menu.open { display: block; }
+        .quick-access-card { cursor: pointer; transition: all 0.2s; border: 2px solid transparent; }
+        .quick-access-card:hover { border-color: #7c3aed; background: #faf5ff; }
+        .greeting-time { font-size: 0.85rem; }
+    </style>
 </head>
 <body class="bg-gray-50">
+
     <!-- Navigation -->
-    <nav class="bg-white shadow-sm">
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
         <div class="container mx-auto px-4">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center space-x-8">
-                    <div class="flex items-center space-x-2">
+                    <a href="/dashboard.html" class="flex items-center space-x-2">
                         <i class="fas fa-graduation-cap text-2xl text-purple-600"></i>
                         <span class="text-xl font-bold text-gray-900">VClass</span>
-                    </div>
-                    <div class="hidden md:flex space-x-4">
-                        <a href="/dashboard.html" class="px-3 py-2 rounded-md text-sm font-medium text-purple-600 bg-purple-50">
+                    </a>
+                    <div class="hidden md:flex space-x-1">
+                        <a href="/dashboard.html" class="nav-link-active px-3 py-2 rounded-lg text-sm">
                             <i class="fas fa-home mr-1"></i> Dashboard
                         </a>
-                        <a href="/browse.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
+                        <a href="/browse.html" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100">
                             <i class="fas fa-book mr-1"></i> Conteúdo
                         </a>
-                        <a href="/my-progress.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
+                        <a href="/progress.html" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100">
                             <i class="fas fa-chart-line mr-1"></i> Progresso
+                        </a>
+                        <a href="/library.html" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100">
+                            <i class="fas fa-book-open mr-1"></i> Biblioteca
                         </a>
                     </div>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <span id="user-name" class="text-sm text-gray-700"></span>
-                    <button onclick="VClass.logout()" class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md">
-                        <i class="fas fa-sign-out-alt mr-1"></i> Sair
+                <div class="flex items-center space-x-3">
+                    <!-- Notifications -->
+                    <button class="relative p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition">
+                        <i class="fas fa-bell text-lg"></i>
+                        <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                     </button>
+                    <!-- User dropdown -->
+                    <div class="relative" id="user-dropdown-container">
+                        <button onclick="toggleDropdown()" class="flex items-center space-x-2 p-1 rounded-lg hover:bg-gray-100 transition">
+                            <div id="nav-avatar" class="avatar-circle bg-purple-600">?</div>
+                            <span id="nav-user-name" class="hidden md:block text-sm font-medium text-gray-700"></span>
+                            <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                        </button>
+                        <div class="dropdown-menu" id="user-dropdown">
+                            <div class="px-4 py-3 border-b border-gray-100 bg-purple-50">
+                                <p id="dropdown-name" class="font-semibold text-gray-900"></p>
+                                <p id="dropdown-email" class="text-xs text-gray-500"></p>
+                            </div>
+                            <a href="/profile.html" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition">
+                                <i class="fas fa-user w-5 text-purple-600 mr-2"></i> Meu Perfil
+                            </a>
+                            <a href="/progress.html" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition">
+                                <i class="fas fa-chart-line w-5 text-blue-600 mr-2"></i> Meu Progresso
+                            </a>
+                            <a href="/achievements.html" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition">
+                                <i class="fas fa-trophy w-5 text-yellow-500 mr-2"></i> Conquistas
+                            </a>
+                            <div class="border-t border-gray-100">
+                                <button onclick="VClass.logout()" class="flex items-center w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition">
+                                    <i class="fas fa-sign-out-alt w-5 mr-2"></i> Sair
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </nav>
 
     <!-- Main Content -->
-    <main class="container mx-auto px-4 py-8">
-        <!-- Welcome Section -->
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">
-                Olá, <span id="welcome-name">Estudante</span>! 👋
-            </h1>
-            <p class="text-gray-600">Continue sua jornada de aprendizado</p>
+    <main class="container mx-auto px-4 py-8 max-w-7xl">
+
+        <!-- Welcome Header -->
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+            <div>
+                <div class="flex items-center space-x-3 mb-1">
+                    <h1 class="text-3xl font-bold text-gray-900">
+                        <span id="greeting">Olá</span>, <span id="welcome-name" class="text-purple-600">Estudante</span>! <span id="greeting-emoji">👋</span>
+                    </h1>
+                </div>
+                <p class="text-gray-500" id="greeting-sub">Continue sua jornada de aprendizado hoje</p>
+            </div>
+            <!-- Streak Counter -->
+            <div class="mt-4 md:mt-0 flex items-center space-x-4">
+                <div class="bg-gradient-to-r from-orange-400 to-red-400 rounded-2xl px-5 py-3 text-white flex items-center space-x-3 shadow-md">
+                    <span class="streak-flame text-2xl">🔥</span>
+                    <div>
+                        <p class="text-xs font-medium opacity-80">Sequência</p>
+                        <p class="text-xl font-bold" id="streak-count">0 dias</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl px-5 py-3 flex items-center space-x-3 shadow-sm border border-gray-100">
+                    <span class="text-2xl">⭐</span>
+                    <div>
+                        <p class="text-xs font-medium text-gray-500">Pontos XP</p>
+                        <p class="text-xl font-bold text-gray-900" id="xp-count">0</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Stats Cards -->
-        <div id="stats-container" class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <!-- Loading skeleton -->
-            <div class="bg-white p-6 rounded-lg shadow-md animate-pulse">
-                <div class="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-                <div class="h-8 bg-gray-200 rounded w-1/2"></div>
-            </div>
-            <div class="bg-white p-6 rounded-lg shadow-md animate-pulse">
-                <div class="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-                <div class="h-8 bg-gray-200 rounded w-1/2"></div>
-            </div>
-            <div class="bg-white p-6 rounded-lg shadow-md animate-pulse">
-                <div class="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-                <div class="h-8 bg-gray-200 rounded w-1/2"></div>
-            </div>
-            <div class="bg-white p-6 rounded-lg shadow-md animate-pulse">
-                <div class="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-                <div class="h-8 bg-gray-200 rounded w-1/2"></div>
-            </div>
+        <div id="stats-container" class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <!-- Loading skeletons -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm animate-pulse"><div class="h-4 bg-gray-200 rounded w-3/4 mb-4"></div><div class="h-8 bg-gray-200 rounded w-1/2"></div></div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm animate-pulse"><div class="h-4 bg-gray-200 rounded w-3/4 mb-4"></div><div class="h-8 bg-gray-200 rounded w-1/2"></div></div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm animate-pulse"><div class="h-4 bg-gray-200 rounded w-3/4 mb-4"></div><div class="h-8 bg-gray-200 rounded w-1/2"></div></div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm animate-pulse"><div class="h-4 bg-gray-200 rounded w-3/4 mb-4"></div><div class="h-8 bg-gray-200 rounded w-1/2"></div></div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Recent Activity -->
-            <div class="lg:col-span-2">
-                <div class="bg-white rounded-lg shadow-md p-6">
-                    <h2 class="text-xl font-bold text-gray-900 mb-4">
-                        <i class="fas fa-clock text-purple-600 mr-2"></i>
-                        Atividade Recente
-                    </h2>
-                    <div id="recent-activity" class="space-y-4">
-                        <!-- Loading -->
-                        <div class="animate-pulse space-y-4">
-                            <div class="h-20 bg-gray-100 rounded"></div>
-                            <div class="h-20 bg-gray-100 rounded"></div>
-                            <div class="h-20 bg-gray-100 rounded"></div>
+        <!-- Main Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+
+            <!-- Left: Activity Chart + Continue Watching -->
+            <div class="lg:col-span-2 space-y-6">
+
+                <!-- Weekly Activity Chart -->
+                <div class="bg-white rounded-2xl shadow-sm p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-gray-900">
+                            <i class="fas fa-chart-bar text-purple-600 mr-2"></i>
+                            Atividade Semanal
+                        </h2>
+                        <div class="flex space-x-1 bg-gray-100 rounded-lg p-1">
+                            <button onclick="switchChart('lessons')" id="btn-lessons" class="chart-tab px-3 py-1 text-xs font-medium rounded-md bg-white text-gray-900 shadow-sm transition">Aulas</button>
+                            <button onclick="switchChart('time')" id="btn-time" class="chart-tab px-3 py-1 text-xs font-medium rounded-md text-gray-500 transition">Tempo</button>
+                            <button onclick="switchChart('exercises')" id="btn-exercises" class="chart-tab px-3 py-1 text-xs font-medium rounded-md text-gray-500 transition">Exercícios</button>
+                        </div>
+                    </div>
+                    <canvas id="activityChart" height="120"></canvas>
+                </div>
+
+                <!-- Continue Watching -->
+                <div class="bg-white rounded-2xl shadow-sm p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-gray-900">
+                            <i class="fas fa-play-circle text-purple-600 mr-2"></i>
+                            Continue Assistindo
+                        </h2>
+                        <a href="/browse.html" class="text-sm text-purple-600 hover:text-purple-700 font-medium">Ver tudo →</a>
+                    </div>
+                    <div id="continue-watching" class="space-y-3">
+                        <div class="animate-pulse space-y-3">
+                            <div class="h-20 bg-gray-100 rounded-xl"></div>
+                            <div class="h-20 bg-gray-100 rounded-xl"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="bg-white rounded-2xl shadow-sm p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-gray-900">
+                            <i class="fas fa-history text-purple-600 mr-2"></i>
+                            Atividade Recente
+                        </h2>
+                    </div>
+                    <div id="recent-activity" class="space-y-3">
+                        <div class="animate-pulse space-y-3">
+                            <div class="h-16 bg-gray-100 rounded-xl"></div>
+                            <div class="h-16 bg-gray-100 rounded-xl"></div>
+                            <div class="h-16 bg-gray-100 rounded-xl"></div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Subject Progress -->
-            <div>
-                <div class="bg-white rounded-lg shadow-md p-6">
-                    <h2 class="text-xl font-bold text-gray-900 mb-4">
-                        <i class="fas fa-book-open text-purple-600 mr-2"></i>
-                        Progresso por Disciplina
-                    </h2>
+            <!-- Right Sidebar -->
+            <div class="space-y-6">
+
+                <!-- Daily Goal -->
+                <div class="bg-gradient-to-br from-purple-600 to-purple-800 rounded-2xl p-6 text-white shadow-md">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-bold text-lg">Meta Diária</h3>
+                        <span class="text-2xl">🎯</span>
+                    </div>
+                    <div class="mb-3">
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="opacity-80">Progresso de hoje</span>
+                            <span id="daily-progress-text" class="font-bold">0 / 3 aulas</span>
+                        </div>
+                        <div class="w-full bg-white/20 rounded-full h-3">
+                            <div id="daily-progress-bar" class="bg-white rounded-full h-3 progress-bar-fill" style="width:0%"></div>
+                        </div>
+                    </div>
+                    <p class="text-xs opacity-70" id="daily-msg">Assista 3 aulas hoje para manter sua sequência!</p>
+                </div>
+
+                <!-- Subject Progress -->
+                <div class="bg-white rounded-2xl shadow-sm p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-gray-900">
+                            <i class="fas fa-book-open text-purple-600 mr-2"></i>
+                            Disciplinas
+                        </h2>
+                        <a href="/progress.html" class="text-sm text-purple-600 hover:text-purple-700 font-medium">Detalhes →</a>
+                    </div>
                     <div id="subject-progress" class="space-y-4">
-                        <!-- Loading -->
                         <div class="animate-pulse space-y-4">
-                            <div class="h-16 bg-gray-100 rounded"></div>
-                            <div class="h-16 bg-gray-100 rounded"></div>
-                            <div class="h-16 bg-gray-100 rounded"></div>
+                            <div class="h-14 bg-gray-100 rounded-xl"></div>
+                            <div class="h-14 bg-gray-100 rounded-xl"></div>
+                            <div class="h-14 bg-gray-100 rounded-xl"></div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Achievements Preview -->
+                <div class="bg-white rounded-2xl shadow-sm p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-gray-900">
+                            <i class="fas fa-trophy text-yellow-500 mr-2"></i>
+                            Conquistas
+                        </h2>
+                        <a href="/achievements.html" class="text-sm text-purple-600 hover:text-purple-700 font-medium">Ver todas →</a>
+                    </div>
+                    <div class="grid grid-cols-4 gap-2" id="achievements-preview">
+                        <div class="badge bg-yellow-100 text-2xl" title="Primeiro Passo">🎓</div>
+                        <div class="badge bg-blue-100 text-2xl" title="Explorador">🔭</div>
+                        <div class="badge bg-green-100 text-2xl" title="Dedicado">📚</div>
+                        <div class="badge bg-gray-100 text-2xl opacity-40" title="Bloqueado">🔒</div>
+                        <div class="badge bg-gray-100 text-2xl opacity-40" title="Bloqueado">🔒</div>
+                        <div class="badge bg-gray-100 text-2xl opacity-40" title="Bloqueado">🔒</div>
+                        <div class="badge bg-gray-100 text-2xl opacity-40" title="Bloqueado">🔒</div>
+                        <div class="badge bg-gray-100 text-2xl opacity-40" title="Bloqueado">🔒</div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-3 text-center">3 de 12 conquistas desbloqueadas</p>
+                </div>
+
+                <!-- Quick Access -->
+                <div class="bg-white rounded-2xl shadow-sm p-6">
+                    <h2 class="text-lg font-bold text-gray-900 mb-4">
+                        <i class="fas fa-bolt text-yellow-500 mr-2"></i>
+                        Acesso Rápido
+                    </h2>
+                    <div class="grid grid-cols-2 gap-3">
+                        <a href="/browse.html" class="quick-access-card bg-purple-50 rounded-xl p-3 text-center">
+                            <i class="fas fa-search text-purple-600 text-xl mb-2 block"></i>
+                            <span class="text-xs font-medium text-gray-700">Explorar</span>
+                        </a>
+                        <a href="/library.html" class="quick-access-card bg-blue-50 rounded-xl p-3 text-center">
+                            <i class="fas fa-book-open text-blue-600 text-xl mb-2 block"></i>
+                            <span class="text-xs font-medium text-gray-700">Biblioteca</span>
+                        </a>
+                        <a href="/progress.html" class="quick-access-card bg-green-50 rounded-xl p-3 text-center">
+                            <i class="fas fa-chart-line text-green-600 text-xl mb-2 block"></i>
+                            <span class="text-xs font-medium text-gray-700">Progresso</span>
+                        </a>
+                        <a href="/chat.html" class="quick-access-card bg-orange-50 rounded-xl p-3 text-center">
+                            <i class="fas fa-comments text-orange-500 text-xl mb-2 block"></i>
+                            <span class="text-xs font-medium text-gray-700">Chat IA</span>
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Browse Content CTA -->
-        <div class="mt-8 bg-gradient-to-r from-purple-600 to-purple-800 rounded-lg shadow-lg p-8 text-white text-center">
-            <h2 class="text-2xl font-bold mb-2">Pronto para aprender mais?</h2>
-            <p class="mb-6 text-purple-100">Explore nosso catálogo de disciplinas e lições</p>
-            <a href="/browse.html" class="inline-flex items-center px-6 py-3 bg-white text-purple-600 rounded-lg font-semibold hover:bg-gray-100 transition">
-                <i class="fas fa-search mr-2"></i>
-                Explorar Conteúdo
-            </a>
+        <!-- CTA Banner -->
+        <div class="bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-700 rounded-2xl shadow-lg p-8 text-white flex flex-col md:flex-row items-center justify-between">
+            <div class="mb-4 md:mb-0">
+                <h2 class="text-2xl font-bold mb-1">📖 Pronto para explorar mais?</h2>
+                <p class="text-purple-200">Temos centenas de aulas e exercícios esperando por você!</p>
+            </div>
+            <div class="flex space-x-3">
+                <a href="/browse.html" class="inline-flex items-center px-6 py-3 bg-white text-purple-600 rounded-xl font-semibold hover:bg-gray-100 transition shadow">
+                    <i class="fas fa-search mr-2"></i> Explorar Conteúdo
+                </a>
+                <a href="/progress.html" class="inline-flex items-center px-6 py-3 bg-purple-500/40 text-white rounded-xl font-semibold hover:bg-purple-500/60 transition">
+                    <i class="fas fa-chart-line mr-2"></i> Ver Progresso
+                </a>
+            </div>
         </div>
     </main>
 
     <script src="/static/app.js"></script>
     <script>
-        // Check authentication
+        // Authentication check
         if (!VClass.isAuthenticated()) {
             window.location.href = '/login.html';
         }
-
         const user = VClass.getCurrentUser();
-        if (user && user.role !== 'student') {
-            window.location.href = '/teacher-dashboard.html';
+
+        // Dropdown
+        function toggleDropdown() {
+            document.getElementById('user-dropdown').classList.toggle('open');
+        }
+        document.addEventListener('click', function(e) {
+            const container = document.getElementById('user-dropdown-container');
+            if (!container.contains(e.target)) {
+                document.getElementById('user-dropdown').classList.remove('open');
+            }
+        });
+
+        // Setup user info
+        function setupUserInfo() {
+            if (!user) return;
+            const name = user.full_name || user.name || 'Estudante';
+            const initials = name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
+            document.getElementById('nav-avatar').textContent = initials;
+            document.getElementById('nav-user-name').textContent = name.split(' ')[0];
+            document.getElementById('welcome-name').textContent = name.split(' ')[0];
+            document.getElementById('dropdown-name').textContent = name;
+            document.getElementById('dropdown-email').textContent = user.email || '';
         }
 
-        // Update user name
-        if (user) {
-            document.getElementById('user-name').textContent = user.full_name;
-            document.getElementById('welcome-name').textContent = user.full_name.split(' ')[0];
+        // Greeting based on time
+        function setGreeting() {
+            const h = new Date().getHours();
+            let greeting, emoji, sub;
+            if (h < 12) { greeting = 'Bom dia'; emoji = '☀️'; sub = 'Comece bem o dia com uma nova aula!'; }
+            else if (h < 18) { greeting = 'Boa tarde'; emoji = '🌤️'; sub = 'Continue sua jornada de aprendizado!'; }
+            else { greeting = 'Boa noite'; emoji = '🌙'; sub = 'Uma última aula antes de dormir?'; }
+            document.getElementById('greeting').textContent = greeting;
+            document.getElementById('greeting-emoji').textContent = emoji;
+            document.getElementById('greeting-sub').textContent = sub;
         }
 
-        // Load dashboard data
+        // Animated counter
+        function animateCounter(el, target, suffix = '') {
+            let start = 0;
+            const duration = 1000;
+            const step = Math.max(1, Math.round(target / (duration / 16)));
+            const timer = setInterval(() => {
+                start = Math.min(start + step, target);
+                el.textContent = start + suffix;
+                if (start >= target) clearInterval(timer);
+            }, 16);
+        }
+
+        // Chart
+        let activityChartInstance = null;
+        const chartData = {
+            lessons: { data: [2, 3, 1, 4, 3, 5, 2], label: 'Aulas Assistidas', color: '#7c3aed', bg: 'rgba(124,58,237,0.1)' },
+            time:    { data: [30, 45, 20, 60, 40, 75, 35], label: 'Minutos Estudados', color: '#2563eb', bg: 'rgba(37,99,235,0.1)' },
+            exercises:{ data: [5, 8, 3, 12, 7, 15, 4], label: 'Exercícios', color: '#16a34a', bg: 'rgba(22,163,74,0.1)' }
+        };
+
+        function switchChart(type) {
+            // Update tabs
+            document.querySelectorAll('.chart-tab').forEach(btn => {
+                btn.classList.remove('bg-white', 'text-gray-900', 'shadow-sm');
+                btn.classList.add('text-gray-500');
+            });
+            document.getElementById(`btn-${type}`).classList.add('bg-white', 'text-gray-900', 'shadow-sm');
+            document.getElementById(`btn-${type}`).classList.remove('text-gray-500');
+            // Update chart
+            const d = chartData[type];
+            activityChartInstance.data.datasets[0].data = d.data;
+            activityChartInstance.data.datasets[0].label = d.label;
+            activityChartInstance.data.datasets[0].borderColor = d.color;
+            activityChartInstance.data.datasets[0].backgroundColor = d.bg;
+            activityChartInstance.update('active');
+        }
+
+        function createActivityChart() {
+            const ctx = document.getElementById('activityChart').getContext('2d');
+            const d = chartData.lessons;
+            const labels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+            activityChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: d.label,
+                        data: d.data,
+                        backgroundColor: d.bg,
+                        borderColor: d.color,
+                        borderWidth: 2,
+                        borderRadius: 8,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        // Render stats
+        function renderStats(summary) {
+            const timeSpent = Math.floor((summary.total_time_spent_seconds || 0) / 60);
+            const lessonsCompleted = summary.lessons_completed || 0;
+            const exercisesDone = summary.exercises_completed || 0;
+            const avgScore = Math.round(summary.avg_score || 0);
+
+            document.getElementById('stats-container').innerHTML = `
+                <div class="stat-card bg-white p-6 rounded-2xl shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-check-circle text-purple-600 text-xl"></i>
+                        </div>
+                        <span class="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">+2 hoje</span>
+                    </div>
+                    <p class="stat-number text-3xl font-bold text-gray-900 count-animate" id="stat-lessons">0</p>
+                    <p class="text-sm text-gray-500 mt-1">Lições Concluídas</p>
+                </div>
+                <div class="stat-card bg-white p-6 rounded-2xl shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-tasks text-blue-600 text-xl"></i>
+                        </div>
+                        <span class="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">+5 hoje</span>
+                    </div>
+                    <p class="stat-number text-3xl font-bold text-gray-900 count-animate" id="stat-exercises">0</p>
+                    <p class="text-sm text-gray-500 mt-1">Exercícios Feitos</p>
+                </div>
+                <div class="stat-card bg-white p-6 rounded-2xl shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-star text-green-600 text-xl"></i>
+                        </div>
+                        <span class="text-xs font-medium ${avgScore >= 70 ? 'text-green-600 bg-green-50' : 'text-orange-600 bg-orange-50'} px-2 py-1 rounded-full">${avgScore >= 70 ? '😊 Ótimo' : '📈 Melhorar'}</span>
+                    </div>
+                    <p class="stat-number text-3xl font-bold text-gray-900 count-animate" id="stat-score">0%</p>
+                    <p class="text-sm text-gray-500 mt-1">Pontuação Média</p>
+                </div>
+                <div class="stat-card bg-white p-6 rounded-2xl shadow-sm">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-clock text-orange-600 text-xl"></i>
+                        </div>
+                        <span class="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-full">Esta semana</span>
+                    </div>
+                    <p class="stat-number text-3xl font-bold text-gray-900 count-animate" id="stat-time">0min</p>
+                    <p class="text-sm text-gray-500 mt-1">Tempo de Estudo</p>
+                </div>
+            `;
+            // Animate counters
+            setTimeout(() => {
+                animateCounter(document.getElementById('stat-lessons'), lessonsCompleted);
+                animateCounter(document.getElementById('stat-exercises'), exercisesDone);
+                animateCounter(document.getElementById('stat-score'), avgScore, '%');
+                animateCounter(document.getElementById('stat-time'), timeSpent, 'min');
+            }, 100);
+
+            // Update streak & XP
+            animateCounter(document.getElementById('streak-count'), 7, ' dias');
+            animateCounter(document.getElementById('xp-count'), lessonsCompleted * 50 + exercisesDone * 20);
+
+            // Daily goal
+            const dailyGoal = 3;
+            const todayLessons = Math.min(lessonsCompleted, dailyGoal);
+            document.getElementById('daily-progress-text').textContent = `${todayLessons} / ${dailyGoal} aulas`;
+            document.getElementById('daily-progress-bar').style.width = `${(todayLessons/dailyGoal)*100}%`;
+            if (todayLessons >= dailyGoal) {
+                document.getElementById('daily-msg').textContent = '🎉 Meta do dia concluída! Parabéns!';
+            }
+        }
+
+        // Continue watching
+        function renderContinueWatching(activities) {
+            const container = document.getElementById('continue-watching');
+            if (!activities || activities.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-gray-400">
+                        <i class="fas fa-play-circle text-5xl mb-3 block"></i>
+                        <p class="font-medium text-gray-600">Nenhuma aula em progresso</p>
+                        <a href="/browse.html" class="mt-3 inline-block text-sm text-purple-600 font-medium hover:underline">Começar agora →</a>
+                    </div>`;
+                return;
+            }
+            container.innerHTML = activities.slice(0, 3).map(a => `
+                <a href="/lesson.html?id=${a.lesson_id || 'lesson-1'}" class="lesson-card flex items-center space-x-4 p-4 bg-gray-50 rounded-xl hover:bg-purple-50 transition cursor-pointer block">
+                    <div class="w-16 h-12 rounded-lg bg-gradient-to-br from-purple-400 to-indigo-500 flex items-center justify-center flex-shrink-0 shadow">
+                        <i class="fas fa-play text-white"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-semibold text-gray-900 text-sm truncate">${a.lesson?.title || 'Lição'}</p>
+                        <div class="flex items-center space-x-2 mt-1">
+                            <div class="flex-1 bg-gray-200 rounded-full h-1.5">
+                                <div class="bg-purple-600 h-1.5 rounded-full" style="width:${a.progress_percent || 0}%"></div>
+                            </div>
+                            <span class="text-xs text-gray-500 flex-shrink-0">${a.progress_percent || 0}%</span>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right text-gray-300 text-sm flex-shrink-0"></i>
+                </a>
+            `).join('');
+        }
+
+        // Recent activity
+        function renderRecentActivity(activities) {
+            const container = document.getElementById('recent-activity');
+            if (!activities || activities.length === 0) {
+                container.innerHTML = `<div class="text-center py-6 text-gray-400"><p class="text-sm">Nenhuma atividade recente</p></div>`;
+                return;
+            }
+            const icons = { lesson_completed: {icon:'fa-check-circle', bg:'bg-green-100', color:'text-green-600'}, exercise_submitted: {icon:'fa-tasks', bg:'bg-blue-100', color:'text-blue-600'}, video_watched: {icon:'fa-play-circle', bg:'bg-purple-100', color:'text-purple-600'} };
+            container.innerHTML = activities.slice(0, 5).map(a => {
+                const style = icons[a.type] || {icon:'fa-circle', bg:'bg-gray-100', color:'text-gray-600'};
+                const date = new Date(a.updated_at || a.created_at);
+                const diff = Math.floor((Date.now()-date)/3600000);
+                const timeAgo = diff < 1 ? 'Agora' : diff < 24 ? `Há ${diff}h` : `Há ${Math.floor(diff/24)}d`;
+                return `
+                <div class="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition">
+                    <div class="w-9 h-9 ${style.bg} rounded-lg flex items-center justify-center flex-shrink-0">
+                        <i class="fas ${style.icon} ${style.color} text-sm"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-900 truncate">${a.lesson?.title || a.title || 'Atividade'}</p>
+                        <p class="text-xs text-gray-500">${a.progress_percent ? `${a.progress_percent}% completo` : ''} · ${timeAgo}</p>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // Subject progress
+        function renderSubjectProgress(subjects) {
+            const container = document.getElementById('subject-progress');
+            if (!subjects || subjects.length === 0) {
+                container.innerHTML = `<div class="text-center py-4 text-gray-400 text-sm">Sem progresso ainda</div>`;
+                return;
+            }
+            const colors = ['#7c3aed','#2563eb','#16a34a','#dc2626','#d97706','#0891b2'];
+            container.innerHTML = subjects.slice(0, 5).map((s, i) => {
+                const pct = s.progress_percent || Math.round(((s.completed_lessons||0)/(s.total_lessons||1))*100);
+                const color = s.subject_color || colors[i % colors.length];
+                return `
+                <div class="group">
+                    <div class="flex items-center justify-between mb-1">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 rounded-full" style="background:${color}"></div>
+                            <span class="text-sm font-medium text-gray-900">${s.subject_name}</span>
+                        </div>
+                        <span class="text-sm font-bold" style="color:${color}">${pct}%</span>
+                    </div>
+                    <div class="w-full bg-gray-100 rounded-full h-2">
+                        <div class="h-2 rounded-full progress-bar-fill" style="width:${pct}%; background:${color}"></div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">${s.completed_lessons||0} / ${s.total_lessons||0} lições</p>
+                </div>`;
+            }).join('');
+        }
+
         async function loadDashboard() {
             try {
                 const result = await VClass.api.progress.getDashboard();
-
                 if (result.success) {
                     const { summary, recentActivity, subjectProgress } = result.data;
-
-                    // Render stats
-                    renderStats(summary);
-
-                    // Render recent activity
+                    renderStats(summary || {});
+                    renderContinueWatching(recentActivity);
                     renderRecentActivity(recentActivity);
-
-                    // Render subject progress
                     renderSubjectProgress(subjectProgress);
                 } else {
-                    console.error('Failed to load dashboard:', result.error);
+                    renderStats({});
+                    renderContinueWatching([]);
+                    renderRecentActivity([]);
+                    renderSubjectProgress([]);
                 }
             } catch (error) {
                 console.error('Dashboard error:', error);
+                renderStats({});
+                renderContinueWatching([]);
+                renderRecentActivity([]);
+                renderSubjectProgress([]);
             }
         }
 
-        function renderStats(summary) {
-            const statsContainer = document.getElementById('stats-container');
-            const timeSpent = Math.floor(summary.total_time_spent_seconds / 60); // Convert to minutes
-
-            statsContainer.innerHTML = `
-                <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm text-gray-600 mb-1">Lições Completas</p>
-                            <p class="text-3xl font-bold text-purple-600">${summary.lessons_completed || 0}</p>
-                        </div>
-                        <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-check text-purple-600 text-xl"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm text-gray-600 mb-1">Exercícios Feitos</p>
-                            <p class="text-3xl font-bold text-blue-600">${summary.exercises_completed || 0}</p>
-                        </div>
-                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-tasks text-blue-600 text-xl"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm text-gray-600 mb-1">Pontuação Média</p>
-                            <p class="text-3xl font-bold text-green-600">${Math.round(summary.avg_score || 0)}%</p>
-                        </div>
-                        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-star text-green-600 text-xl"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm text-gray-600 mb-1">Tempo de Estudo</p>
-                            <p class="text-3xl font-bold text-orange-600">${timeSpent}min</p>
-                        </div>
-                        <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-clock text-orange-600 text-xl"></i>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderRecentActivity(activities) {
-            const container = document.getElementById('recent-activity');
-
-            if (!activities || activities.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-8 text-gray-500">
-                        <i class="fas fa-inbox text-4xl mb-2"></i>
-                        <p>Nenhuma atividade recente</p>
-                        <a href="/browse.html" class="text-purple-600 hover:text-purple-700 text-sm mt-2 inline-block">
-                            Começar a aprender
-                        </a>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = activities.map(activity => `
-                <div class="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
-                    <img src="${activity.lesson?.thumbnail_url || 'https://via.placeholder.com/80'}" 
-                         alt="${activity.lesson?.title}" 
-                         class="w-20 h-20 rounded object-cover">
-                    <div class="flex-1">
-                        <h3 class="font-semibold text-gray-900">${activity.lesson?.title || 'Lição'}</h3>
-                        <div class="flex items-center space-x-4 mt-1">
-                            <span class="text-sm text-gray-600">
-                                ${activity.progress_percent}% completo
-                            </span>
-                            <span class="text-xs text-gray-400">
-                                ${new Date(activity.updated_at).toLocaleDateString('pt')}
-                            </span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
-                            <div class="bg-purple-600 h-2 rounded-full" style="width: ${activity.progress_percent}%"></div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function renderSubjectProgress(subjects) {
-            const container = document.getElementById('subject-progress');
-
-            if (!subjects || subjects.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-4 text-gray-500">
-                        <p class="text-sm">Sem progresso ainda</p>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = subjects.slice(0, 5).map(subject => `
-                <div class="space-y-2">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-2">
-                            <div class="w-3 h-3 rounded-full" style="background-color: ${subject.subject_color}"></div>
-                            <span class="font-medium text-gray-900">${subject.subject_name}</span>
-                        </div>
-                        <span class="text-sm font-semibold text-gray-700">${subject.progress_percent || 0}%</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div class="h-2 rounded-full" 
-                             style="width: ${subject.progress_percent || 0}%; background-color: ${subject.subject_color}">
-                        </div>
-                    </div>
-                    <p class="text-xs text-gray-500">
-                        ${subject.completed_lessons || 0} de ${subject.total_lessons || 0} lições
-                    </p>
-                </div>
-            `).join('');
-        }
-
-        // Load data on page load
+        // Init
+        setupUserInfo();
+        setGreeting();
+        createActivityChart();
         loadDashboard();
     </script>
 </body>

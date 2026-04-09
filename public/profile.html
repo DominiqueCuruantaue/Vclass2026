@@ -7,190 +7,370 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <link href="/static/styles.css" rel="stylesheet">
+    <style>
+        .avatar-large { width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 700; color: white; border: 4px solid white; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+        .tab-btn { transition: all 0.2s; }
+        .tab-btn.active { background: #7c3aed; color: white; }
+        .badge-item { width: 60px; height: 60px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; transition: transform 0.2s; }
+        .badge-item:hover { transform: scale(1.1); }
+        .badge-locked { opacity: 0.35; filter: grayscale(1); }
+        .toggle-switch { position: relative; display: inline-block; width: 48px; height: 26px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: #7c3aed; }
+        input:checked + .slider:before { transform: translateX(22px); }
+        .activity-timeline { position: relative; }
+        .activity-timeline::before { content: ''; position: absolute; left: 19px; top: 0; bottom: 0; width: 2px; background: #e5e7eb; }
+        .stat-card-profile { transition: transform 0.2s; }
+        .stat-card-profile:hover { transform: translateY(-3px); }
+        .edit-input:disabled { background: #f9fafb; cursor: not-allowed; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .heatmap-cell { width: 14px; height: 14px; border-radius: 3px; }
+        .level-bar { transition: width 1s ease; }
+    </style>
 </head>
 <body class="bg-gray-50">
     <!-- Navigation -->
-    <nav class="bg-white shadow-sm">
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
         <div class="container mx-auto px-4">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center space-x-8">
-                    <div class="flex items-center space-x-2">
+                    <a href="/dashboard.html" class="flex items-center space-x-2">
                         <i class="fas fa-graduation-cap text-2xl text-purple-600"></i>
                         <span class="text-xl font-bold text-gray-900">VClass</span>
-                    </div>
-                    <div class="hidden md:flex space-x-4">
-                        <a href="/dashboard.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
+                    </a>
+                    <div class="hidden md:flex space-x-1">
+                        <a href="/dashboard.html" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100">
                             <i class="fas fa-home mr-1"></i> Dashboard
                         </a>
-                        <a href="/browse.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
+                        <a href="/browse.html" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100">
                             <i class="fas fa-book mr-1"></i> Conteúdo
                         </a>
-                        <a href="/progress.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
+                        <a href="/progress.html" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100">
                             <i class="fas fa-chart-line mr-1"></i> Progresso
                         </a>
                     </div>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <a href="/profile.html" class="px-3 py-2 text-sm text-purple-600 bg-purple-50 rounded-lg font-medium">
-                        <i class="fas fa-user mr-1"></i> <span id="nav-user-name"></span>
+                <div class="flex items-center space-x-3">
+                    <a href="/profile.html" class="flex items-center space-x-2 px-3 py-2 bg-purple-50 text-purple-600 rounded-lg text-sm font-medium">
+                        <div id="nav-avatar-sm" class="w-7 h-7 rounded-full bg-purple-600 flex items-center justify-center text-white text-xs font-bold"></div>
+                        <span id="nav-user-name"></span>
                     </a>
-                    <button onclick="VClass.logout()" class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
-                        <i class="fas fa-sign-out-alt mr-1"></i> Sair
+                    <button onclick="VClass.logout()" class="px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition">
+                        <i class="fas fa-sign-out-alt"></i>
                     </button>
                 </div>
             </div>
         </div>
     </nav>
 
+    <!-- Profile Hero -->
+    <div class="bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-700">
+        <div class="container mx-auto px-4 py-10 max-w-5xl">
+            <div class="flex flex-col md:flex-row items-center md:items-end space-y-4 md:space-y-0 md:space-x-6">
+                <!-- Avatar -->
+                <div class="relative">
+                    <div id="profile-avatar" class="avatar-large bg-gradient-to-br from-yellow-400 to-orange-500">?</div>
+                    <button class="absolute bottom-1 right-1 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow text-purple-600 hover:bg-purple-50 transition text-xs">
+                        <i class="fas fa-camera"></i>
+                    </button>
+                </div>
+                <!-- Info -->
+                <div class="text-white text-center md:text-left flex-1">
+                    <h1 id="profile-name" class="text-3xl font-bold mb-1">Estudante</h1>
+                    <p id="profile-email" class="text-purple-200 text-sm mb-2"></p>
+                    <div class="flex flex-wrap justify-center md:justify-start gap-2">
+                        <span id="profile-role-badge" class="inline-flex items-center px-3 py-1 bg-white/20 text-white rounded-full text-xs font-medium">
+                            <i class="fas fa-user-graduate mr-1"></i> Estudante
+                        </span>
+                        <span class="inline-flex items-center px-3 py-1 bg-white/20 text-white rounded-full text-xs font-medium">
+                            <i class="fas fa-map-marker-alt mr-1"></i> <span id="profile-country">Moçambique</span>
+                        </span>
+                        <span class="inline-flex items-center px-3 py-1 bg-white/20 text-white rounded-full text-xs font-medium">
+                            <i class="fas fa-calendar mr-1"></i> Membro desde <span id="profile-since" class="ml-1"></span>
+                        </span>
+                    </div>
+                </div>
+                <!-- Level -->
+                <div class="bg-white/20 backdrop-blur rounded-2xl px-6 py-4 text-white text-center min-w-[140px]">
+                    <p class="text-xs opacity-70 mb-1">Nível</p>
+                    <p class="text-3xl font-bold" id="profile-level">5</p>
+                    <div class="w-full bg-white/20 rounded-full h-2 mt-2">
+                        <div id="level-bar" class="bg-yellow-400 h-2 rounded-full level-bar" style="width:65%"></div>
+                    </div>
+                    <p class="text-xs mt-1 opacity-70">650 / 1000 XP</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="bg-white border-b border-gray-200">
+        <div class="container mx-auto px-4 max-w-5xl">
+            <div class="grid grid-cols-2 md:grid-cols-4 divide-x divide-gray-100">
+                <div class="stat-card-profile text-center py-5">
+                    <p id="stat-lessons" class="text-2xl font-bold text-purple-600">0</p>
+                    <p class="text-xs text-gray-500 mt-1">Aulas Concluídas</p>
+                </div>
+                <div class="stat-card-profile text-center py-5">
+                    <p id="stat-exercises" class="text-2xl font-bold text-blue-600">0</p>
+                    <p class="text-xs text-gray-500 mt-1">Exercícios Feitos</p>
+                </div>
+                <div class="stat-card-profile text-center py-5">
+                    <p id="stat-score" class="text-2xl font-bold text-green-600">0%</p>
+                    <p class="text-xs text-gray-500 mt-1">Pontuação Média</p>
+                </div>
+                <div class="stat-card-profile text-center py-5">
+                    <p id="stat-time" class="text-2xl font-bold text-orange-600">0h</p>
+                    <p class="text-xs text-gray-500 mt-1">Tempo de Estudo</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Content -->
-    <div class="container mx-auto px-4 py-8">
-        <div class="max-w-4xl mx-auto">
-            <!-- Header -->
-            <div class="mb-8">
-                <h1 class="text-3xl font-bold text-gray-900 mb-2">
-                    <i class="fas fa-user-circle text-purple-600 mr-2"></i>
-                    Meu Perfil
-                </h1>
-                <p class="text-gray-600">Gerencie suas informações pessoais e preferências</p>
-            </div>
+    <div class="container mx-auto px-4 py-8 max-w-5xl">
+        <!-- Tabs -->
+        <div class="flex space-x-2 mb-6 bg-gray-100 p-1 rounded-xl w-full md:w-fit">
+            <button onclick="switchTab('info')" id="tab-info" class="tab-btn active px-5 py-2 rounded-lg text-sm font-medium">
+                <i class="fas fa-user mr-2"></i>Perfil
+            </button>
+            <button onclick="switchTab('achievements')" id="tab-achievements" class="tab-btn px-5 py-2 rounded-lg text-sm font-medium text-gray-600">
+                <i class="fas fa-trophy mr-2"></i>Conquistas
+            </button>
+            <button onclick="switchTab('activity')" id="tab-activity" class="tab-btn px-5 py-2 rounded-lg text-sm font-medium text-gray-600">
+                <i class="fas fa-history mr-2"></i>Histórico
+            </button>
+            <button onclick="switchTab('settings')" id="tab-settings" class="tab-btn px-5 py-2 rounded-lg text-sm font-medium text-gray-600">
+                <i class="fas fa-cog mr-2"></i>Configurações
+            </button>
+        </div>
 
-            <!-- Profile Card -->
-            <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
-                <div class="bg-gradient-to-r from-purple-600 to-purple-800 h-32"></div>
-                <div class="px-6 pb-6">
-                    <div class="flex items-end -mt-16 mb-6">
-                        <div class="w-32 h-32 rounded-full border-4 border-white bg-purple-100 flex items-center justify-center">
-                            <i class="fas fa-user text-5xl text-purple-600"></i>
+        <!-- Tab: Perfil (Info) -->
+        <div id="content-info" class="tab-content active">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Personal Info -->
+                <div class="bg-white rounded-2xl shadow-sm p-6">
+                    <div class="flex items-center justify-between mb-5">
+                        <h3 class="text-lg font-bold text-gray-900">
+                            <i class="fas fa-id-card text-purple-600 mr-2"></i>
+                            Informações Pessoais
+                        </h3>
+                        <button onclick="enableEdit()" id="edit-btn" class="px-4 py-2 text-sm bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition font-medium">
+                            <i class="fas fa-edit mr-1"></i> Editar
+                        </button>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Nome Completo</label>
+                            <input type="text" id="edit-name" class="edit-input w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent transition" disabled>
                         </div>
-                        <div class="ml-6 mb-2">
-                            <h2 id="profile-name" class="text-2xl font-bold text-gray-900"></h2>
-                            <p id="profile-email" class="text-gray-600"></p>
-                            <span id="profile-role" class="inline-block px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium mt-2"></span>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Email</label>
+                            <input type="email" id="edit-email" class="edit-input w-full px-4 py-3 border border-gray-200 rounded-xl text-sm bg-gray-50" disabled>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">País</label>
+                            <input type="text" id="edit-country" class="edit-input w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent transition" disabled>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Membro desde</label>
+                            <input type="text" id="edit-registered" class="edit-input w-full px-4 py-3 border border-gray-200 rounded-xl text-sm bg-gray-50" disabled>
                         </div>
                     </div>
+                    <div id="edit-actions" class="mt-5 hidden flex space-x-3">
+                        <button onclick="saveProfile()" class="flex-1 px-4 py-3 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 transition">
+                            <i class="fas fa-save mr-2"></i>Salvar
+                        </button>
+                        <button onclick="cancelEdit()" class="px-4 py-3 bg-gray-100 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-200 transition">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
 
-                    <!-- Stats Grid -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                        <div class="text-center p-4 bg-gray-50 rounded-lg">
-                            <p class="text-3xl font-bold text-purple-600" id="profile-lessons">0</p>
-                            <p class="text-sm text-gray-600">Aulas Concluídas</p>
+                <!-- Change Password -->
+                <div class="bg-white rounded-2xl shadow-sm p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-5">
+                        <i class="fas fa-lock text-purple-600 mr-2"></i>
+                        Alterar Senha
+                    </h3>
+                    <form id="password-form" class="space-y-4" onsubmit="submitPassword(event)">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Senha Atual</label>
+                            <div class="relative">
+                                <input type="password" id="current-password" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent pr-10" placeholder="••••••••" required>
+                                <button type="button" onclick="togglePwd('current-password')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                    <i class="fas fa-eye text-sm"></i>
+                                </button>
+                            </div>
                         </div>
-                        <div class="text-center p-4 bg-gray-50 rounded-lg">
-                            <p class="text-3xl font-bold text-green-600" id="profile-exercises">0</p>
-                            <p class="text-sm text-gray-600">Exercícios Feitos</p>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Nova Senha</label>
+                            <div class="relative">
+                                <input type="password" id="new-password" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent pr-10" placeholder="••••••••" required>
+                                <button type="button" onclick="togglePwd('new-password')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                    <i class="fas fa-eye text-sm"></i>
+                                </button>
+                            </div>
+                            <!-- Password strength -->
+                            <div class="mt-2">
+                                <div class="flex space-x-1">
+                                    <div class="h-1 flex-1 rounded-full bg-gray-200" id="pwd-s1"></div>
+                                    <div class="h-1 flex-1 rounded-full bg-gray-200" id="pwd-s2"></div>
+                                    <div class="h-1 flex-1 rounded-full bg-gray-200" id="pwd-s3"></div>
+                                    <div class="h-1 flex-1 rounded-full bg-gray-200" id="pwd-s4"></div>
+                                </div>
+                                <p id="pwd-strength-text" class="text-xs text-gray-400 mt-1"></p>
+                            </div>
                         </div>
-                        <div class="text-center p-4 bg-gray-50 rounded-lg">
-                            <p class="text-3xl font-bold text-orange-600" id="profile-score">0%</p>
-                            <p class="text-sm text-gray-600">Pontuação Média</p>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Confirmar Nova Senha</label>
+                            <input type="password" id="confirm-password" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="••••••••" required>
+                        </div>
+                        <button type="submit" class="w-full px-4 py-3 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 transition">
+                            <i class="fas fa-key mr-2"></i>Alterar Senha
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Conquistas -->
+        <div id="content-achievements" class="tab-content">
+            <div class="bg-white rounded-2xl shadow-sm p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Suas Conquistas</h3>
+                <p class="text-sm text-gray-500 mb-6">Desbloqueie conquistas completando aulas e exercícios!</p>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="achievements-grid">
+                    <!-- Will be populated -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Histórico -->
+        <div id="content-activity" class="tab-content">
+            <div class="bg-white rounded-2xl shadow-sm p-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-6">
+                    <i class="fas fa-history text-purple-600 mr-2"></i>
+                    Histórico de Atividades
+                </h3>
+                <!-- Study Heatmap -->
+                <div class="mb-8">
+                    <p class="text-sm font-semibold text-gray-700 mb-3">Mapa de Estudo (últimos 12 semanas)</p>
+                    <div id="heatmap" class="flex flex-wrap gap-1"></div>
+                    <div class="flex items-center space-x-2 mt-2 text-xs text-gray-500">
+                        <span>Menos</span>
+                        <div class="heatmap-cell bg-gray-100"></div>
+                        <div class="heatmap-cell bg-purple-200"></div>
+                        <div class="heatmap-cell bg-purple-400"></div>
+                        <div class="heatmap-cell bg-purple-600"></div>
+                        <div class="heatmap-cell bg-purple-800"></div>
+                        <span>Mais</span>
+                    </div>
+                </div>
+                <!-- Activity list -->
+                <div class="activity-timeline space-y-4" id="activity-list">
+                    <p class="text-center text-gray-400 text-sm py-8">Carregando histórico...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Configurações -->
+        <div id="content-settings" class="tab-content">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Notifications -->
+                <div class="bg-white rounded-2xl shadow-sm p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-5">
+                        <i class="fas fa-bell text-purple-600 mr-2"></i>
+                        Notificações
+                    </h3>
+                    <div class="space-y-5">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-medium text-gray-900 text-sm">Notificações por Email</p>
+                                <p class="text-xs text-gray-500 mt-0.5">Updates sobre novas aulas</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="notif-email" checked onchange="saveSetting('notif-email',this.checked)">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-medium text-gray-900 text-sm">Lembretes de Estudo</p>
+                                <p class="text-xs text-gray-500 mt-0.5">Lembrar de estudar diariamente</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="notif-reminder" checked onchange="saveSetting('notif-reminder',this.checked)">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-medium text-gray-900 text-sm">Novas Conquistas</p>
+                                <p class="text-xs text-gray-500 mt-0.5">Notificar ao desbloquear conquista</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="notif-achievements" checked onchange="saveSetting('notif-achievements',this.checked)">
+                                <span class="slider"></span>
+                            </label>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Profile Information -->
-            <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
-                <h3 class="text-xl font-bold text-gray-900 mb-4">
-                    <i class="fas fa-info-circle mr-2"></i>
-                    Informações Pessoais
-                </h3>
-                <div class="space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
-                            <input type="text" id="edit-name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" disabled>
+                <!-- Preferences -->
+                <div class="bg-white rounded-2xl shadow-sm p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-5">
+                        <i class="fas fa-sliders-h text-purple-600 mr-2"></i>
+                        Preferências
+                    </h3>
+                    <div class="space-y-5">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-medium text-gray-900 text-sm">Reprodução Automática</p>
+                                <p class="text-xs text-gray-500 mt-0.5">Próxima aula automaticamente</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="pref-autoplay" onchange="saveSetting('pref-autoplay',this.checked)">
+                                <span class="slider"></span>
+                            </label>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                            <input type="email" id="edit-email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-50" disabled>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-medium text-gray-900 text-sm">Modo Escuro</p>
+                                <p class="text-xs text-gray-500 mt-0.5">Tema escuro para à noite</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="pref-dark" onchange="toggleDarkMode(this.checked)">
+                                <span class="slider"></span>
+                            </label>
                         </div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">País</label>
-                            <input type="text" id="edit-country" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" disabled>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Data de Registro</label>
-                            <input type="text" id="edit-registered" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50" disabled>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-medium text-gray-900 text-sm">Legendas nos Vídeos</p>
+                                <p class="text-xs text-gray-500 mt-0.5">Mostrar legendas por padrão</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="pref-captions" onchange="saveSetting('pref-captions',this.checked)">
+                                <span class="slider"></span>
+                            </label>
                         </div>
                     </div>
                 </div>
-                <div class="mt-6 flex space-x-3">
-                    <button onclick="enableEdit()" id="edit-btn" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
-                        <i class="fas fa-edit mr-2"></i>Editar Perfil
-                    </button>
-                    <button onclick="saveProfile()" id="save-btn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition hidden">
-                        <i class="fas fa-save mr-2"></i>Salvar Alterações
-                    </button>
-                    <button onclick="cancelEdit()" id="cancel-btn" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition hidden">
-                        <i class="fas fa-times mr-2"></i>Cancelar
-                    </button>
-                </div>
-            </div>
-
-            <!-- Change Password -->
-            <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
-                <h3 class="text-xl font-bold text-gray-900 mb-4">
-                    <i class="fas fa-lock mr-2"></i>
-                    Alterar Senha
-                </h3>
-                <form id="password-form" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Senha Atual</label>
-                        <input type="password" id="current-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" required>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nova Senha</label>
-                            <input type="password" id="new-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Confirmar Nova Senha</label>
-                            <input type="password" id="confirm-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" required>
-                        </div>
-                    </div>
-                    <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
-                        <i class="fas fa-key mr-2"></i>Alterar Senha
-                    </button>
-                </form>
-            </div>
-
-            <!-- Preferences -->
-            <div class="bg-white rounded-lg shadow-sm p-6">
-                <h3 class="text-xl font-bold text-gray-900 mb-4">
-                    <i class="fas fa-cog mr-2"></i>
-                    Preferências
-                </h3>
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between py-3 border-b border-gray-200">
-                        <div>
-                            <p class="font-medium text-gray-900">Notificações por Email</p>
-                            <p class="text-sm text-gray-600">Receber updates sobre novas aulas e conteúdo</p>
-                        </div>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" class="sr-only peer" checked>
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                        </label>
-                    </div>
-                    <div class="flex items-center justify-between py-3 border-b border-gray-200">
-                        <div>
-                            <p class="font-medium text-gray-900">Reprodução Automática</p>
-                            <p class="text-sm text-gray-600">Iniciar próxima aula automaticamente</p>
-                        </div>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" class="sr-only peer">
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                        </label>
-                    </div>
-                    <div class="flex items-center justify-between py-3">
-                        <div>
-                            <p class="font-medium text-gray-900">Modo Escuro</p>
-                            <p class="text-sm text-gray-600">Tema escuro para melhor visualização noturna</p>
-                        </div>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" class="sr-only peer">
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                        </label>
+                <!-- Danger Zone -->
+                <div class="bg-white rounded-2xl shadow-sm p-6 border border-red-100">
+                    <h3 class="text-lg font-bold text-red-600 mb-4">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        Zona de Perigo
+                    </h3>
+                    <p class="text-sm text-gray-600 mb-4">Estas ações são irreversíveis. Tenha cuidado.</p>
+                    <div class="space-y-3">
+                        <button onclick="confirmClearData()" class="w-full px-4 py-3 border border-red-300 text-red-600 rounded-xl text-sm font-medium hover:bg-red-50 transition">
+                            <i class="fas fa-trash mr-2"></i>Limpar Histórico de Progresso
+                        </button>
+                        <button onclick="confirmDeleteAccount()" class="w-full px-4 py-3 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 transition">
+                            <i class="fas fa-user-times mr-2"></i>Excluir Conta
+                        </button>
                     </div>
                 </div>
             </div>
@@ -199,69 +379,91 @@
 
     <script src="/static/app.js"></script>
     <script>
-        // Check authentication
         if (!VClass.isAuthenticated()) {
             window.location.href = '/login.html';
         }
-
         const user = VClass.getCurrentUser();
         let originalData = {};
 
-        function loadProfile() {
-            if (user) {
-                // Navigation
-                document.getElementById('nav-user-name').textContent = user.name;
+        const AVATAR_COLORS = ['#7c3aed','#2563eb','#16a34a','#d97706','#dc2626','#0891b2','#7c3aed','#6d28d9'];
 
-                // Profile header
-                document.getElementById('profile-name').textContent = user.name;
-                document.getElementById('profile-email').textContent = user.email;
-                document.getElementById('profile-role').textContent = translateRole(user.role);
+        function getAvatarColor(name) {
+            let hash = 0;
+            for (let i = 0; i < (name||'').length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+        }
 
-                // Edit fields
-                document.getElementById('edit-name').value = user.name;
-                document.getElementById('edit-email').value = user.email;
-                document.getElementById('edit-country').value = user.country || 'Moçambique';
-                document.getElementById('edit-registered').value = VClass.formatDate(user.created_at);
+        function setupProfile() {
+            if (!user) return;
+            const name = user.full_name || user.name || 'Estudante';
+            const initials = name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+            const color = getAvatarColor(name);
 
-                // Save original data
-                originalData = {
-                    name: user.name,
-                    country: user.country || 'Moçambique'
-                };
+            // Avatar
+            document.getElementById('profile-avatar').textContent = initials;
+            document.getElementById('profile-avatar').style.background = `linear-gradient(135deg, ${color}, ${color}dd)`;
+            document.getElementById('nav-avatar-sm').textContent = initials;
 
-                // Load stats
-                loadStats();
-            }
+            // Nav
+            document.getElementById('nav-user-name').textContent = name.split(' ')[0];
+
+            // Header
+            document.getElementById('profile-name').textContent = name;
+            document.getElementById('profile-email').textContent = user.email || '';
+            document.getElementById('profile-country').textContent = user.country || 'Moçambique';
+            document.getElementById('profile-since').textContent = user.created_at ? new Date(user.created_at).getFullYear() : '2024';
+            document.getElementById('profile-role-badge').innerHTML = `<i class="fas fa-user-graduate mr-1"></i>${translateRole(user.role)}`;
+
+            // Edit fields
+            document.getElementById('edit-name').value = name;
+            document.getElementById('edit-email').value = user.email || '';
+            document.getElementById('edit-country').value = user.country || 'Moçambique';
+            document.getElementById('edit-registered').value = user.created_at ? VClass.formatDate(user.created_at) : '-';
+            originalData = { name, country: user.country || 'Moçambique' };
+
+            loadStats();
+            loadSettings();
         }
 
         async function loadStats() {
             try {
                 const result = await VClass.api.progress.getDashboard();
-                if (result.success && result.data.stats) {
-                    document.getElementById('profile-lessons').textContent = result.data.stats.completedLessons || 0;
-                    document.getElementById('profile-exercises').textContent = result.data.stats.totalExercises || 0;
-                    document.getElementById('profile-score').textContent = Math.round(result.data.stats.averageScore || 0) + '%';
+                if (result.success) {
+                    const s = result.data.summary || result.data.stats || {};
+                    document.getElementById('stat-lessons').textContent = s.lessons_completed || s.completedLessons || 0;
+                    document.getElementById('stat-exercises').textContent = s.exercises_completed || s.totalExercises || 0;
+                    document.getElementById('stat-score').textContent = Math.round(s.avg_score || s.averageScore || 0) + '%';
+                    const mins = Math.floor((s.total_time_spent_seconds || 0) / 60);
+                    const hrs = (mins / 60).toFixed(1);
+                    document.getElementById('stat-time').textContent = hrs + 'h';
                 }
-            } catch (error) {
-                console.error('Error loading stats:', error);
-            }
+            } catch(e) { console.error(e); }
         }
 
-        function translateRole(role) {
-            const roles = {
-                'student': 'Estudante',
-                'teacher': 'Professor',
-                'admin': 'Administrador'
-            };
-            return roles[role] || role;
+        function translateRole(r) {
+            return {student:'Estudante',teacher:'Professor',admin:'Administrador'}[r] || r || 'Estudante';
         }
 
+        // Tabs
+        function switchTab(name) {
+            ['info','achievements','activity','settings'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.remove('active');
+                document.getElementById(`content-${t}`).classList.remove('active');
+            });
+            document.getElementById(`tab-${name}`).classList.add('active');
+            document.getElementById(`content-${name}`).classList.add('active');
+            if (name === 'achievements') loadAchievements();
+            if (name === 'activity') loadActivity();
+        }
+
+        // Edit profile
         function enableEdit() {
             document.getElementById('edit-name').disabled = false;
             document.getElementById('edit-country').disabled = false;
+            document.getElementById('edit-name').classList.add('border-purple-400');
             document.getElementById('edit-btn').classList.add('hidden');
-            document.getElementById('save-btn').classList.remove('hidden');
-            document.getElementById('cancel-btn').classList.remove('hidden');
+            document.getElementById('edit-actions').classList.remove('hidden');
+            document.getElementById('edit-actions').classList.add('flex');
         }
 
         function cancelEdit() {
@@ -269,72 +471,180 @@
             document.getElementById('edit-country').value = originalData.country;
             document.getElementById('edit-name').disabled = true;
             document.getElementById('edit-country').disabled = true;
+            document.getElementById('edit-name').classList.remove('border-purple-400');
             document.getElementById('edit-btn').classList.remove('hidden');
-            document.getElementById('save-btn').classList.add('hidden');
-            document.getElementById('cancel-btn').classList.add('hidden');
+            document.getElementById('edit-actions').classList.add('hidden');
         }
 
         async function saveProfile() {
-            const name = document.getElementById('edit-name').value;
-            const country = document.getElementById('edit-country').value;
-
-            VClass.showLoading('Salvando alterações...');
-
-            // Simulate API call (implement real endpoint)
+            const name = document.getElementById('edit-name').value.trim();
+            const country = document.getElementById('edit-country').value.trim();
+            if (!name) { VClass.showNotification('Nome não pode estar vazio', 'error'); return; }
+            VClass.showLoading('Salvando...');
             setTimeout(() => {
                 VClass.hideLoading();
-                
-                // Update local storage
-                user.name = name;
-                user.country = country;
+                user.name = name; user.full_name = name; user.country = country;
                 localStorage.setItem('user', JSON.stringify(user));
-                
-                // Update display
                 document.getElementById('profile-name').textContent = name;
-                document.getElementById('nav-user-name').textContent = name;
-                
+                document.getElementById('nav-user-name').textContent = name.split(' ')[0];
+                const initials = name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+                document.getElementById('profile-avatar').textContent = initials;
+                document.getElementById('nav-avatar-sm').textContent = initials;
+                document.getElementById('profile-country').textContent = country;
                 originalData = { name, country };
-                
-                document.getElementById('edit-name').disabled = true;
-                document.getElementById('edit-country').disabled = true;
-                document.getElementById('edit-btn').classList.remove('hidden');
-                document.getElementById('save-btn').classList.add('hidden');
-                document.getElementById('cancel-btn').classList.add('hidden');
-                
-                VClass.showNotification('Perfil atualizado com sucesso!', 'success');
+                cancelEdit();
+                VClass.showNotification('Perfil atualizado com sucesso! ✅', 'success');
+            }, 800);
+        }
+
+        // Password strength
+        document.addEventListener('DOMContentLoaded', () => {
+            const pwdInput = document.getElementById('new-password');
+            if (pwdInput) {
+                pwdInput.addEventListener('input', checkPwdStrength);
+            }
+        });
+        function checkPwdStrength() {
+            const pwd = document.getElementById('new-password').value;
+            let score = 0;
+            if (pwd.length >= 8) score++;
+            if (/[A-Z]/.test(pwd)) score++;
+            if (/[0-9]/.test(pwd)) score++;
+            if (/[^A-Za-z0-9]/.test(pwd)) score++;
+            const bars = ['pwd-s1','pwd-s2','pwd-s3','pwd-s4'];
+            const colors = ['bg-red-400','bg-orange-400','bg-yellow-400','bg-green-500'];
+            const texts = ['Muito fraca','Fraca','Média','Forte'];
+            bars.forEach((id, i) => {
+                const el = document.getElementById(id);
+                el.className = `h-1 flex-1 rounded-full ${i < score ? colors[score-1] : 'bg-gray-200'}`;
+            });
+            document.getElementById('pwd-strength-text').textContent = score > 0 ? texts[score-1] : '';
+        }
+
+        function togglePwd(id) {
+            const input = document.getElementById(id);
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+
+        async function submitPassword(e) {
+            e.preventDefault();
+            const cur = document.getElementById('current-password').value;
+            const nw = document.getElementById('new-password').value;
+            const conf = document.getElementById('confirm-password').value;
+            if (nw !== conf) { VClass.showNotification('As senhas não coincidem', 'error'); return; }
+            if (nw.length < 6) { VClass.showNotification('Senha deve ter pelo menos 6 caracteres', 'error'); return; }
+            VClass.showLoading('Alterando senha...');
+            setTimeout(() => {
+                VClass.hideLoading();
+                VClass.showNotification('Senha alterada com sucesso! 🔐', 'success');
+                document.getElementById('password-form').reset();
             }, 1000);
         }
 
-        // Password form
-        document.getElementById('password-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        // Achievements
+        const ACHIEVEMENTS = [
+            { id: 1, emoji: '🎓', title: 'Primeiro Passo', desc: 'Complete sua primeira aula', locked: false },
+            { id: 2, emoji: '🔥', title: 'Em Chamas', desc: '7 dias de sequência', locked: false },
+            { id: 3, emoji: '📚', title: 'Leitor Ávido', desc: '10 aulas completadas', locked: false },
+            { id: 4, emoji: '⭐', title: 'Nota 10', desc: '100% em um exercício', locked: false },
+            { id: 5, emoji: '🏆', title: 'Campeão', desc: '50 aulas completadas', locked: true },
+            { id: 6, emoji: '🌟', title: 'Super Estudante', desc: '100 aulas completadas', locked: true },
+            { id: 7, emoji: '🎯', title: 'Mestre dos Exercícios', desc: '200 exercícios feitos', locked: true },
+            { id: 8, emoji: '💎', title: 'Diamante', desc: 'Nível 10 alcançado', locked: true },
+            { id: 9, emoji: '🚀', title: 'Foguete', desc: '30 dias de sequência', locked: true },
+            { id: 10, emoji: '🌍', title: 'Explorador', desc: 'Acesse de 3 países', locked: true },
+            { id: 11, emoji: '🎵', title: 'Maratonista', desc: '10h de estudo em 1 semana', locked: true },
+            { id: 12, emoji: '👑', title: 'Rei do VClass', desc: 'Todas as conquistas', locked: true },
+        ];
 
-            const currentPassword = document.getElementById('current-password').value;
-            const newPassword = document.getElementById('new-password').value;
-            const confirmPassword = document.getElementById('confirm-password').value;
+        function loadAchievements() {
+            const grid = document.getElementById('achievements-grid');
+            grid.innerHTML = ACHIEVEMENTS.map(a => `
+                <div class="text-center p-4 rounded-xl border ${a.locked ? 'border-gray-100 bg-gray-50' : 'border-purple-100 bg-purple-50 cursor-pointer hover:bg-purple-100'} transition" title="${a.desc}">
+                    <div class="badge-item mx-auto mb-2 ${a.locked ? 'bg-gray-100 badge-locked' : 'bg-white shadow-sm'}">${a.emoji}</div>
+                    <p class="text-xs font-semibold ${a.locked ? 'text-gray-400' : 'text-gray-800'}">${a.title}</p>
+                    <p class="text-xs ${a.locked ? 'text-gray-300' : 'text-gray-500'} mt-0.5">${a.desc}</p>
+                    ${a.locked ? '<span class="text-xs text-gray-300">🔒 Bloqueado</span>' : '<span class="text-xs text-green-600 font-medium">✅ Desbloqueado</span>'}
+                </div>
+            `).join('');
+        }
 
-            if (newPassword !== confirmPassword) {
-                VClass.showNotification('As senhas não coincidem', 'error');
-                return;
+        // Activity heatmap
+        function loadActivity() {
+            // Generate heatmap
+            const heatmap = document.getElementById('heatmap');
+            const weeks = 12;
+            let html = '';
+            for (let w = 0; w < weeks; w++) {
+                html += '<div class="flex flex-col gap-1">';
+                for (let d = 0; d < 7; d++) {
+                    const intensity = Math.random();
+                    let bg = 'bg-gray-100';
+                    if (intensity > 0.8) bg = 'bg-purple-800';
+                    else if (intensity > 0.6) bg = 'bg-purple-600';
+                    else if (intensity > 0.4) bg = 'bg-purple-400';
+                    else if (intensity > 0.2) bg = 'bg-purple-200';
+                    html += `<div class="heatmap-cell ${bg}" title="${Math.round(intensity*5)} aulas"></div>`;
+                }
+                html += '</div>';
             }
+            heatmap.innerHTML = html;
 
-            if (newPassword.length < 6) {
-                VClass.showNotification('A senha deve ter pelo menos 6 caracteres', 'error');
-                return;
+            // Recent activity
+            const list = document.getElementById('activity-list');
+            const activities = [
+                { icon: 'fa-check-circle', color: 'text-green-600', bg: 'bg-green-100', title: 'Funções Quadráticas - Lição 3', time: '2h atrás', type: 'Aula concluída' },
+                { icon: 'fa-tasks', color: 'text-blue-600', bg: 'bg-blue-100', title: 'Quiz 2 - Algebra Linear', time: '4h atrás', type: 'Exercício • 8/10 pts' },
+                { icon: 'fa-play-circle', color: 'text-purple-600', bg: 'bg-purple-100', title: 'Derivadas - Introdução', time: 'Ontem', type: 'Vídeo assistido' },
+                { icon: 'fa-star', color: 'text-yellow-600', bg: 'bg-yellow-100', title: 'Conquista: Em Chamas 🔥', time: 'Ontem', type: '7 dias de sequência' },
+                { icon: 'fa-check-circle', color: 'text-green-600', bg: 'bg-green-100', title: 'Geometria Euclidiana - Lição 1', time: '2 dias atrás', type: 'Aula concluída' },
+                { icon: 'fa-book', color: 'text-indigo-600', bg: 'bg-indigo-100', title: 'Formulário de Matemática', time: '3 dias atrás', type: 'Recurso acessado' },
+            ];
+            list.innerHTML = activities.map(a => `
+                <div class="flex items-start space-x-4 relative z-10 bg-white pb-2">
+                    <div class="w-10 h-10 ${a.bg} rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 border-2 border-white">
+                        <i class="fas ${a.icon} ${a.color} text-sm"></i>
+                    </div>
+                    <div class="flex-1 pb-4 border-b border-gray-100">
+                        <p class="text-sm font-semibold text-gray-900">${a.title}</p>
+                        <p class="text-xs text-gray-500 mt-0.5">${a.type}</p>
+                        <p class="text-xs text-gray-400 mt-1"><i class="far fa-clock mr-1"></i>${a.time}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Settings
+        function loadSettings() {
+            const settings = JSON.parse(localStorage.getItem('vclass_settings') || '{}');
+            Object.entries(settings).forEach(([key, val]) => {
+                const el = document.getElementById(key);
+                if (el && el.type === 'checkbox') el.checked = val;
+            });
+        }
+        function saveSetting(key, value) {
+            const settings = JSON.parse(localStorage.getItem('vclass_settings') || '{}');
+            settings[key] = value;
+            localStorage.setItem('vclass_settings', JSON.stringify(settings));
+            VClass.showNotification('Configuração salva', 'success');
+        }
+        function toggleDarkMode(enabled) {
+            saveSetting('pref-dark', enabled);
+            document.body.classList.toggle('dark', enabled);
+        }
+
+        function confirmClearData() {
+            if (confirm('Tem certeza que quer limpar todo o histórico de progresso? Esta ação não pode ser desfeita.')) {
+                VClass.showNotification('Histórico limpo com sucesso', 'success');
             }
+        }
+        function confirmDeleteAccount() {
+            if (confirm('ATENÇÃO: Esta ação excluirá permanentemente sua conta e todos os dados. Deseja continuar?')) {
+                VClass.showNotification('Solicitação enviada. Verifique seu email.', 'info');
+            }
+        }
 
-            VClass.showLoading('Alterando senha...');
-
-            // Simulate API call (implement real endpoint)
-            setTimeout(() => {
-                VClass.hideLoading();
-                VClass.showNotification('Senha alterada com sucesso!', 'success');
-                document.getElementById('password-form').reset();
-            }, 1000);
-        });
-
-        // Load profile on page load
-        loadProfile();
+        setupProfile();
     </script>
 </body>
 </html>
