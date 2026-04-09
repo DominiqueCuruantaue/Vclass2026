@@ -516,9 +516,11 @@
             }
 
             try {
-                const tokenResult = await VClass.api.video.getToken(lessonId);
+                // DEMO MODE: Use video_url directly from lesson data
+                // In production, fetch token from API: await VClass.api.video.getToken(lessonId)
+                const videoUrl = lessonData.video_url;
                 
-                if (tokenResult.success && tokenResult.data && tokenResult.data.hls_url) {
+                if (videoUrl) {
                     const videoElement = document.getElementById('lesson-video');
                     player = videojs(videoElement, {
                         controls: true,
@@ -529,13 +531,15 @@
                     });
 
                     player.src({
-                        src: tokenResult.data.hls_url,
+                        src: videoUrl,
                         type: 'application/x-mpegURL'
                     });
 
                     // Track progress
                     player.on('timeupdate', updateVideoProgress);
                     player.on('ended', onVideoEnded);
+                    
+                    console.log('Video loaded successfully:', videoUrl);
                 } else {
                     document.getElementById('video-container').classList.add('hidden');
                     document.getElementById('video-error').classList.remove('hidden');
