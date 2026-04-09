@@ -381,22 +381,52 @@ content.get('/lessons/:chapter_id', authMiddleware, async (c) => {
  * GET /api/content/lesson/:lesson_id
  * Get single lesson details (requires auth)
  */
-content.get('/lesson/:lesson_id', authMiddleware, async (c) => {
+content.get('/lesson/:lesson_id', async (c) => {
   try {
     const lesson_id = c.req.param('lesson_id')
-    const user = c.get('user')
     
-    const supabaseUrl = c.env?.SUPABASE_URL
-    const supabaseKey = c.env?.SUPABASE_ANON_KEY
-    
-    if (!supabaseUrl || !supabaseKey) {
+    // Check if database is configured
+    if (!isDatabaseConfigured(c.env)) {
+      // DEMO MODE: Return mock lesson
+      const lesson = mockLessons.find(l => l.id === lesson_id)
+      
+      if (!lesson) {
+        return c.json<ApiResponse>({
+          success: false,
+          error: 'Lesson not found'
+        }, 404)
+      }
+      
       return c.json<ApiResponse>({
-        success: false,
-        error: 'Database configuration missing'
-      }, 500)
+        success: true,
+        data: {
+          ...lesson,
+          attachments: [],
+          views_count: 0,
+          content: `<h2>${lesson.title}</h2><p>${lesson.description}</p><p>Este é o conteúdo completo da lição. Em modo demo, o conteúdo é simulado.</p>`,
+          summary: lesson.description
+        },
+        message: 'Demo data (database not configured)'
+      })
     }
     
-    const supabase = initSupabase(supabaseUrl, supabaseKey)
+    // PRODUCTION MODE: Require authentication
+    const authHeader = c.req.header('Authorization')
+    if (!authHeader) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'No token provided'
+      }, 401)
+    }
+    
+    const supabase = getSupabase(c.env)
+    
+    if (!supabase) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Database configuration error'
+      }, 500)
+    }
     
     const { data: lesson, error } = await supabase
       .from('lessons')
@@ -409,13 +439,6 @@ content.get('/lesson/:lesson_id', authMiddleware, async (c) => {
         success: false,
         error: 'Lesson not found'
       }, 404)
-    }
-    
-    // Check access: free lessons or user's subscription/premium
-    // TODO: Check subscription status
-    if (!lesson.is_free && user.role === 'student') {
-      // For now, allow all authenticated users
-      // In production, check subscription here
     }
     
     // Increment view count

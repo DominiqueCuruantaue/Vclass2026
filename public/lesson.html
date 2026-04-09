@@ -416,8 +416,19 @@
     <script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
     <script src="/static/app.js"></script>
     <script>
-        // Check authentication
-        if (!VClass.isAuthenticated()) {
+        // DEMO MODE: Set fake authentication for testing
+        const isDemoMode = true; // Set to false to require login
+        
+        if (isDemoMode && !VClass.isAuthenticated()) {
+            // Set demo token to bypass auth checks
+            localStorage.setItem('accessToken', 'demo_token');
+            localStorage.setItem('user', JSON.stringify({
+                id: 'demo',
+                email: 'demo@vclass.mz',
+                full_name: 'Demo User',
+                role: 'student'
+            }));
+        } else if (!isDemoMode && !VClass.isAuthenticated()) {
             window.location.href = '/login.html';
         }
 
