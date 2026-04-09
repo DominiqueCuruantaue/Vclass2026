@@ -26,38 +26,7 @@
     </style>
 </head>
 <body class="bg-gray-50">
-    <!-- Navigation -->
-    <nav class="bg-white shadow-sm sticky top-0 z-50">
-        <div class="container mx-auto px-4">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center space-x-8">
-                    <a href="/dashboard.html" class="flex items-center space-x-2">
-                        <i class="fas fa-graduation-cap text-2xl text-purple-600"></i>
-                        <span class="text-xl font-bold text-gray-900">VClass</span>
-                    </a>
-                    <div class="hidden md:flex space-x-1">
-                        <a href="/dashboard.html" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100">
-                            <i class="fas fa-home mr-1"></i> Dashboard
-                        </a>
-                        <a href="/browse.html" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100">
-                            <i class="fas fa-book mr-1"></i> Conteúdo
-                        </a>
-                        <a href="/progress.html" class="px-3 py-2 rounded-lg text-sm font-medium bg-purple-50 text-purple-600">
-                            <i class="fas fa-chart-line mr-1"></i> Progresso
-                        </a>
-                    </div>
-                </div>
-                <div class="flex items-center space-x-3">
-                    <a href="/profile.html" class="flex items-center space-x-2">
-                        <div id="nav-avatar" class="w-9 h-9 rounded-full bg-purple-600 flex items-center justify-center text-white text-sm font-bold">?</div>
-                    </a>
-                    <button onclick="VClass.logout()" class="px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </nav>
+    <div id="navbar-placeholder"></div>
 
     <!-- Header -->
     <div class="bg-gradient-to-r from-purple-600 to-indigo-700 text-white">
@@ -189,12 +158,8 @@
         if (!VClass.isAuthenticated()) {
             window.location.href = '/login.html';
         }
+        VClass.initNavbar('progress');
         const user = VClass.getCurrentUser();
-        if (user) {
-            const name = user.full_name || user.name || '';
-            const initials = name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
-            document.getElementById('nav-avatar').textContent = initials;
-        }
 
         let mainChartInstance = null;
         let currentPeriod = 'week';
@@ -550,6 +515,7 @@
         // Init
         createChart();
         loadProgress();
+        setTab('subjects');
     </script>
 </body>
 </html>

@@ -3,296 +3,422 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registar - VClass</title>
+    <title>Criar Conta - VClass</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <link href="/static/styles.css" rel="stylesheet">
+    <style>
+        body { background: #f8f7ff; }
+        .card-shadow { box-shadow: 0 20px 60px rgba(109,40,217,0.12), 0 4px 20px rgba(0,0,0,0.06); }
+        .input-field {
+            width: 100%;
+            padding: 0.625rem 0.875rem 0.625rem 2.5rem;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 0.625rem;
+            font-size: 0.875rem;
+            outline: none;
+            transition: all 0.2s;
+            background: white;
+        }
+        .input-field:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
+        .input-field.error { border-color: #ef4444; }
+        .input-field.success { border-color: #10b981; }
+        .btn-primary {
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.625rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .btn-primary:hover:not(:disabled) { background: linear-gradient(135deg, #6d28d9, #5b21b6); transform: translateY(-1px); box-shadow: 0 4px 15px rgba(109,40,217,0.4); }
+        .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
+        .error-msg { color: #ef4444; font-size: 0.75rem; margin-top: 0.25rem; display: none; }
+        .error-msg.show { display: block; }
+        .strength-bar { height: 4px; border-radius: 2px; transition: width 0.3s, background 0.3s; }
+        .left-panel { background: linear-gradient(160deg, #7c3aed 0%, #4f46e5 50%, #1e40af 100%); }
+        .step-indicator { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; }
+        .step-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.3); }
+        .step-dot.active { background: white; width: 24px; border-radius: 4px; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-in { animation: fadeInUp 0.5s ease forwards; }
+        .role-btn { cursor: pointer; border: 2px solid #e5e7eb; border-radius: 0.75rem; padding: 0.75rem; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; }
+        .role-btn:hover { border-color: #7c3aed; background: #faf5ff; }
+        .role-btn.selected { border-color: #7c3aed; background: #faf5ff; }
+        .role-btn.selected .role-icon { color: #7c3aed; }
+    </style>
 </head>
-<body class="bg-gray-50">
-    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div class="max-w-md w-full space-y-8">
+<body class="min-h-screen flex items-center justify-center py-8 px-4">
+
+    <div class="w-full max-w-4xl flex rounded-2xl overflow-hidden card-shadow animate-in">
+
+        <!-- Left Panel - Hidden on mobile -->
+        <div class="left-panel hidden lg:flex flex-col justify-between p-10 w-5/12 text-white min-h-full">
             <!-- Logo -->
-            <div class="text-center">
-                <div class="flex items-center justify-center space-x-2 mb-4">
-                    <i class="fas fa-graduation-cap text-5xl text-purple-600"></i>
-                </div>
-                <h2 class="text-3xl font-extrabold text-gray-900">
-                    Criar Conta
-                </h2>
-                <p class="mt-2 text-sm text-gray-600">
-                    Junte-se à comunidade VClass
-                </p>
+            <div>
+                <a href="/home.html" class="flex items-center gap-3 mb-10">
+                    <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                        <i class="fas fa-graduation-cap text-white text-lg"></i>
+                    </div>
+                    <span class="text-2xl font-bold">VClass</span>
+                </a>
+
+                <h2 class="text-3xl font-bold mb-3 leading-tight">Comece sua jornada de aprendizado hoje!</h2>
+                <p class="text-purple-200 text-sm leading-relaxed">Acesse milhares de aulas, exercícios interativos e acompanhe seu progresso em tempo real.</p>
             </div>
 
-            <!-- Alert Container -->
-            <div id="alert-container"></div>
-
-            <!-- Register Form -->
-            <form id="register-form" class="mt-8 space-y-6 bg-white p-8 rounded-lg shadow-md">
-                <div class="space-y-4">
-                    <div>
-                        <label for="full_name" class="block text-sm font-medium text-gray-700">
-                            Nome Completo
-                        </label>
-                        <div class="mt-1 relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <i class="fas fa-user text-gray-400"></i>
-                            </div>
-                            <input 
-                                id="full_name" 
-                                name="full_name" 
-                                type="text" 
-                                required 
-                                class="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                                placeholder="João Silva"
-                            >
-                        </div>
+            <!-- Features -->
+            <div class="space-y-4 my-8">
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <i class="fas fa-play text-xs"></i>
                     </div>
-
                     <div>
-                        <label for="email" class="block text-sm font-medium text-gray-700">
-                            Email
-                        </label>
-                        <div class="mt-1 relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <i class="fas fa-envelope text-gray-400"></i>
-                            </div>
-                            <input 
-                                id="email" 
-                                name="email" 
-                                type="email" 
-                                required 
-                                class="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                                placeholder="seu@email.com"
-                            >
-                        </div>
-                    </div>
-
-                    <div>
-                        <label for="phone" class="block text-sm font-medium text-gray-700">
-                            Telefone (Opcional)
-                        </label>
-                        <div class="mt-1 relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <i class="fas fa-phone text-gray-400"></i>
-                            </div>
-                            <input 
-                                id="phone" 
-                                name="phone" 
-                                type="tel" 
-                                class="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                                placeholder="+258 84 123 4567"
-                            >
-                        </div>
-                    </div>
-
-                    <div>
-                        <label for="password" class="block text-sm font-medium text-gray-700">
-                            Senha
-                        </label>
-                        <div class="mt-1 relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <i class="fas fa-lock text-gray-400"></i>
-                            </div>
-                            <input 
-                                id="password" 
-                                name="password" 
-                                type="password" 
-                                required 
-                                class="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                                placeholder="••••••••"
-                            >
-                        </div>
-                        <p class="mt-1 text-xs text-gray-500">
-                            Mínimo 8 caracteres, com maiúscula, minúscula e número
-                        </p>
-                    </div>
-
-                    <div>
-                        <label for="confirm_password" class="block text-sm font-medium text-gray-700">
-                            Confirmar Senha
-                        </label>
-                        <div class="mt-1 relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <i class="fas fa-lock text-gray-400"></i>
-                            </div>
-                            <input 
-                                id="confirm_password" 
-                                name="confirm_password" 
-                                type="password" 
-                                required 
-                                class="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                                placeholder="••••••••"
-                            >
-                        </div>
-                    </div>
-
-                    <div>
-                        <label for="role" class="block text-sm font-medium text-gray-700">
-                            Eu sou um(a)
-                        </label>
-                        <select 
-                            id="role" 
-                            name="role" 
-                            required
-                            class="mt-1 block w-full pl-3 pr-10 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-                        >
-                            <option value="student">Estudante</option>
-                            <option value="teacher">Professor(a)</option>
-                        </select>
+                        <p class="font-semibold text-sm">+500 Aulas em Vídeo</p>
+                        <p class="text-xs text-purple-200">Matemática, Física, Química, Biologia e mais</p>
                     </div>
                 </div>
-
-                <div class="flex items-center">
-                    <input 
-                        id="terms" 
-                        name="terms" 
-                        type="checkbox" 
-                        required
-                        class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
-                    >
-                    <label for="terms" class="ml-2 block text-sm text-gray-900">
-                        Concordo com os <a href="#" class="text-purple-600 hover:text-purple-500">Termos de Uso</a>
-                    </label>
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <i class="fas fa-tasks text-xs"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-sm">Exercícios Interativos</p>
+                        <p class="text-xs text-purple-200">Pratique e receba feedback imediato</p>
+                    </div>
                 </div>
-
-                <div>
-                    <button 
-                        type="submit" 
-                        id="register-btn"
-                        class="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition"
-                    >
-                        <i class="fas fa-user-plus mr-2"></i>
-                        Criar Conta
-                    </button>
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <i class="fas fa-chart-bar text-xs"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-sm">Progresso Detalhado</p>
+                        <p class="text-xs text-purple-200">Veja sua evolução por disciplina</p>
+                    </div>
                 </div>
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <i class="fas fa-trophy text-xs"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-sm">Sistema de Conquistas</p>
+                        <p class="text-xs text-purple-200">Ganhe badges e pontos enquanto aprende</p>
+                    </div>
+                </div>
+            </div>
 
+            <!-- Stats -->
+            <div class="grid grid-cols-3 gap-3 pt-6 border-t border-white/20">
                 <div class="text-center">
-                    <p class="text-sm text-gray-600">
-                        Já tem uma conta?
-                        <a href="/login.html" class="font-medium text-purple-600 hover:text-purple-500">
-                            Entrar
-                        </a>
-                    </p>
+                    <p class="text-2xl font-bold">10k+</p>
+                    <p class="text-xs text-purple-200">Estudantes</p>
                 </div>
-            </form>
+                <div class="text-center">
+                    <p class="text-2xl font-bold">500+</p>
+                    <p class="text-xs text-purple-200">Aulas</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-2xl font-bold">98%</p>
+                    <p class="text-xs text-purple-200">Satisfação</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel - Form -->
+        <div class="bg-white flex-1 p-8 lg:p-10 overflow-y-auto">
+            <!-- Mobile logo -->
+            <div class="lg:hidden flex items-center justify-between mb-8">
+                <a href="/home.html" class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-graduation-cap text-white text-sm"></i>
+                    </div>
+                    <span class="text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">VClass</span>
+                </a>
+                <a href="/login.html" class="text-sm text-purple-600 hover:underline font-medium">Entrar</a>
+            </div>
+
+            <div class="max-w-md mx-auto">
+                <div class="mb-8">
+                    <h1 class="text-2xl font-bold text-gray-900 mb-1">Criar conta gratuita</h1>
+                    <p class="text-sm text-gray-500">Preencha os dados abaixo para começar</p>
+                </div>
+
+                <!-- Alert -->
+                <div id="alert-container" class="mb-4"></div>
+
+                <!-- Form -->
+                <form id="register-form" novalidate class="space-y-4">
+
+                    <!-- Full Name -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Nome Completo</label>
+                        <div class="relative">
+                            <i class="fas fa-user absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                            <input type="text" id="full_name" class="input-field" placeholder="Ex: João Silva" autocomplete="name" required>
+                        </div>
+                        <p class="error-msg" id="full_name-error">Por favor, insira seu nome completo</p>
+                    </div>
+
+                    <!-- Email -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+                        <div class="relative">
+                            <i class="fas fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                            <input type="email" id="email" class="input-field" placeholder="seu@email.com" autocomplete="email" required>
+                        </div>
+                        <p class="error-msg" id="email-error">Insira um email válido</p>
+                    </div>
+
+                    <!-- Role Selection -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de conta</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="role-btn selected" onclick="selectRole('student', this)" id="role-student">
+                                <i class="fas fa-user-graduate text-2xl role-icon text-purple-600"></i>
+                                <span class="text-sm font-medium text-gray-700">Estudante</span>
+                                <span class="text-xs text-gray-400">Acesso a aulas</span>
+                            </div>
+                            <div class="role-btn" onclick="selectRole('teacher', this)" id="role-teacher">
+                                <i class="fas fa-chalkboard-teacher text-2xl role-icon text-gray-400"></i>
+                                <span class="text-sm font-medium text-gray-700">Professor</span>
+                                <span class="text-xs text-gray-400">Crie conteúdo</span>
+                            </div>
+                        </div>
+                        <input type="hidden" id="role" value="student">
+                    </div>
+
+                    <!-- Password -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Senha</label>
+                        <div class="relative">
+                            <i class="fas fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                            <input type="password" id="password" class="input-field pr-10" placeholder="Mínimo 8 caracteres" autocomplete="new-password" required oninput="checkStrength()">
+                            <button type="button" onclick="togglePwd('password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
+                                <i class="fas fa-eye text-sm"></i>
+                            </button>
+                        </div>
+                        <!-- Strength indicator -->
+                        <div class="mt-2">
+                            <div class="flex gap-1 mb-1">
+                                <div class="strength-bar flex-1 bg-gray-200" id="s1"></div>
+                                <div class="strength-bar flex-1 bg-gray-200" id="s2"></div>
+                                <div class="strength-bar flex-1 bg-gray-200" id="s3"></div>
+                                <div class="strength-bar flex-1 bg-gray-200" id="s4"></div>
+                            </div>
+                            <p class="text-xs text-gray-400" id="strength-label">Força da senha</p>
+                        </div>
+                        <p class="error-msg" id="password-error">A senha deve ter pelo menos 8 caracteres</p>
+                    </div>
+
+                    <!-- Confirm Password -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Confirmar Senha</label>
+                        <div class="relative">
+                            <i class="fas fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                            <input type="password" id="confirm_password" class="input-field pr-10" placeholder="Repita a senha" autocomplete="new-password" required>
+                            <button type="button" onclick="togglePwd('confirm_password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
+                                <i class="fas fa-eye text-sm"></i>
+                            </button>
+                        </div>
+                        <p class="error-msg" id="confirm_password-error">As senhas não coincidem</p>
+                    </div>
+
+                    <!-- Terms -->
+                    <div class="flex items-start gap-3 py-1">
+                        <input type="checkbox" id="terms" class="mt-0.5 w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500 cursor-pointer" required>
+                        <label for="terms" class="text-sm text-gray-600 cursor-pointer">
+                            Aceito os <a href="#" class="text-purple-600 hover:underline font-medium">Termos de Uso</a> e 
+                            <a href="#" class="text-purple-600 hover:underline font-medium">Política de Privacidade</a>
+                        </label>
+                    </div>
+                    <p class="error-msg" id="terms-error">Você deve aceitar os termos para continuar</p>
+
+                    <!-- Submit -->
+                    <button type="submit" id="submit-btn" class="btn-primary">
+                        <span id="btn-text"><i class="fas fa-user-plus mr-1"></i> Criar Conta</span>
+                        <span id="btn-loading" class="hidden"><i class="fas fa-circle-notch fa-spin mr-1"></i> Criando conta...</span>
+                    </button>
+                </form>
+
+                <!-- Login link -->
+                <p class="text-center text-sm text-gray-500 mt-6">
+                    Já tem conta? 
+                    <a href="/login.html" class="text-purple-600 hover:underline font-semibold">Entrar agora</a>
+                </p>
+
+                <!-- Back to home -->
+                <p class="text-center mt-4">
+                    <a href="/home.html" class="text-xs text-gray-400 hover:text-purple-600 transition">
+                        <i class="fas fa-arrow-left mr-1"></i> Voltar para o início
+                    </a>
+                </p>
+            </div>
         </div>
     </div>
 
     <script src="/static/app.js"></script>
     <script>
-        const registerForm = document.getElementById('register-form');
-        const registerBtn = document.getElementById('register-btn');
-        const alertContainer = document.getElementById('alert-container');
+        let selectedRole = 'student';
 
-        // Show alert
-        function showAlert(message, type = 'error') {
-            const colors = {
-                error: 'bg-red-50 border-red-200 text-red-800',
-                success: 'bg-green-50 border-green-200 text-green-800',
-                info: 'bg-blue-50 border-blue-200 text-blue-800'
-            };
-
-            alertContainer.innerHTML = `
-                <div class="${colors[type]} border rounded-lg p-4 mb-4 fade-in">
-                    <div class="flex items-center">
-                        <i class="fas fa-${type === 'error' ? 'exclamation-circle' : type === 'success' ? 'check-circle' : 'info-circle'} mr-2"></i>
-                        <span>${message}</span>
-                    </div>
-                </div>
-            `;
+        function selectRole(role, el) {
+            selectedRole = role;
+            document.getElementById('role').value = role;
+            document.querySelectorAll('.role-btn').forEach(b => {
+                b.classList.remove('selected');
+                b.querySelector('.role-icon').className = b.querySelector('.role-icon').className.replace('text-purple-600', 'text-gray-400');
+            });
+            el.classList.add('selected');
+            el.querySelector('.role-icon').className = el.querySelector('.role-icon').className.replace('text-gray-400', 'text-purple-600');
         }
 
-        // Handle registration
-        registerForm.addEventListener('submit', async (e) => {
+        function togglePwd(id, btn) {
+            const input = document.getElementById(id);
+            const icon = btn.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fas fa-eye-slash text-sm';
+            } else {
+                input.type = 'password';
+                icon.className = 'fas fa-eye text-sm';
+            }
+        }
+
+        function checkStrength() {
+            const pwd = document.getElementById('password').value;
+            const bars = [document.getElementById('s1'), document.getElementById('s2'), document.getElementById('s3'), document.getElementById('s4')];
+            const label = document.getElementById('strength-label');
+            bars.forEach(b => { b.style.background = '#e5e7eb'; });
+
+            let score = 0;
+            if (pwd.length >= 8) score++;
+            if (/[A-Z]/.test(pwd)) score++;
+            if (/[0-9]/.test(pwd)) score++;
+            if (/[^A-Za-z0-9]/.test(pwd)) score++;
+
+            const configs = [
+                { color: '#ef4444', label: 'Muito fraca', active: 1 },
+                { color: '#f97316', label: 'Fraca', active: 2 },
+                { color: '#eab308', label: 'Razoável', active: 3 },
+                { color: '#22c55e', label: 'Forte', active: 4 },
+            ];
+
+            if (pwd.length > 0 && score > 0) {
+                const cfg = configs[score - 1];
+                for (let i = 0; i < cfg.active; i++) bars[i].style.background = cfg.color;
+                label.textContent = cfg.label;
+                label.style.color = cfg.color;
+            } else {
+                label.textContent = 'Força da senha';
+                label.style.color = '#9ca3af';
+            }
+        }
+
+        function showFieldError(field, msg) {
+            const input = document.getElementById(field);
+            const error = document.getElementById(field + '-error');
+            if (input) input.classList.add('error');
+            if (error) { error.textContent = msg; error.classList.add('show'); }
+        }
+
+        function clearFieldError(field) {
+            const input = document.getElementById(field);
+            const error = document.getElementById(field + '-error');
+            if (input) { input.classList.remove('error'); input.classList.add('success'); }
+            if (error) error.classList.remove('show');
+        }
+
+        // Real-time validation
+        ['full_name', 'email', 'password', 'confirm_password'].forEach(id => {
+            document.getElementById(id)?.addEventListener('blur', () => validateField(id));
+        });
+
+        function validateField(id) {
+            const val = document.getElementById(id)?.value.trim();
+            if (id === 'full_name') {
+                if (!val || val.length < 3) { showFieldError('full_name', 'Nome deve ter pelo menos 3 caracteres'); return false; }
+                clearFieldError('full_name');
+            } else if (id === 'email') {
+                if (!val || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) { showFieldError('email', 'Insira um email válido'); return false; }
+                clearFieldError('email');
+            } else if (id === 'password') {
+                if (!val || val.length < 8) { showFieldError('password', 'Senha deve ter pelo menos 8 caracteres'); return false; }
+                clearFieldError('password');
+            } else if (id === 'confirm_password') {
+                const pwd = document.getElementById('password')?.value;
+                if (val !== pwd) { showFieldError('confirm_password', 'As senhas não coincidem'); return false; }
+                clearFieldError('confirm_password');
+            }
+            return true;
+        }
+
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const full_name = document.getElementById('full_name').value;
-            const email = document.getElementById('email').value;
-            const phone = document.getElementById('phone').value;
-            const password = document.getElementById('password').value;
-            const confirm_password = document.getElementById('confirm_password').value;
-            const role = document.getElementById('role').value;
+            const valid = ['full_name', 'email', 'password', 'confirm_password'].every(id => validateField(id));
+            if (!valid) return;
 
-            // Validate password match
-            if (password !== confirm_password) {
-                showAlert('As senhas não coincidem', 'error');
+            if (!document.getElementById('terms').checked) {
+                document.getElementById('terms-error').classList.add('show');
                 return;
             }
+            document.getElementById('terms-error').classList.remove('show');
 
-            // Validate password strength
-            if (password.length < 8) {
-                showAlert('A senha deve ter no mínimo 8 caracteres', 'error');
-                return;
-            }
+            const btn = document.getElementById('submit-btn');
+            document.getElementById('btn-text').classList.add('hidden');
+            document.getElementById('btn-loading').classList.remove('hidden');
+            btn.disabled = true;
 
-            if (!/[A-Z]/.test(password)) {
-                showAlert('A senha deve conter pelo menos uma letra maiúscula', 'error');
-                return;
-            }
-
-            if (!/[a-z]/.test(password)) {
-                showAlert('A senha deve conter pelo menos uma letra minúscula', 'error');
-                return;
-            }
-
-            if (!/[0-9]/.test(password)) {
-                showAlert('A senha deve conter pelo menos um número', 'error');
-                return;
-            }
-
-            // Show loading
-            registerBtn.disabled = true;
-            registerBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Criando conta...';
+            const data = {
+                full_name: document.getElementById('full_name').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                password: document.getElementById('password').value,
+                role: document.getElementById('role').value
+            };
 
             try {
-                const result = await VClass.api.auth.register({
-                    email,
-                    password,
-                    full_name,
-                    role,
-                    phone: phone || undefined
-                });
-
-                if (result.success) {
-                    // Save auth data
-                    VClass.saveAuth(result.data);
-
-                    // Show success
-                    showAlert('Conta criada com sucesso!', 'success');
-
-                    // Redirect
+                const res = await VClass.api.auth.register(data);
+                if (res.success) {
+                    VClass.showNotification('Conta criada com sucesso! Redirecionando...', 'success');
                     setTimeout(() => {
-                        if (role === 'student') {
-                            window.location.href = '/dashboard.html';
-                        } else {
-                            window.location.href = '/teacher-dashboard.html';
-                        }
+                        window.location.href = '/login.html?registered=1';
                     }, 1500);
                 } else {
-                    showAlert(result.error || 'Erro ao criar conta', 'error');
-                    registerBtn.disabled = false;
-                    registerBtn.innerHTML = '<i class="fas fa-user-plus mr-2"></i>Criar Conta';
+                    const container = document.getElementById('alert-container');
+                    container.innerHTML = `<div class="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700"><i class="fas fa-exclamation-circle text-red-500"></i>${res.error || 'Erro ao criar conta'}</div>`;
+                    btn.disabled = false;
+                    document.getElementById('btn-text').classList.remove('hidden');
+                    document.getElementById('btn-loading').classList.add('hidden');
                 }
-            } catch (error) {
-                console.error('Register error:', error);
-                showAlert('Erro de conexão. Verifique sua internet.', 'error');
-                registerBtn.disabled = false;
-                registerBtn.innerHTML = '<i class="fas fa-user-plus mr-2"></i>Criar Conta';
+            } catch (err) {
+                VClass.showNotification('Erro de conexão. Tente novamente.', 'error');
+                btn.disabled = false;
+                document.getElementById('btn-text').classList.remove('hidden');
+                document.getElementById('btn-loading').classList.add('hidden');
             }
         });
 
-        // Check if already logged in
-        if (VClass.isAuthenticated()) {
-            const user = VClass.getCurrentUser();
-            if (user) {
-                if (user.role === 'student') {
-                    window.location.href = '/dashboard.html';
-                } else {
-                    window.location.href = '/teacher-dashboard.html';
-                }
+        // If already logged in, redirect
+        window.addEventListener('load', () => {
+            if (VClass.isAuthenticated()) window.location.href = '/dashboard.html';
+
+            // Check if coming from registration success
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('registered') === '1') {
+                document.getElementById('alert-container').innerHTML = `
+                    <div class="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 mb-4">
+                        <i class="fas fa-check-circle text-green-500"></i>
+                        Conta criada! Faça login para continuar.
+                    </div>`;
             }
-        }
+        });
     </script>
 </body>
 </html>

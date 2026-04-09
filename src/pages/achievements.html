@@ -8,404 +8,257 @@
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <link href="/static/styles.css" rel="stylesheet">
     <style>
-        .achievement-card {
-            transition: all 0.3s ease;
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        .achievement-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-        }
-        .achievement-locked {
-            opacity: 0.5;
-            filter: grayscale(100%);
-        }
-        .achievement-shine {
-            position: relative;
-            overflow: hidden;
-        }
-        .achievement-shine::after {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
-            transform: rotate(45deg);
-            animation: shine 3s infinite;
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(124,58,237,0.4); }
+            70% { box-shadow: 0 0 0 12px rgba(124,58,237,0); }
+            100% { box-shadow: 0 0 0 0 rgba(124,58,237,0); }
         }
         @keyframes shine {
-            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
-            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
         }
-        .progress-ring {
-            transform: rotate(-90deg);
+        .ach-card {
+            transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+            animation: fadeInUp 0.4s ease forwards;
+            opacity: 0;
         }
+        .ach-card:nth-child(1) { animation-delay: 0.05s; }
+        .ach-card:nth-child(2) { animation-delay: 0.10s; }
+        .ach-card:nth-child(3) { animation-delay: 0.15s; }
+        .ach-card:nth-child(4) { animation-delay: 0.20s; }
+        .ach-card:nth-child(5) { animation-delay: 0.25s; }
+        .ach-card:nth-child(6) { animation-delay: 0.30s; }
+        .ach-card:nth-child(7) { animation-delay: 0.35s; }
+        .ach-card:nth-child(8) { animation-delay: 0.40s; }
+        .ach-card:nth-child(9) { animation-delay: 0.45s; }
+        .ach-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.12); }
+        .ach-card.unlocked { border: 1.5px solid #e9d5ff; }
+        .ach-card.locked { filter: grayscale(0.8); opacity: 0.7; }
+        .ach-card.locked:hover { opacity: 0.9; }
+        .badge-glow { animation: pulse-ring 2s infinite; }
+        .shimmer-badge {
+            background: linear-gradient(90deg, #fbbf24, #f59e0b, #fcd34d, #f59e0b, #fbbf24);
+            background-size: 200% auto;
+            animation: shine 2s linear infinite;
+        }
+        .cat-btn { transition: all 0.2s; border: 1.5px solid transparent; }
+        .cat-btn.active { background: #7c3aed; color: white; border-color: #7c3aed; }
+        .cat-btn:not(.active) { background: white; color: #6b7280; border-color: #e5e7eb; }
+        .cat-btn:not(.active):hover { border-color: #7c3aed; color: #7c3aed; background: #faf5ff; }
+        .stat-ring { position: relative; width: 80px; height: 80px; }
+        .stat-ring svg { transform: rotate(-90deg); }
+        .stat-ring-value { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 800; }
     </style>
 </head>
-<body class="bg-gray-50">
-    <!-- Navigation -->
-    <nav class="bg-white shadow-sm border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center space-x-8">
-                    <a href="/dashboard.html" class="flex items-center space-x-2">
-                        <i class="fas fa-graduation-cap text-2xl text-purple-600"></i>
-                        <span class="text-xl font-bold text-gray-900">VClass</span>
-                    </a>
-                    <div class="hidden md:flex space-x-4">
-                        <a href="/dashboard.html" class="px-3 py-2 text-gray-700 hover:text-purple-600">
-                            <i class="fas fa-home mr-1"></i> Dashboard
-                        </a>
-                        <a href="/browse.html" class="px-3 py-2 text-gray-700 hover:text-purple-600">
-                            <i class="fas fa-book mr-1"></i> Conteúdo
-                        </a>
-                        <a href="/achievements.html" class="px-3 py-2 text-purple-600 border-b-2 border-purple-600">
-                            <i class="fas fa-trophy mr-1"></i> Conquistas
-                        </a>
-                    </div>
+<body class="bg-gray-50 min-h-screen">
+
+    <div id="navbar-placeholder"></div>
+
+    <main class="container mx-auto px-4 py-8 max-w-7xl">
+
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-2">
+                    <span class="text-3xl">🏆</span> Suas Conquistas
+                </h1>
+                <p class="text-gray-500 text-sm mt-1">Continue estudando para desbloquear novos badges!</p>
+            </div>
+            <a href="/dashboard.html" class="self-start md:self-auto text-sm text-purple-600 hover:underline flex items-center gap-1">
+                <i class="fas fa-arrow-left text-xs"></i> Dashboard
+            </a>
+        </div>
+
+        <!-- Stats Banner -->
+        <div class="bg-gradient-to-r from-purple-700 via-purple-600 to-indigo-600 rounded-2xl p-6 mb-8 text-white shadow-lg">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div class="text-center">
+                    <div class="text-3xl md:text-4xl font-black mb-1" id="stat-unlocked">5/12</div>
+                    <div class="text-xs text-purple-200 font-medium">Desbloqueadas</div>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <div class="flex items-center space-x-2">
-                        <span class="text-sm text-gray-700" id="user-name">Carregando...</span>
-                        <button onclick="VClass.logout()" class="text-sm text-red-600 hover:text-red-700">
-                            <i class="fas fa-sign-out-alt"></i> Sair
-                        </button>
-                    </div>
+                <div class="text-center">
+                    <div class="text-3xl md:text-4xl font-black mb-1" id="stat-points">175</div>
+                    <div class="text-xs text-purple-200 font-medium">Pontos XP</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl md:text-4xl font-black mb-1" id="stat-percent">42%</div>
+                    <div class="text-xs text-purple-200 font-medium">Progresso</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl md:text-3xl font-black mb-1" id="stat-rank">🥈 Avançado</div>
+                    <div class="text-xs text-purple-200 font-medium">Nível Atual</div>
                 </div>
             </div>
-        </div>
-    </nav>
-
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Header with Stats -->
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">
-                <i class="fas fa-trophy text-yellow-500 mr-2"></i>
-                Suas Conquistas
-            </h1>
-            <p class="text-gray-600 mb-6">Continue estudando para desbloquear novas conquistas!</p>
-            
-            <!-- Overall Progress -->
-            <div class="bg-gradient-to-r from-purple-600 to-purple-800 rounded-lg shadow-lg p-6 text-white">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div class="text-center">
-                        <div class="text-4xl font-bold" id="total-achievements">0</div>
-                        <div class="text-sm text-purple-200">Conquistas Desbloqueadas</div>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-4xl font-bold" id="total-points">0</div>
-                        <div class="text-sm text-purple-200">Pontos Totais</div>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-4xl font-bold" id="completion-percent">0%</div>
-                        <div class="text-sm text-purple-200">Progresso</div>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-4xl font-bold" id="rank-level">Iniciante</div>
-                        <div class="text-sm text-purple-200">Nível Atual</div>
-                    </div>
+            <!-- Progress bar -->
+            <div class="mt-5">
+                <div class="flex justify-between text-xs text-purple-200 mb-1.5">
+                    <span>Progresso para Mestre</span>
+                    <span id="stat-progress-label">175 / 500 XP</span>
+                </div>
+                <div class="h-2.5 bg-purple-800/60 rounded-full overflow-hidden">
+                    <div id="xp-bar" class="h-full bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full transition-all duration-1000" style="width: 35%"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Categories -->
+        <!-- Category Filters -->
         <div class="flex flex-wrap gap-2 mb-6">
-            <button onclick="filterAchievements('all')" 
-                    class="category-btn px-4 py-2 rounded-lg bg-purple-600 text-white font-medium" 
-                    data-category="all">
-                Todas
+            <button class="cat-btn active px-4 py-2 rounded-xl text-sm font-semibold" onclick="setCategory('all', this)">
+                <i class="fas fa-th mr-1.5"></i> Todas <span class="ml-1 text-xs opacity-70" id="count-all">12</span>
             </button>
-            <button onclick="filterAchievements('lessons')" 
-                    class="category-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300" 
-                    data-category="lessons">
-                Lições
+            <button class="cat-btn px-4 py-2 rounded-xl text-sm font-semibold" onclick="setCategory('lessons', this)">
+                <i class="fas fa-play-circle mr-1.5"></i> Aulas <span class="ml-1 text-xs opacity-70" id="count-lessons">3</span>
             </button>
-            <button onclick="filterAchievements('exercises')" 
-                    class="category-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300" 
-                    data-category="exercises">
-                Exercícios
+            <button class="cat-btn px-4 py-2 rounded-xl text-sm font-semibold" onclick="setCategory('exercises', this)">
+                <i class="fas fa-tasks mr-1.5"></i> Exercícios <span class="ml-1 text-xs opacity-70" id="count-exercises">3</span>
             </button>
-            <button onclick="filterAchievements('streak')" 
-                    class="category-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300" 
-                    data-category="streak">
-                Sequência
+            <button class="cat-btn px-4 py-2 rounded-xl text-sm font-semibold" onclick="setCategory('streak', this)">
+                <i class="fas fa-fire mr-1.5"></i> Sequência <span class="ml-1 text-xs opacity-70" id="count-streak">3</span>
             </button>
-            <button onclick="filterAchievements('special')" 
-                    class="category-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300" 
-                    data-category="special">
-                Especiais
+            <button class="cat-btn px-4 py-2 rounded-xl text-sm font-semibold" onclick="setCategory('special', this)">
+                <i class="fas fa-star mr-1.5"></i> Especiais <span class="ml-1 text-xs opacity-70" id="count-special">3</span>
             </button>
         </div>
 
         <!-- Achievements Grid -->
-        <div id="achievements-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Loading -->
-            <div class="col-span-full animate-pulse space-y-4">
-                <div class="h-40 bg-gray-200 rounded-lg"></div>
-                <div class="h-40 bg-gray-200 rounded-lg"></div>
-                <div class="h-40 bg-gray-200 rounded-lg"></div>
+        <div id="achievements-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <!-- Rendered by JS -->
+        </div>
+
+        <!-- Next Achievement Tip -->
+        <div id="next-tip" class="mt-8 p-5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl flex items-center gap-4">
+            <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl">🎯</div>
+            <div>
+                <p class="font-semibold text-amber-900 text-sm">Próxima conquista: <span id="next-ach-name" class="text-amber-700"></span></p>
+                <p class="text-xs text-amber-700 mt-0.5" id="next-ach-desc"></p>
             </div>
         </div>
     </main>
 
     <script src="/static/app.js"></script>
     <script>
-        // Check authentication
-        if (!VClass.isAuthenticated()) {
-            window.location.href = '/login.html';
-        }
-
-        const user = VClass.getCurrentUser();
-        if (user) {
-            document.getElementById('user-name').textContent = user.full_name;
-        }
-
-        // Mock achievements data
-        const achievements = [
-            {
-                id: '1',
-                category: 'lessons',
-                title: 'Primeiro Passo',
-                description: 'Complete sua primeira lição',
-                icon: 'fa-star',
-                color: 'bg-blue-500',
-                points: 10,
-                unlocked: true,
-                progress: 1,
-                target: 1,
-                unlockedAt: new Date(Date.now() - 86400000).toISOString()
-            },
-            {
-                id: '2',
-                category: 'lessons',
-                title: 'Estudante Dedicado',
-                description: 'Complete 10 lições',
-                icon: 'fa-book-open',
-                color: 'bg-purple-500',
-                points: 50,
-                unlocked: true,
-                progress: 12,
-                target: 10,
-                unlockedAt: new Date(Date.now() - 3600000).toISOString()
-            },
-            {
-                id: '3',
-                category: 'lessons',
-                title: 'Mestre do Conhecimento',
-                description: 'Complete 50 lições',
-                icon: 'fa-graduation-cap',
-                color: 'bg-yellow-500',
-                points: 200,
-                unlocked: false,
-                progress: 12,
-                target: 50
-            },
-            {
-                id: '4',
-                category: 'exercises',
-                title: 'Solucionador',
-                description: 'Complete seu primeiro exercício',
-                icon: 'fa-check-circle',
-                color: 'bg-green-500',
-                points: 10,
-                unlocked: true,
-                progress: 1,
-                target: 1,
-                unlockedAt: new Date(Date.now() - 172800000).toISOString()
-            },
-            {
-                id: '5',
-                category: 'exercises',
-                title: 'Pontuação Perfeita',
-                description: 'Obtenha 100% em 5 exercícios',
-                icon: 'fa-medal',
-                color: 'bg-yellow-500',
-                points: 100,
-                unlocked: false,
-                progress: 2,
-                target: 5
-            },
-            {
-                id: '6',
-                category: 'exercises',
-                title: 'Expert em Matemática',
-                description: 'Complete 20 exercícios de Matemática',
-                icon: 'fa-calculator',
-                color: 'bg-purple-500',
-                points: 150,
-                unlocked: false,
-                progress: 8,
-                target: 20
-            },
-            {
-                id: '7',
-                category: 'streak',
-                title: 'Consistência',
-                description: 'Estude por 3 dias consecutivos',
-                icon: 'fa-fire',
-                color: 'bg-orange-500',
-                points: 30,
-                unlocked: true,
-                progress: 5,
-                target: 3,
-                unlockedAt: new Date(Date.now() - 259200000).toISOString()
-            },
-            {
-                id: '8',
-                category: 'streak',
-                title: 'Dedicação Total',
-                description: 'Estude por 7 dias consecutivos',
-                icon: 'fa-fire-alt',
-                color: 'bg-red-500',
-                points: 100,
-                unlocked: false,
-                progress: 5,
-                target: 7
-            },
-            {
-                id: '9',
-                category: 'streak',
-                title: 'Maratona de Estudos',
-                description: 'Estude por 30 dias consecutivos',
-                icon: 'fa-crown',
-                color: 'bg-yellow-500',
-                points: 500,
-                unlocked: false,
-                progress: 5,
-                target: 30
-            },
-            {
-                id: '10',
-                category: 'special',
-                title: 'Explorador',
-                description: 'Visualize lições de 3 disciplinas diferentes',
-                icon: 'fa-compass',
-                color: 'bg-teal-500',
-                points: 50,
-                unlocked: true,
-                progress: 3,
-                target: 3,
-                unlockedAt: new Date(Date.now() - 432000000).toISOString()
-            },
-            {
-                id: '11',
-                category: 'special',
-                title: 'Madrugador',
-                description: 'Estude antes das 7h da manhã',
-                icon: 'fa-sun',
-                color: 'bg-yellow-400',
-                points: 75,
-                unlocked: false,
-                progress: 0,
-                target: 1
-            },
-            {
-                id: '12',
-                category: 'special',
-                title: 'Coruja Noturna',
-                description: 'Estude depois das 23h',
-                icon: 'fa-moon',
-                color: 'bg-indigo-500',
-                points: 75,
-                unlocked: false,
-                progress: 0,
-                target: 1
-            }
-        ];
+        if (!VClass.isAuthenticated()) window.location.href = '/login.html';
+        VClass.initNavbar('achievements');
 
         let currentCategory = 'all';
 
-        function loadAchievements() {
+        const ACHIEVEMENTS = [
+            { id:'1', cat:'lessons', title:'Primeiro Passo', desc:'Complete sua primeira lição', icon:'play', emoji:'▶️', color:'#6366f1', bg:'#eef2ff', points:10, unlocked:true, progress:1, target:1, unlockedAt: new Date(Date.now()-86400000).toISOString() },
+            { id:'2', cat:'lessons', title:'Estudante Dedicado', desc:'Complete 10 lições', icon:'book-open', emoji:'📖', color:'#7c3aed', bg:'#faf5ff', points:50, unlocked:true, progress:12, target:10, unlockedAt: new Date(Date.now()-3600000).toISOString() },
+            { id:'3', cat:'lessons', title:'Mestre do Conhecimento', desc:'Complete 50 lições', icon:'graduation-cap', emoji:'🎓', color:'#f59e0b', bg:'#fffbeb', points:200, unlocked:false, progress:12, target:50 },
+            { id:'4', cat:'exercises', title:'Solucionador', desc:'Complete seu primeiro exercício', icon:'check-circle', emoji:'✅', color:'#22c55e', bg:'#f0fdf4', points:10, unlocked:true, progress:1, target:1, unlockedAt: new Date(Date.now()-172800000).toISOString() },
+            { id:'5', cat:'exercises', title:'Pontuação Perfeita', desc:'Obtenha 100% em 5 exercícios', icon:'medal', emoji:'🥇', color:'#f59e0b', bg:'#fffbeb', points:100, unlocked:false, progress:2, target:5 },
+            { id:'6', cat:'exercises', title:'Expert Matemático', desc:'Complete 20 exercícios de Matemática', icon:'calculator', emoji:'🔢', color:'#8b5cf6', bg:'#faf5ff', points:150, unlocked:false, progress:8, target:20 },
+            { id:'7', cat:'streak', title:'Consistente', desc:'Estude por 3 dias seguidos', icon:'fire', emoji:'🔥', color:'#f97316', bg:'#fff7ed', points:30, unlocked:true, progress:5, target:3, unlockedAt: new Date(Date.now()-259200000).toISOString() },
+            { id:'8', cat:'streak', title:'Dedicação Total', desc:'Estude por 7 dias seguidos', icon:'fire-alt', emoji:'🔥🔥', color:'#ef4444', bg:'#fef2f2', points:100, unlocked:false, progress:5, target:7 },
+            { id:'9', cat:'streak', title:'Maratonista', desc:'Estude por 30 dias seguidos', icon:'crown', emoji:'👑', color:'#f59e0b', bg:'#fffbeb', points:500, unlocked:false, progress:5, target:30 },
+            { id:'10', cat:'special', title:'Explorador', desc:'Veja aulas de 3 disciplinas', icon:'compass', emoji:'🧭', color:'#14b8a6', bg:'#f0fdfa', points:50, unlocked:true, progress:3, target:3, unlockedAt: new Date(Date.now()-432000000).toISOString() },
+            { id:'11', cat:'special', title:'Madrugador', desc:'Estude antes das 7h', icon:'sun', emoji:'🌅', color:'#eab308', bg:'#fefce8', points:75, unlocked:false, progress:0, target:1 },
+            { id:'12', cat:'special', title:'Coruja Noturna', desc:'Estude depois das 23h', icon:'moon', emoji:'🦉', color:'#6366f1', bg:'#eef2ff', points:75, unlocked:false, progress:0, target:1 },
+        ];
+
+        function init() {
             updateStats();
             renderAchievements();
+            updateCategoryCounts();
+            showNextTip();
         }
 
         function updateStats() {
-            const unlocked = achievements.filter(a => a.unlocked).length;
-            const total = achievements.length;
-            const points = achievements.filter(a => a.unlocked).reduce((sum, a) => sum + a.points, 0);
-            const percent = Math.round((unlocked / total) * 100);
-            
-            // Determine rank
-            let rank = 'Iniciante';
-            if (points >= 500) rank = 'Mestre';
-            else if (points >= 200) rank = 'Especialista';
-            else if (points >= 100) rank = 'Avançado';
-            
-            document.getElementById('total-achievements').textContent = `${unlocked}/${total}`;
-            document.getElementById('total-points').textContent = points;
-            document.getElementById('completion-percent').textContent = `${percent}%`;
-            document.getElementById('rank-level').textContent = rank;
+            const unlocked = ACHIEVEMENTS.filter(a => a.unlocked);
+            const points = unlocked.reduce((s, a) => s + a.points, 0);
+            const pct = Math.round(unlocked.length / ACHIEVEMENTS.length * 100);
+            let rank = '🥉 Iniciante';
+            if (points >= 500) rank = '🏆 Mestre';
+            else if (points >= 300) rank = '💎 Expert';
+            else if (points >= 150) rank = '🥈 Avançado';
+            else if (points >= 50) rank = '🥉 Intermediário';
+
+            document.getElementById('stat-unlocked').textContent = `${unlocked.length}/${ACHIEVEMENTS.length}`;
+            document.getElementById('stat-points').textContent = points;
+            document.getElementById('stat-percent').textContent = `${pct}%`;
+            document.getElementById('stat-rank').textContent = rank;
+            document.getElementById('stat-progress-label').textContent = `${points} / 500 XP`;
+
+            setTimeout(() => {
+                document.getElementById('xp-bar').style.width = `${Math.min(100, points / 500 * 100)}%`;
+            }, 300);
         }
 
-        function renderAchievements() {
-            const container = document.getElementById('achievements-container');
-            
-            let filtered = achievements;
-            if (currentCategory !== 'all') {
-                filtered = achievements.filter(a => a.category === currentCategory);
-            }
-            
-            container.innerHTML = filtered.map(achievement => {
-                const progressPercent = Math.min(100, Math.round((achievement.progress / achievement.target) * 100));
-                
-                return `
-                    <div class="achievement-card ${achievement.unlocked ? 'achievement-shine' : 'achievement-locked'} bg-white rounded-lg shadow-md p-6">
-                        <div class="flex items-start justify-between mb-4">
-                            <div class="${achievement.color} w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl">
-                                <i class="fas ${achievement.icon}"></i>
-                            </div>
-                            ${achievement.unlocked 
-                                ? '<span class="text-green-600 font-bold"><i class="fas fa-check-circle"></i> Desbloqueado</span>'
-                                : '<span class="text-gray-400 font-bold"><i class="fas fa-lock"></i> Bloqueado</span>'
-                            }
-                        </div>
-                        
-                        <h3 class="text-xl font-bold text-gray-900 mb-2">${achievement.title}</h3>
-                        <p class="text-gray-600 text-sm mb-4">${achievement.description}</p>
-                        
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-sm text-gray-600">Progresso</span>
-                            <span class="text-sm font-semibold text-gray-900">${achievement.progress}/${achievement.target}</span>
-                        </div>
-                        
-                        <div class="w-full bg-gray-200 rounded-full h-2 mb-4">
-                            <div class="${achievement.color} h-2 rounded-full transition-all" style="width: ${progressPercent}%"></div>
-                        </div>
-                        
-                        <div class="flex items-center justify-between text-sm">
-                            <span class="text-purple-600 font-bold">
-                                <i class="fas fa-coins mr-1"></i>
-                                ${achievement.points} pontos
-                            </span>
-                            ${achievement.unlocked 
-                                ? `<span class="text-gray-500">${VClass.formatRelativeTime(achievement.unlockedAt)}</span>`
-                                : `<span class="text-gray-500">${progressPercent}% completo</span>`
-                            }
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function filterAchievements(category) {
-            currentCategory = category;
-            
-            // Update button styles
-            document.querySelectorAll('.category-btn').forEach(btn => {
-                if (btn.dataset.category === category) {
-                    btn.className = 'category-btn px-4 py-2 rounded-lg bg-purple-600 text-white font-medium';
-                } else {
-                    btn.className = 'category-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300';
-                }
+        function updateCategoryCounts() {
+            const cats = ['all', 'lessons', 'exercises', 'streak', 'special'];
+            cats.forEach(cat => {
+                const count = cat === 'all' ? ACHIEVEMENTS.length : ACHIEVEMENTS.filter(a => a.cat === cat).length;
+                const el = document.getElementById('count-' + cat);
+                if (el) el.textContent = count;
             });
-            
+        }
+
+        function setCategory(cat, btn) {
+            currentCategory = cat;
+            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
             renderAchievements();
         }
 
-        // Load achievements on page load
-        loadAchievements();
+        function renderAchievements() {
+            const list = currentCategory === 'all' ? ACHIEVEMENTS : ACHIEVEMENTS.filter(a => a.cat === currentCategory);
+            const grid = document.getElementById('achievements-grid');
+            grid.innerHTML = list.map(a => {
+                const pct = Math.min(100, Math.round(a.progress / a.target * 100));
+                const lockedClass = a.unlocked ? 'unlocked' : 'locked';
+                return `
+                <div class="ach-card ${lockedClass} bg-white rounded-2xl p-5 shadow-sm relative overflow-hidden" style="border-color: ${a.unlocked ? a.color + '40' : '#e5e7eb'}">
+                    ${a.unlocked ? `<div class="absolute top-3 right-3 w-6 h-6 bg-green-100 rounded-full flex items-center justify-center"><i class="fas fa-check text-green-500 text-xs"></i></div>` : `<div class="absolute top-3 right-3 w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center"><i class="fas fa-lock text-gray-400 text-xs"></i></div>`}
+                    
+                    <!-- Icon -->
+                    <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-4 ${a.unlocked ? 'badge-glow' : ''}" style="background: ${a.bg}">
+                        ${a.emoji}
+                    </div>
+
+                    <h3 class="font-bold text-gray-900 text-sm mb-1">${a.title}</h3>
+                    <p class="text-xs text-gray-500 mb-3 leading-relaxed">${a.desc}</p>
+
+                    <!-- Progress -->
+                    <div class="mb-3">
+                        <div class="flex justify-between text-xs text-gray-500 mb-1.5">
+                            <span>${a.progress}/${a.target}</span>
+                            <span>${pct}%</span>
+                        </div>
+                        <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div class="h-full rounded-full transition-all duration-700" style="width: ${pct}%; background: ${a.color}"></div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold" style="color: ${a.color}">
+                            <i class="fas fa-star text-xs mr-0.5"></i> ${a.points} XP
+                        </span>
+                        ${a.unlocked 
+                            ? `<span class="text-xs text-gray-400">${VClass.formatRelativeTime(a.unlockedAt)}</span>`
+                            : `<span class="text-xs text-gray-400">${a.target - a.progress} restante(s)</span>`
+                        }
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function showNextTip() {
+            const next = ACHIEVEMENTS.filter(a => !a.unlocked).sort((a,b) => (b.progress/b.target) - (a.progress/a.target))[0];
+            if (next) {
+                document.getElementById('next-ach-name').textContent = next.title;
+                document.getElementById('next-ach-desc').textContent = `${next.desc} — faltam ${next.target - next.progress} ${next.target - next.progress === 1 ? 'item' : 'itens'}`;
+            } else {
+                document.getElementById('next-tip').classList.add('hidden');
+            }
+        }
+
+        init();
     </script>
 </body>
 </html>

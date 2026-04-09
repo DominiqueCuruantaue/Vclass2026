@@ -251,12 +251,168 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// ─── Global Navbar ────────────────────────────────────────────────────────────
+function getNavbarHTML(activePage = '') {
+  const links = [
+    { href: '/dashboard.html', icon: 'fa-home', label: 'Dashboard', key: 'dashboard' },
+    { href: '/browse.html', icon: 'fa-book', label: 'Conteúdo', key: 'browse' },
+    { href: '/progress.html', icon: 'fa-chart-line', label: 'Progresso', key: 'progress' },
+    { href: '/library.html', icon: 'fa-book-open', label: 'Biblioteca', key: 'library' },
+    { href: '/achievements.html', icon: 'fa-trophy', label: 'Conquistas', key: 'achievements' },
+  ];
+
+  const navLinks = links.map(l => `
+    <a href="${l.href}" class="nav-link px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-colors ${activePage === l.key ? 'bg-purple-50 text-purple-700 font-semibold' : 'text-gray-600 hover:text-purple-600 hover:bg-gray-50'}">
+      <i class="fas ${l.icon}"></i> ${l.label}
+    </a>`).join('');
+
+  return `
+  <nav class="vclass-navbar bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm" id="vclass-main-nav">
+    <div class="container mx-auto px-4 max-w-7xl">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo + Links -->
+        <div class="flex items-center space-x-6">
+          <a href="/dashboard.html" class="flex items-center space-x-2 flex-shrink-0">
+            <div class="w-8 h-8 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-lg flex items-center justify-center shadow">
+              <i class="fas fa-graduation-cap text-white text-sm"></i>
+            </div>
+            <span class="text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">VClass</span>
+          </a>
+          <div class="hidden md:flex items-center space-x-1">
+            ${navLinks}
+          </div>
+        </div>
+
+        <!-- Right actions -->
+        <div class="flex items-center space-x-2">
+          <!-- Search -->
+          <a href="/search.html" class="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition hidden md:flex" title="Buscar">
+            <i class="fas fa-search text-sm"></i>
+          </a>
+          <!-- Notifications -->
+          <a href="/notifications.html" class="relative p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition" title="Notificações">
+            <i class="fas fa-bell text-sm"></i>
+            <span class="notif-badge absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full hidden"></span>
+          </a>
+          <!-- User Dropdown -->
+          <div class="relative" id="nav-user-menu">
+            <button onclick="VClass.toggleNavDropdown()" class="flex items-center gap-2 p-1.5 rounded-xl hover:bg-gray-100 transition group" id="nav-user-btn">
+              <div id="nav-avatar" class="nav-avatar w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold bg-purple-600 flex-shrink-0">?</div>
+              <span id="nav-user-name" class="hidden md:block text-sm font-medium text-gray-700 max-w-[120px] truncate"></span>
+              <i class="fas fa-chevron-down text-xs text-gray-400 group-hover:text-gray-600 transition hidden md:block"></i>
+            </button>
+            <div id="nav-dropdown" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50">
+              <div class="px-4 py-3 bg-gradient-to-r from-purple-50 to-indigo-50 border-b border-gray-100">
+                <p id="nav-dropdown-name" class="font-semibold text-gray-900 text-sm truncate"></p>
+                <p id="nav-dropdown-email" class="text-xs text-gray-500 truncate"></p>
+              </div>
+              <div class="py-1">
+                <a href="/profile.html" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition gap-3">
+                  <i class="fas fa-user text-purple-500 w-4 text-center"></i> Meu Perfil
+                </a>
+                <a href="/progress.html" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition gap-3">
+                  <i class="fas fa-chart-line text-blue-500 w-4 text-center"></i> Progresso
+                </a>
+                <a href="/achievements.html" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-yellow-50 hover:text-yellow-700 transition gap-3">
+                  <i class="fas fa-trophy text-yellow-500 w-4 text-center"></i> Conquistas
+                </a>
+                <a href="/help.html" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition gap-3">
+                  <i class="fas fa-question-circle text-gray-400 w-4 text-center"></i> Ajuda
+                </a>
+              </div>
+              <div class="border-t border-gray-100 py-1">
+                <button onclick="VClass.logout()" class="flex items-center w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition gap-3">
+                  <i class="fas fa-sign-out-alt w-4 text-center"></i> Sair
+                </button>
+              </div>
+            </div>
+          </div>
+          <!-- Mobile menu btn -->
+          <button onclick="VClass.toggleMobileMenu()" class="md:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition" id="mobile-menu-btn">
+            <i class="fas fa-bars text-sm"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- Mobile menu -->
+    <div id="nav-mobile-menu" class="hidden md:hidden bg-white border-t border-gray-100 px-4 py-3 space-y-1">
+      ${links.map(l => `
+      <a href="${l.href}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium ${activePage === l.key ? 'bg-purple-50 text-purple-700' : 'text-gray-700 hover:bg-gray-50'}">
+        <i class="fas ${l.icon} w-4 text-center text-purple-500"></i> ${l.label}
+      </a>`).join('')}
+      <div class="border-t border-gray-100 pt-2 mt-2">
+        <a href="/notifications.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
+          <i class="fas fa-bell w-4 text-center text-gray-400"></i> Notificações
+        </a>
+        <a href="/profile.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
+          <i class="fas fa-user w-4 text-center text-gray-400"></i> Perfil
+        </a>
+        <button onclick="VClass.logout()" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-red-600 hover:bg-red-50 w-full text-left">
+          <i class="fas fa-sign-out-alt w-4 text-center"></i> Sair
+        </button>
+      </div>
+    </div>
+  </nav>`;
+}
+
+function initNavbar(activePage = '') {
+  const placeholder = document.getElementById('navbar-placeholder');
+  if (placeholder) {
+    placeholder.outerHTML = getNavbarHTML(activePage);
+  } else if (!document.getElementById('vclass-main-nav')) {
+    document.body.insertAdjacentHTML('afterbegin', getNavbarHTML(activePage));
+  }
+  _updateNavbarUser();
+}
+
+function _updateNavbarUser() {
+  const user = getCurrentUser();
+  if (!user) return;
+  const initials = (user.full_name || 'U').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  const colors = ['bg-purple-600','bg-blue-600','bg-green-600','bg-orange-500','bg-pink-600','bg-indigo-600'];
+  const color = colors[initials.charCodeAt(0) % colors.length];
+
+  // Update all avatar elements
+  document.querySelectorAll('#nav-avatar, .nav-avatar').forEach(el => {
+    el.textContent = initials;
+    el.className = el.className.replace(/bg-\w+-\d+/, '') + ' ' + color;
+  });
+  document.querySelectorAll('#nav-user-name').forEach(el => {
+    el.textContent = (user.full_name || '').split(' ')[0];
+  });
+  document.querySelectorAll('#nav-dropdown-name').forEach(el => {
+    el.textContent = user.full_name || '';
+  });
+  document.querySelectorAll('#nav-dropdown-email').forEach(el => {
+    el.textContent = user.email || '';
+  });
+}
+
+function toggleNavDropdown() {
+  const d = document.getElementById('nav-dropdown');
+  if (d) d.classList.toggle('hidden');
+}
+
+function toggleMobileMenu() {
+  const m = document.getElementById('nav-mobile-menu');
+  if (m) m.classList.toggle('hidden');
+}
+
+// Close dropdown on outside click
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('nav-user-menu');
+  if (menu && !menu.contains(e.target)) {
+    document.getElementById('nav-dropdown')?.classList.add('hidden');
+  }
+});
+
 // ─── Export ───────────────────────────────────────────────────────────────────
 window.VClass = {
   api, saveAuth, logout, isAuthenticated, getCurrentUser,
   formatDuration, formatDate, formatRelativeTime, formatTime,
   showNotification, showLoading, hideLoading, updateProgressBar,
-  debounce, storage, analytics
+  debounce, storage, analytics,
+  initNavbar, toggleNavDropdown, toggleMobileMenu
 };
 
 console.log('VClass API client v2.0 loaded');

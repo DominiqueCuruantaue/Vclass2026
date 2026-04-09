@@ -7,349 +7,326 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <link href="/static/styles.css" rel="stylesheet">
+    <style>
+        .faq-item { border: 1.5px solid #f3f4f6; transition: border-color 0.2s; }
+        .faq-item.open { border-color: #e9d5ff; }
+        .faq-btn { transition: background 0.15s; }
+        .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1); }
+        .faq-answer.open { max-height: 500px; }
+        .faq-icon { transition: transform 0.3s; flex-shrink: 0; }
+        .faq-item.open .faq-icon { transform: rotate(180deg); }
+        .quick-link { transition: all 0.2s; border: 1.5px solid transparent; }
+        .quick-link:hover { border-color: #7c3aed; transform: translateY(-2px); }
+        .section-heading { display: flex; align-items: center; gap: 0.75rem; font-size: 1.125rem; font-weight: 700; color: #111827; padding: 1rem 0 0.75rem; border-bottom: 2px solid #f3f4f6; margin-bottom: 1rem; }
+    </style>
 </head>
-<body class="bg-gray-50">
-    <!-- Navigation -->
-    <nav class="bg-white shadow-sm">
-        <div class="container mx-auto px-4">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center space-x-8">
-                    <a href="/" class="flex items-center space-x-2">
-                        <i class="fas fa-graduation-cap text-2xl text-purple-600"></i>
-                        <span class="text-xl font-bold text-gray-900">VClass</span>
-                    </a>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <a href="/dashboard.html" class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
-                        <i class="fas fa-arrow-left mr-1"></i> Voltar ao Dashboard
-                    </a>
-                </div>
+<body class="bg-gray-50 min-h-screen">
+
+    <div id="navbar-placeholder"></div>
+
+    <!-- Hero -->
+    <div class="bg-gradient-to-br from-purple-700 to-indigo-600 py-14 px-4 text-white text-center">
+        <div class="max-w-2xl mx-auto">
+            <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
+                <i class="fas fa-question-circle text-2xl text-white"></i>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold mb-2">Como podemos ajudar?</h1>
+            <p class="text-purple-200 mb-6">Encontre respostas rápidas para as dúvidas mais comuns</p>
+            <!-- Search -->
+            <div class="max-w-lg mx-auto relative">
+                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input type="text" id="faq-search" placeholder="Buscar por palavra-chave..."
+                    class="w-full pl-11 pr-4 py-3.5 rounded-xl text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-md"
+                    oninput="filterFAQ(this.value)">
             </div>
         </div>
-    </nav>
+    </div>
 
-    <!-- Main Content -->
-    <div class="container mx-auto px-4 py-8">
-        <!-- Header -->
-        <div class="text-center mb-12">
-            <h1 class="text-4xl font-bold text-gray-900 mb-4">
-                <i class="fas fa-question-circle text-purple-600 mr-3"></i>
-                Como podemos ajudar?
-            </h1>
-            <p class="text-xl text-gray-600">Encontre respostas rápidas para suas dúvidas</p>
-        </div>
-
-        <!-- Search -->
-        <div class="max-w-2xl mx-auto mb-12">
-            <div class="relative">
-                <i class="fas fa-search absolute left-4 top-4 text-gray-400 text-xl"></i>
-                <input 
-                    type="text" 
-                    id="faq-search"
-                    placeholder="Buscar por palavra-chave..." 
-                    class="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg"
-                >
-            </div>
-        </div>
+    <div class="container mx-auto px-4 py-10 max-w-4xl">
 
         <!-- Quick Links -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <a href="#getting-started" class="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition text-center">
-                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-rocket text-blue-600 text-2xl"></i>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+            <a href="#getting-started" class="quick-link bg-white rounded-2xl p-4 text-center shadow-sm hover:shadow-md">
+                <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-2">
+                    <i class="fas fa-rocket text-blue-600"></i>
                 </div>
-                <h3 class="text-lg font-bold text-gray-900 mb-2">Começar</h3>
-                <p class="text-gray-600 text-sm">Primeiros passos na plataforma</p>
+                <p class="text-sm font-semibold text-gray-800">Começar</p>
             </a>
-            <a href="#video-player" class="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition text-center">
-                <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-play-circle text-purple-600 text-2xl"></i>
+            <a href="#video-player" class="quick-link bg-white rounded-2xl p-4 text-center shadow-sm hover:shadow-md">
+                <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-2">
+                    <i class="fas fa-play-circle text-purple-600"></i>
                 </div>
-                <h3 class="text-lg font-bold text-gray-900 mb-2">Assistir Aulas</h3>
-                <p class="text-gray-600 text-sm">Como usar o player de vídeo</p>
+                <p class="text-sm font-semibold text-gray-800">Assistir Aulas</p>
             </a>
-            <a href="#exercises" class="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition text-center">
-                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-tasks text-green-600 text-2xl"></i>
+            <a href="#exercises" class="quick-link bg-white rounded-2xl p-4 text-center shadow-sm hover:shadow-md">
+                <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-2">
+                    <i class="fas fa-tasks text-green-600"></i>
                 </div>
-                <h3 class="text-lg font-bold text-gray-900 mb-2">Exercícios</h3>
-                <p class="text-gray-600 text-sm">Como fazer exercícios e ver resultados</p>
+                <p class="text-sm font-semibold text-gray-800">Exercícios</p>
+            </a>
+            <a href="#technical" class="quick-link bg-white rounded-2xl p-4 text-center shadow-sm hover:shadow-md">
+                <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center mx-auto mb-2">
+                    <i class="fas fa-wrench text-orange-600"></i>
+                </div>
+                <p class="text-sm font-semibold text-gray-800">Problemas</p>
             </a>
         </div>
 
         <!-- FAQ Sections -->
-        <div class="max-w-4xl mx-auto">
+        <div id="faq-container" class="space-y-8">
+
             <!-- Getting Started -->
-            <div id="getting-started" class="mb-8">
-                <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                    <i class="fas fa-rocket text-blue-600 mr-3"></i>
+            <section id="getting-started">
+                <div class="section-heading">
+                    <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-rocket text-blue-600 text-sm"></i>
+                    </div>
                     Começando
-                </h2>
-                
-                <div class="space-y-4">
-                    <div class="faq-item bg-white rounded-lg shadow-sm overflow-hidden">
-                        <button onclick="toggleFAQ(this)" class="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition">
-                            <span class="font-medium text-gray-900">Como criar uma conta?</span>
-                            <i class="fas fa-chevron-down text-gray-400 transition-transform"></i>
+                </div>
+                <div class="space-y-2">
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="como criar conta registro">
+                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                            <span class="font-medium text-gray-800 text-sm">Como criar uma conta?</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
                         </button>
-                        <div class="faq-answer px-6 pb-4 text-gray-600 hidden">
-                            <p class="mb-3">Para criar uma conta no VClass:</p>
-                            <ol class="list-decimal list-inside space-y-2 ml-4">
-                                <li>Clique em "Registar" no menu superior</li>
-                                <li>Preencha seus dados pessoais (nome, email, senha)</li>
-                                <li>Selecione seu país e nível de ensino</li>
-                                <li>Escolha se é estudante ou professor</li>
-                                <li>Clique em "Criar Conta"</li>
-                                <li>Verifique seu email para ativar a conta</li>
+                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
+                            <ol class="list-decimal list-inside space-y-1.5 mt-2">
+                                <li>Clique em <a href="/register.html" class="text-purple-600 font-medium hover:underline">Criar Conta</a> no menu</li>
+                                <li>Preencha nome, email e senha</li>
+                                <li>Selecione seu tipo de conta (Estudante ou Professor)</li>
+                                <li>Aceite os termos e clique em "Criar Conta"</li>
+                                <li>Faça login e comece a estudar!</li>
                             </ol>
                         </div>
                     </div>
-
-                    <div class="faq-item bg-white rounded-lg shadow-sm overflow-hidden">
-                        <button onclick="toggleFAQ(this)" class="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition">
-                            <span class="font-medium text-gray-900">Como navegar pelo conteúdo?</span>
-                            <i class="fas fa-chevron-down text-gray-400 transition-transform"></i>
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="navegar conteúdo disciplinas">
+                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                            <span class="font-medium text-gray-800 text-sm">Como navegar pelo conteúdo?</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
                         </button>
-                        <div class="faq-answer px-6 pb-4 text-gray-600 hidden">
-                            <p class="mb-3">A navegação é hierárquica:</p>
-                            <ul class="list-disc list-inside space-y-2 ml-4">
-                                <li><strong>Disciplinas:</strong> Escolha a matéria que quer estudar</li>
-                                <li><strong>Capítulos:</strong> Selecione o tópico específico</li>
-                                <li><strong>Aulas:</strong> Assista vídeos e faça exercícios</li>
-                                <li>Use a barra de busca para encontrar conteúdo específico</li>
+                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
+                            <p class="mt-2 mb-2">A navegação é hierárquica:</p>
+                            <ul class="list-disc list-inside space-y-1.5">
+                                <li><strong>País → Série → Disciplina → Capítulos → Aulas</strong></li>
+                                <li>Acesse via menu <strong>Conteúdo</strong> na navbar</li>
+                                <li>Use a busca para encontrar conteúdo específico</li>
                             </ul>
                         </div>
                     </div>
-
-                    <div class="faq-item bg-white rounded-lg shadow-sm overflow-hidden">
-                        <button onclick="toggleFAQ(this)" class="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition">
-                            <span class="font-medium text-gray-900">O VClass funciona offline?</span>
-                            <i class="fas fa-chevron-down text-gray-400 transition-transform"></i>
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="offline funciona internet">
+                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                            <span class="font-medium text-gray-800 text-sm">O VClass funciona offline?</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
                         </button>
-                        <div class="faq-answer px-6 pb-4 text-gray-600 hidden">
-                            <p class="mb-3">Sim, mas com limitações:</p>
-                            <ul class="list-disc list-inside space-y-2 ml-4">
-                                <li><strong>App Mobile:</strong> Baixe aulas para assistir offline</li>
-                                <li><strong>Web:</strong> Requer conexão para streaming de vídeo</li>
-                                <li><strong>PDFs:</strong> Podem ser baixados para leitura offline</li>
-                                <li>Seu progresso é sincronizado quando voltar online</li>
+                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
+                            <ul class="list-disc list-inside space-y-1.5 mt-2">
+                                <li>Vídeos requerem conexão (streaming)</li>
+                                <li>PDFs podem ser baixados para leitura offline</li>
+                                <li>Progresso é sincronizado quando voltar online</li>
                             </ul>
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
 
             <!-- Video Player -->
-            <div id="video-player" class="mb-8">
-                <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                    <i class="fas fa-play-circle text-purple-600 mr-3"></i>
+            <section id="video-player">
+                <div class="section-heading">
+                    <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-play-circle text-purple-600 text-sm"></i>
+                    </div>
                     Player de Vídeo
-                </h2>
-                
-                <div class="space-y-4">
-                    <div class="faq-item bg-white rounded-lg shadow-sm overflow-hidden">
-                        <button onclick="toggleFAQ(this)" class="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition">
-                            <span class="font-medium text-gray-900">Como controlar a qualidade do vídeo?</span>
-                            <i class="fas fa-chevron-down text-gray-400 transition-transform"></i>
+                </div>
+                <div class="space-y-2">
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="qualidade vídeo resolução">
+                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                            <span class="font-medium text-gray-800 text-sm">Como controlar a qualidade do vídeo?</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
                         </button>
-                        <div class="faq-answer px-6 pb-4 text-gray-600 hidden">
-                            <p class="mb-3">O player ajusta automaticamente, mas você pode:</p>
-                            <ol class="list-decimal list-inside space-y-2 ml-4">
-                                <li>Clique no ícone de engrenagem (⚙️) no player</li>
+                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
+                            <ol class="list-decimal list-inside space-y-1.5 mt-2">
+                                <li>Clique no ícone ⚙️ no player</li>
                                 <li>Selecione "Qualidade"</li>
                                 <li>Escolha: Auto, 240p, 360p, 480p ou 720p</li>
                                 <li>Qualidades mais baixas usam menos dados</li>
                             </ol>
                         </div>
                     </div>
-
-                    <div class="faq-item bg-white rounded-lg shadow-sm overflow-hidden">
-                        <button onclick="toggleFAQ(this)" class="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition">
-                            <span class="font-medium text-gray-900">Posso baixar vídeos?</span>
-                            <i class="fas fa-chevron-down text-gray-400 transition-transform"></i>
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="download baixar vídeo">
+                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                            <span class="font-medium text-gray-800 text-sm">Posso baixar vídeos para assistir offline?</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
                         </button>
-                        <div class="faq-answer px-6 pb-4 text-gray-600 hidden">
-                            <p class="mb-3">Download depende do tipo de conta:</p>
-                            <ul class="list-disc list-inside space-y-2 ml-4">
-                                <li><strong>Conta Gratuita:</strong> Apenas streaming online</li>
-                                <li><strong>Premium:</strong> Download no app mobile (criptografado)</li>
-                                <li>Vídeos baixados só funcionam dentro do app</li>
-                                <li>Download direto não é permitido por segurança</li>
-                            </ul>
+                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
+                            <p class="mt-2">Atualmente o download está disponível apenas via app mobile (em breve). Na versão web, os vídeos são transmitidos por streaming.</p>
                         </div>
                     </div>
-
-                    <div class="faq-item bg-white rounded-lg shadow-sm overflow-hidden">
-                        <button onclick="toggleFAQ(this)" class="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition">
-                            <span class="font-medium text-gray-900">Como usar legendas?</span>
-                            <i class="fas fa-chevron-down text-gray-400 transition-transform"></i>
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="legendas subtítulos cc">
+                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                            <span class="font-medium text-gray-800 text-sm">Como ativar legendas?</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
                         </button>
-                        <div class="faq-answer px-6 pb-4 text-gray-600 hidden">
-                            <p class="mb-3">Para ativar legendas:</p>
-                            <ol class="list-decimal list-inside space-y-2 ml-4">
-                                <li>Clique no ícone de legendas (CC) no player</li>
-                                <li>Selecione o idioma disponível</li>
-                                <li>Ajuste tamanho e cor nas configurações</li>
-                                <li>Legendas estão disponíveis em português</li>
-                            </ol>
+                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
+                            <p class="mt-2">Clique no botão CC no player. As legendas estão disponíveis em Português para a maioria das aulas.</p>
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
 
             <!-- Exercises -->
-            <div id="exercises" class="mb-8">
-                <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                    <i class="fas fa-tasks text-green-600 mr-3"></i>
+            <section id="exercises">
+                <div class="section-heading">
+                    <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-tasks text-green-600 text-sm"></i>
+                    </div>
                     Exercícios e Avaliações
-                </h2>
-                
-                <div class="space-y-4">
-                    <div class="faq-item bg-white rounded-lg shadow-sm overflow-hidden">
-                        <button onclick="toggleFAQ(this)" class="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition">
-                            <span class="font-medium text-gray-900">Como fazer exercícios?</span>
-                            <i class="fas fa-chevron-down text-gray-400 transition-transform"></i>
+                </div>
+                <div class="space-y-2">
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="fazer exercícios como resolver">
+                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                            <span class="font-medium text-gray-800 text-sm">Como fazer exercícios?</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
                         </button>
-                        <div class="faq-answer px-6 pb-4 text-gray-600 hidden">
-                            <p class="mb-3">Para fazer exercícios:</p>
-                            <ol class="list-decimal list-inside space-y-2 ml-4">
-                                <li>Assista a aula completa primeiro</li>
-                                <li>Role até a seção de exercícios</li>
-                                <li>Leia cada questão com atenção</li>
-                                <li>Selecione sua resposta</li>
-                                <li>Clique em "Submeter" para ver o resultado</li>
-                                <li>Veja explicações das respostas corretas</li>
+                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
+                            <ol class="list-decimal list-inside space-y-1.5 mt-2">
+                                <li>Assista a aula completa</li>
+                                <li>Role até a seção de exercícios (ou clique em "Exercícios")</li>
+                                <li>Leia cada questão e selecione sua resposta</li>
+                                <li>Clique em "Submeter" para ver o resultado e a explicação</li>
                             </ol>
                         </div>
                     </div>
-
-                    <div class="faq-item bg-white rounded-lg shadow-sm overflow-hidden">
-                        <button onclick="toggleFAQ(this)" class="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition">
-                            <span class="font-medium text-gray-900">Como ver meu progresso?</span>
-                            <i class="fas fa-chevron-down text-gray-400 transition-transform"></i>
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="progresso acompanhar resultado nota">
+                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                            <span class="font-medium text-gray-800 text-sm">Como ver meu progresso e notas?</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
                         </button>
-                        <div class="faq-answer px-6 pb-4 text-gray-600 hidden">
-                            <p class="mb-3">Acompanhe seu progresso em:</p>
-                            <ul class="list-disc list-inside space-y-2 ml-4">
-                                <li><strong>Dashboard:</strong> Visão geral de todas as disciplinas</li>
-                                <li><strong>Página de Progresso:</strong> Detalhes por matéria</li>
-                                <li><strong>Gráficos:</strong> Visualize seu desenvolvimento</li>
-                                <li><strong>Histórico:</strong> Veja todas as atividades completadas</li>
+                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
+                            <ul class="list-disc list-inside space-y-1.5 mt-2">
+                                <li>Acesse <a href="/progress.html" class="text-purple-600 font-medium hover:underline">Progresso</a> no menu</li>
+                                <li>Veja gráficos e detalhes por disciplina</li>
+                                <li>O Dashboard mostra um resumo geral</li>
                             </ul>
                         </div>
                     </div>
-
-                    <div class="faq-item bg-white rounded-lg shadow-sm overflow-hidden">
-                        <button onclick="toggleFAQ(this)" class="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition">
-                            <span class="font-medium text-gray-900">Posso refazer exercícios?</span>
-                            <i class="fas fa-chevron-down text-gray-400 transition-transform"></i>
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="refazer repetir exercício">
+                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                            <span class="font-medium text-gray-800 text-sm">Posso refazer exercícios?</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
                         </button>
-                        <div class="faq-answer px-6 pb-4 text-gray-600 hidden">
-                            <p class="mb-3">Sim, você pode:</p>
-                            <ul class="list-disc list-inside space-y-2 ml-4">
-                                <li>Refazer qualquer exercício quantas vezes quiser</li>
-                                <li>Cada tentativa gera questões aleatórias diferentes</li>
-                                <li>Sua melhor pontuação é salva</li>
-                                <li>Use para estudar e melhorar sua nota</li>
-                            </ul>
+                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
+                            <p class="mt-2">Sim! Você pode refazer qualquer exercício. Cada tentativa pode gerar questões diferentes, e sua melhor pontuação é salva automaticamente.</p>
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <!-- Technical Issues -->
-            <div id="technical" class="mb-8">
-                <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                    <i class="fas fa-wrench text-orange-600 mr-3"></i>
+            <!-- Technical -->
+            <section id="technical">
+                <div class="section-heading">
+                    <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-wrench text-orange-600 text-sm"></i>
+                    </div>
                     Problemas Técnicos
-                </h2>
-                
-                <div class="space-y-4">
-                    <div class="faq-item bg-white rounded-lg shadow-sm overflow-hidden">
-                        <button onclick="toggleFAQ(this)" class="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition">
-                            <span class="font-medium text-gray-900">Vídeo não carrega ou trava</span>
-                            <i class="fas fa-chevron-down text-gray-400 transition-transform"></i>
+                </div>
+                <div class="space-y-2">
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="vídeo não carrega trava lento">
+                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                            <span class="font-medium text-gray-800 text-sm">Vídeo não carrega ou trava</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
                         </button>
-                        <div class="faq-answer px-6 pb-4 text-gray-600 hidden">
-                            <p class="mb-3">Soluções comuns:</p>
-                            <ol class="list-decimal list-inside space-y-2 ml-4">
+                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
+                            <ol class="list-decimal list-inside space-y-1.5 mt-2">
                                 <li>Verifique sua conexão de internet</li>
-                                <li>Reduza a qualidade do vídeo para 240p ou 360p</li>
-                                <li>Limpe o cache do navegador</li>
-                                <li>Tente outro navegador (Chrome, Firefox, Safari)</li>
-                                <li>Desative extensões do navegador temporariamente</li>
-                                <li>Reinicie seu dispositivo</li>
+                                <li>Reduza a qualidade do vídeo para 240p</li>
+                                <li>Limpe o cache do navegador (Ctrl+Shift+R)</li>
+                                <li>Tente outro navegador (Chrome recomendado)</li>
+                                <li>Desative extensões que podem interferir</li>
                             </ol>
                         </div>
                     </div>
-
-                    <div class="faq-item bg-white rounded-lg shadow-sm overflow-hidden">
-                        <button onclick="toggleFAQ(this)" class="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition">
-                            <span class="font-medium text-gray-900">Esqueci minha senha</span>
-                            <i class="fas fa-chevron-down text-gray-400 transition-transform"></i>
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="esqueci senha recuperar password">
+                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                            <span class="font-medium text-gray-800 text-sm">Esqueci minha senha</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
                         </button>
-                        <div class="faq-answer px-6 pb-4 text-gray-600 hidden">
-                            <p class="mb-3">Para recuperar sua senha:</p>
-                            <ol class="list-decimal list-inside space-y-2 ml-4">
-                                <li>Clique em "Esqueceu a senha?" na tela de login</li>
-                                <li>Digite seu email cadastrado</li>
+                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
+                            <ol class="list-decimal list-inside space-y-1.5 mt-2">
+                                <li>Acesse a <a href="/login.html" class="text-purple-600 font-medium hover:underline">página de login</a></li>
+                                <li>Clique em "Esqueceu a senha?"</li>
+                                <li>Insira seu email cadastrado</li>
                                 <li>Verifique sua caixa de entrada (e spam)</li>
-                                <li>Clique no link de recuperação</li>
-                                <li>Crie uma nova senha segura</li>
-                                <li>Faça login com a nova senha</li>
+                                <li>Siga o link para criar uma nova senha</li>
                             </ol>
                         </div>
                     </div>
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="login erro autenticação conta bloqueada">
+                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                            <span class="font-medium text-gray-800 text-sm">Erro ao fazer login</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
+                        </button>
+                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
+                            <ul class="list-disc list-inside space-y-1.5 mt-2">
+                                <li>Verifique se email e senha estão corretos</li>
+                                <li>Certifique-se de que o CAPS LOCK não está ativo</li>
+                                <li>Use "Esqueceu a senha?" para redefinir</li>
+                                <li>Limpe cookies do navegador e tente novamente</li>
+                                <li>Conta demo: estudante@vclass.mz / password123</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </section>
+        </div>
 
-            <!-- Contact Support -->
-            <div class="bg-gradient-to-r from-purple-600 to-purple-800 rounded-lg p-8 text-white text-center">
-                <h3 class="text-2xl font-bold mb-4">Ainda precisa de ajuda?</h3>
-                <p class="text-purple-100 mb-6">Nossa equipe de suporte está pronta para ajudar você</p>
-                <div class="flex flex-col sm:flex-row justify-center gap-4">
-                    <a href="mailto:suporte@vclass.mz" class="px-6 py-3 bg-white text-purple-600 rounded-lg font-medium hover:bg-gray-100 transition">
-                        <i class="fas fa-envelope mr-2"></i>Email: suporte@vclass.mz
-                    </a>
-                    <a href="tel:+258840000000" class="px-6 py-3 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-400 transition">
-                        <i class="fas fa-phone mr-2"></i>Tel: +258 84 000 0000
-                    </a>
-                </div>
+        <!-- Contact Support -->
+        <div class="mt-10 bg-gradient-to-r from-purple-700 to-indigo-600 rounded-2xl p-8 text-white text-center shadow-lg">
+            <h3 class="text-xl font-bold mb-2">Ainda precisa de ajuda?</h3>
+            <p class="text-purple-200 text-sm mb-6">Nossa equipe de suporte está pronta para te ajudar</p>
+            <div class="flex flex-col sm:flex-row justify-center gap-3">
+                <a href="/chat.html" class="px-5 py-3 bg-white text-purple-700 rounded-xl font-semibold text-sm hover:bg-purple-50 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-robot"></i> Chat com IA
+                </a>
+                <a href="mailto:suporte@vclass.mz" class="px-5 py-3 bg-purple-500/60 text-white rounded-xl font-semibold text-sm hover:bg-purple-500 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-envelope"></i> suporte@vclass.mz
+                </a>
+                <a href="tel:+258840000000" class="px-5 py-3 bg-purple-500/60 text-white rounded-xl font-semibold text-sm hover:bg-purple-500 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-phone"></i> +258 84 000 0000
+                </a>
             </div>
         </div>
     </div>
 
     <script src="/static/app.js"></script>
     <script>
-        // Toggle FAQ answer
-        function toggleFAQ(button) {
-            const answer = button.nextElementSibling;
-            const icon = button.querySelector('i');
-            
-            if (answer.classList.contains('hidden')) {
-                answer.classList.remove('hidden');
-                icon.style.transform = 'rotate(180deg)';
-            } else {
-                answer.classList.add('hidden');
-                icon.style.transform = 'rotate(0deg)';
+        VClass.initNavbar('');
+
+        function toggleFAQ(btn) {
+            const item = btn.closest('.faq-item');
+            const answer = btn.nextElementSibling;
+            const isOpen = item.classList.contains('open');
+
+            // Close all
+            document.querySelectorAll('.faq-item.open').forEach(el => {
+                el.classList.remove('open');
+                el.querySelector('.faq-answer').classList.remove('open');
+            });
+
+            if (!isOpen) {
+                item.classList.add('open');
+                answer.classList.add('open');
             }
         }
 
-        // Search FAQ
-        const searchInput = document.getElementById('faq-search');
-        if (searchInput) {
-            searchInput.addEventListener('input', function(e) {
-                const searchTerm = e.target.value.toLowerCase();
-                const faqItems = document.querySelectorAll('.faq-item');
-                
-                faqItems.forEach(item => {
-                    const text = item.textContent.toLowerCase();
-                    if (text.includes(searchTerm)) {
-                        item.style.display = 'block';
-                    } else {
-                        item.style.display = 'none';
-                    }
-                });
+        function filterFAQ(query) {
+            const q = query.toLowerCase().trim();
+            document.querySelectorAll('.faq-item').forEach(item => {
+                const text = (item.dataset.text + ' ' + item.textContent).toLowerCase();
+                item.style.display = !q || text.includes(q) ? '' : 'none';
+            });
+            document.querySelectorAll('section').forEach(sec => {
+                const visible = [...sec.querySelectorAll('.faq-item')].some(i => i.style.display !== 'none');
+                sec.style.display = visible ? '' : 'none';
             });
         }
     </script>
