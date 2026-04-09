@@ -275,12 +275,13 @@ export const mockSubjects = [
 ]
 
 export const mockChapters = [
-  // Matemática 10ª Classe
+  // Matemática 10ª Classe - 1º Trimestre
   {
     id: 'ch-mat-1',
     grade_subject_id: 'gs-matematica-10',
     title: 'Funções',
     description: 'Introdução às funções matemáticas',
+    trimester: 1,
     display_order: 1
   },
   {
@@ -288,6 +289,7 @@ export const mockChapters = [
     grade_subject_id: 'gs-matematica-10',
     title: 'Equações',
     description: 'Equações do 1º e 2º grau',
+    trimester: 1,
     display_order: 2
   },
   {
@@ -295,14 +297,67 @@ export const mockChapters = [
     grade_subject_id: 'gs-matematica-10',
     title: 'Geometria Plana',
     description: 'Polígonos e áreas',
+    trimester: 1,
     display_order: 3
   },
-  // Português 10ª Classe
+  // Matemática 10ª Classe - 2º Trimestre
+  {
+    id: 'ch-mat-4',
+    grade_subject_id: 'gs-matematica-10',
+    title: 'Trigonometria',
+    description: 'Seno, cosseno e tangente',
+    trimester: 2,
+    display_order: 4
+  },
+  {
+    id: 'ch-mat-5',
+    grade_subject_id: 'gs-matematica-10',
+    title: 'Logaritmos',
+    description: 'Propriedades e aplicações',
+    trimester: 2,
+    display_order: 5
+  },
+  {
+    id: 'ch-mat-6',
+    grade_subject_id: 'gs-matematica-10',
+    title: 'Progressões',
+    description: 'Aritméticas e geométricas',
+    trimester: 2,
+    display_order: 6
+  },
+  // Matemática 10ª Classe - 3º Trimestre
+  {
+    id: 'ch-mat-7',
+    grade_subject_id: 'gs-matematica-10',
+    title: 'Matrizes',
+    description: 'Operações com matrizes',
+    trimester: 3,
+    display_order: 7
+  },
+  {
+    id: 'ch-mat-8',
+    grade_subject_id: 'gs-matematica-10',
+    title: 'Determinantes',
+    description: 'Cálculo de determinantes',
+    trimester: 3,
+    display_order: 8
+  },
+  {
+    id: 'ch-mat-9',
+    grade_subject_id: 'gs-matematica-10',
+    title: 'Geometria Analítica',
+    description: 'Retas e circunferências',
+    trimester: 3,
+    display_order: 9
+  },
+  
+  // Português 10ª Classe - 1º Trimestre
   {
     id: 'ch-port-1',
     grade_subject_id: 'gs-portugues-10',
     title: 'Classes Gramaticais',
     description: 'Substantivos, verbos e adjetivos',
+    trimester: 1,
     display_order: 1
   },
   {
@@ -310,15 +365,294 @@ export const mockChapters = [
     grade_subject_id: 'gs-portugues-10',
     title: 'Literatura Portuguesa',
     description: 'Autores clássicos',
+    trimester: 1,
     display_order: 2
   },
-  // Física 10ª Classe
+  {
+    id: 'ch-port-3',
+    grade_subject_id: 'gs-portugues-10',
+    title: 'Análise Sintática',
+    description: 'Sujeito, predicado e complementos',
+    trimester: 1,
+    display_order: 3
+  },
+  // Português 10ª Classe - 2º Trimestre
+  {
+    id: 'ch-port-4',
+    grade_subject_id: 'gs-portugues-10',
+    title: 'Orações Coordenadas',
+    description: 'Coordenação sindética e assindética',
+    trimester: 2,
+    display_order: 4
+  },
+  {
+    id: 'ch-port-5',
+    grade_subject_id: 'gs-portugues-10',
+    title: 'Orações Subordinadas',
+    description: 'Substantivas, adjetivas e adverbiais',
+    trimester: 2,
+    display_order: 5
+  },
+  {
+    id: 'ch-port-6',
+    grade_subject_id: 'gs-portugues-10',
+    title: 'Literatura Moçambicana',
+    description: 'Autores contemporâneos',
+    trimester: 2,
+    display_order: 6
+  },
+  // Português 10ª Classe - 3º Trimestre
+  {
+    id: 'ch-port-7',
+    grade_subject_id: 'gs-portugues-10',
+    title: 'Redação',
+    description: 'Dissertação e argumentação',
+    trimester: 3,
+    display_order: 7
+  },
+  {
+    id: 'ch-port-8',
+    grade_subject_id: 'gs-portugues-10',
+    title: 'Interpretação de Textos',
+    description: 'Análise crítica de textos',
+    trimester: 3,
+    display_order: 8
+  },
+  {
+    id: 'ch-port-9',
+    grade_subject_id: 'gs-portugues-10',
+    title: 'Literatura Africana',
+    description: 'Literatura dos PALOP',
+    trimester: 3,
+    display_order: 9
+  },
+  
+  // Física 10ª Classe - 1º Trimestre
   {
     id: 'ch-fis-1',
     grade_subject_id: 'gs-fisica-10',
     title: 'Cinemática',
     description: 'Movimento uniforme e variado',
+    trimester: 1,
     display_order: 1
+  },
+  {
+    id: 'ch-fis-2',
+    grade_subject_id: 'gs-fisica-10',
+    title: 'Dinâmica',
+    description: 'Leis de Newton e forças',
+    trimester: 1,
+    display_order: 2
+  },
+  {
+    id: 'ch-fis-3',
+    grade_subject_id: 'gs-fisica-10',
+    title: 'Trabalho e Energia',
+    description: 'Energia cinética e potencial',
+    trimester: 1,
+    display_order: 3
+  },
+  // Física 10ª Classe - 2º Trimestre
+  {
+    id: 'ch-fis-4',
+    grade_subject_id: 'gs-fisica-10',
+    title: 'Termodinâmica',
+    description: 'Calor e temperatura',
+    trimester: 2,
+    display_order: 4
+  },
+  {
+    id: 'ch-fis-5',
+    grade_subject_id: 'gs-fisica-10',
+    title: 'Óptica Geométrica',
+    description: 'Reflexão e refração da luz',
+    trimester: 2,
+    display_order: 5
+  },
+  {
+    id: 'ch-fis-6',
+    grade_subject_id: 'gs-fisica-10',
+    title: 'Ondulatória',
+    description: 'Ondas mecânicas e eletromagnéticas',
+    trimester: 2,
+    display_order: 6
+  },
+  // Física 10ª Classe - 3º Trimestre
+  {
+    id: 'ch-fis-7',
+    grade_subject_id: 'gs-fisica-10',
+    title: 'Eletrostática',
+    description: 'Cargas elétricas e força elétrica',
+    trimester: 3,
+    display_order: 7
+  },
+  {
+    id: 'ch-fis-8',
+    grade_subject_id: 'gs-fisica-10',
+    title: 'Eletrodinâmica',
+    description: 'Corrente elétrica e circuitos',
+    trimester: 3,
+    display_order: 8
+  },
+  {
+    id: 'ch-fis-9',
+    grade_subject_id: 'gs-fisica-10',
+    title: 'Magnetismo',
+    description: 'Campo magnético e eletromagnetismo',
+    trimester: 3,
+    display_order: 9
+  },
+  
+  // Química 10ª Classe - 1º Trimestre
+  {
+    id: 'ch-quim-1',
+    grade_subject_id: 'gs-quimica-10',
+    title: 'Estrutura Atômica',
+    description: 'Átomos, prótons e elétrons',
+    trimester: 1,
+    display_order: 1
+  },
+  {
+    id: 'ch-quim-2',
+    grade_subject_id: 'gs-quimica-10',
+    title: 'Tabela Periódica',
+    description: 'Organização dos elementos',
+    trimester: 1,
+    display_order: 2
+  },
+  {
+    id: 'ch-quim-3',
+    grade_subject_id: 'gs-quimica-10',
+    title: 'Ligações Químicas',
+    description: 'Iônicas, covalentes e metálicas',
+    trimester: 1,
+    display_order: 3
+  },
+  // Química 10ª Classe - 2º Trimestre
+  {
+    id: 'ch-quim-4',
+    grade_subject_id: 'gs-quimica-10',
+    title: 'Funções Inorgânicas',
+    description: 'Ácidos, bases, sais e óxidos',
+    trimester: 2,
+    display_order: 4
+  },
+  {
+    id: 'ch-quim-5',
+    grade_subject_id: 'gs-quimica-10',
+    title: 'Reações Químicas',
+    description: 'Tipos de reações e balanceamento',
+    trimester: 2,
+    display_order: 5
+  },
+  {
+    id: 'ch-quim-6',
+    grade_subject_id: 'gs-quimica-10',
+    title: 'Estequiometria',
+    description: 'Cálculos químicos',
+    trimester: 2,
+    display_order: 6
+  },
+  // Química 10ª Classe - 3º Trimestre
+  {
+    id: 'ch-quim-7',
+    grade_subject_id: 'gs-quimica-10',
+    title: 'Química Orgânica',
+    description: 'Hidrocarbonetos e cadeias carbônicas',
+    trimester: 3,
+    display_order: 7
+  },
+  {
+    id: 'ch-quim-8',
+    grade_subject_id: 'gs-quimica-10',
+    title: 'Funções Orgânicas',
+    description: 'Álcoois, éteres e aldeídos',
+    trimester: 3,
+    display_order: 8
+  },
+  {
+    id: 'ch-quim-9',
+    grade_subject_id: 'gs-quimica-10',
+    title: 'Isomeria',
+    description: 'Tipos de isômeros',
+    trimester: 3,
+    display_order: 9
+  },
+  
+  // Biologia 10ª Classe - 1º Trimestre
+  {
+    id: 'ch-bio-1',
+    grade_subject_id: 'gs-biologia-10',
+    title: 'Citologia',
+    description: 'Estrutura celular',
+    trimester: 1,
+    display_order: 1
+  },
+  {
+    id: 'ch-bio-2',
+    grade_subject_id: 'gs-biologia-10',
+    title: 'Metabolismo Celular',
+    description: 'Respiração e fotossíntese',
+    trimester: 1,
+    display_order: 2
+  },
+  {
+    id: 'ch-bio-3',
+    grade_subject_id: 'gs-biologia-10',
+    title: 'Divisão Celular',
+    description: 'Mitose e meiose',
+    trimester: 1,
+    display_order: 3
+  },
+  // Biologia 10ª Classe - 2º Trimestre
+  {
+    id: 'ch-bio-4',
+    grade_subject_id: 'gs-biologia-10',
+    title: 'Genética',
+    description: 'Leis de Mendel',
+    trimester: 2,
+    display_order: 4
+  },
+  {
+    id: 'ch-bio-5',
+    grade_subject_id: 'gs-biologia-10',
+    title: 'DNA e RNA',
+    description: 'Ácidos nucleicos',
+    trimester: 2,
+    display_order: 5
+  },
+  {
+    id: 'ch-bio-6',
+    grade_subject_id: 'gs-biologia-10',
+    title: 'Evolução',
+    description: 'Teorias evolutivas',
+    trimester: 2,
+    display_order: 6
+  },
+  // Biologia 10ª Classe - 3º Trimestre
+  {
+    id: 'ch-bio-7',
+    grade_subject_id: 'gs-biologia-10',
+    title: 'Ecologia',
+    description: 'Ecossistemas e cadeias alimentares',
+    trimester: 3,
+    display_order: 7
+  },
+  {
+    id: 'ch-bio-8',
+    grade_subject_id: 'gs-biologia-10',
+    title: 'Taxonomia',
+    description: 'Classificação dos seres vivos',
+    trimester: 3,
+    display_order: 8
+  },
+  {
+    id: 'ch-bio-9',
+    grade_subject_id: 'gs-biologia-10',
+    title: 'Fisiologia Humana',
+    description: 'Sistemas do corpo humano',
+    trimester: 3,
+    display_order: 9
   }
 ]
 
