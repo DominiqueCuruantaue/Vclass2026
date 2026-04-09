@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor de Lição - VClass Creator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/styles.css" rel="stylesheet">
+    <style>
+        @keyframes fadeIn { from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);} }
+        .fade-in { animation: fadeIn 0.3s ease forwards; }
+        .tab-btn { border-bottom: 3px solid transparent; transition: all 0.15s; }
+        .tab-btn.active { border-color: #8b5cf6; color: #7c3aed; font-weight: 600; }
+        .section-card { transition: box-shadow 0.2s; }
+        .section-card:hover { box-shadow: 0 4px 20px rgba(139,92,246,0.1); }
+        /* Video upload area */
+        .upload-zone { border: 2px dashed #d1d5db; transition: all 0.2s; cursor: pointer; }
+        .upload-zone:hover, .upload-zone.drag-over { border-color: #8b5cf6; background: #faf5ff; }
+        /* Exercise editor */
+        .exercise-item { border-left: 3px solid #e5e7eb; transition: border-color 0.2s; }
+        .exercise-item:hover { border-color: #8b5cf6; }
+        .option-row { transition: background 0.15s; }
+        .option-row:hover { background: #f9fafb; }
+        .option-correct { background: #f0fdf4; border-color: #86efac; }
+        /* Sticky header */
+        .editor-header { background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); }
+        /* Auto-save indicator */
+        @keyframes savePulse { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+        .save-pulse { animation: savePulse 1.5s ease infinite; }
+        /* Rich text hint */
+        .rich-hint { font-size: 0.7rem; color: #9ca3af; }
+        /* Progress steps */
+        .step-active { background: #8b5cf6; color: white; }
+        .step-done { background: #10b981; color: white; }
+        .step-pending { background: #e5e7eb; color: #9ca3af; }
+        /* Toggle */
+        .toggle-bg { transition: background 0.2s; }
+        input:checked + .toggle-bg { background: #8b5cf6; }
+        input:checked + .toggle-bg .toggle-dot { transform: translateX(20px); }
+        .toggle-dot { transition: transform 0.2s; }
+        /* Modal */
+        .modal-overlay { background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <!-- Sticky Editor Header -->
+    <header class="editor-header border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex items-center justify-between h-16 gap-4">
+                <!-- Back + Title -->
+                <div class="flex items-center gap-3 min-w-0">
+                    <a href="/creator-content.html" class="flex items-center justify-center w-9 h-9 rounded-xl border border-gray-200 hover:bg-gray-100 text-gray-500 transition flex-shrink-0" title="Voltar">
+                        <i class="fas fa-arrow-left text-sm"></i>
+                    </a>
+                    <div class="min-w-0">
+                        <h1 class="text-sm font-bold text-gray-900 truncate" id="header-title">Editar Lição</h1>
+                        <div class="flex items-center gap-2 mt-0.5">
+                            <span id="save-status" class="text-xs text-gray-400 flex items-center gap-1">
+                                <i class="fas fa-circle text-gray-300 text-xs"></i> Não salvo
+                            </span>
+                            <span id="lesson-status-badge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Rascunho</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Steps (desktop) -->
+                <div class="hidden lg:flex items-center gap-2">
+                    <div class="flex items-center gap-1.5 step-item" data-step="info">
+                        <div class="w-6 h-6 rounded-full step-active flex items-center justify-center text-xs font-bold step-circle" id="step-circle-1">1</div>
+                        <span class="text-xs font-medium text-gray-700">Informações</span>
+                    </div>
+                    <div class="w-8 h-px bg-gray-200"></div>
+                    <div class="flex items-center gap-1.5 step-item" data-step="video">
+                        <div class="w-6 h-6 rounded-full step-pending flex items-center justify-center text-xs font-bold step-circle" id="step-circle-2">2</div>
+                        <span class="text-xs font-medium text-gray-400" id="step-label-2">Vídeo</span>
+                    </div>
+                    <div class="w-8 h-px bg-gray-200"></div>
+                    <div class="flex items-center gap-1.5 step-item" data-step="exercises">
+                        <div class="w-6 h-6 rounded-full step-pending flex items-center justify-center text-xs font-bold step-circle" id="step-circle-3">3</div>
+                        <span class="text-xs font-medium text-gray-400" id="step-label-3">Exercícios</span>
+                    </div>
+                    <div class="w-8 h-px bg-gray-200"></div>
+                    <div class="flex items-center gap-1.5 step-item" data-step="publish">
+                        <div class="w-6 h-6 rounded-full step-pending flex items-center justify-center text-xs font-bold step-circle" id="step-circle-4">4</div>
+                        <span class="text-xs font-medium text-gray-400" id="step-label-4">Publicar</span>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <button onclick="saveDraft()" class="px-3 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition">
+                        <i class="fas fa-save mr-1"></i> <span class="hidden sm:inline">Salvar</span>
+                    </button>
+                    <button onclick="previewLesson()" class="px-3 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition">
+                        <i class="fas fa-eye mr-1"></i> <span class="hidden sm:inline">Pré-ver</span>
+                    </button>
+                    <button onclick="publishLesson()" id="btn-publish" class="px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-xl hover:bg-green-700 transition shadow-sm">
+                        <i class="fas fa-upload mr-1"></i> Publicar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Tabs -->
+    <div class="bg-white border-b border-gray-100 sticky top-16 z-40">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex items-center gap-1 overflow-x-auto">
+                <button onclick="switchTab('info')" id="tab-info" class="tab-btn active whitespace-nowrap px-5 py-4 text-sm text-purple-700">
+                    <i class="fas fa-info-circle mr-1.5"></i> Informações
+                </button>
+                <button onclick="switchTab('video')" id="tab-video" class="tab-btn whitespace-nowrap px-5 py-4 text-sm text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-video mr-1.5"></i> Vídeo
+                </button>
+                <button onclick="switchTab('exercises')" id="tab-exercises" class="tab-btn whitespace-nowrap px-5 py-4 text-sm text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-question-circle mr-1.5"></i> Exercícios
+                    <span id="exercise-count-badge" class="ml-1 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">0</span>
+                </button>
+                <button onclick="switchTab('resources')" id="tab-resources" class="tab-btn whitespace-nowrap px-5 py-4 text-sm text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-paperclip mr-1.5"></i> Recursos
+                </button>
+                <button onclick="switchTab('publish')" id="tab-publish" class="tab-btn whitespace-nowrap px-5 py-4 text-sm text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-rocket mr-1.5"></i> Publicar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-6xl mx-auto px-4 py-8">
+
+        <!-- ── TAB: Informações ─────────────────────────────────────── -->
+        <div id="panel-info" class="fade-in">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Main Info -->
+                <div class="lg:col-span-2 space-y-5">
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 section-card">
+                        <h2 class="text-base font-semibold text-gray-900 mb-4"><i class="fas fa-pen-nib text-purple-500 mr-2"></i>Informações da Lição</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Título <span class="text-red-500">*</span></label>
+                                <input type="text" id="field-title" placeholder="Ex: Leis de Newton — 2ª Lei (F = ma)" maxlength="100"
+                                    oninput="onFieldChange()" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-400">
+                                <div class="flex justify-between mt-1">
+                                    <p class="text-xs text-gray-400">Seja claro e objetivo. Títulos descritivos têm mais visualizações.</p>
+                                    <span class="text-xs text-gray-400"><span id="title-count">0</span>/100</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+                                <textarea id="field-desc" rows="4" maxlength="500" placeholder="Descreva o que o aluno vai aprender nesta lição. Inclua os principais conceitos abordados."
+                                    oninput="onFieldChange()" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"></textarea>
+                                <div class="flex justify-between mt-1">
+                                    <p class="text-xs text-gray-400">Máx. 500 caracteres.</p>
+                                    <span class="text-xs text-gray-400"><span id="desc-count">0</span>/500</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Objetivos de Aprendizagem</label>
+                                <p class="text-xs text-gray-400 mb-2">O que o aluno será capaz de fazer após esta lição?</p>
+                                <div id="objectives-list" class="space-y-2 mb-2">
+                                    <!-- objectives added by JS -->
+                                </div>
+                                <button onclick="addObjective()" class="flex items-center gap-2 text-sm text-purple-600 hover:text-purple-800 font-medium">
+                                    <i class="fas fa-plus-circle text-sm"></i> Adicionar objetivo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes / Transcript -->
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 section-card">
+                        <h2 class="text-base font-semibold text-gray-900 mb-4"><i class="fas fa-sticky-note text-blue-500 mr-2"></i>Notas da Aula</h2>
+                        <p class="text-xs text-gray-500 mb-3">Estas notas ficam visíveis para os alunos enquanto assistem a aula. Suporta formatação básica.</p>
+                        <textarea id="field-notes" rows="8" placeholder="Cole aqui a transcrição, resumo ou notas complementares da aula. Os alunos podem ver e exportar estas notas durante a lição."
+                            oninput="onFieldChange()" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 resize-y font-mono"></textarea>
+                        <p class="rich-hint mt-1">**negrito** · *itálico* · # Título · - Lista · `código`</p>
+                    </div>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="space-y-5">
+                    <!-- Organização -->
+                    <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 section-card">
+                        <h3 class="text-sm font-semibold text-gray-900 mb-4"><i class="fas fa-sitemap text-purple-500 mr-2"></i>Organização</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Disciplina <span class="text-red-400">*</span></label>
+                                <select id="field-subject" onchange="loadChapters()" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                                    <option value="">Selecionar...</option>
+                                    <option value="fisica">Física</option>
+                                    <option value="matematica">Matemática</option>
+                                    <option value="quimica">Química</option>
+                                    <option value="portugues">Português</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Capítulo <span class="text-red-400">*</span></label>
+                                <select id="field-chapter" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                                    <option value="">Selecione a disciplina</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Ordem no capítulo</label>
+                                <input type="number" id="field-order" value="1" min="1" max="99" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Configurações -->
+                    <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 section-card">
+                        <h3 class="text-sm font-semibold text-gray-900 mb-4"><i class="fas fa-cog text-gray-500 mr-2"></i>Configurações</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Duração estimada</label>
+                                <div class="relative">
+                                    <input type="number" id="field-duration" value="12" min="1" max="120" class="w-full px-3 py-2 pr-10 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">min</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-2">Nível de dificuldade</label>
+                                <div class="grid grid-cols-3 gap-1.5">
+                                    <button onclick="setDifficulty('easy')" id="diff-easy" class="py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:border-green-400 hover:bg-green-50 text-gray-600 transition">
+                                        🟢 Fácil
+                                    </button>
+                                    <button onclick="setDifficulty('medium')" id="diff-medium" class="py-1.5 text-xs font-medium rounded-lg border border-purple-400 bg-purple-50 text-purple-700 transition">
+                                        🟡 Médio
+                                    </button>
+                                    <button onclick="setDifficulty('hard')" id="diff-hard" class="py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:border-red-400 hover:bg-red-50 text-gray-600 transition">
+                                        🔴 Difícil
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs font-medium text-gray-700">Acesso gratuito</p>
+                                    <p class="text-xs text-gray-400">Todos os alunos podem aceder</p>
+                                </div>
+                                <label class="relative inline-block w-11 h-6 cursor-pointer">
+                                    <input type="checkbox" id="toggle-free" checked class="sr-only peer">
+                                    <div class="toggle-bg w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-purple-600"></div>
+                                    <div class="toggle-dot absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow peer-checked:translate-x-5 transition"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs font-medium text-gray-700">Requerer sequência</p>
+                                    <p class="text-xs text-gray-400">Aluno deve concluir lição anterior</p>
+                                </div>
+                                <label class="relative inline-block w-11 h-6 cursor-pointer">
+                                    <input type="checkbox" id="toggle-sequence" class="sr-only peer">
+                                    <div class="toggle-bg w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-purple-600"></div>
+                                    <div class="toggle-dot absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow peer-checked:translate-x-5 transition"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Regras de Conclusão -->
+                    <div class="bg-purple-50 rounded-2xl p-5 border border-purple-100">
+                        <h3 class="text-sm font-semibold text-purple-900 mb-3"><i class="fas fa-shield-alt text-purple-600 mr-2"></i>Regras de Conclusão</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-medium text-purple-800 mb-1">% mínima do vídeo</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="range" id="rule-video-pct" min="0" max="100" value="80" class="flex-1 accent-purple-600" oninput="document.getElementById('video-pct-val').textContent=this.value+'%'">
+                                    <span class="text-xs font-bold text-purple-700 w-8" id="video-pct-val">80%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-purple-800 mb-1">Nota mínima nos exercícios</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="range" id="rule-exercise-score" min="0" max="100" value="60" class="flex-1 accent-purple-600" oninput="document.getElementById('exercise-score-val').textContent=this.value+'%'">
+                                    <span class="text-xs font-bold text-purple-700 w-8" id="exercise-score-val">60%</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <p class="text-xs font-medium text-purple-800">Exercícios obrigatórios</p>
+                                <label class="relative inline-block w-11 h-6 cursor-pointer">
+                                    <input type="checkbox" id="toggle-exercises-req" checked class="sr-only peer">
+                                    <div class="toggle-bg w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-purple-600"></div>
+                                    <div class="toggle-dot absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow peer-checked:translate-x-5 transition"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── TAB: Vídeo ──────────────────────────────────────────── -->
+        <div id="panel-video" class="hidden fade-in">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 space-y-5">
+                    <!-- Video Source -->
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 section-card">
+                        <h2 class="text-base font-semibold text-gray-900 mb-1"><i class="fas fa-video text-purple-500 mr-2"></i>Fonte do Vídeo</h2>
+                        <p class="text-xs text-gray-500 mb-5">O VClass usa Bunny.net CDN para streaming HLS seguro. Forneça o ID do vídeo ou uma URL direta.</p>
+
+                        <!-- Source Tabs -->
+                        <div class="flex items-center gap-2 mb-5 p-1 bg-gray-100 rounded-xl w-fit">
+                            <button onclick="setVideoSource('bunny')" id="src-bunny" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-white shadow text-purple-700 transition">
+                                <i class="fas fa-cloud mr-1"></i> Bunny.net
+                            </button>
+                            <button onclick="setVideoSource('url')" id="src-url" class="px-4 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 rounded-lg transition">
+                                <i class="fas fa-link mr-1"></i> URL Direta
+                            </button>
+                            <button onclick="setVideoSource('youtube')" id="src-youtube" class="px-4 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 rounded-lg transition">
+                                <i class="fab fa-youtube mr-1"></i> YouTube
+                            </button>
+                        </div>
+
+                        <!-- Bunny.net -->
+                        <div id="source-bunny" class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">ID do Vídeo no Bunny.net <span class="text-red-500">*</span></label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="field-video-id" placeholder="Ex: a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                                        class="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-400">
+                                    <button onclick="validateVideoId()" class="px-4 py-2.5 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700 transition">
+                                        <i class="fas fa-check-circle mr-1"></i> Validar
+                                    </button>
+                                </div>
+                                <p class="text-xs text-gray-400 mt-1">Encontre o ID no painel da sua conta Bunny.net → Stream.</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Library ID</label>
+                                <input type="text" id="field-library-id" placeholder="Ex: 123456" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-400">
+                            </div>
+                        </div>
+
+                        <!-- URL Direta -->
+                        <div id="source-url" class="hidden space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">URL do Arquivo de Vídeo</label>
+                                <input type="url" id="field-video-url" placeholder="https://cdn.example.com/video/aula.mp4"
+                                    class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-400">
+                                <p class="text-xs text-amber-600 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Use apenas para testes. Prefira Bunny.net em produção.</p>
+                            </div>
+                        </div>
+
+                        <!-- YouTube -->
+                        <div id="source-youtube" class="hidden space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">URL do YouTube</label>
+                                <input type="url" id="field-youtube-url" placeholder="https://www.youtube.com/watch?v=..."
+                                    class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-400">
+                                <p class="text-xs text-amber-600 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>Vídeos do YouTube não possuem controle de acesso premium.</p>
+                            </div>
+                        </div>
+
+                        <!-- Validation Result -->
+                        <div id="video-validation" class="hidden mt-4 p-4 bg-green-50 border border-green-200 rounded-xl">
+                            <div class="flex items-center gap-2 text-green-700">
+                                <i class="fas fa-check-circle"></i>
+                                <span class="text-sm font-semibold">Vídeo encontrado e validado!</span>
+                            </div>
+                            <div class="mt-2 text-xs text-green-600 space-y-0.5" id="video-info-block">
+                                <p>Duração: <strong id="video-duration-found">--</strong></p>
+                                <p>Formato: <strong>HLS (m3u8)</strong></p>
+                                <p>Status: <strong>Pronto para streaming</strong></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Thumbnail -->
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 section-card">
+                        <h2 class="text-base font-semibold text-gray-900 mb-1"><i class="fas fa-image text-blue-500 mr-2"></i>Thumbnail</h2>
+                        <p class="text-xs text-gray-500 mb-4">Imagem de capa da lição. Recomendado: 1280×720 px (16:9), máx. 2 MB.</p>
+                        <div class="upload-zone rounded-2xl p-8 text-center" id="thumbnail-zone"
+                            onclick="document.getElementById('thumbnail-input').click()"
+                            ondragover="event.preventDefault();this.classList.add('drag-over')"
+                            ondragleave="this.classList.remove('drag-over')"
+                            ondrop="handleThumbDrop(event)">
+                            <div id="thumb-placeholder">
+                                <i class="fas fa-image text-4xl text-gray-300 mb-3 block"></i>
+                                <p class="text-sm font-medium text-gray-500">Clique ou arraste uma imagem aqui</p>
+                                <p class="text-xs text-gray-400 mt-1">JPG, PNG ou WebP · Máx. 2 MB</p>
+                            </div>
+                            <img id="thumb-preview" class="hidden max-h-40 mx-auto rounded-xl object-cover" src="" alt="thumbnail">
+                        </div>
+                        <input type="file" id="thumbnail-input" accept="image/*" class="hidden" onchange="handleThumbFile(this)">
+                        <div class="flex items-center gap-2 mt-3">
+                            <button onclick="document.getElementById('thumbnail-input').click()" class="text-xs text-purple-600 font-medium hover:underline">
+                                <i class="fas fa-upload mr-1"></i> Fazer upload
+                            </button>
+                            <span class="text-gray-300">|</span>
+                            <button onclick="generateThumbnail()" class="text-xs text-gray-500 hover:text-gray-700 font-medium">
+                                <i class="fas fa-magic mr-1"></i> Gerar do vídeo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar: video checklist -->
+                <div class="space-y-5">
+                    <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                        <h3 class="text-sm font-semibold text-gray-900 mb-4"><i class="fas fa-clipboard-check text-green-500 mr-2"></i>Checklist do Vídeo</h3>
+                        <div class="space-y-2.5" id="video-checklist">
+                            <div class="flex items-center gap-2 text-sm" id="check-video-id">
+                                <i class="fas fa-circle text-gray-200 text-xs w-4"></i>
+                                <span class="text-gray-500">ID do vídeo informado</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-sm" id="check-thumbnail">
+                                <i class="fas fa-circle text-gray-200 text-xs w-4"></i>
+                                <span class="text-gray-500">Thumbnail definida</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-sm" id="check-duration">
+                                <i class="fas fa-circle text-gray-200 text-xs w-4"></i>
+                                <span class="text-gray-500">Duração estimada informada</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-amber-50 rounded-2xl p-5 border border-amber-100">
+                        <h3 class="text-sm font-semibold text-amber-900 mb-3"><i class="fas fa-lightbulb text-amber-500 mr-2"></i>Boas Práticas</h3>
+                        <ul class="text-xs text-amber-800 space-y-1.5">
+                            <li>✅ Vídeos entre <strong>8–15 minutos</strong> têm mais conclusões</li>
+                            <li>✅ Thumbnail clara e atraente aumenta cliques em 40%</li>
+                            <li>✅ Use Bunny.net para garantir velocidade global</li>
+                            <li>⚠️ Evite vídeos com mais de 30 minutos contínuos</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── TAB: Exercícios ─────────────────────────────────────── -->
+        <div id="panel-exercises" class="hidden fade-in">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 space-y-4">
+                    <!-- Toolbar -->
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-base font-semibold text-gray-900">Exercícios da Lição</h2>
+                            <p class="text-xs text-gray-500 mt-0.5"><span id="ex-count-label">0</span> exercícios · Múltipla escolha com 4 alternativas</p>
+                        </div>
+                        <button onclick="addExercise()" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition shadow-sm">
+                            <i class="fas fa-plus"></i> Adicionar
+                        </button>
+                    </div>
+
+                    <!-- Exercise list -->
+                    <div id="exercises-container" class="space-y-4">
+                        <!-- populated by JS -->
+                    </div>
+
+                    <div id="no-exercises-msg" class="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-200">
+                        <i class="fas fa-question-circle text-4xl text-gray-200 mb-4 block"></i>
+                        <p class="text-sm font-medium text-gray-500">Ainda não há exercícios nesta lição.</p>
+                        <p class="text-xs text-gray-400 mt-1 mb-5">Exercícios aumentam o engajamento em 3× e ajudam a fixar o conteúdo.</p>
+                        <button onclick="addExercise()" class="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition">
+                            <i class="fas fa-plus"></i> Criar primeiro exercício
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sidebar: rules -->
+                <div class="space-y-5">
+                    <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                        <h3 class="text-sm font-semibold text-gray-900 mb-4"><i class="fas fa-sliders-h text-purple-500 mr-2"></i>Regras dos Exercícios</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-xs font-medium text-gray-700 block mb-1">Tentativas permitidas</label>
+                                <select id="rule-attempts" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                                    <option value="1">1 tentativa</option>
+                                    <option value="3" selected>3 tentativas</option>
+                                    <option value="5">5 tentativas</option>
+                                    <option value="0">Ilimitadas</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs font-medium text-gray-700 block mb-1">Tempo limite por questão</label>
+                                <select id="rule-time" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                                    <option value="0">Sem limite</option>
+                                    <option value="30">30 segundos</option>
+                                    <option value="60" selected>1 minuto</option>
+                                    <option value="120">2 minutos</option>
+                                    <option value="300">5 minutos</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center justify-between pt-1">
+                                <div>
+                                    <p class="text-xs font-medium text-gray-700">Embaralhar ordem</p>
+                                    <p class="text-xs text-gray-400">Questões em ordem aleatória</p>
+                                </div>
+                                <label class="relative inline-block w-11 h-6 cursor-pointer">
+                                    <input type="checkbox" id="toggle-shuffle" checked class="sr-only peer">
+                                    <div class="toggle-bg w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-purple-600"></div>
+                                    <div class="toggle-dot absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow peer-checked:translate-x-5 transition"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs font-medium text-gray-700">Mostrar explicação</p>
+                                    <p class="text-xs text-gray-400">Após responder cada questão</p>
+                                </div>
+                                <label class="relative inline-block w-11 h-6 cursor-pointer">
+                                    <input type="checkbox" id="toggle-explain" checked class="sr-only peer">
+                                    <div class="toggle-bg w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-purple-600"></div>
+                                    <div class="toggle-dot absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow peer-checked:translate-x-5 transition"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-blue-50 rounded-2xl p-5 border border-blue-100">
+                        <h3 class="text-sm font-semibold text-blue-900 mb-3"><i class="fas fa-info-circle text-blue-500 mr-2"></i>Diretrizes</h3>
+                        <ul class="text-xs text-blue-800 space-y-1.5">
+                            <li>✅ Mínimo de <strong>3 exercícios</strong> por lição</li>
+                            <li>✅ Sempre inclua <strong>explicação</strong> para respostas incorretas</li>
+                            <li>✅ As 4 alternativas devem ser <strong>plausíveis</strong></li>
+                            <li>✅ Use linguagem <strong>clara e objetiva</strong> nas perguntas</li>
+                            <li>⚠️ Evite alternativas do tipo "Todas as anteriores"</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── TAB: Recursos ───────────────────────────────────────── -->
+        <div id="panel-resources" class="hidden fade-in">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 space-y-5">
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h2 class="text-base font-semibold text-gray-900"><i class="fas fa-paperclip text-purple-500 mr-2"></i>Materiais Complementares</h2>
+                                <p class="text-xs text-gray-500 mt-0.5">Links e arquivos disponíveis para os alunos na página da lição.</p>
+                            </div>
+                            <button onclick="addResource()" class="px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700 transition">
+                                <i class="fas fa-plus mr-1"></i> Adicionar
+                            </button>
+                        </div>
+                        <div id="resources-list" class="space-y-3">
+                            <!-- populated by JS -->
+                        </div>
+                        <div id="no-resources-msg" class="text-center py-10 text-gray-400">
+                            <i class="fas fa-paperclip text-3xl text-gray-200 mb-3 block"></i>
+                            <p class="text-sm">Nenhum material adicionado.</p>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="bg-green-50 rounded-2xl p-5 border border-green-100">
+                        <h3 class="text-sm font-semibold text-green-900 mb-3"><i class="fas fa-link text-green-600 mr-2"></i>Tipos de Recursos</h3>
+                        <ul class="text-xs text-green-800 space-y-1.5">
+                            <li>📄 <strong>PDF</strong> — resumos, formulários, fichas</li>
+                            <li>🔗 <strong>Link</strong> — artigos, sites de referência</li>
+                            <li>📊 <strong>Slides</strong> — apresentações da aula</li>
+                            <li>🧮 <strong>Exercícios</strong> — listas extras</li>
+                            <li>📺 <strong>Vídeo extra</strong> — conteúdo complementar</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── TAB: Publicar ────────────────────────────────────────── -->
+        <div id="panel-publish" class="hidden fade-in">
+            <div class="max-w-2xl mx-auto">
+                <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 text-center mb-6">
+                    <div id="publish-ready-icon" class="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-clipboard-list text-amber-600 text-2xl"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-900 mb-2" id="publish-heading">Verificação Pré-publicação</h2>
+                    <p class="text-sm text-gray-500 mb-6" id="publish-subheading">Verifique os itens abaixo antes de publicar sua lição.</p>
+
+                    <!-- Checklist final -->
+                    <div class="text-left space-y-3 mb-8" id="publish-checklist">
+                        <div class="flex items-center gap-3 p-3 rounded-xl" id="pcheck-title">
+                            <i class="fas fa-times-circle text-red-400 text-lg w-6"></i>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-800">Título da lição</p>
+                                <p class="text-xs text-gray-500" id="pcheck-title-detail">Preencha o título da lição na aba "Informações"</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3 p-3 rounded-xl" id="pcheck-subject">
+                            <i class="fas fa-times-circle text-red-400 text-lg w-6"></i>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-800">Disciplina e capítulo</p>
+                                <p class="text-xs text-gray-500" id="pcheck-subject-detail">Selecione a disciplina e o capítulo na aba "Informações"</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3 p-3 rounded-xl" id="pcheck-video">
+                            <i class="fas fa-times-circle text-red-400 text-lg w-6"></i>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-800">Vídeo configurado</p>
+                                <p class="text-xs text-gray-500" id="pcheck-video-detail">Adicione o ID do vídeo na aba "Vídeo"</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3 p-3 rounded-xl" id="pcheck-exercises">
+                            <i class="fas fa-exclamation-circle text-amber-400 text-lg w-6"></i>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-800">Exercícios (recomendado)</p>
+                                <p class="text-xs text-gray-500" id="pcheck-ex-detail">Recomendamos pelo menos 3 exercícios por lição</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="publishLesson()" id="btn-publish-final" class="w-full py-3 bg-green-600 text-white font-bold rounded-2xl hover:bg-green-700 transition shadow-md text-base disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fas fa-rocket mr-2"></i> Publicar Lição Agora
+                    </button>
+                    <p class="text-xs text-gray-400 mt-3">A lição ficará disponível para os alunos imediatamente após publicação.</p>
+                </div>
+
+                <!-- Danger zone -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-red-100">
+                    <h3 class="text-base font-semibold text-red-700 mb-3"><i class="fas fa-exclamation-triangle mr-2"></i>Zona de Risco</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-700">Mover para rascunho</p>
+                                <p class="text-xs text-gray-400">A lição ficará oculta para os alunos</p>
+                            </div>
+                            <button onclick="unpublishLesson()" class="px-3 py-2 text-sm font-medium text-amber-700 border border-amber-200 rounded-xl hover:bg-amber-50 transition">
+                                <i class="fas fa-eye-slash mr-1"></i> Despublicar
+                            </button>
+                        </div>
+                        <div class="flex items-center justify-between pt-2 border-t border-gray-100">
+                            <div>
+                                <p class="text-sm font-medium text-red-700">Excluir lição</p>
+                                <p class="text-xs text-gray-400">Esta ação não pode ser desfeita</p>
+                            </div>
+                            <button onclick="deleteLesson()" class="px-3 py-2 text-sm font-medium text-red-700 border border-red-200 rounded-xl hover:bg-red-50 transition">
+                                <i class="fas fa-trash mr-1"></i> Excluir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auto-save toast -->
+    <div id="autosave-toast" class="hidden fixed bottom-6 right-6 bg-gray-800 text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 z-50">
+        <i class="fas fa-check-circle text-green-400"></i> Rascunho salvo automaticamente
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        // ── Auth ────────────────────────────────────────────────────────
+        if (!VClass.isAuthenticated()) location.href = '/login.html';
+
+        // ── State ────────────────────────────────────────────────────────
+        const urlP = new URLSearchParams(location.search);
+        const LESSON_ID = urlP.get('id') || 'new';
+        const LESSON_TITLE_INIT = urlP.get('title') || '';
+        let lessonData = {
+            title: LESSON_TITLE_INIT, desc: '', notes: '', subject: '', chapter: '',
+            order: 1, duration: 12, difficulty: 'medium', isFree: true, requireSequence: false,
+            videoId: '', videoSource: 'bunny', objectives: [],
+            exercises: [], resources: [],
+            status: 'draft'
+        };
+        let autoSaveTimer = null;
+        let exerciseIdCounter = 1;
+        let resourceIdCounter = 1;
+
+        const CHAPTERS = {
+            fisica:     ['Cinemática','Dinâmica','Óptica','Termodinâmica','Eletricidade'],
+            matematica: ['Funções','Álgebra Linear','Geometria Analítica','Trigonometria'],
+            quimica:    ['Átomos e Moléculas','Soluções','Reações Orgânicas'],
+            portugues:  ['Gramática','Literatura','Interpretação de Texto','Redação'],
+        };
+
+        // ── Init ─────────────────────────────────────────────────────────
+        window.onload = function() {
+            if (LESSON_TITLE_INIT) {
+                document.getElementById('field-title').value = LESSON_TITLE_INIT;
+                document.getElementById('header-title').textContent = LESSON_TITLE_INIT;
+                updateCharCount('field-title','title-count');
+                lessonData.title = LESSON_TITLE_INIT;
+            }
+            renderExercises();
+            renderResources();
+            updatePublishChecklist();
+        };
+
+        // ── Tabs ─────────────────────────────────────────────────────────
+        const TABS = ['info','video','exercises','resources','publish'];
+        function switchTab(tab) {
+            TABS.forEach(t => {
+                document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+                document.getElementById(`panel-${t}`).classList.toggle('hidden', t !== tab);
+            });
+            if (tab === 'publish') updatePublishChecklist();
+        }
+
+        // ── Field Changes ────────────────────────────────────────────────
+        function onFieldChange() {
+            lessonData.title = document.getElementById('field-title').value;
+            lessonData.desc  = document.getElementById('field-desc').value;
+            lessonData.notes = document.getElementById('field-notes').value;
+            document.getElementById('header-title').textContent = lessonData.title || 'Editar Lição';
+            updateCharCount('field-title','title-count');
+            updateCharCount('field-desc','desc-count');
+            scheduleAutoSave();
+        }
+
+        function updateCharCount(fieldId, countId) {
+            const v = document.getElementById(fieldId).value.length;
+            document.getElementById(countId).textContent = v;
+        }
+
+        function loadChapters() {
+            const subj = document.getElementById('field-subject').value;
+            lessonData.subject = subj;
+            const sel = document.getElementById('field-chapter');
+            const chapters = CHAPTERS[subj] || [];
+            sel.innerHTML = chapters.length
+                ? chapters.map(c => `<option value="${c}">${c}</option>`).join('')
+                : '<option value="">Nenhum capítulo</option>';
+            lessonData.chapter = chapters[0] || '';
+        }
+
+        // ── Difficulty ───────────────────────────────────────────────────
+        function setDifficulty(d) {
+            lessonData.difficulty = d;
+            ['easy','medium','hard'].forEach(k => {
+                const el = document.getElementById(`diff-${k}`);
+                el.className = k === d
+                    ? 'py-1.5 text-xs font-medium rounded-lg border border-purple-400 bg-purple-50 text-purple-700 transition'
+                    : 'py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:border-purple-300 text-gray-600 transition';
+            });
+        }
+
+        // ── Objectives ───────────────────────────────────────────────────
+        function addObjective() {
+            lessonData.objectives.push('');
+            renderObjectives();
+        }
+
+        function renderObjectives() {
+            const c = document.getElementById('objectives-list');
+            if (lessonData.objectives.length === 0) { c.innerHTML = ''; return; }
+            c.innerHTML = lessonData.objectives.map((o, i) => `
+            <div class="flex items-center gap-2">
+                <i class="fas fa-check-circle text-green-400 text-sm flex-shrink-0"></i>
+                <input type="text" value="${o}" placeholder="Ex: Calcular aceleração usando a 2ª Lei de Newton"
+                    onchange="lessonData.objectives[${i}]=this.value"
+                    class="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                <button onclick="removeObjective(${i})" class="w-7 h-7 flex items-center justify-center text-gray-300 hover:text-red-500 transition">
+                    <i class="fas fa-times text-xs"></i>
+                </button>
+            </div>`).join('');
+        }
+
+        function removeObjective(i) {
+            lessonData.objectives.splice(i, 1);
+            renderObjectives();
+        }
+
+        // ── Video Source ─────────────────────────────────────────────────
+        function setVideoSource(src) {
+            lessonData.videoSource = src;
+            ['bunny','url','youtube'].forEach(s => {
+                document.getElementById(`source-${s}`).classList.toggle('hidden', s !== src);
+                const btn = document.getElementById(`src-${s}`);
+                btn.className = s === src
+                    ? 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-white shadow text-purple-700 transition'
+                    : 'px-4 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 rounded-lg transition';
+            });
+        }
+
+        function validateVideoId() {
+            const id = document.getElementById('field-video-id').value.trim();
+            if (!id) { VClass.showNotification('Insira o ID do vídeo primeiro.', 'warning'); return; }
+            VClass.showLoading('Validando vídeo...');
+            setTimeout(() => {
+                VClass.hideLoading();
+                lessonData.videoId = id;
+                document.getElementById('video-duration-found').textContent = `${lessonData.duration} min`;
+                document.getElementById('video-validation').classList.remove('hidden');
+                updateCheckItem('check-video-id', true, 'ID do vídeo informado');
+                VClass.showNotification('Vídeo validado com sucesso!', 'success');
+                scheduleAutoSave();
+            }, 1200);
+        }
+
+        // ── Thumbnail ───────────────────────────────────────────────────
+        function handleThumbFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+            if (file.size > 2 * 1024 * 1024) { VClass.showNotification('Imagem muito grande. Máx. 2 MB.', 'warning'); return; }
+            const reader = new FileReader();
+            reader.onload = e => {
+                document.getElementById('thumb-preview').src = e.target.result;
+                document.getElementById('thumb-preview').classList.remove('hidden');
+                document.getElementById('thumb-placeholder').classList.add('hidden');
+                updateCheckItem('check-thumbnail', true, 'Thumbnail definida');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleThumbDrop(e) {
+            e.preventDefault();
+            document.getElementById('thumbnail-zone').classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                document.getElementById('thumbnail-input').files = dt.files;
+                handleThumbFile(document.getElementById('thumbnail-input'));
+            }
+        }
+
+        function generateThumbnail() {
+            VClass.showNotification('Gerando thumbnail do frame do vídeo...', 'info');
+        }
+
+        function updateCheckItem(id, ok, label) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.querySelector('i').className = `fas ${ok ? 'fa-check-circle text-green-500' : 'fa-circle text-gray-200'} text-xs w-4`;
+            el.querySelector('span').className = ok ? 'text-gray-800 font-medium' : 'text-gray-500';
+        }
+
+        // ── Exercises ────────────────────────────────────────────────────
+        function addExercise() {
+            const ex = {
+                id: exerciseIdCounter++,
+                question: '',
+                options: ['', '', '', ''],
+                correct: 0,
+                explanation: '',
+                points: 10
+            };
+            lessonData.exercises.push(ex);
+            renderExercises();
+            updateExerciseCount();
+            setTimeout(() => {
+                const els = document.querySelectorAll('.ex-question');
+                els[els.length-1]?.focus();
+            }, 50);
+        }
+
+        function removeExercise(id) {
+            lessonData.exercises = lessonData.exercises.filter(e => e.id !== id);
+            renderExercises();
+            updateExerciseCount();
+        }
+
+        function updateExerciseCount() {
+            const n = lessonData.exercises.length;
+            document.getElementById('exercise-count-badge').textContent = n;
+            document.getElementById('ex-count-label').textContent = n;
+            const noMsg = document.getElementById('no-exercises-msg');
+            noMsg.classList.toggle('hidden', n > 0);
+        }
+
+        function renderExercises() {
+            const c = document.getElementById('exercises-container');
+            updateExerciseCount();
+            if (lessonData.exercises.length === 0) { c.innerHTML = ''; return; }
+
+            c.innerHTML = lessonData.exercises.map((ex, idx) => {
+                const opts = ex.options.map((opt, oi) => `
+                <div class="option-row flex items-center gap-3 p-2.5 rounded-xl ${oi === ex.correct ? 'option-correct border border-green-200' : 'border border-transparent'}">
+                    <input type="radio" name="correct-${ex.id}" value="${oi}" ${oi === ex.correct ? 'checked' : ''}
+                        onchange="setCorrect(${ex.id},${oi})" class="accent-green-600 flex-shrink-0">
+                    <input type="text" value="${opt}" placeholder="Alternativa ${String.fromCharCode(65+oi)}"
+                        oninput="updateOption(${ex.id},${oi},this.value)"
+                        class="flex-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400 ${oi === ex.correct ? 'border-green-300' : ''}">
+                    ${oi === ex.correct ? '<i class="fas fa-check-circle text-green-500 text-sm flex-shrink-0"></i>' : '<span class="w-4"></span>'}
+                </div>`).join('');
+
+                return `
+                <div class="exercise-item bg-white rounded-2xl p-5 shadow-sm border border-gray-100" id="ex-${ex.id}">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="w-7 h-7 bg-blue-600 text-white rounded-lg flex items-center justify-center text-xs font-bold">${idx+1}</span>
+                            <span class="text-sm font-semibold text-gray-700">Questão ${idx+1}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-1 bg-gray-100 rounded-lg px-2 py-1">
+                                <span class="text-xs text-gray-500">Pontos:</span>
+                                <input type="number" value="${ex.points}" min="1" max="100"
+                                    oninput="updatePoints(${ex.id},this.value)"
+                                    class="w-10 text-xs font-bold text-gray-700 bg-transparent focus:outline-none">
+                            </div>
+                            <button onclick="removeExercise(${ex.id})" class="w-8 h-8 flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition">
+                                <i class="fas fa-trash text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Pergunta <span class="text-red-400">*</span></label>
+                        <textarea class="ex-question w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                            rows="2" placeholder="Escreva a pergunta de forma clara e objetiva..."
+                            oninput="updateQuestion(${ex.id},this.value)">${ex.question}</textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-xs font-medium text-gray-600 mb-2">Alternativas <span class="text-xs text-gray-400">(selecione a correta com o rádio)</span></label>
+                        <div class="space-y-2">${opts}</div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Explicação (para quando errar)</label>
+                        <input type="text" value="${ex.explanation}" placeholder="Ex: A 2ª Lei de Newton diz que F = m×a, portanto..."
+                            oninput="updateExplanation(${ex.id},this.value)"
+                            class="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-purple-400">
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function updateQuestion(id, v) { const ex = lessonData.exercises.find(e=>e.id===id); if(ex) ex.question=v; scheduleAutoSave(); }
+        function updateOption(id, oi, v) { const ex = lessonData.exercises.find(e=>e.id===id); if(ex) ex.options[oi]=v; scheduleAutoSave(); }
+        function setCorrect(id, oi) { const ex = lessonData.exercises.find(e=>e.id===id); if(ex){ ex.correct=oi; renderExercises(); } }
+        function updateExplanation(id, v) { const ex = lessonData.exercises.find(e=>e.id===id); if(ex) ex.explanation=v; scheduleAutoSave(); }
+        function updatePoints(id, v) { const ex = lessonData.exercises.find(e=>e.id===id); if(ex) ex.points=parseInt(v)||10; scheduleAutoSave(); }
+
+        // ── Resources ────────────────────────────────────────────────────
+        function addResource() {
+            const r = { id: resourceIdCounter++, title: '', url: '', type: 'link' };
+            lessonData.resources.push(r);
+            renderResources();
+        }
+
+        function renderResources() {
+            const c = document.getElementById('resources-list');
+            const noMsg = document.getElementById('no-resources-msg');
+            noMsg.classList.toggle('hidden', lessonData.resources.length > 0);
+            if (lessonData.resources.length === 0) { c.innerHTML = ''; return; }
+            const icons = { link:'fa-link', pdf:'fa-file-pdf', slides:'fa-file-powerpoint', video:'fa-video', exercise:'fa-list-ol' };
+            const colors = { link:'blue', pdf:'red', slides:'orange', video:'purple', exercise:'green' };
+            c.innerHTML = lessonData.resources.map(r => {
+                const ic = icons[r.type] || 'fa-link';
+                const col = colors[r.type] || 'blue';
+                return `
+                <div class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl bg-gray-50">
+                    <select onchange="updateResType(${r.id},this.value)" class="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none">
+                        <option value="link" ${r.type==='link'?'selected':''}>🔗 Link</option>
+                        <option value="pdf" ${r.type==='pdf'?'selected':''}>📄 PDF</option>
+                        <option value="slides" ${r.type==='slides'?'selected':''}>📊 Slides</option>
+                        <option value="video" ${r.type==='video'?'selected':''}>📺 Vídeo</option>
+                        <option value="exercise" ${r.type==='exercise'?'selected':''}>📝 Exercício</option>
+                    </select>
+                    <input type="text" value="${r.title}" placeholder="Título do recurso" oninput="updateResTitle(${r.id},this.value)"
+                        class="flex-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400 bg-white">
+                    <input type="url" value="${r.url}" placeholder="https://..." oninput="updateResUrl(${r.id},this.value)"
+                        class="flex-1 px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-400 bg-white">
+                    <button onclick="removeResource(${r.id})" class="w-8 h-8 flex items-center justify-center text-gray-300 hover:text-red-500 transition flex-shrink-0">
+                        <i class="fas fa-times text-xs"></i>
+                    </button>
+                </div>`;
+            }).join('');
+        }
+
+        function removeResource(id) { lessonData.resources = lessonData.resources.filter(r=>r.id!==id); renderResources(); }
+        function updateResType(id,v) { const r=lessonData.resources.find(r=>r.id===id); if(r){r.type=v; renderResources();} }
+        function updateResTitle(id,v) { const r=lessonData.resources.find(r=>r.id===id); if(r) r.title=v; }
+        function updateResUrl(id,v) { const r=lessonData.resources.find(r=>r.id===id); if(r) r.url=v; }
+
+        // ── Publish Checklist ────────────────────────────────────────────
+        function updatePublishChecklist() {
+            const hasTitle   = lessonData.title.length >= 5;
+            const hasSubject = !!document.getElementById('field-subject')?.value;
+            const hasVideo   = !!document.getElementById('field-video-id')?.value || !!document.getElementById('field-video-url')?.value;
+            const hasEx      = lessonData.exercises.length >= 3;
+
+            setCheckRow('pcheck-title',   hasTitle,  'Título: "' + (lessonData.title||'—') + '"', 'Preencha o título da lição na aba "Informações"');
+            setCheckRow('pcheck-subject', hasSubject,'Disciplina e capítulo selecionados', 'Selecione a disciplina e o capítulo na aba "Informações"');
+            setCheckRow('pcheck-video',   hasVideo,  'Vídeo configurado', 'Adicione o ID do vídeo na aba "Vídeo"');
+            setCheckRow('pcheck-exercises', hasEx, `${lessonData.exercises.length} exercícios adicionados`, 'Recomendamos pelo menos 3 exercícios', 'warning');
+
+            const critical = hasTitle && hasSubject && hasVideo;
+            document.getElementById('btn-publish-final').disabled = !critical;
+        }
+
+        function setCheckRow(id, ok, okText, failText, level='error') {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const icon = el.querySelector('i');
+            const detail = el.querySelector('p:last-child');
+            if (ok) {
+                icon.className = 'fas fa-check-circle text-green-500 text-lg w-6';
+                detail.textContent = okText;
+                el.className = 'flex items-center gap-3 p-3 rounded-xl bg-green-50';
+            } else if (level === 'warning') {
+                icon.className = 'fas fa-exclamation-circle text-amber-400 text-lg w-6';
+                detail.textContent = failText;
+                el.className = 'flex items-center gap-3 p-3 rounded-xl bg-amber-50';
+            } else {
+                icon.className = 'fas fa-times-circle text-red-400 text-lg w-6';
+                detail.textContent = failText;
+                el.className = 'flex items-center gap-3 p-3 rounded-xl bg-red-50';
+            }
+        }
+
+        // ── Save ─────────────────────────────────────────────────────────
+        function scheduleAutoSave() {
+            clearTimeout(autoSaveTimer);
+            setSaveStatus('saving');
+            autoSaveTimer = setTimeout(() => {
+                performSave();
+                setSaveStatus('saved');
+                showAutosaveToast();
+            }, 2000);
+        }
+
+        function setSaveStatus(s) {
+            const el = document.getElementById('save-status');
+            if (s === 'saving') el.innerHTML = '<i class="fas fa-circle save-pulse text-amber-400 text-xs"></i> Salvando...';
+            else if (s === 'saved') el.innerHTML = '<i class="fas fa-circle text-green-400 text-xs"></i> Salvo';
+            else el.innerHTML = '<i class="fas fa-circle text-gray-300 text-xs"></i> Não salvo';
+        }
+
+        function performSave() {
+            localStorage.setItem(`vclass_lesson_${LESSON_ID}`, JSON.stringify(lessonData));
+        }
+
+        function saveDraft() {
+            performSave();
+            setSaveStatus('saved');
+            VClass.showNotification('Rascunho salvo!', 'success');
+        }
+
+        function showAutosaveToast() {
+            const t = document.getElementById('autosave-toast');
+            t.classList.remove('hidden');
+            t.classList.add('flex');
+            setTimeout(() => { t.classList.add('hidden'); t.classList.remove('flex'); }, 2500);
+        }
+
+        function publishLesson() {
+            updatePublishChecklist();
+            const hasTitle   = lessonData.title.length >= 5;
+            const hasSubject = !!document.getElementById('field-subject')?.value;
+            const hasVideo   = !!document.getElementById('field-video-id')?.value;
+            if (!hasTitle || !hasSubject || !hasVideo) {
+                VClass.showNotification('Preencha todos os campos obrigatórios antes de publicar.', 'warning');
+                switchTab('publish');
+                return;
+            }
+            lessonData.status = 'published';
+            performSave();
+            document.getElementById('lesson-status-badge').textContent = 'Publicada';
+            document.getElementById('lesson-status-badge').className = 'text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700';
+            VClass.showNotification('Lição publicada com sucesso! 🎉', 'success');
+            setTimeout(() => location.href = '/creator-content.html', 2000);
+        }
+
+        function unpublishLesson() {
+            lessonData.status = 'draft';
+            performSave();
+            document.getElementById('lesson-status-badge').textContent = 'Rascunho';
+            document.getElementById('lesson-status-badge').className = 'text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700';
+            VClass.showNotification('Lição movida para rascunho.', 'info');
+        }
+
+        function deleteLesson() {
+            if (!confirm('Excluir esta lição permanentemente? Esta ação não pode ser desfeita.')) return;
+            localStorage.removeItem(`vclass_lesson_${LESSON_ID}`);
+            VClass.showNotification('Lição excluída.', 'warning');
+            setTimeout(() => location.href = '/creator-content.html', 1000);
+        }
+
+        function previewLesson() {
+            VClass.showNotification('Pré-visualização disponível após salvar a lição.', 'info');
+        }
+    </script>
+</body>
+</html>

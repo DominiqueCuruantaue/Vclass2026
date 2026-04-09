@@ -9,6 +9,7 @@ import contentRoutes from './routes/content'
 import videoRoutes from './routes/video'
 import exercisesRoutes from './routes/exercises'
 import progressRoutes from './routes/progress'
+import creatorRoutes from './routes/creator'
 import pagesRoutes from './routes/pages'
 
 const app = new Hono()
@@ -30,6 +31,7 @@ app.route('/api/content', contentRoutes)
 app.route('/api/video', videoRoutes)
 app.route('/api/exercises', exercisesRoutes)
 app.route('/api/progress', progressRoutes)
+app.route('/api/creator', creatorRoutes)
 
 // Health check
 app.get('/api/health', (c) => {

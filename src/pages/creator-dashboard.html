@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel do Criador — VClass</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+    <link href="/static/styles.css" rel="stylesheet">
+    <style>
+        /* ── Animations ─────────────────────────────────────────────── */
+        @keyframes fadeInUp { from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);} }
+        @keyframes fadeInLeft { from{opacity:0;transform:translateX(-16px);}to{opacity:1;transform:translateX(0);} }
+        @keyframes countUp { from{opacity:0;transform:scale(0.8);}to{opacity:1;transform:scale(1);} }
+        @keyframes shimmer { 0%{background-position:-200% 0;}100%{background-position:200% 0;} }
+        @keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1);}50%{opacity:.6;transform:scale(1.3);} }
+        @keyframes tipSlide { from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);} }
+        @keyframes streakFlicker { 0%,100%{text-shadow:0 0 8px #f59e0b;}50%{text-shadow:0 0 18px #f59e0b,0 0 30px #fbbf24;} }
+        @keyframes ringDraw { from{stroke-dashoffset:314;}to{stroke-dashoffset:var(--target);} }
+
+        .fade-in   { animation: fadeInUp 0.4s ease forwards; }
+        .fade-in-2 { animation: fadeInUp 0.4s ease 0.08s forwards; opacity:0; }
+        .fade-in-3 { animation: fadeInUp 0.4s ease 0.16s forwards; opacity:0; }
+        .fade-in-4 { animation: fadeInUp 0.4s ease 0.24s forwards; opacity:0; }
+        .fade-in-5 { animation: fadeInUp 0.4s ease 0.32s forwards; opacity:0; }
+        .fade-left { animation: fadeInLeft 0.4s ease forwards; }
+
+        /* ── Skeleton ───────────────────────────────────────────────── */
+        .skeleton { background: linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%); background-size:200% 100%; animation:shimmer 1.4s ease infinite; border-radius:6px; }
+
+        /* ── Stat Cards ─────────────────────────────────────────────── */
+        .stat-card { position:relative; overflow:hidden; transition:transform .2s,box-shadow .2s; }
+        .stat-card:hover { transform:translateY(-3px); box-shadow:0 12px 32px rgba(0,0,0,.09); }
+        .stat-card::before { content:''; position:absolute; top:-20px; right:-20px; width:80px; height:80px; border-radius:50%; background:currentColor; opacity:.06; }
+        .stat-num { animation: countUp 0.5s ease forwards; }
+
+        /* ── Creator Navbar ─────────────────────────────────────────── */
+        .creator-nav-link { transition:all .15s; border-radius:.5rem; }
+        .creator-nav-link:hover { background:rgba(139,92,246,.08); color:#7c3aed; }
+        .creator-nav-link.active { background:#f5f3ff; color:#7c3aed; font-weight:600; }
+
+        /* ── Progress Ring ──────────────────────────────────────────── */
+        .ring-circle { animation: ringDraw 1.2s cubic-bezier(.4,0,.2,1) forwards; }
+
+        /* ── Lesson Rows ────────────────────────────────────────────── */
+        .lesson-row { transition:background .15s; }
+        .lesson-row:hover { background:#f9fafb; }
+
+        /* ── Quick Action ───────────────────────────────────────────── */
+        .quick-action { transition:all .2s; }
+        .quick-action:hover { transform:scale(1.04); box-shadow:0 6px 18px rgba(0,0,0,.1); }
+
+        /* ── Status Badges ──────────────────────────────────────────── */
+        .badge-pub   { background:#d1fae5; color:#065f46; }
+        .badge-draft { background:#fef3c7; color:#92400e; }
+        .badge-rev   { background:#dbeafe; color:#1e40af; }
+        .status-badge { font-size:.68rem; font-weight:700; padding:2px 8px; border-radius:999px; }
+
+        /* ── Pulse Dot ──────────────────────────────────────────────── */
+        .pulse-dot { animation: pulseDot 2s ease infinite; }
+
+        /* ── Tip Card ───────────────────────────────────────────────── */
+        .tip-card { border-left:4px solid #a78bfa; }
+        .tip-text { animation: tipSlide .35s ease; }
+
+        /* ── Streak Flame ───────────────────────────────────────────── */
+        .streak-icon { animation: streakFlicker 2s ease infinite; }
+
+        /* ── Mobile menu ─────────────────────────────────────────────── */
+        .mobile-nav { transition:all .3s ease; }
+
+        /* ── Dropdown ────────────────────────────────────────────────── */
+        .dropdown-menu { transform-origin:top right; transition:opacity .15s, transform .15s; }
+        .dropdown-menu.hidden { opacity:0; transform:scale(.95); pointer-events:none; }
+
+        /* ── Chart container ─────────────────────────────────────────── */
+        .chart-wrapper { position:relative; height:200px; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         CREATOR NAVBAR
+    ═══════════════════════════════════════════════════════════════════════ -->
+    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex items-center justify-between h-16 gap-2">
+
+                <!-- Logo + Badge -->
+                <div class="flex items-center gap-3 flex-shrink-0">
+                    <a href="/creator-dashboard.html" class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center shadow">
+                            <i class="fas fa-graduation-cap text-white text-sm"></i>
+                        </div>
+                        <span class="text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent hidden sm:block">VClass</span>
+                    </a>
+                    <span class="inline-flex items-center gap-1 bg-amber-100 text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full">
+                        <i class="fas fa-pen-nib text-xs"></i>
+                        <span class="hidden sm:inline">Criador</span>
+                    </span>
+                </div>
+
+                <!-- Desktop Nav -->
+                <div class="hidden md:flex items-center gap-0.5 flex-1 justify-center max-w-sm">
+                    <a href="/creator-dashboard.html" class="creator-nav-link active flex items-center gap-1.5 px-3 py-2 text-sm">
+                        <i class="fas fa-th-large text-xs"></i> Visão Geral
+                    </a>
+                    <a href="/creator-content.html" class="creator-nav-link flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600">
+                        <i class="fas fa-layer-group text-xs"></i> Conteúdos
+                    </a>
+                    <a href="/creator-students.html" class="creator-nav-link flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600">
+                        <i class="fas fa-users text-xs"></i> Alunos
+                    </a>
+                    <a href="/creator-analytics.html" class="creator-nav-link flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600">
+                        <i class="fas fa-chart-bar text-xs"></i> Analytics
+                    </a>
+                </div>
+
+                <!-- Right actions -->
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <!-- Nova Lição CTA -->
+                    <a href="/creator-lesson-editor.html?new=true" class="hidden sm:inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700 transition shadow-sm">
+                        <i class="fas fa-plus text-xs"></i> Nova Lição
+                    </a>
+                    <!-- Mode switch -->
+                    <a href="/dashboard.html" title="Modo Estudante" class="hidden md:flex items-center justify-center w-9 h-9 rounded-xl border border-gray-200 text-gray-500 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200 transition text-sm">
+                        <i class="fas fa-user-graduate"></i>
+                    </a>
+                    <!-- User -->
+                    <div class="relative" id="nav-user-wrapper">
+                        <button onclick="toggleNavDrop()" class="flex items-center gap-2 p-1.5 rounded-xl hover:bg-gray-100 transition" id="nav-user-btn">
+                            <div id="nav-avatar" class="w-8 h-8 rounded-xl flex items-center justify-center text-white text-sm font-bold bg-amber-500 flex-shrink-0">?</div>
+                            <span id="nav-user-name" class="hidden md:block text-sm font-medium text-gray-700 max-w-[100px] truncate"></span>
+                            <i class="fas fa-chevron-down text-xs text-gray-400 hidden md:block"></i>
+                        </button>
+                        <div id="nav-dropdown" class="dropdown-menu hidden absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50">
+                            <div class="px-4 py-3 bg-gradient-to-r from-amber-50 to-yellow-50 border-b border-gray-100">
+                                <p id="dd-name" class="font-semibold text-gray-900 text-sm truncate"></p>
+                                <p class="text-xs text-amber-600 font-medium">Criador de Conteúdo</p>
+                            </div>
+                            <div class="py-1">
+                                <a href="/dashboard.html" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition gap-3">
+                                    <i class="fas fa-user-graduate text-purple-400 w-4 text-center"></i> Modo Estudante
+                                </a>
+                                <a href="/profile.html" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition gap-3">
+                                    <i class="fas fa-user text-gray-400 w-4 text-center"></i> Meu Perfil
+                                </a>
+                                <a href="/creator-analytics.html" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition gap-3">
+                                    <i class="fas fa-chart-bar text-blue-400 w-4 text-center"></i> Analytics
+                                </a>
+                            </div>
+                            <div class="border-t border-gray-100 py-1">
+                                <button onclick="VClass.logout()" class="flex items-center w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition gap-3">
+                                    <i class="fas fa-sign-out-alt w-4 text-center"></i> Sair
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Mobile menu btn -->
+                    <button onclick="toggleMobileNav()" class="md:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition">
+                        <i class="fas fa-bars text-sm"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Nav Menu -->
+        <div id="mobile-nav" class="hidden md:hidden bg-white border-t border-gray-100 px-4 py-2 space-y-1">
+            <a href="/creator-dashboard.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-purple-700 bg-purple-50"><i class="fas fa-th-large w-4 text-center text-purple-500"></i> Visão Geral</a>
+            <a href="/creator-content.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50"><i class="fas fa-layer-group w-4 text-center text-gray-400"></i> Conteúdos</a>
+            <a href="/creator-students.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50"><i class="fas fa-users w-4 text-center text-gray-400"></i> Alunos</a>
+            <a href="/creator-analytics.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50"><i class="fas fa-chart-bar w-4 text-center text-gray-400"></i> Analytics</a>
+            <div class="border-t border-gray-100 pt-2 mt-1">
+                <a href="/creator-lesson-editor.html?new=true" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-purple-700 font-semibold bg-purple-50 hover:bg-purple-100"><i class="fas fa-plus w-4 text-center text-purple-500"></i> Nova Lição</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         MAIN CONTENT
+    ═══════════════════════════════════════════════════════════════════════ -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+
+        <!-- Welcome Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 fade-in">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="streak-icon text-xl">🔥</span>
+                    <span class="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full" id="streak-badge">7 dias seguidos</span>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-900">Olá, <span id="creator-first-name">Criador</span>! 👋</h1>
+                <p class="text-gray-500 mt-1 text-sm">Aqui está o resumo do seu conteúdo e desempenho da semana.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="/creator-lesson-editor.html?new=true" class="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700 transition shadow-sm">
+                    <i class="fas fa-plus"></i> Nova Lição
+                </a>
+                <a href="/creator-content.html" class="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 transition">
+                    <i class="fas fa-layer-group text-purple-400 text-xs"></i> Conteúdos
+                </a>
+            </div>
+        </div>
+
+        <!-- ── KPI Stats Grid ─────────────────────────────────────────── -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8" id="stats-grid">
+            <!-- Lições -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 stat-card fade-in">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-11 h-11 bg-purple-100 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-video text-purple-600 text-lg"></i>
+                    </div>
+                    <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full" id="stat-lessons-delta">+2 mês</span>
+                </div>
+                <p class="text-3xl font-bold text-gray-900 stat-num" id="stat-lessons">—</p>
+                <p class="text-sm text-gray-500 mt-1">Lições publicadas</p>
+                <div class="mt-3 flex items-center gap-1">
+                    <div class="h-1 flex-1 bg-gray-100 rounded-full overflow-hidden">
+                        <div class="h-full bg-purple-400 rounded-full" id="stat-lessons-bar" style="width:0%;transition:width 1s ease;"></div>
+                    </div>
+                    <span class="text-xs text-gray-400" id="stat-lessons-pct">—</span>
+                </div>
+            </div>
+
+            <!-- Capítulos -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 stat-card fade-in-2">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-11 h-11 bg-blue-100 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-book-open text-blue-600 text-lg"></i>
+                    </div>
+                    <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">+5 mês</span>
+                </div>
+                <p class="text-3xl font-bold text-gray-900 stat-num" id="stat-chapters">—</p>
+                <p class="text-sm text-gray-500 mt-1">Capítulos criados</p>
+                <div class="mt-3 flex items-center gap-1.5 text-xs text-gray-400">
+                    <i class="fas fa-folder text-gray-300"></i> 3 disciplinas ativas
+                </div>
+            </div>
+
+            <!-- Alunos -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 stat-card fade-in-3">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-11 h-11 bg-green-100 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-users text-green-600 text-lg"></i>
+                    </div>
+                    <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full" id="stat-students-delta">+128</span>
+                </div>
+                <p class="text-3xl font-bold text-gray-900 stat-num" id="stat-students">—</p>
+                <p class="text-sm text-gray-500 mt-1">Alunos alcançados</p>
+                <div class="mt-3 flex items-center gap-1.5 text-xs text-green-600">
+                    <div class="pulse-dot w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                    <span id="stat-students-active">634 ativos esta semana</span>
+                </div>
+            </div>
+
+            <!-- Aprovação -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 stat-card fade-in-4">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-11 h-11 bg-amber-100 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-star text-amber-500 text-lg"></i>
+                    </div>
+                    <span class="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">↑ 3%</span>
+                </div>
+                <p class="text-3xl font-bold text-gray-900 stat-num"><span id="stat-avg">—</span><span class="text-base text-gray-400">%</span></p>
+                <p class="text-sm text-gray-500 mt-1">Aprovação média</p>
+                <div class="mt-3 flex items-center gap-1">
+                    <div class="h-1 flex-1 bg-gray-100 rounded-full overflow-hidden">
+                        <div class="h-full bg-amber-400 rounded-full" id="stat-avg-bar" style="width:0%;transition:width 1s ease;"></div>
+                    </div>
+                    <span class="text-xs text-gray-400" id="stat-avg-label">—</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Main Grid ──────────────────────────────────────────────── -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- Left Column (2/3) -->
+            <div class="lg:col-span-2 space-y-6">
+
+                <!-- Chart Card -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 fade-in">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+                        <div>
+                            <h2 class="text-base font-semibold text-gray-900">Engajamento Semanal</h2>
+                            <p class="text-xs text-gray-400 mt-0.5">Últimos 7 dias — Seg a Dom</p>
+                        </div>
+                        <div class="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
+                            <button onclick="switchChart('views')" id="btn-views" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-purple-700 shadow-sm transition">
+                                <i class="fas fa-eye mr-1 text-xs"></i>Views
+                            </button>
+                            <button onclick="switchChart('completions')" id="btn-completions" class="px-3 py-1.5 text-xs font-medium rounded-lg text-gray-500 hover:text-gray-700 transition">
+                                <i class="fas fa-check-circle mr-1 text-xs"></i>Conclusões
+                            </button>
+                            <button onclick="switchChart('exercises')" id="btn-exercises" class="px-3 py-1.5 text-xs font-medium rounded-lg text-gray-500 hover:text-gray-700 transition">
+                                <i class="fas fa-question mr-1 text-xs"></i>Exercícios
+                            </button>
+                        </div>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="engagementChart"></canvas>
+                    </div>
+                    <!-- Chart Summary -->
+                    <div class="grid grid-cols-3 gap-4 mt-5 pt-4 border-t border-gray-100">
+                        <div class="text-center">
+                            <p class="text-xl font-bold text-purple-600" id="summary-views">312</p>
+                            <p class="text-xs text-gray-400 mt-0.5">Visualizações</p>
+                        </div>
+                        <div class="text-center border-x border-gray-100">
+                            <p class="text-xl font-bold text-green-600" id="summary-completions">87</p>
+                            <p class="text-xs text-gray-400 mt-0.5">Conclusões</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-xl font-bold text-blue-600" id="summary-exercises">143</p>
+                            <p class="text-xs text-gray-400 mt-0.5">Exercícios feitos</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Lessons -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden fade-in-2">
+                    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                        <h2 class="text-base font-semibold text-gray-900">Lições Recentes</h2>
+                        <a href="/creator-content.html" class="text-sm text-purple-600 font-medium hover:text-purple-800 transition flex items-center gap-1">
+                            Ver todas <i class="fas fa-arrow-right text-xs"></i>
+                        </a>
+                    </div>
+                    <div id="recent-lessons-container">
+                        <!-- Skeleton -->
+                        <div class="divide-y divide-gray-50" id="lessons-skeleton">
+                            <div class="flex items-center gap-4 px-6 py-4">
+                                <div class="skeleton w-10 h-10 rounded-xl"></div>
+                                <div class="flex-1 space-y-2"><div class="skeleton h-4 w-2/3"></div><div class="skeleton h-3 w-1/3"></div></div>
+                                <div class="skeleton h-5 w-16 rounded-full"></div>
+                            </div>
+                            <div class="flex items-center gap-4 px-6 py-4">
+                                <div class="skeleton w-10 h-10 rounded-xl"></div>
+                                <div class="flex-1 space-y-2"><div class="skeleton h-4 w-3/4"></div><div class="skeleton h-3 w-2/5"></div></div>
+                                <div class="skeleton h-5 w-16 rounded-full"></div>
+                            </div>
+                            <div class="flex items-center gap-4 px-6 py-4">
+                                <div class="skeleton w-10 h-10 rounded-xl"></div>
+                                <div class="flex-1 space-y-2"><div class="skeleton h-4 w-1/2"></div><div class="skeleton h-3 w-1/4"></div></div>
+                                <div class="skeleton h-5 w-16 rounded-full"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pendências -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 fade-in-3">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-base font-semibold text-gray-900 flex items-center gap-2">
+                            <i class="fas fa-exclamation-triangle text-amber-500"></i> Pendências
+                        </h2>
+                        <span class="text-xs bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full" id="pending-count">3</span>
+                    </div>
+                    <div class="space-y-3" id="pending-list">
+                        <!-- Rascunhos -->
+                        <div class="flex items-start gap-3 p-3.5 bg-amber-50 rounded-xl border border-amber-100 hover:border-amber-200 transition">
+                            <div class="w-9 h-9 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-file-alt text-amber-600 text-sm"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-gray-900">3 lições em rascunho</p>
+                                <p class="text-xs text-gray-500 mt-0.5">Cinemática cap.2 · Óptica Geométrica · Termodinâmica I</p>
+                            </div>
+                            <a href="/creator-content.html?filter=draft" class="text-xs text-amber-700 font-bold hover:text-amber-900 transition whitespace-nowrap flex items-center gap-1">
+                                Revisar <i class="fas fa-arrow-right text-xs"></i>
+                            </a>
+                        </div>
+                        <!-- Sem exercícios -->
+                        <div class="flex items-start gap-3 p-3.5 bg-blue-50 rounded-xl border border-blue-100 hover:border-blue-200 transition">
+                            <div class="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-question-circle text-blue-600 text-sm"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-gray-900">5 lições sem exercícios</p>
+                                <p class="text-xs text-gray-500 mt-0.5">Adicione questões para melhorar o engajamento em 3×</p>
+                            </div>
+                            <a href="/creator-content.html?filter=no-exercises" class="text-xs text-blue-700 font-bold hover:text-blue-900 transition whitespace-nowrap flex items-center gap-1">
+                                Adicionar <i class="fas fa-arrow-right text-xs"></i>
+                            </a>
+                        </div>
+                        <!-- Meta mensal -->
+                        <div class="flex items-start gap-3 p-3.5 bg-green-50 rounded-xl border border-green-100 hover:border-green-200 transition">
+                            <div class="w-9 h-9 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-bullseye text-green-600 text-sm"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-gray-900">Meta do mês: 20 lições</p>
+                                <p class="text-xs text-gray-500 mt-0.5">Publicadas: 16 de 20 — faltam apenas 4!</p>
+                                <div class="mt-2 h-1.5 bg-green-200 rounded-full overflow-hidden">
+                                    <div class="h-full bg-green-500 rounded-full" style="width:80%"></div>
+                                </div>
+                            </div>
+                            <span class="text-xs font-bold text-green-700 bg-green-100 px-2 py-1 rounded-full whitespace-nowrap">80%</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Column (1/3) -->
+            <div class="space-y-6">
+
+                <!-- Progresso Geral (Ring) -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 fade-in text-center">
+                    <h2 class="text-base font-semibold text-gray-900 mb-5">Progresso do Conteúdo</h2>
+                    <div class="relative inline-flex items-center justify-center mb-4">
+                        <svg width="120" height="120" viewBox="0 0 120 120">
+                            <circle cx="60" cy="60" r="50" fill="none" stroke="#f3f4f6" stroke-width="10"/>
+                            <circle cx="60" cy="60" r="50" fill="none" stroke="#8b5cf6" stroke-width="10"
+                                stroke-dasharray="314.16"
+                                stroke-dashoffset="56.55"
+                                stroke-linecap="round"
+                                transform="rotate(-90 60 60)"
+                                id="ring-progress"
+                                style="transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)"/>
+                        </svg>
+                        <div class="absolute flex flex-col items-center">
+                            <span class="text-2xl font-bold text-purple-600" id="ring-pct">82%</span>
+                            <span class="text-xs text-gray-400">da meta</span>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-500 mb-4">16 de 20 lições da meta publicadas</p>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="flex items-center gap-1.5 text-gray-500"><span class="w-2 h-2 bg-green-400 rounded-full"></span>Publicadas</span>
+                            <span class="font-bold text-gray-700" id="count-pub">13</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="flex items-center gap-1.5 text-gray-500"><span class="w-2 h-2 bg-amber-400 rounded-full"></span>Rascunhos</span>
+                            <span class="font-bold text-gray-700" id="count-draft">3</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="flex items-center gap-1.5 text-gray-500"><span class="w-2 h-2 bg-blue-400 rounded-full"></span>Em revisão</span>
+                            <span class="font-bold text-gray-700" id="count-review">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Minhas Disciplinas -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 fade-in-2">
+                    <h2 class="text-base font-semibold text-gray-900 mb-4">Minhas Disciplinas</h2>
+                    <div class="space-y-3" id="subjects-list">
+                        <!-- JS rendered -->
+                        <div class="skeleton h-14 rounded-xl"></div>
+                        <div class="skeleton h-14 rounded-xl"></div>
+                        <div class="skeleton h-14 rounded-xl"></div>
+                    </div>
+                    <a href="/creator-content.html" class="mt-4 flex items-center justify-center gap-2 w-full py-2.5 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-purple-400 hover:text-purple-600 transition">
+                        <i class="fas fa-plus text-xs"></i> Gerenciar disciplinas
+                    </a>
+                </div>
+
+                <!-- Dica do Dia -->
+                <div class="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl p-6 text-white fade-in-3">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-lightbulb text-yellow-300"></i>
+                            <span class="text-sm font-semibold text-purple-200">Dica do dia</span>
+                        </div>
+                        <button onclick="nextTip()" title="Próxima dica" class="w-7 h-7 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition text-xs">
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                    <p class="text-sm font-medium leading-relaxed tip-text" id="tip-text">
+                        Lições com exercícios têm <strong>3× mais engajamento</strong>. Adicione pelo menos 3 questões por aula!
+                    </p>
+                    <div class="flex gap-1 mt-4" id="tip-dots"></div>
+                </div>
+
+                <!-- Ações Rápidas -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 fade-in-4">
+                    <h2 class="text-sm font-semibold text-gray-900 mb-3">Ações Rápidas</h2>
+                    <div class="grid grid-cols-2 gap-2">
+                        <a href="/creator-lesson-editor.html?new=true" class="quick-action flex flex-col items-center gap-2 p-3 bg-purple-50 rounded-xl hover:bg-purple-100 text-center border border-purple-100">
+                            <div class="w-9 h-9 bg-purple-600 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-plus text-white text-sm"></i>
+                            </div>
+                            <span class="text-xs font-semibold text-purple-800">Nova Lição</span>
+                        </a>
+                        <a href="/creator-content.html?new=chapter" class="quick-action flex flex-col items-center gap-2 p-3 bg-blue-50 rounded-xl hover:bg-blue-100 text-center border border-blue-100">
+                            <div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-folder-plus text-white text-sm"></i>
+                            </div>
+                            <span class="text-xs font-semibold text-blue-800">Novo Capítulo</span>
+                        </a>
+                        <a href="/creator-analytics.html" class="quick-action flex flex-col items-center gap-2 p-3 bg-green-50 rounded-xl hover:bg-green-100 text-center border border-green-100">
+                            <div class="w-9 h-9 bg-green-600 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-chart-bar text-white text-sm"></i>
+                            </div>
+                            <span class="text-xs font-semibold text-green-800">Analytics</span>
+                        </a>
+                        <a href="/creator-students.html" class="quick-action flex flex-col items-center gap-2 p-3 bg-amber-50 rounded-xl hover:bg-amber-100 text-center border border-amber-100">
+                            <div class="w-9 h-9 bg-amber-500 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-users text-white text-sm"></i>
+                            </div>
+                            <span class="text-xs font-semibold text-amber-800">Alunos</span>
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         SCRIPTS
+    ═══════════════════════════════════════════════════════════════════════ -->
+    <script src="/static/app.js"></script>
+    <script>
+    // ── Auth Guard ─────────────────────────────────────────────────────────
+    if (!VClass.isAuthenticated()) { location.href = '/login.html'; }
+
+    const currentUser = VClass.getCurrentUser();
+    if (!currentUser) { location.href = '/login.html'; }
+
+    // ── User Setup ─────────────────────────────────────────────────────────
+    const firstName = (currentUser.full_name || 'Criador').split(' ')[0];
+    const fullName  = currentUser.full_name || 'Criador';
+    const initials  = fullName.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
+    const colors    = ['bg-amber-500','bg-purple-600','bg-blue-600','bg-green-600','bg-orange-500'];
+    const avatarBg  = colors[initials.charCodeAt(0) % colors.length];
+
+    document.getElementById('creator-first-name').textContent = firstName;
+    document.getElementById('nav-user-name').textContent = firstName;
+    document.getElementById('dd-name').textContent = fullName;
+
+    const navAvatar = document.getElementById('nav-avatar');
+    navAvatar.textContent = initials;
+    navAvatar.className = navAvatar.className.replace(/bg-\w+-\d+/, '') + ' ' + avatarBg;
+
+    // ── Navbar Dropdown ────────────────────────────────────────────────────
+    function toggleNavDrop() {
+        document.getElementById('nav-dropdown').classList.toggle('hidden');
+    }
+    function toggleMobileNav() {
+        document.getElementById('mobile-nav').classList.toggle('hidden');
+    }
+    document.addEventListener('click', e => {
+        const w = document.getElementById('nav-user-wrapper');
+        if (w && !w.contains(e.target)) {
+            document.getElementById('nav-dropdown')?.classList.add('hidden');
+        }
+    });
+
+    // ── Mock Data (used when API not available) ────────────────────────────
+    const MOCK_STATS = {
+        total_lessons: 16, published_lessons: 13, draft_lessons: 3,
+        total_chapters: 61, total_students_reached: 1847,
+        avg_approval_rate: 78, weekly_views: 312, weekly_completions: 87, weekly_exercises_done: 143
+    };
+
+    const MOCK_SUBJECTS = [
+        { name: 'Física',      color: 'teal',   icon: 'fa-atom',       lessons: 13, pct: 72, key: 'fisica' },
+        { name: 'Matemática',  color: 'indigo',  icon: 'fa-calculator', lessons: 2,  pct: 40, key: 'matematica' },
+        { name: 'Química',     color: 'amber',   icon: 'fa-flask',      lessons: 1,  pct: 10, key: 'quimica' },
+    ];
+
+    const MOCK_LESSONS = [
+        { id:1,  title:'Leis de Newton — Aplicações',         subject:'Física',     chapter:'Dinâmica',   status:'published', views:128, exercises:5, updated:'2 dias atrás' },
+        { id:2,  title:'Cinemática — Movimento Uniforme',      subject:'Física',     chapter:'Cinemática', status:'published', views:96,  exercises:4, updated:'4 dias atrás' },
+        { id:3,  title:'Óptica Geométrica — Reflexão',         subject:'Física',     chapter:'Óptica',     status:'draft',     views:0,   exercises:0, updated:'5 dias atrás' },
+        { id:14, title:'Funções Quadráticas',                  subject:'Matemática', chapter:'Funções',    status:'published', views:54,  exercises:6, updated:'1 sem. atrás' },
+        { id:16, title:'Tabela Periódica — Grupos e Períodos', subject:'Química',    chapter:'Átomos',     status:'draft',     views:0,   exercises:2, updated:'1 sem. atrás' },
+    ];
+
+    // ── Animate Number ─────────────────────────────────────────────────────
+    function animateNumber(el, target, suffix = '') {
+        const duration = 800;
+        const start = performance.now();
+        const from = 0;
+        function step(now) {
+            const elapsed = now - start;
+            const progress = Math.min(elapsed / duration, 1);
+            const ease = 1 - Math.pow(1 - progress, 3);
+            const val = Math.round(from + (target - from) * ease);
+            el.textContent = val.toLocaleString('pt') + suffix;
+            if (progress < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+    }
+
+    // ── Load Stats ─────────────────────────────────────────────────────────
+    async function loadStats() {
+        let stats = MOCK_STATS;
+        try {
+            const res = await VClass.api.creator?.dashboard?.() || null;
+            if (res?.success && res.data?.stats) stats = res.data.stats;
+        } catch (_) {}
+
+        const pubPct = Math.round((stats.published_lessons / Math.max(stats.total_lessons,1)) * 100);
+        const avgPct = stats.avg_approval_rate || 78;
+
+        // Animate numbers
+        setTimeout(() => {
+            animateNumber(document.getElementById('stat-lessons'), stats.published_lessons);
+            animateNumber(document.getElementById('stat-chapters'), stats.total_chapters || 61);
+            animateNumber(document.getElementById('stat-students'), stats.total_students_reached);
+            animateNumber(document.getElementById('stat-avg'), avgPct);
+        }, 200);
+
+        // Bars
+        setTimeout(() => {
+            document.getElementById('stat-lessons-bar').style.width = pubPct + '%';
+            document.getElementById('stat-lessons-pct').textContent = pubPct + '% da meta';
+            document.getElementById('stat-avg-bar').style.width = avgPct + '%';
+            document.getElementById('stat-avg-label').textContent = avgPct >= 80 ? 'Excelente' : avgPct >= 60 ? 'Bom' : 'A melhorar';
+        }, 400);
+
+        // Summary chart totals
+        document.getElementById('summary-views').textContent = stats.weekly_views || 312;
+        document.getElementById('summary-completions').textContent = stats.weekly_completions || 87;
+        document.getElementById('summary-exercises').textContent = stats.weekly_exercises_done || 143;
+
+        // Ring progress
+        const ringTarget = Math.round(314.16 * (1 - stats.published_lessons / 20));
+        document.getElementById('ring-progress').style.strokeDashoffset = ringTarget;
+        document.getElementById('ring-pct').textContent = pubPct + '%';
+        document.getElementById('count-pub').textContent = stats.published_lessons;
+        document.getElementById('count-draft').textContent = stats.draft_lessons;
+    }
+
+    // ── Load Lessons ───────────────────────────────────────────────────────
+    const SUBJECT_META = {
+        'Física':     { color: 'teal',   icon: 'fa-atom' },
+        'Matemática': { color: 'indigo', icon: 'fa-calculator' },
+        'Química':    { color: 'amber',  icon: 'fa-flask' },
+        'Português':  { color: 'pink',   icon: 'fa-book' },
+    };
+
+    function statusBadge(s) {
+        if (s === 'published') return `<span class="status-badge badge-pub">Publicada</span>`;
+        if (s === 'draft')     return `<span class="status-badge badge-draft">Rascunho</span>`;
+        return `<span class="status-badge badge-rev">Revisão</span>`;
+    }
+
+    function renderLessons(lessons) {
+        const container = document.getElementById('recent-lessons-container');
+        container.innerHTML = lessons.map(l => {
+            const meta = SUBJECT_META[l.subject] || { color: 'purple', icon: 'fa-video' };
+            return `
+            <div class="lesson-row flex items-center gap-4 px-6 py-4 border-b border-gray-50 last:border-b-0">
+                <div class="w-10 h-10 bg-${meta.color}-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-play-circle text-${meta.color}-600 text-sm"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-gray-900 truncate">${l.title}</p>
+                    <p class="text-xs text-gray-400 mt-0.5">${l.subject} · ${l.chapter} · ${l.updated}</p>
+                </div>
+                <div class="hidden sm:flex items-center gap-4 text-xs text-gray-400">
+                    <span title="Visualizações"><i class="fas fa-eye mr-1 text-gray-300"></i>${l.views}</span>
+                    <span title="Exercícios"><i class="fas fa-question-circle mr-1 ${l.exercises > 0 ? 'text-blue-300' : 'text-gray-200'}"></i>${l.exercises}</span>
+                </div>
+                ${statusBadge(l.status)}
+                <a href="/creator-lesson-editor.html?id=${l.id}" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:text-purple-600 hover:bg-purple-50 transition" title="Editar">
+                    <i class="fas fa-pen text-xs"></i>
+                </a>
+            </div>`;
+        }).join('');
+    }
+
+    // ── Load Subjects ──────────────────────────────────────────────────────
+    function renderSubjects(subjects) {
+        const container = document.getElementById('subjects-list');
+        container.innerHTML = subjects.map(s => `
+        <div class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-purple-50 transition cursor-pointer"
+             onclick="location.href='/creator-content.html?subject=${s.key}'">
+            <div class="w-10 h-10 bg-${s.color}-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <i class="fas ${s.icon} text-${s.color}-600 text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-gray-900">${s.name}</p>
+                <div class="flex items-center gap-2 mt-1">
+                    <div class="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div class="h-full bg-${s.color}-500 rounded-full transition-all duration-1000" style="width:${s.pct}%"></div>
+                    </div>
+                    <span class="text-xs text-gray-400">${s.pct}%</span>
+                </div>
+            </div>
+            <span class="text-xs font-bold text-${s.color}-700 bg-${s.color}-50 px-2 py-1 rounded-full whitespace-nowrap">${s.lessons} lições</span>
+        </div>`).join('');
+    }
+
+    // ── Chart ──────────────────────────────────────────────────────────────
+    const CHART_DATA = {
+        views:       { label: 'Visualizações', data: [42,58,35,71,49,88,69], color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)' },
+        completions: { label: 'Conclusões',    data: [10,14,8,19,12,22,18], color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
+        exercises:   { label: 'Exercícios',    data: [18,24,13,32,21,38,28], color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
+    };
+    const DAYS = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+    let chartInst;
+
+    function buildChart(type) {
+        const ctx = document.getElementById('engagementChart').getContext('2d');
+        const d = CHART_DATA[type];
+        if (chartInst) chartInst.destroy();
+        chartInst = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: DAYS,
+                datasets: [{
+                    label: d.label,
+                    data: d.data,
+                    backgroundColor: d.bg,
+                    borderColor: d.color,
+                    borderWidth: 2,
+                    borderRadius: 6,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 500 },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1f2937',
+                        padding: 10,
+                        titleFont: { size: 12 },
+                        bodyFont: { size: 13, weight: 'bold' },
+                        callbacks: {
+                            label: (ctx) => ` ${ctx.parsed.y} ${d.label.toLowerCase()}`
+                        }
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,.04)' }, ticks: { color: '#9ca3af', font: { size: 11 } } },
+                    x: { grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 11 } } }
+                }
+            }
+        });
+    }
+
+    function switchChart(type) {
+        // Update buttons
+        ['views','completions','exercises'].forEach(t => {
+            const btn = document.getElementById(`btn-${t}`);
+            if (t === type) {
+                btn.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-purple-700 shadow-sm transition';
+            } else {
+                btn.className = 'px-3 py-1.5 text-xs font-medium rounded-lg text-gray-500 hover:text-gray-700 transition';
+            }
+        });
+        buildChart(type);
+    }
+
+    // ── Tips ───────────────────────────────────────────────────────────────
+    const TIPS = [
+        'Lições com exercícios têm <strong>3× mais engajamento</strong>. Adicione pelo menos 3 questões por aula!',
+        'Vídeos entre <strong>8 e 15 minutos</strong> têm maior taxa de conclusão. Evite aulas muito longas.',
+        'Organize conteúdo em <strong>capítulos com sequência lógica</strong>. Alunos seguem melhor com progressão clara.',
+        'Use <strong>títulos descritivos e objetivos</strong>: "Leis de Newton — Força e Aceleração" é melhor que "Aula 3".',
+        'Adicione uma <strong>descrição detalhada</strong> a cada lição. Isso melhora a busca e a experiência do aluno.',
+    ];
+    let tipIdx = 0;
+
+    function renderTipDots() {
+        document.getElementById('tip-dots').innerHTML = TIPS.map((_, i) =>
+            `<div class="w-1.5 h-1.5 rounded-full transition-all ${i === tipIdx ? 'bg-white' : 'bg-white/30'}"></div>`
+        ).join('');
+    }
+
+    function nextTip() {
+        tipIdx = (tipIdx + 1) % TIPS.length;
+        const el = document.getElementById('tip-text');
+        el.style.animation = 'none';
+        el.offsetHeight; // reflow
+        el.style.animation = 'tipSlide .35s ease';
+        el.innerHTML = TIPS[tipIdx];
+        renderTipDots();
+    }
+
+    // ── Add Creator API methods ────────────────────────────────────────────
+    if (!VClass.api.creator) {
+        VClass.api.creator = {
+            dashboard: () => fetch('/api/creator/dashboard', {
+                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('accessToken') }
+            }).then(r => r.json()),
+            lessons: (params='') => fetch('/api/creator/lessons' + params, {
+                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('accessToken') }
+            }).then(r => r.json()),
+        };
+    }
+
+    // ── Initialize ─────────────────────────────────────────────────────────
+    async function init() {
+        // Load stats from API (or use mock)
+        await loadStats();
+
+        // Load lessons
+        try {
+            const res = await VClass.api.creator.lessons('?limit=5');
+            if (res?.success && res.data?.length > 0) {
+                renderLessons(res.data.map(l => ({
+                    ...l,
+                    subject: l.subject || 'Física',
+                    updated: VClass.formatRelativeTime ? VClass.formatRelativeTime(l.updated_at || l.updated) : (l.updated || '—')
+                })));
+            } else {
+                renderLessons(MOCK_LESSONS);
+            }
+        } catch (_) {
+            renderLessons(MOCK_LESSONS);
+        }
+
+        // Load subjects
+        renderSubjects(MOCK_SUBJECTS);
+
+        // Build chart
+        buildChart('views');
+
+        // Render tips
+        document.getElementById('tip-text').innerHTML = TIPS[tipIdx];
+        renderTipDots();
+    }
+
+    init();
+    </script>
+</body>
+</html>

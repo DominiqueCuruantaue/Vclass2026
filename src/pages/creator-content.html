@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Conteúdos - VClass Creator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/styles.css" rel="stylesheet">
+    <style>
+        @keyframes fadeInUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+        .fade-in { animation: fadeInUp 0.35s ease forwards; }
+        .content-card { transition: transform 0.2s, box-shadow 0.2s; }
+        .content-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.09); }
+        .filter-btn { transition: all 0.15s; }
+        .filter-btn.active { background:#8b5cf6; color:#fff; }
+        .tab-btn { border-bottom: 2px solid transparent; transition: all 0.15s; }
+        .tab-btn.active { border-color: #8b5cf6; color: #7c3aed; font-weight: 600; }
+        .lesson-row { transition: background 0.15s; }
+        .lesson-row:hover { background: #f9fafb; }
+        .status-badge { font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+        .status-published { background: #d1fae5; color: #065f46; }
+        .status-draft { background: #fef3c7; color: #92400e; }
+        .status-review { background: #dbeafe; color: #1e40af; }
+        .drag-handle { cursor: grab; color: #d1d5db; }
+        .drag-handle:active { cursor: grabbing; }
+        /* Modal */
+        .modal-overlay { background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); }
+        .modal-card { animation: fadeInUp 0.25s ease; }
+        /* Bulk select */
+        .bulk-bar { animation: fadeInUp 0.2s ease; }
+        .chapter-group { border-left: 3px solid #e5e7eb; }
+        .chapter-group:hover { border-color: #8b5cf6; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <!-- Navbar -->
+    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-4">
+                    <a href="/creator-dashboard.html" class="flex items-center space-x-2">
+                        <div class="w-8 h-8 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-lg flex items-center justify-center shadow">
+                            <i class="fas fa-graduation-cap text-white text-sm"></i>
+                        </div>
+                        <span class="text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">VClass</span>
+                    </a>
+                    <span class="hidden sm:inline-flex items-center gap-1 bg-amber-100 text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full">
+                        <i class="fas fa-pen-nib text-xs"></i> Criador
+                    </span>
+                </div>
+                <div class="hidden md:flex items-center space-x-1">
+                    <a href="/creator-dashboard.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-purple-600 hover:bg-gray-50">
+                        <i class="fas fa-th-large"></i> Visão Geral
+                    </a>
+                    <a href="/creator-content.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-purple-50 text-purple-700">
+                        <i class="fas fa-layer-group"></i> Conteúdos
+                    </a>
+                    <a href="/creator-students.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-purple-600 hover:bg-gray-50">
+                        <i class="fas fa-users"></i> Alunos
+                    </a>
+                    <a href="/creator-analytics.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-purple-600 hover:bg-gray-50">
+                        <i class="fas fa-chart-bar"></i> Analytics
+                    </a>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="openNewLessonModal()" class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700 transition shadow-sm">
+                        <i class="fas fa-plus"></i> Nova Lição
+                    </button>
+                    <div id="nav-avatar-sm" class="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-white text-sm font-bold cursor-pointer" onclick="location.href='/profile.html'">?</div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="max-w-7xl mx-auto px-4 pt-8 pb-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 fade-in">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Gerenciar Conteúdos</h1>
+                <p class="text-sm text-gray-500 mt-1">Organize disciplinas, capítulos e lições da sua autoria.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="openNewChapterModal()" class="inline-flex items-center gap-2 px-4 py-2 border border-purple-300 text-purple-700 text-sm font-semibold rounded-xl hover:bg-purple-50 transition">
+                    <i class="fas fa-folder-plus"></i> Novo Capítulo
+                </button>
+                <button onclick="openNewLessonModal()" class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700 transition shadow-sm">
+                    <i class="fas fa-plus"></i> Nova Lição
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs + Filters -->
+    <div class="max-w-7xl mx-auto px-4">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden fade-in">
+            <!-- Tab bar -->
+            <div class="flex items-center border-b border-gray-100 px-6 overflow-x-auto gap-1">
+                <button onclick="switchTab('all')" id="tab-all" class="tab-btn active whitespace-nowrap px-4 py-4 text-sm font-medium text-purple-700">
+                    Todas <span class="ml-1 text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full" id="count-all">16</span>
+                </button>
+                <button onclick="switchTab('published')" id="tab-published" class="tab-btn whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-500 hover:text-gray-700">
+                    Publicadas <span class="ml-1 text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full" id="count-published">13</span>
+                </button>
+                <button onclick="switchTab('draft')" id="tab-draft" class="tab-btn whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-500 hover:text-gray-700">
+                    Rascunhos <span class="ml-1 text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full" id="count-draft">3</span>
+                </button>
+                <button onclick="switchTab('no-exercises')" id="tab-no-exercises" class="tab-btn whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-500 hover:text-gray-700">
+                    Sem Exercícios <span class="ml-1 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">5</span>
+                </button>
+            </div>
+
+            <!-- Toolbar -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 px-6 py-4 border-b border-gray-50 bg-gray-50">
+                <!-- Search -->
+                <div class="relative flex-1">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" id="search-input" placeholder="Buscar lições, capítulos..." oninput="filterLessons()"
+                        class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white">
+                </div>
+                <!-- Filters -->
+                <div class="flex items-center gap-2 flex-wrap">
+                    <select id="filter-subject" onchange="filterLessons()" class="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white">
+                        <option value="">Todas disciplinas</option>
+                        <option value="fisica">Física</option>
+                        <option value="matematica">Matemática</option>
+                        <option value="quimica">Química</option>
+                        <option value="portugues">Português</option>
+                    </select>
+                    <select id="filter-sort" onchange="filterLessons()" class="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white">
+                        <option value="recent">Mais recentes</option>
+                        <option value="views">Mais vistos</option>
+                        <option value="title">A → Z</option>
+                    </select>
+                    <!-- View toggle -->
+                    <div class="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1">
+                        <button onclick="setView('list')" id="view-list" class="p-1.5 rounded-lg bg-purple-100 text-purple-700 transition" title="Lista">
+                            <i class="fas fa-list text-xs"></i>
+                        </button>
+                        <button onclick="setView('grid')" id="view-grid" class="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition" title="Grid">
+                            <i class="fas fa-th text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bulk Action Bar (hidden by default) -->
+            <div id="bulk-bar" class="hidden bulk-bar items-center gap-3 px-6 py-3 bg-purple-50 border-b border-purple-100">
+                <span class="text-sm font-medium text-purple-800"><span id="selected-count">0</span> selecionadas</span>
+                <button onclick="bulkPublish()" class="text-xs font-semibold text-green-700 bg-green-100 hover:bg-green-200 px-3 py-1.5 rounded-lg transition">
+                    <i class="fas fa-check mr-1"></i> Publicar
+                </button>
+                <button onclick="bulkDraft()" class="text-xs font-semibold text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition">
+                    <i class="fas fa-archive mr-1"></i> Rascunho
+                </button>
+                <button onclick="bulkDelete()" class="text-xs font-semibold text-red-700 bg-red-100 hover:bg-red-200 px-3 py-1.5 rounded-lg transition">
+                    <i class="fas fa-trash mr-1"></i> Excluir
+                </button>
+                <button onclick="clearSelection()" class="ml-auto text-xs text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times mr-1"></i> Cancelar
+                </button>
+            </div>
+
+            <!-- Content List -->
+            <div id="content-list" class="divide-y divide-gray-50">
+                <!-- Populated by JS -->
+                <div class="flex items-center justify-center py-16 text-gray-400">
+                    <i class="fas fa-spinner fa-spin text-2xl"></i>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden flex flex-col items-center justify-center py-20 px-4 text-center">
+                <div class="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
+                    <i class="fas fa-video text-2xl text-gray-300"></i>
+                </div>
+                <h3 class="text-base font-semibold text-gray-700 mb-1">Nenhuma lição encontrada</h3>
+                <p class="text-sm text-gray-400 mb-5">Crie sua primeira lição e comece a ensinar!</p>
+                <button onclick="openNewLessonModal()" class="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700 transition">
+                    <i class="fas fa-plus"></i> Criar primeira lição
+                </button>
+            </div>
+
+            <!-- Pagination -->
+            <div class="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50">
+                <span class="text-xs text-gray-500">Exibindo <span id="showing-count">16</span> lições</span>
+                <div class="flex items-center gap-1">
+                    <button class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 text-sm disabled:opacity-40" disabled>
+                        <i class="fas fa-chevron-left text-xs"></i>
+                    </button>
+                    <button class="w-8 h-8 flex items-center justify-center rounded-lg bg-purple-600 text-white text-sm font-semibold">1</button>
+                    <button class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 text-sm">
+                        <i class="fas fa-chevron-right text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── MODAL: Nova Lição ─────────────────────────────────────────── -->
+    <div id="modal-new-lesson" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg modal-card overflow-hidden">
+            <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-purple-50 to-indigo-50">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900">Nova Lição</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">Preencha as informações básicas para criar a lição</p>
+                </div>
+                <button onclick="closeModal('modal-new-lesson')" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500 transition">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="px-6 py-5 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Título da Lição <span class="text-red-500">*</span></label>
+                    <input type="text" id="new-lesson-title" placeholder="Ex: Leis de Newton — Aplicações" maxlength="100"
+                        class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                    <p class="text-xs text-gray-400 mt-1">Seja descritivo. Máx. 100 caracteres.</p>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Disciplina <span class="text-red-500">*</span></label>
+                        <select id="new-lesson-subject" onchange="loadChaptersForSubject()" class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                            <option value="">Selecionar...</option>
+                            <option value="fisica">Física</option>
+                            <option value="matematica">Matemática</option>
+                            <option value="quimica">Química</option>
+                            <option value="portugues">Português</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Capítulo <span class="text-red-500">*</span></label>
+                        <select id="new-lesson-chapter" class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                            <option value="">Selecione a disciplina</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+                    <textarea id="new-lesson-desc" rows="3" placeholder="Descreva o que o aluno vai aprender nesta lição..."
+                        class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Duração estimada</label>
+                        <div class="relative">
+                            <input type="number" id="new-lesson-duration" placeholder="12" min="1" max="120"
+                                class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">min</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Acesso</label>
+                        <select id="new-lesson-access" class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                            <option value="free">Gratuito</option>
+                            <option value="premium">Premium</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3 bg-gray-50">
+                <button onclick="closeModal('modal-new-lesson')" class="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-100 transition">Cancelar</button>
+                <button onclick="saveLessonDraft()" class="px-4 py-2 text-sm font-medium text-amber-700 border border-amber-200 rounded-xl hover:bg-amber-50 transition">
+                    <i class="fas fa-save mr-1"></i> Salvar Rascunho
+                </button>
+                <button onclick="createAndEditLesson()" class="px-4 py-2 text-sm font-semibold text-white bg-purple-600 rounded-xl hover:bg-purple-700 transition shadow-sm">
+                    <i class="fas fa-pen-nib mr-1"></i> Criar e Editar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── MODAL: Novo Capítulo ──────────────────────────────────────── -->
+    <div id="modal-new-chapter" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md modal-card overflow-hidden">
+            <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-gray-900">Novo Capítulo</h3>
+                <button onclick="closeModal('modal-new-chapter')" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500 transition">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="px-6 py-5 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nome do Capítulo <span class="text-red-500">*</span></label>
+                    <input type="text" id="new-chapter-name" placeholder="Ex: Dinâmica — Leis de Newton" maxlength="80"
+                        class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Disciplina <span class="text-red-500">*</span></label>
+                    <select id="new-chapter-subject" class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                        <option value="">Selecionar...</option>
+                        <option value="fisica">Física</option>
+                        <option value="matematica">Matemática</option>
+                        <option value="quimica">Química</option>
+                        <option value="portugues">Português</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Trimestre</label>
+                    <select id="new-chapter-trimester" class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                        <option value="1">1º Trimestre</option>
+                        <option value="2">2º Trimestre</option>
+                        <option value="3">3º Trimestre</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+                    <textarea id="new-chapter-desc" rows="2" placeholder="Breve descrição do que este capítulo cobre..."
+                        class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"></textarea>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3 bg-gray-50">
+                <button onclick="closeModal('modal-new-chapter')" class="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-100 transition">Cancelar</button>
+                <button onclick="createChapter()" class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition shadow-sm">
+                    <i class="fas fa-folder-plus mr-1"></i> Criar Capítulo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── MODAL: Confirmar Exclusão ─────────────────────────────────── -->
+    <div id="modal-delete" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm modal-card p-6 text-center">
+            <div class="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-trash text-red-600 text-xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900 mb-2">Excluir lição?</h3>
+            <p class="text-sm text-gray-500 mb-6" id="delete-lesson-name">Esta ação não pode ser desfeita. O progresso dos alunos será preservado.</p>
+            <div class="flex gap-3">
+                <button onclick="closeModal('modal-delete')" class="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition">Cancelar</button>
+                <button onclick="confirmDelete()" class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 transition">Excluir</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="pb-12"></div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        // ── Auth ────────────────────────────────────────────────────────
+        if (!VClass.isAuthenticated()) location.href = '/login.html';
+        const user = VClass.getCurrentUser();
+        if (user) {
+            const initials = (user.full_name||'C').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+            document.getElementById('nav-avatar-sm').textContent = initials;
+        }
+
+        // ── Mock Data ────────────────────────────────────────────────────
+        const SUBJECT_META = {
+            fisica:     { label: 'Física',      color: 'teal',   icon: 'fa-atom' },
+            matematica: { label: 'Matemática',   color: 'indigo', icon: 'fa-calculator' },
+            quimica:    { label: 'Química',      color: 'amber',  icon: 'fa-flask' },
+            portugues:  { label: 'Português',    color: 'pink',   icon: 'fa-book' },
+        };
+
+        const CHAPTERS_BY_SUBJECT = {
+            fisica:     ['Cinemática','Dinâmica','Óptica','Termodinâmica','Eletricidade'],
+            matematica: ['Funções','Álgebra Linear','Geometria Analítica','Trigonometria'],
+            quimica:    ['Átomos e Moléculas','Soluções','Reações Orgânicas'],
+            portugues:  ['Gramática','Literatura','Interpretação de Texto','Redação'],
+        };
+
+        let ALL_LESSONS = [
+            { id:1,  title:'Leis de Newton — Aplicações',          subject:'fisica',     chapter:'Dinâmica',              status:'published', views:128, exercises:5, duration:14, access:'free',    updated:'2026-04-07' },
+            { id:2,  title:'Cinemática — Movimento Uniforme',       subject:'fisica',     chapter:'Cinemática',            status:'published', views:96,  exercises:4, duration:12, access:'free',    updated:'2026-04-05' },
+            { id:3,  title:'Óptica Geométrica — Reflexão',          subject:'fisica',     chapter:'Óptica',                status:'draft',     views:0,   exercises:0, duration:11, access:'free',    updated:'2026-04-04' },
+            { id:4,  title:'Óptica Geométrica — Refração',          subject:'fisica',     chapter:'Óptica',                status:'draft',     views:0,   exercises:2, duration:13, access:'free',    updated:'2026-04-03' },
+            { id:5,  title:'Termodinâmica — 1ª Lei',                subject:'fisica',     chapter:'Termodinâmica',         status:'published', views:71,  exercises:3, duration:15, access:'premium', updated:'2026-04-01' },
+            { id:6,  title:'Eletricidade — Lei de Ohm',             subject:'fisica',     chapter:'Eletricidade',          status:'published', views:88,  exercises:5, duration:16, access:'free',    updated:'2026-03-30' },
+            { id:7,  title:'Movimento Circular Uniforme',           subject:'fisica',     chapter:'Cinemática',            status:'published', views:55,  exercises:4, duration:10, access:'free',    updated:'2026-03-28' },
+            { id:8,  title:'Queda Livre e Lançamento Vertical',     subject:'fisica',     chapter:'Cinemática',            status:'published', views:62,  exercises:5, duration:13, access:'free',    updated:'2026-03-25' },
+            { id:9,  title:'Força de Atrito',                       subject:'fisica',     chapter:'Dinâmica',              status:'published', views:44,  exercises:3, duration:9,  access:'free',    updated:'2026-03-22' },
+            { id:10, title:'Energia Cinética e Potencial',          subject:'fisica',     chapter:'Dinâmica',              status:'published', views:50,  exercises:4, duration:12, access:'free',    updated:'2026-03-20' },
+            { id:11, title:'Ondas Mecânicas — Conceitos',           subject:'fisica',     chapter:'Óptica',                status:'draft',     views:0,   exercises:0, duration:11, access:'free',    updated:'2026-03-18' },
+            { id:12, title:'Circuitos Elétricos Simples',           subject:'fisica',     chapter:'Eletricidade',          status:'published', views:39,  exercises:4, duration:14, access:'premium', updated:'2026-03-15' },
+            { id:13, title:'Lei de Coulomb',                        subject:'fisica',     chapter:'Eletricidade',          status:'published', views:33,  exercises:3, duration:10, access:'free',    updated:'2026-03-12' },
+            { id:14, title:'Funções Quadráticas — Gráficos',        subject:'matematica', chapter:'Funções',               status:'published', views:54,  exercises:6, duration:18, access:'free',    updated:'2026-04-02' },
+            { id:15, title:'Geometria Analítica — Ponto e Reta',    subject:'matematica', chapter:'Geometria Analítica',   status:'published', views:41,  exercises:4, duration:15, access:'free',    updated:'2026-03-28' },
+            { id:16, title:'Tabela Periódica — Grupos e Períodos',  subject:'quimica',    chapter:'Átomos e Moléculas',    status:'draft',     views:0,   exercises:2, duration:12, access:'free',    updated:'2026-03-26' },
+        ];
+
+        let currentTab = 'all';
+        let currentView = 'list';
+        let selectedIds = new Set();
+        let deletingId = null;
+
+        // ── Tabs ─────────────────────────────────────────────────────────
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-${tab}`)?.classList.add('active');
+            renderLessons();
+        }
+
+        // Check URL param on load
+        const urlParams = new URLSearchParams(location.search);
+        if (urlParams.get('filter')) switchTab(urlParams.get('filter'));
+        if (urlParams.get('new') === 'chapter') setTimeout(openNewChapterModal, 300);
+
+        // ── View ─────────────────────────────────────────────────────────
+        function setView(v) {
+            currentView = v;
+            document.getElementById('view-list').className = v === 'list'
+                ? 'p-1.5 rounded-lg bg-purple-100 text-purple-700 transition'
+                : 'p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition';
+            document.getElementById('view-grid').className = v === 'grid'
+                ? 'p-1.5 rounded-lg bg-purple-100 text-purple-700 transition'
+                : 'p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition';
+            renderLessons();
+        }
+
+        // ── Filter ───────────────────────────────────────────────────────
+        function getFiltered() {
+            const q = (document.getElementById('search-input').value || '').toLowerCase();
+            const subj = document.getElementById('filter-subject').value;
+            const sort = document.getElementById('filter-sort').value;
+
+            let list = ALL_LESSONS.filter(l => {
+                if (currentTab === 'published' && l.status !== 'published') return false;
+                if (currentTab === 'draft' && l.status !== 'draft') return false;
+                if (currentTab === 'no-exercises' && l.exercises > 0) return false;
+                if (subj && l.subject !== subj) return false;
+                if (q && !l.title.toLowerCase().includes(q) && !l.chapter.toLowerCase().includes(q)) return false;
+                return true;
+            });
+
+            if (sort === 'views') list.sort((a,b) => b.views - a.views);
+            else if (sort === 'title') list.sort((a,b) => a.title.localeCompare(b.title));
+            else list.sort((a,b) => b.updated.localeCompare(a.updated));
+
+            return list;
+        }
+
+        function filterLessons() { renderLessons(); }
+
+        // ── Render ───────────────────────────────────────────────────────
+        function renderLessons() {
+            const list = getFiltered();
+            const container = document.getElementById('content-list');
+            const empty = document.getElementById('empty-state');
+
+            document.getElementById('showing-count').textContent = list.length;
+
+            if (list.length === 0) {
+                container.innerHTML = '';
+                empty.classList.remove('hidden');
+                empty.classList.add('flex');
+                return;
+            }
+            empty.classList.add('hidden');
+            empty.classList.remove('flex');
+
+            if (currentView === 'grid') {
+                renderGrid(list, container);
+            } else {
+                renderList(list, container);
+            }
+        }
+
+        function statusBadge(s) {
+            if (s === 'published') return '<span class="status-badge status-published">Publicada</span>';
+            if (s === 'draft')     return '<span class="status-badge status-draft">Rascunho</span>';
+            return '<span class="status-badge status-review">Revisão</span>';
+        }
+
+        function renderList(list, container) {
+            // Group by chapter
+            const grouped = {};
+            list.forEach(l => {
+                const key = `${l.subject}__${l.chapter}`;
+                if (!grouped[key]) grouped[key] = { subject: l.subject, chapter: l.chapter, lessons: [] };
+                grouped[key].lessons.push(l);
+            });
+
+            container.innerHTML = Object.values(grouped).map(g => {
+                const meta = SUBJECT_META[g.subject] || { label: g.subject, color: 'purple', icon: 'fa-book' };
+                const rows = g.lessons.map(l => {
+                    const checked = selectedIds.has(l.id);
+                    return `
+                    <div class="lesson-row flex items-center gap-4 px-6 py-3.5 border-b border-gray-50 last:border-b-0">
+                        <input type="checkbox" class="lesson-check w-4 h-4 rounded accent-purple-600" data-id="${l.id}"
+                            ${checked ? 'checked' : ''} onchange="toggleSelect(${l.id}, this.checked)">
+                        <i class="drag-handle fas fa-grip-vertical text-sm"></i>
+                        <div class="w-8 h-8 bg-${meta.color}-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-play-circle text-${meta.color}-600 text-sm"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-gray-900 truncate">${l.title}</p>
+                            <p class="text-xs text-gray-400 mt-0.5">${l.duration} min · ${l.access === 'premium' ? '🔒 Premium' : '🆓 Gratuito'} · ${l.updated}</p>
+                        </div>
+                        <div class="hidden md:flex items-center gap-5 text-xs text-gray-500">
+                            <span title="Visualizações" class="flex items-center gap-1"><i class="fas fa-eye text-gray-300"></i> ${l.views}</span>
+                            <span title="Exercícios" class="flex items-center gap-1">
+                                <i class="fas fa-question-circle ${l.exercises > 0 ? 'text-blue-400' : 'text-gray-200'}"></i>
+                                ${l.exercises > 0 ? l.exercises : '<span class="text-red-400">0</span>'}
+                            </span>
+                        </div>
+                        ${statusBadge(l.status)}
+                        <div class="flex items-center gap-1">
+                            <a href="/creator-lesson-editor.html?id=${l.id}" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition" title="Editar">
+                                <i class="fas fa-pen text-xs"></i>
+                            </a>
+                            <button onclick="toggleLessonStatus(${l.id})" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition" title="${l.status === 'published' ? 'Mover p/ rascunho' : 'Publicar'}">
+                                <i class="fas ${l.status === 'published' ? 'fa-eye-slash' : 'fa-check-circle'} text-xs"></i>
+                            </button>
+                            <button onclick="openDeleteModal(${l.id})" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition" title="Excluir">
+                                <i class="fas fa-trash text-xs"></i>
+                            </button>
+                        </div>
+                    </div>`;
+                }).join('');
+
+                return `
+                <div class="chapter-group ml-0 transition">
+                    <div class="flex items-center gap-3 px-6 py-3 bg-gray-50 border-b border-gray-100">
+                        <i class="fas fa-folder text-${meta.color}-500 text-sm"></i>
+                        <span class="text-sm font-semibold text-gray-700">${g.chapter}</span>
+                        <span class="text-xs bg-${meta.color}-100 text-${meta.color}-700 px-2 py-0.5 rounded-full font-medium">${SUBJECT_META[g.subject]?.label || g.subject}</span>
+                        <span class="text-xs text-gray-400 ml-auto">${g.lessons.length} lição(ões)</span>
+                        <button onclick="openNewLessonModal('${g.subject}','${g.chapter}')" class="text-xs text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1">
+                            <i class="fas fa-plus text-xs"></i> Adicionar
+                        </button>
+                    </div>
+                    ${rows}
+                </div>`;
+            }).join('');
+        }
+
+        function renderGrid(list, container) {
+            container.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">` +
+                list.map(l => {
+                    const meta = SUBJECT_META[l.subject] || { label: l.subject, color: 'purple', icon: 'fa-book' };
+                    return `
+                    <div class="content-card bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+                        <div class="h-2 bg-gradient-to-r from-${meta.color}-500 to-${meta.color}-400"></div>
+                        <div class="p-4">
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="w-9 h-9 bg-${meta.color}-100 rounded-xl flex items-center justify-center">
+                                    <i class="fas ${meta.icon} text-${meta.color}-600 text-sm"></i>
+                                </div>
+                                ${statusBadge(l.status)}
+                            </div>
+                            <h3 class="text-sm font-semibold text-gray-900 mb-1 line-clamp-2">${l.title}</h3>
+                            <p class="text-xs text-gray-400 mb-3">${l.chapter} · ${l.duration} min</p>
+                            <div class="flex items-center gap-3 text-xs text-gray-500 mb-4">
+                                <span><i class="fas fa-eye mr-1 text-gray-300"></i>${l.views}</span>
+                                <span><i class="fas fa-question-circle mr-1 ${l.exercises>0?'text-blue-300':'text-gray-200'}"></i>${l.exercises}</span>
+                                <span class="ml-auto">${l.access === 'premium' ? '🔒' : '🆓'}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <a href="/creator-lesson-editor.html?id=${l.id}" class="flex-1 text-center py-2 text-xs font-semibold text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition">
+                                    <i class="fas fa-pen mr-1"></i> Editar
+                                </a>
+                                <button onclick="toggleLessonStatus(${l.id})" class="py-2 px-3 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
+                                    <i class="fas ${l.status==='published'?'fa-eye-slash':'fa-check-circle'}"></i>
+                                </button>
+                                <button onclick="openDeleteModal(${l.id})" class="py-2 px-3 text-xs text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('') + '</div>';
+        }
+
+        // ── Selection ────────────────────────────────────────────────────
+        function toggleSelect(id, checked) {
+            if (checked) selectedIds.add(id);
+            else selectedIds.delete(id);
+            updateBulkBar();
+        }
+
+        function updateBulkBar() {
+            const bar = document.getElementById('bulk-bar');
+            if (selectedIds.size > 0) {
+                bar.classList.remove('hidden');
+                bar.classList.add('flex');
+                document.getElementById('selected-count').textContent = selectedIds.size;
+            } else {
+                bar.classList.add('hidden');
+                bar.classList.remove('flex');
+            }
+        }
+
+        function clearSelection() {
+            selectedIds.clear();
+            updateBulkBar();
+            document.querySelectorAll('.lesson-check').forEach(c => c.checked = false);
+        }
+
+        function bulkPublish() {
+            selectedIds.forEach(id => {
+                const l = ALL_LESSONS.find(x => x.id === id);
+                if (l) l.status = 'published';
+            });
+            VClass.showNotification(`${selectedIds.size} lições publicadas!`, 'success');
+            clearSelection();
+            renderLessons();
+        }
+
+        function bulkDraft() {
+            selectedIds.forEach(id => {
+                const l = ALL_LESSONS.find(x => x.id === id);
+                if (l) l.status = 'draft';
+            });
+            VClass.showNotification(`${selectedIds.size} lições movidas para rascunho.`, 'info');
+            clearSelection();
+            renderLessons();
+        }
+
+        function bulkDelete() {
+            if (!confirm(`Excluir ${selectedIds.size} lições? Esta ação não pode ser desfeita.`)) return;
+            ALL_LESSONS = ALL_LESSONS.filter(l => !selectedIds.has(l.id));
+            VClass.showNotification(`${selectedIds.size} lições excluídas.`, 'warning');
+            clearSelection();
+            renderLessons();
+        }
+
+        // ── Toggle Status ────────────────────────────────────────────────
+        function toggleLessonStatus(id) {
+            const l = ALL_LESSONS.find(x => x.id === id);
+            if (!l) return;
+            l.status = l.status === 'published' ? 'draft' : 'published';
+            const msg = l.status === 'published' ? `"${l.title}" publicada!` : `"${l.title}" movida para rascunho.`;
+            VClass.showNotification(msg, l.status === 'published' ? 'success' : 'info');
+            renderLessons();
+        }
+
+        // ── Delete ───────────────────────────────────────────────────────
+        function openDeleteModal(id) {
+            deletingId = id;
+            const l = ALL_LESSONS.find(x => x.id === id);
+            document.getElementById('delete-lesson-name').textContent = `Excluir "${l?.title}"? Esta ação não pode ser desfeita.`;
+            document.getElementById('modal-delete').classList.remove('hidden');
+        }
+
+        function confirmDelete() {
+            ALL_LESSONS = ALL_LESSONS.filter(l => l.id !== deletingId);
+            VClass.showNotification('Lição excluída.', 'warning');
+            closeModal('modal-delete');
+            renderLessons();
+        }
+
+        // ── Modal Helpers ────────────────────────────────────────────────
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function openNewLessonModal(subject = '', chapter = '') {
+            if (subject) document.getElementById('new-lesson-subject').value = subject;
+            if (chapter) { loadChaptersForSubject(); setTimeout(() => document.getElementById('new-lesson-chapter').value = chapter, 10); }
+            document.getElementById('modal-new-lesson').classList.remove('hidden');
+        }
+
+        function openNewChapterModal() {
+            document.getElementById('modal-new-chapter').classList.remove('hidden');
+        }
+
+        // Close modals on backdrop click
+        ['modal-new-lesson','modal-new-chapter','modal-delete'].forEach(id => {
+            document.getElementById(id)?.addEventListener('click', function(e) {
+                if (e.target === this) closeModal(id);
+            });
+        });
+
+        function loadChaptersForSubject() {
+            const subj = document.getElementById('new-lesson-subject').value;
+            const sel = document.getElementById('new-lesson-chapter');
+            const chapters = CHAPTERS_BY_SUBJECT[subj] || [];
+            sel.innerHTML = chapters.length
+                ? chapters.map(c => `<option value="${c}">${c}</option>`).join('')
+                : '<option value="">Nenhum capítulo disponível</option>';
+        }
+
+        function saveLessonDraft() {
+            const title = document.getElementById('new-lesson-title').value.trim();
+            if (!title) { VClass.showNotification('Preencha o título da lição.', 'warning'); return; }
+            const subject = document.getElementById('new-lesson-subject').value;
+            const chapter = document.getElementById('new-lesson-chapter').value;
+            if (!subject || !chapter) { VClass.showNotification('Selecione a disciplina e o capítulo.', 'warning'); return; }
+
+            const newLesson = {
+                id: Date.now(), title, subject, chapter, status: 'draft',
+                views: 0, exercises: 0,
+                duration: parseInt(document.getElementById('new-lesson-duration').value) || 10,
+                access: document.getElementById('new-lesson-access').value,
+                updated: new Date().toISOString().split('T')[0]
+            };
+            ALL_LESSONS.unshift(newLesson);
+            VClass.showNotification(`"${title}" salva como rascunho!`, 'success');
+            closeModal('modal-new-lesson');
+            renderLessons();
+        }
+
+        function createAndEditLesson() {
+            const title = document.getElementById('new-lesson-title').value.trim();
+            if (!title) { VClass.showNotification('Preencha o título da lição.', 'warning'); return; }
+            const subject = document.getElementById('new-lesson-subject').value;
+            const chapter = document.getElementById('new-lesson-chapter').value;
+            if (!subject || !chapter) { VClass.showNotification('Selecione a disciplina e o capítulo.', 'warning'); return; }
+
+            const id = Date.now();
+            const newLesson = { id, title, subject, chapter, status: 'draft', views: 0, exercises: 0,
+                duration: parseInt(document.getElementById('new-lesson-duration').value) || 10,
+                access: document.getElementById('new-lesson-access').value,
+                updated: new Date().toISOString().split('T')[0] };
+            ALL_LESSONS.unshift(newLesson);
+            closeModal('modal-new-lesson');
+            location.href = `/creator-lesson-editor.html?id=${id}&title=${encodeURIComponent(title)}`;
+        }
+
+        function createChapter() {
+            const name = document.getElementById('new-chapter-name').value.trim();
+            const subject = document.getElementById('new-chapter-subject').value;
+            if (!name || !subject) { VClass.showNotification('Preencha o nome e a disciplina.', 'warning'); return; }
+            if (CHAPTERS_BY_SUBJECT[subject]) CHAPTERS_BY_SUBJECT[subject].unshift(name);
+            VClass.showNotification(`Capítulo "${name}" criado com sucesso!`, 'success');
+            closeModal('modal-new-chapter');
+        }
+
+        // ── Init ──────────────────────────────────────────────────────────
+        renderLessons();
+    </script>
+</body>
+</html>

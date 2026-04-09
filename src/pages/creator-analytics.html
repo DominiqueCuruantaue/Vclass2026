@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics - VClass Creator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+    <link href="/static/styles.css" rel="stylesheet">
+    <style>
+        @keyframes fadeInUp { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);} }
+        .fade-in { animation: fadeInUp 0.35s ease forwards; }
+        .stat-card { transition: transform 0.2s, box-shadow 0.2s; }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(0,0,0,0.09); }
+        .period-btn { transition: all 0.15s; }
+        .period-btn.active { background: #8b5cf6; color: white; }
+        .lesson-rank-row { transition: background 0.15s; }
+        .lesson-rank-row:hover { background: #f9fafb; }
+        .trend-up { color: #059669; }
+        .trend-down { color: #dc2626; }
+        .heatmap-cell { width: 14px; height: 14px; border-radius: 3px; transition: transform 0.15s; }
+        .heatmap-cell:hover { transform: scale(1.3); }
+        .metric-ring { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <!-- Navbar -->
+    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-4">
+                    <a href="/creator-dashboard.html" class="flex items-center space-x-2">
+                        <div class="w-8 h-8 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-lg flex items-center justify-center shadow">
+                            <i class="fas fa-graduation-cap text-white text-sm"></i>
+                        </div>
+                        <span class="text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">VClass</span>
+                    </a>
+                    <span class="hidden sm:inline-flex items-center gap-1 bg-amber-100 text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full">
+                        <i class="fas fa-pen-nib text-xs"></i> Criador
+                    </span>
+                </div>
+                <div class="hidden md:flex items-center space-x-1">
+                    <a href="/creator-dashboard.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50"><i class="fas fa-th-large"></i> Visão Geral</a>
+                    <a href="/creator-content.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50"><i class="fas fa-layer-group"></i> Conteúdos</a>
+                    <a href="/creator-students.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50"><i class="fas fa-users"></i> Alunos</a>
+                    <a href="/creator-analytics.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-purple-50 text-purple-700"><i class="fas fa-chart-bar"></i> Analytics</a>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="exportReport()" class="hidden sm:inline-flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-50 transition">
+                        <i class="fas fa-download"></i> Exportar
+                    </button>
+                    <div id="nav-avatar-sm" class="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-white text-sm font-bold cursor-pointer">?</div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+
+        <!-- Header + Period Selector -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 fade-in">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Analytics</h1>
+                <p class="text-sm text-gray-500 mt-1">Métricas de engajamento, progresso e desempenho do seu conteúdo.</p>
+            </div>
+            <div class="flex items-center gap-2 bg-white border border-gray-200 rounded-xl p-1">
+                <button onclick="setPeriod('7d')" id="period-7d" class="period-btn active px-3 py-1.5 text-xs font-semibold rounded-lg">7 dias</button>
+                <button onclick="setPeriod('30d')" id="period-30d" class="period-btn px-3 py-1.5 text-xs font-medium text-gray-500 rounded-lg">30 dias</button>
+                <button onclick="setPeriod('90d')" id="period-90d" class="period-btn px-3 py-1.5 text-xs font-medium text-gray-500 rounded-lg">3 meses</button>
+                <button onclick="setPeriod('all')" id="period-all" class="period-btn px-3 py-1.5 text-xs font-medium text-gray-500 rounded-lg">Total</button>
+            </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 fade-in">
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 stat-card">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-eye text-purple-600"></i>
+                    </div>
+                    <span class="trend-up text-xs font-bold flex items-center gap-0.5"><i class="fas fa-arrow-up text-xs"></i>18%</span>
+                </div>
+                <p class="text-2xl font-bold text-gray-900" id="kpi-views">2 184</p>
+                <p class="text-xs text-gray-500 mt-0.5">Visualizações</p>
+                <p class="text-xs text-gray-400 mt-1">vs. período anterior</p>
+            </div>
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 stat-card">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-check-circle text-green-600"></i>
+                    </div>
+                    <span class="trend-up text-xs font-bold flex items-center gap-0.5"><i class="fas fa-arrow-up text-xs"></i>9%</span>
+                </div>
+                <p class="text-2xl font-bold text-gray-900" id="kpi-completions">608</p>
+                <p class="text-xs text-gray-500 mt-0.5">Conclusões</p>
+                <p class="text-xs text-gray-400 mt-1">Taxa: <strong id="kpi-completion-rate">27.8%</strong></p>
+            </div>
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 stat-card">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-clock text-blue-600"></i>
+                    </div>
+                    <span class="trend-down text-xs font-bold flex items-center gap-0.5"><i class="fas fa-arrow-down text-xs"></i>4%</span>
+                </div>
+                <p class="text-2xl font-bold text-gray-900" id="kpi-watchtime">11.4<span class="text-base text-gray-400">min</span></p>
+                <p class="text-xs text-gray-500 mt-0.5">Tempo médio de vídeo</p>
+                <p class="text-xs text-gray-400 mt-1">Por sessão</p>
+            </div>
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 stat-card">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-star text-amber-500"></i>
+                    </div>
+                    <span class="trend-up text-xs font-bold flex items-center gap-0.5"><i class="fas fa-arrow-up text-xs"></i>3%</span>
+                </div>
+                <p class="text-2xl font-bold text-gray-900" id="kpi-score">78<span class="text-base text-gray-400">%</span></p>
+                <p class="text-xs text-gray-500 mt-0.5">Aprovação média</p>
+                <p class="text-xs text-gray-400 mt-1">Nos exercícios</p>
+            </div>
+        </div>
+
+        <!-- Main Charts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <!-- Views Over Time -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 fade-in">
+                <div class="flex items-center justify-between mb-5">
+                    <div>
+                        <h2 class="text-sm font-semibold text-gray-900">Visualizações ao longo do tempo</h2>
+                        <p class="text-xs text-gray-500 mt-0.5" id="views-chart-label">Últimos 7 dias</p>
+                    </div>
+                    <div class="flex items-center gap-1 text-xs">
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 bg-purple-500 rounded-full inline-block"></span> Visualizações</span>
+                        <span class="flex items-center gap-1 ml-2"><span class="w-2 h-2 bg-green-400 rounded-full inline-block"></span> Conclusões</span>
+                    </div>
+                </div>
+                <div style="height:200px"><canvas id="viewsChart"></canvas></div>
+            </div>
+
+            <!-- Completion Funnel -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 fade-in">
+                <h2 class="text-sm font-semibold text-gray-900 mb-5">Funil de Engajamento</h2>
+                <div class="space-y-3" id="funnel-chart">
+                    <div>
+                        <div class="flex justify-between text-xs mb-1"><span class="text-gray-600">Acessaram a lição</span><span class="font-bold text-gray-900">2 184</span></div>
+                        <div class="h-6 bg-gray-100 rounded-lg overflow-hidden">
+                            <div class="h-full bg-purple-500 rounded-lg flex items-center px-2" style="width:100%"><span class="text-white text-xs font-bold">100%</span></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs mb-1"><span class="text-gray-600">Iniciaram o vídeo</span><span class="font-bold text-gray-900">1 897</span></div>
+                        <div class="h-6 bg-gray-100 rounded-lg overflow-hidden">
+                            <div class="h-full bg-indigo-400 rounded-lg flex items-center px-2" style="width:87%"><span class="text-white text-xs font-bold">87%</span></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs mb-1"><span class="text-gray-600">Assistiram ≥ 80%</span><span class="font-bold text-gray-900">1 058</span></div>
+                        <div class="h-6 bg-gray-100 rounded-lg overflow-hidden">
+                            <div class="h-full bg-blue-400 rounded-lg flex items-center px-2" style="width:48%"><span class="text-white text-xs font-bold">48%</span></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs mb-1"><span class="text-gray-600">Fizeram exercícios</span><span class="font-bold text-gray-900">764</span></div>
+                        <div class="h-6 bg-gray-100 rounded-lg overflow-hidden">
+                            <div class="h-full bg-teal-400 rounded-lg flex items-center px-2" style="width:35%"><span class="text-white text-xs font-bold">35%</span></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs mb-1"><span class="text-gray-600">Concluíram a lição</span><span class="font-bold text-gray-900">608</span></div>
+                        <div class="h-6 bg-gray-100 rounded-lg overflow-hidden">
+                            <div class="h-full bg-green-500 rounded-lg flex items-center px-2" style="width:28%"><span class="text-white text-xs font-bold">28%</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Second Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <!-- Top Lessons -->
+            <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden fade-in">
+                <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <h2 class="text-sm font-semibold text-gray-900">Lições com melhor desempenho</h2>
+                    <a href="/creator-content.html" class="text-xs text-purple-600 font-medium hover:underline">Ver todas →</a>
+                </div>
+                <div id="top-lessons-table" class="divide-y divide-gray-50">
+                    <!-- JS rendered -->
+                </div>
+            </div>
+
+            <!-- Score Distribution -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 fade-in">
+                <h2 class="text-sm font-semibold text-gray-900 mb-4">Distribuição de Notas</h2>
+                <div style="height:180px"><canvas id="scoreDistChart"></canvas></div>
+                <div class="mt-4 space-y-1.5 text-xs">
+                    <div class="flex justify-between"><span class="text-gray-500">Aprovados (≥60%)</span><span class="font-bold text-green-600">72%</span></div>
+                    <div class="flex justify-between"><span class="text-gray-500">Nota média</span><span class="font-bold text-gray-800">78%</span></div>
+                    <div class="flex justify-between"><span class="text-gray-500">Maior nota</span><span class="font-bold text-gray-800">100%</span></div>
+                    <div class="flex justify-between"><span class="text-gray-500">Menor nota</span><span class="font-bold text-gray-800">20%</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Third Row: Heatmap + Subject Stats -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <!-- Activity Heatmap -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 fade-in">
+                <h2 class="text-sm font-semibold text-gray-900 mb-1">Mapa de Atividade</h2>
+                <p class="text-xs text-gray-500 mb-4">Visualizações por hora do dia × dia da semana</p>
+                <!-- Days label -->
+                <div class="flex items-start gap-2">
+                    <div class="flex flex-col gap-1.5 pt-6 text-xs text-gray-400 flex-shrink-0">
+                        <span class="h-3.5 flex items-center">Dom</span>
+                        <span class="h-3.5 flex items-center">Seg</span>
+                        <span class="h-3.5 flex items-center">Ter</span>
+                        <span class="h-3.5 flex items-center">Qua</span>
+                        <span class="h-3.5 flex items-center">Qui</span>
+                        <span class="h-3.5 flex items-center">Sex</span>
+                        <span class="h-3.5 flex items-center">Sáb</span>
+                    </div>
+                    <div class="flex-1 overflow-x-auto">
+                        <div class="flex gap-1 mb-1" id="heatmap-hours">
+                            <!-- hour labels -->
+                        </div>
+                        <div id="heatmap-grid" class="space-y-1">
+                            <!-- heatmap cells -->
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 mt-3 text-xs text-gray-400">
+                    <span>Menos</span>
+                    <div class="flex gap-1">
+                        <div class="heatmap-cell bg-gray-100 w-3 h-3 rounded-sm"></div>
+                        <div class="heatmap-cell bg-purple-200 w-3 h-3 rounded-sm"></div>
+                        <div class="heatmap-cell bg-purple-400 w-3 h-3 rounded-sm"></div>
+                        <div class="heatmap-cell bg-purple-600 w-3 h-3 rounded-sm"></div>
+                        <div class="heatmap-cell bg-purple-800 w-3 h-3 rounded-sm"></div>
+                    </div>
+                    <span>Mais</span>
+                </div>
+            </div>
+
+            <!-- Per-subject Analytics -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 fade-in">
+                <h2 class="text-sm font-semibold text-gray-900 mb-4">Desempenho por Disciplina</h2>
+                <div class="space-y-4" id="subject-analytics">
+                    <!-- JS rendered -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Insights -->
+        <div class="bg-gradient-to-r from-purple-600 to-indigo-700 rounded-2xl p-6 text-white fade-in">
+            <h2 class="text-base font-semibold mb-4"><i class="fas fa-lightbulb text-yellow-300 mr-2"></i>Insights Automáticos</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" id="insights-container">
+                <div class="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
+                    <i class="fas fa-fire text-orange-300 text-xl mb-2 block"></i>
+                    <p class="text-sm font-semibold">Melhor horário</p>
+                    <p class="text-xs text-purple-200 mt-1">A maioria dos alunos acessa entre <strong class="text-white">18h–21h</strong> de segunda a quinta.</p>
+                </div>
+                <div class="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
+                    <i class="fas fa-exclamation-triangle text-yellow-300 text-xl mb-2 block"></i>
+                    <p class="text-sm font-semibold">Ponto de abandono</p>
+                    <p class="text-xs text-purple-200 mt-1">52% dos alunos abandonam o vídeo após os <strong class="text-white">8 minutos</strong>. Considere lições mais curtas.</p>
+                </div>
+                <div class="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
+                    <i class="fas fa-trophy text-yellow-300 text-xl mb-2 block"></i>
+                    <p class="text-sm font-semibold">Maior engajamento</p>
+                    <p class="text-xs text-purple-200 mt-1">Lições com exercícios têm <strong class="text-white">3.2×</strong> mais conclusões do que sem.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="pb-12"></div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        if (!VClass.isAuthenticated()) location.href = '/login.html';
+        const user = VClass.getCurrentUser();
+        if (user) {
+            const initials = (user.full_name||'C').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+            document.getElementById('nav-avatar-sm').textContent = initials;
+        }
+
+        // ── Period ────────────────────────────────────────────────────────
+        const PERIOD_DATA = {
+            '7d':  { views:[42,58,35,71,49,88,69],  completions:[10,14,8,19,12,22,18],  labels:['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'], kpi:{views:2184,comp:608,watch:11.4,score:78} },
+            '30d': { views:[180,220,195,240,210,260,230,195,175,205,220,260,240,185,200,215,190,175,205,230,245,260,280,195,210,225,240,255,270,285], completions:[40,55,48,62,52,70,59,48,43,51,55,65,60,46,50,54,47,43,51,57,61,65,70,49,52,56,60,64,68,71], labels:Array.from({length:30},(_,i)=>`${i+1}`), kpi:{views:8420,comp:2340,watch:10.8,score:76} },
+            '90d': { views:[600,750,820,900,680,950,1100,780,850,920,1050,800], completions:[150,190,205,225,170,240,275,195,213,230,262,200], labels:['Jan W1','W2','W3','W4','Fev W1','W2','W3','W4','Mar W1','W2','W3','W4'], kpi:{views:24850,comp:6900,watch:10.2,score:75} },
+            'all': { views:[1200,2100,3400,2800,4200,5600,4900,6200,5800,7100,6400,8200], completions:[300,525,850,700,1050,1400,1225,1550,1450,1775,1600,2050], labels:['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'], kpi:{views:58000,comp:16200,watch:9.8,score:74} }
+        };
+
+        let currentPeriod = '7d';
+        let viewsChartInst;
+
+        function setPeriod(p) {
+            currentPeriod = p;
+            document.querySelectorAll('.period-btn').forEach(b=>{
+                b.classList.toggle('active', b.id===`period-${p}`);
+                if(b.id!==`period-${p}`) b.className = 'period-btn px-3 py-1.5 text-xs font-medium text-gray-500 rounded-lg';
+            });
+            updateKPIs(PERIOD_DATA[p].kpi);
+            updateViewsChart(PERIOD_DATA[p]);
+        }
+
+        function updateKPIs(kpi) {
+            document.getElementById('kpi-views').textContent = kpi.views.toLocaleString('pt');
+            document.getElementById('kpi-completions').textContent = kpi.comp.toLocaleString('pt');
+            document.getElementById('kpi-completion-rate').textContent = ((kpi.comp/kpi.views)*100).toFixed(1)+'%';
+            document.getElementById('kpi-watchtime').innerHTML = kpi.watch.toFixed(1)+'<span class="text-base text-gray-400">min</span>';
+            document.getElementById('kpi-score').innerHTML = kpi.score+'<span class="text-base text-gray-400">%</span>';
+        }
+
+        // ── Views Chart ────────────────────────────────────────────────────
+        function buildViewsChart(d) {
+            const ctx = document.getElementById('viewsChart').getContext('2d');
+            if (viewsChartInst) viewsChartInst.destroy();
+            viewsChartInst = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: d.labels,
+                    datasets: [
+                        { label:'Visualizações', data:d.views, borderColor:'#8b5cf6', backgroundColor:'rgba(139,92,246,0.08)', borderWidth:2, tension:0.4, fill:true, pointRadius:3, pointBackgroundColor:'#8b5cf6' },
+                        { label:'Conclusões', data:d.completions, borderColor:'#10b981', backgroundColor:'rgba(16,185,129,0.05)', borderWidth:2, tension:0.4, fill:true, pointRadius:3, pointBackgroundColor:'#10b981' }
+                    ]
+                },
+                options: { responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false}}} }
+            });
+        }
+
+        function updateViewsChart(d) {
+            if (viewsChartInst) {
+                viewsChartInst.data.labels = d.labels;
+                viewsChartInst.data.datasets[0].data = d.views;
+                viewsChartInst.data.datasets[1].data = d.completions;
+                viewsChartInst.update();
+            }
+        }
+
+        buildViewsChart(PERIOD_DATA['7d']);
+
+        // ── Score Distribution ─────────────────────────────────────────────
+        new Chart(document.getElementById('scoreDistChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: ['0–20','21–40','41–60','61–80','81–100'],
+                datasets: [{ data:[45,92,178,312,251], backgroundColor:['#fca5a5','#fcd34d','#a78bfa','#60a5fa','#34d399'], borderRadius:6, borderWidth:0 }]
+            },
+            options: { responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{display:false},x:{grid:{display:false}}} }
+        });
+
+        // ── Top Lessons ────────────────────────────────────────────────────
+        const TOP_LESSONS = [
+            { title:'Leis de Newton — Aplicações', subject:'Física', views:128, completions:82, score:88, trend:'+12%' },
+            { title:'Cinemática — MU', subject:'Física', views:96, completions:67, score:85, trend:'+8%' },
+            { title:'Funções Quadráticas', subject:'Matemática', views:54, completions:38, score:79, trend:'+5%' },
+            { title:'Lei de Ohm', subject:'Física', views:88, completions:55, score:76, trend:'+3%' },
+            { title:'Energia Cinética', subject:'Física', views:50, completions:29, score:72, trend:'-2%' },
+        ];
+
+        const subjectColors = { 'Física':'teal','Matemática':'indigo','Química':'amber','Português':'pink' };
+
+        document.getElementById('top-lessons-table').innerHTML = TOP_LESSONS.map((l,i)=>{
+            const col = subjectColors[l.subject] || 'purple';
+            const trendClass = l.trend.startsWith('+') ? 'text-green-600' : 'text-red-500';
+            return `
+            <div class="lesson-rank-row flex items-center gap-4 px-6 py-3.5 border-b border-gray-50 last:border-0">
+                <span class="text-sm font-bold text-gray-300 w-5 text-center">${i+1}</span>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-gray-900 truncate">${l.title}</p>
+                    <p class="text-xs text-gray-400 mt-0.5">${l.subject}</p>
+                </div>
+                <div class="hidden sm:grid grid-cols-3 gap-4 text-center text-xs">
+                    <div><p class="font-bold text-gray-700">${l.views}</p><p class="text-gray-400">Views</p></div>
+                    <div><p class="font-bold text-gray-700">${Math.round(l.completions/l.views*100)}%</p><p class="text-gray-400">Conclusão</p></div>
+                    <div><p class="font-bold text-gray-700">${l.score}%</p><p class="text-gray-400">Nota</p></div>
+                </div>
+                <span class="text-xs font-bold ${trendClass}">${l.trend}</span>
+            </div>`;
+        }).join('');
+
+        // ── Subject Analytics ───────────────────────────────────────────────
+        const SUBJECTS_ANALYTICS = [
+            { name:'Física',     icon:'fa-atom',       color:'teal',   views:880, score:78, completion:68 },
+            { name:'Matemática', icon:'fa-calculator',  color:'indigo', views:264, score:74, completion:55 },
+            { name:'Química',    icon:'fa-flask',       color:'amber',  views:88,  score:65, completion:42 },
+        ];
+
+        document.getElementById('subject-analytics').innerHTML = SUBJECTS_ANALYTICS.map(s=>`
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 bg-${s.color}-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <i class="fas ${s.icon} text-${s.color}-600 text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="font-semibold text-gray-800">${s.name}</span>
+                    <span class="text-gray-500">${s.views} views · ${s.score}% nota</span>
+                </div>
+                <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-${s.color}-500 rounded-full" style="width:${s.completion}%"></div>
+                </div>
+                <p class="text-xs text-gray-400 mt-0.5">${s.completion}% de conclusão média</p>
+            </div>
+        </div>`).join('');
+
+        // ── Heatmap ────────────────────────────────────────────────────────
+        const HOURS = ['6h','8h','10h','12h','14h','16h','18h','20h','22h'];
+        const HEATMAP = [
+            [2,3,5,8,6,7,18,22,12],  // Dom
+            [1,4,7,9,8,10,28,35,20], // Seg
+            [2,5,8,10,9,11,30,38,22],// Ter
+            [1,4,7,10,8,12,32,40,24],// Qua
+            [2,5,8,9,7,10,28,36,21], // Qui
+            [3,6,9,11,10,13,34,42,25],// Sex
+            [5,8,12,15,14,16,20,25,15],// Sáb
+        ];
+
+        const maxVal = Math.max(...HEATMAP.flat());
+        function heatColor(v) {
+            const t = v/maxVal;
+            if (t < 0.2) return 'bg-gray-100';
+            if (t < 0.4) return 'bg-purple-200';
+            if (t < 0.6) return 'bg-purple-400';
+            if (t < 0.8) return 'bg-purple-600';
+            return 'bg-purple-800';
+        }
+
+        document.getElementById('heatmap-hours').innerHTML = HOURS.map(h=>`<span class="text-xs text-gray-400 w-[14px] text-center" style="font-size:0.6rem">${h}</span>`).join('');
+
+        document.getElementById('heatmap-grid').innerHTML = HEATMAP.map(row=>`
+        <div class="flex gap-1">
+            ${row.map((v,i)=>`<div class="heatmap-cell ${heatColor(v)}" title="${HOURS[i]}: ${v} visualizações"></div>`).join('')}
+        </div>`).join('');
+
+        function exportReport() {
+            VClass.showNotification('Relatório exportado como PDF!', 'success');
+        }
+    </script>
+</body>
+</html>

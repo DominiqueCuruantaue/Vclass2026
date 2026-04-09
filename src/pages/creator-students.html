@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alunos - VClass Creator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+    <link href="/static/styles.css" rel="stylesheet">
+    <style>
+        @keyframes fadeInUp { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);} }
+        .fade-in { animation: fadeInUp 0.35s ease forwards; }
+        .student-row { transition: background 0.15s; cursor: pointer; }
+        .student-row:hover { background: #f9fafb; }
+        .progress-bar { transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+        .avatar-circle { width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;color:white;flex-shrink:0; }
+        .score-badge { font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:999px; }
+        .score-high { background:#d1fae5;color:#065f46; }
+        .score-mid  { background:#fef3c7;color:#92400e; }
+        .score-low  { background:#fee2e2;color:#991b1b; }
+        .filter-pill { transition:all 0.15s; }
+        .filter-pill.active { background:#8b5cf6;color:white; }
+        .modal-overlay { background:rgba(0,0,0,0.5);backdrop-filter:blur(3px); }
+        .activity-dot::before { content:''; width:6px;height:6px;background:#8b5cf6;border-radius:50%;display:inline-block;margin-right:6px; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <!-- Navbar -->
+    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-4">
+                    <a href="/creator-dashboard.html" class="flex items-center space-x-2">
+                        <div class="w-8 h-8 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-lg flex items-center justify-center shadow">
+                            <i class="fas fa-graduation-cap text-white text-sm"></i>
+                        </div>
+                        <span class="text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">VClass</span>
+                    </a>
+                    <span class="hidden sm:inline-flex items-center gap-1 bg-amber-100 text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full">
+                        <i class="fas fa-pen-nib text-xs"></i> Criador
+                    </span>
+                </div>
+                <div class="hidden md:flex items-center space-x-1">
+                    <a href="/creator-dashboard.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50"><i class="fas fa-th-large"></i> Visão Geral</a>
+                    <a href="/creator-content.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50"><i class="fas fa-layer-group"></i> Conteúdos</a>
+                    <a href="/creator-students.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-purple-50 text-purple-700"><i class="fas fa-users"></i> Alunos</a>
+                    <a href="/creator-analytics.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50"><i class="fas fa-chart-bar"></i> Analytics</a>
+                </div>
+                <div id="nav-avatar-sm" class="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-white text-sm font-bold cursor-pointer">?</div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+
+        <!-- Header + Stats -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 fade-in">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Alunos</h1>
+                <p class="text-sm text-gray-500 mt-1">Acompanhe o progresso e engajamento dos seus alunos.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="exportCSV()" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-50 transition">
+                    <i class="fas fa-download"></i> Exportar CSV
+                </button>
+                <button onclick="openMessageModal()" class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700 transition shadow-sm">
+                    <i class="fas fa-envelope"></i> Mensagem em Massa
+                </button>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 fade-in">
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center"><i class="fas fa-users text-purple-600"></i></div>
+                    <span class="text-xs text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded-full">+128</span>
+                </div>
+                <p class="text-2xl font-bold text-gray-900">1 847</p>
+                <p class="text-xs text-gray-500 mt-0.5">Total de alunos</p>
+            </div>
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center"><i class="fas fa-fire text-green-600"></i></div>
+                    <span class="text-xs text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded-full">↑ 12%</span>
+                </div>
+                <p class="text-2xl font-bold text-gray-900">634</p>
+                <p class="text-xs text-gray-500 mt-0.5">Ativos esta semana</p>
+            </div>
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center"><i class="fas fa-chart-line text-blue-600"></i></div>
+                    <span class="text-xs text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full">↑ 3%</span>
+                </div>
+                <p class="text-2xl font-bold text-gray-900">72<span class="text-lg text-gray-400">%</span></p>
+                <p class="text-xs text-gray-500 mt-0.5">Nota média</p>
+            </div>
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center"><i class="fas fa-graduation-cap text-amber-600"></i></div>
+                    <span class="text-xs text-amber-600 font-semibold bg-amber-50 px-2 py-0.5 rounded-full">Este mês</span>
+                </div>
+                <p class="text-2xl font-bold text-gray-900">89</p>
+                <p class="text-xs text-gray-500 mt-0.5">Lições concluídas hoje</p>
+            </div>
+        </div>
+
+        <!-- Table + Sidebar -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- Student Table -->
+            <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden fade-in">
+                <!-- Toolbar -->
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-4 border-b border-gray-100">
+                    <div class="relative flex-1">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                        <input type="text" id="student-search" placeholder="Buscar por nome ou email..." oninput="filterStudents()"
+                            class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <select id="filter-activity" onchange="filterStudents()" class="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400">
+                            <option value="">Todos</option>
+                            <option value="active">Ativos (7d)</option>
+                            <option value="inactive">Inativos</option>
+                            <option value="high">Nota ≥ 80%</option>
+                            <option value="low">Nota &lt; 60%</option>
+                        </select>
+                        <select id="filter-sort-s" onchange="filterStudents()" class="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400">
+                            <option value="recent">Mais ativos</option>
+                            <option value="score">Maior nota</option>
+                            <option value="name">Nome A→Z</option>
+                            <option value="progress">Progresso</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Table Header -->
+                <div class="grid grid-cols-12 gap-2 px-4 py-2.5 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    <div class="col-span-4">Aluno</div>
+                    <div class="col-span-2 text-center">Progresso</div>
+                    <div class="col-span-2 text-center">Nota</div>
+                    <div class="col-span-2 text-center hidden sm:block">Última atividade</div>
+                    <div class="col-span-2 text-center">Ações</div>
+                </div>
+
+                <!-- Table Body -->
+                <div id="students-table">
+                    <div class="flex items-center justify-center py-12 text-gray-400">
+                        <i class="fas fa-spinner fa-spin text-2xl"></i>
+                    </div>
+                </div>
+
+                <!-- Pagination -->
+                <div class="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
+                    <span class="text-xs text-gray-500">Exibindo <span id="student-count-label">20</span> de 1847</span>
+                    <div class="flex gap-1">
+                        <button class="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 text-xs" disabled><i class="fas fa-chevron-left"></i></button>
+                        <button class="w-7 h-7 flex items-center justify-center rounded-lg bg-purple-600 text-white text-xs font-bold">1</button>
+                        <button class="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 text-xs">2</button>
+                        <button class="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 text-xs"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Sidebar -->
+            <div class="space-y-5">
+                <!-- Progress Distribution Chart -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 fade-in">
+                    <h3 class="text-sm font-semibold text-gray-900 mb-4">Distribuição de Progresso</h3>
+                    <div style="height:160px"><canvas id="progressChart"></canvas></div>
+                    <div class="grid grid-cols-3 gap-2 mt-4 text-center text-xs">
+                        <div><p class="font-bold text-green-600">628</p><p class="text-gray-400">Avançados<br>≥70%</p></div>
+                        <div class="border-x border-gray-100"><p class="font-bold text-amber-600">741</p><p class="text-gray-400">Em progresso<br>30–69%</p></div>
+                        <div><p class="font-bold text-red-500">478</p><p class="text-gray-400">Iniciantes<br>&lt;30%</p></div>
+                    </div>
+                </div>
+
+                <!-- Top Performers -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 fade-in">
+                    <h3 class="text-sm font-semibold text-gray-900 mb-4"><i class="fas fa-trophy text-amber-500 mr-1"></i> Top 5 Alunos</h3>
+                    <div class="space-y-3" id="top-students-list"></div>
+                </div>
+
+                <!-- At-risk students -->
+                <div class="bg-red-50 rounded-2xl p-5 border border-red-100 fade-in">
+                    <h3 class="text-sm font-semibold text-red-900 mb-3"><i class="fas fa-exclamation-triangle text-red-500 mr-1"></i> Precisam de Atenção</h3>
+                    <div class="space-y-2.5" id="at-risk-list">
+                        <div class="flex items-center gap-2">
+                            <div class="avatar-circle bg-red-400 text-xs">MJ</div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-semibold text-gray-800 truncate">Manuel João</p>
+                                <p class="text-xs text-red-600">Inativo há 14 dias · 32%</p>
+                            </div>
+                            <button class="text-xs text-red-600 font-semibold hover:underline">Contatar</button>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="avatar-circle bg-orange-400 text-xs">SF</div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-semibold text-gray-800 truncate">Sara Fernandes</p>
+                                <p class="text-xs text-red-600">Nota 42% · 3 falhas seguidas</p>
+                            </div>
+                            <button class="text-xs text-red-600 font-semibold hover:underline">Contatar</button>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="avatar-circle bg-pink-400 text-xs">TM</div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-semibold text-gray-800 truncate">Tomás Mabunda</p>
+                                <p class="text-xs text-red-600">Inativo há 21 dias</p>
+                            </div>
+                            <button class="text-xs text-red-600 font-semibold hover:underline">Contatar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Student Detail -->
+    <div id="modal-student" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-purple-50 to-indigo-50">
+                <div class="flex items-center gap-3">
+                    <div id="modal-avatar" class="avatar-circle bg-purple-500 text-sm">?</div>
+                    <div>
+                        <h3 id="modal-student-name" class="text-base font-bold text-gray-900">Nome do Aluno</h3>
+                        <p id="modal-student-email" class="text-xs text-gray-500">email@exemplo.com</p>
+                    </div>
+                </div>
+                <button onclick="closeStudentModal()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="grid grid-cols-3 gap-3 text-center">
+                    <div class="bg-purple-50 rounded-xl p-3">
+                        <p id="modal-progress" class="text-xl font-bold text-purple-600">—</p>
+                        <p class="text-xs text-gray-500 mt-0.5">Progresso</p>
+                    </div>
+                    <div class="bg-green-50 rounded-xl p-3">
+                        <p id="modal-score" class="text-xl font-bold text-green-600">—</p>
+                        <p class="text-xs text-gray-500 mt-0.5">Nota média</p>
+                    </div>
+                    <div class="bg-blue-50 rounded-xl p-3">
+                        <p id="modal-lessons" class="text-xl font-bold text-blue-600">—</p>
+                        <p class="text-xs text-gray-500 mt-0.5">Lições feitas</p>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-700 mb-2">Progresso por disciplina</p>
+                    <div id="modal-subjects" class="space-y-2"></div>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-700 mb-2">Atividade recente</p>
+                    <div id="modal-activity" class="space-y-1 text-xs text-gray-600"></div>
+                </div>
+            </div>
+            <div class="px-6 pb-5 flex gap-2">
+                <button onclick="closeStudentModal()" class="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition">Fechar</button>
+                <button class="flex-1 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 transition">
+                    <i class="fas fa-envelope mr-1"></i> Enviar mensagem
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Message -->
+    <div id="modal-message" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+                <h3 class="text-base font-bold text-gray-900">Mensagem em Massa</h3>
+                <button onclick="closeModal('modal-message')" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Destinatários</label>
+                    <select class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                        <option>Todos os alunos (1 847)</option>
+                        <option>Alunos inativos há +7 dias (213)</option>
+                        <option>Alunos com nota &lt; 60% (478)</option>
+                        <option>Alunos ativos esta semana (634)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Assunto</label>
+                    <input type="text" placeholder="Ex: Nova aula disponível — Física 10ª Classe" class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Mensagem</label>
+                    <textarea rows="4" placeholder="Escreva sua mensagem aqui..." class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"></textarea>
+                </div>
+            </div>
+            <div class="px-6 pb-5 flex gap-2">
+                <button onclick="closeModal('modal-message')" class="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition">Cancelar</button>
+                <button onclick="sendMessage()" class="flex-1 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 transition">
+                    <i class="fas fa-paper-plane mr-1"></i> Enviar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        if (!VClass.isAuthenticated()) location.href = '/login.html';
+        const user = VClass.getCurrentUser();
+        if (user) {
+            const initials = (user.full_name||'C').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+            document.getElementById('nav-avatar-sm').textContent = initials;
+        }
+
+        // ── Mock Students ─────────────────────────────────────────────────
+        const AVATAR_COLORS = ['#8b5cf6','#3b82f6','#10b981','#f59e0b','#ef4444','#ec4899','#14b8a6','#6366f1'];
+        function randomColor(name) { let h=0; for(const c of name) h=(h+c.charCodeAt(0))%AVATAR_COLORS.length; return AVATAR_COLORS[h]; }
+
+        const MOCK_STUDENTS = Array.from({length:20},(_,i)=>{
+            const names = ['Ana Clara Sitoe','Bernardo Machava','Catarina Nhantumbo','David Muchanga',
+                'Elisa Mutemba','Frederico Guambe','Graça Chissano','Hélio Mondlane','Ivone Tembe','João Cumbe',
+                'Kátia Moiane','Luís Cuna','Marta Nhavene','Nuno Macuácua','Olga Chimoio','Paulo Zimba',
+                'Rebeca Mussa','Sandro Langa','Tânia Gove','Ulisses Bila'];
+            const name = names[i] || `Aluno ${i+1}`;
+            const prog = Math.floor(Math.random()*90)+10;
+            const score = Math.floor(Math.random()*55)+40;
+            const lessons = Math.floor(prog/10)+Math.floor(Math.random()*3);
+            const daysAgo = Math.floor(Math.random()*14);
+            return { id:i+1, name, email:`${name.split(' ')[0].toLowerCase()}@email.com`, progress:prog, score, lessons, daysAgo };
+        });
+
+        let filteredStudents = [...MOCK_STUDENTS];
+
+        function filterStudents() {
+            const q = document.getElementById('student-search').value.toLowerCase();
+            const act = document.getElementById('filter-activity').value;
+            const sort = document.getElementById('filter-sort-s').value;
+
+            filteredStudents = MOCK_STUDENTS.filter(s => {
+                if (q && !s.name.toLowerCase().includes(q) && !s.email.includes(q)) return false;
+                if (act === 'active' && s.daysAgo > 7) return false;
+                if (act === 'inactive' && s.daysAgo <= 7) return false;
+                if (act === 'high' && s.score < 80) return false;
+                if (act === 'low' && s.score >= 60) return false;
+                return true;
+            });
+
+            if (sort === 'recent') filteredStudents.sort((a,b)=>a.daysAgo-b.daysAgo);
+            else if (sort === 'score') filteredStudents.sort((a,b)=>b.score-a.score);
+            else if (sort === 'name') filteredStudents.sort((a,b)=>a.name.localeCompare(b.name));
+            else if (sort === 'progress') filteredStudents.sort((a,b)=>b.progress-a.progress);
+
+            renderTable();
+        }
+
+        function renderTable() {
+            const c = document.getElementById('students-table');
+            document.getElementById('student-count-label').textContent = filteredStudents.length;
+            if (filteredStudents.length === 0) {
+                c.innerHTML = '<div class="text-center py-12 text-gray-400"><i class="fas fa-users text-3xl text-gray-200 mb-3 block"></i><p>Nenhum aluno encontrado.</p></div>';
+                return;
+            }
+            c.innerHTML = filteredStudents.map(s => {
+                const initials = s.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+                const scoreClass = s.score >= 80 ? 'score-high' : s.score >= 60 ? 'score-mid' : 'score-low';
+                const lastActivity = s.daysAgo === 0 ? 'Hoje' : s.daysAgo === 1 ? 'Ontem' : `${s.daysAgo}d atrás`;
+                const isActive = s.daysAgo <= 7;
+                return `
+                <div class="student-row grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-50 items-center" onclick="openStudentModal(${s.id})">
+                    <div class="col-span-4 flex items-center gap-2 min-w-0">
+                        <div class="avatar-circle text-xs" style="background:${randomColor(s.name)}">${initials}</div>
+                        <div class="min-w-0">
+                            <p class="text-sm font-semibold text-gray-900 truncate">${s.name}</p>
+                            <p class="text-xs text-gray-400 truncate">${s.email}</p>
+                        </div>
+                    </div>
+                    <div class="col-span-2">
+                        <div class="flex items-center gap-1.5">
+                            <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div class="progress-bar h-full rounded-full ${s.progress>=70?'bg-green-500':s.progress>=30?'bg-amber-500':'bg-red-400'}" style="width:${s.progress}%"></div>
+                            </div>
+                            <span class="text-xs font-medium text-gray-600 w-8 text-right">${s.progress}%</span>
+                        </div>
+                    </div>
+                    <div class="col-span-2 text-center">
+                        <span class="score-badge ${scoreClass}">${s.score}%</span>
+                    </div>
+                    <div class="col-span-2 text-center hidden sm:block">
+                        <span class="text-xs ${isActive?'text-green-600 font-medium':'text-gray-400'}">${lastActivity}</span>
+                    </div>
+                    <div class="col-span-2 flex items-center justify-center gap-1">
+                        <button class="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition text-xs" title="Ver detalhe" onclick="event.stopPropagation();openStudentModal(${s.id})">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition text-xs" title="Enviar mensagem" onclick="event.stopPropagation()">
+                            <i class="fas fa-envelope"></i>
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // ── Top Performers ────────────────────────────────────────────────
+        const topStudents = [...MOCK_STUDENTS].sort((a,b)=>b.score-a.score).slice(0,5);
+        document.getElementById('top-students-list').innerHTML = topStudents.map((s,i)=>{
+            const initials = s.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+            const medals = ['🥇','🥈','🥉','4º','5º'];
+            return `
+            <div class="flex items-center gap-2">
+                <span class="text-sm w-6 text-center">${medals[i]}</span>
+                <div class="avatar-circle text-xs" style="background:${randomColor(s.name)};width:28px;height:28px;font-size:0.7rem">${initials}</div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-semibold text-gray-800 truncate">${s.name}</p>
+                </div>
+                <span class="text-xs font-bold text-green-600">${s.score}%</span>
+            </div>`;
+        }).join('');
+
+        // ── Progress Chart ─────────────────────────────────────────────────
+        new Chart(document.getElementById('progressChart').getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Avançados (≥70%)', 'Em progresso', 'Iniciantes (<30%)'],
+                datasets: [{ data:[628,741,478], backgroundColor:['#10b981','#f59e0b','#ef4444'], borderWidth:0 }]
+            },
+            options: { responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}} }
+        });
+
+        // ── Modal ─────────────────────────────────────────────────────────
+        function openStudentModal(id) {
+            const s = MOCK_STUDENTS.find(x=>x.id===id);
+            if (!s) return;
+            const initials = s.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+            document.getElementById('modal-avatar').textContent = initials;
+            document.getElementById('modal-avatar').style.background = randomColor(s.name);
+            document.getElementById('modal-student-name').textContent = s.name;
+            document.getElementById('modal-student-email').textContent = s.email;
+            document.getElementById('modal-progress').textContent = s.progress+'%';
+            document.getElementById('modal-score').textContent = s.score+'%';
+            document.getElementById('modal-lessons').textContent = s.lessons;
+
+            document.getElementById('modal-subjects').innerHTML = [
+                {name:'Física',prog:s.progress,color:'teal'},
+                {name:'Matemática',prog:Math.max(s.progress-15,0),color:'indigo'},
+                {name:'Química',prog:Math.max(s.progress-30,0),color:'amber'},
+            ].map(sub=>`
+            <div class="flex items-center gap-2 text-xs">
+                <span class="w-20 text-gray-600">${sub.name}</span>
+                <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-${sub.color}-500 rounded-full" style="width:${sub.prog}%"></div>
+                </div>
+                <span class="font-medium text-gray-700 w-8 text-right">${sub.prog}%</span>
+            </div>`).join('');
+
+            document.getElementById('modal-activity').innerHTML = [
+                `Completou "Leis de Newton" com ${s.score}%`,
+                `Assistiu "Cinemática — MU" (${Math.floor(s.progress*0.8)}% do vídeo)`,
+                `Fez exercício com ${s.score-5}% de acerto`,
+            ].map(a=>`<p class="activity-dot">${a}</p>`).join('');
+
+            document.getElementById('modal-student').classList.remove('hidden');
+        }
+
+        function closeStudentModal() { document.getElementById('modal-student').classList.add('hidden'); }
+        function closeModal(id) { document.getElementById(id)?.classList.add('hidden'); }
+        function openMessageModal() { document.getElementById('modal-message').classList.remove('hidden'); }
+        function sendMessage() {
+            VClass.showNotification('Mensagem enviada para todos os destinatários!', 'success');
+            closeModal('modal-message');
+        }
+
+        function exportCSV() {
+            const header = 'Nome,Email,Progresso,Nota,Lições';
+            const rows = MOCK_STUDENTS.map(s=>`${s.name},${s.email},${s.progress}%,${s.score}%,${s.lessons}`);
+            const csv = [header,...rows].join('\n');
+            const a = document.createElement('a');
+            a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+            a.download = 'alunos_vclass.csv';
+            a.click();
+            VClass.showNotification('CSV exportado com sucesso!', 'success');
+        }
+
+        // Close modals on overlay click
+        ['modal-student','modal-message'].forEach(id=>{
+            document.getElementById(id)?.addEventListener('click',function(e){if(e.target===this)closeModal(id);});
+        });
+
+        filterStudents();
+    </script>
+</body>
+</html>

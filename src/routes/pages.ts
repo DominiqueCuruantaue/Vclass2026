@@ -20,6 +20,11 @@ import chatHtml from '../pages/chat.html?raw'
 import newsHtml from '../pages/news.html?raw'
 import searchHtml from '../pages/search.html?raw'
 import testBrowseHtml from '../pages/test-browse.html?raw'
+import creatorDashboardHtml from '../pages/creator-dashboard.html?raw'
+import creatorContentHtml from '../pages/creator-content.html?raw'
+import creatorLessonEditorHtml from '../pages/creator-lesson-editor.html?raw'
+import creatorStudentsHtml from '../pages/creator-students.html?raw'
+import creatorAnalyticsHtml from '../pages/creator-analytics.html?raw'
 
 // Serve HTML pages
 app.get('/', (c) => c.html(homeHtml))
@@ -40,5 +45,12 @@ app.get('/chat.html', (c) => c.html(chatHtml))
 app.get('/news.html', (c) => c.html(newsHtml))
 app.get('/search.html', (c) => c.html(searchHtml))
 app.get('/test-browse.html', (c) => c.html(testBrowseHtml))
+
+// Creator Panel Pages
+app.get('/creator-dashboard.html',    (c) => c.html(creatorDashboardHtml))
+app.get('/creator-content.html',      (c) => c.html(creatorContentHtml))
+app.get('/creator-lesson-editor.html',(c) => c.html(creatorLessonEditorHtml))
+app.get('/creator-students.html',     (c) => c.html(creatorStudentsHtml))
+app.get('/creator-analytics.html',    (c) => c.html(creatorAnalyticsHtml))
 
 export default app

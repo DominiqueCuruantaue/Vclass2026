@@ -320,6 +320,11 @@ function getNavbarHTML(activePage = '') {
                   <i class="fas fa-question-circle text-gray-400 w-4 text-center"></i> Ajuda
                 </a>
               </div>
+              <div class="border-t border-gray-100 py-1" id="nav-creator-section" style="display:none">
+                <a href="/creator-dashboard.html" class="flex items-center px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50 transition gap-3">
+                  <i class="fas fa-pen-nib text-amber-500 w-4 text-center"></i> Painel do Criador
+                </a>
+              </div>
               <div class="border-t border-gray-100 py-1">
                 <button onclick="VClass.logout()" class="flex items-center w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition gap-3">
                   <i class="fas fa-sign-out-alt w-4 text-center"></i> Sair
@@ -386,6 +391,13 @@ function _updateNavbarUser() {
   document.querySelectorAll('#nav-dropdown-email').forEach(el => {
     el.textContent = user.email || '';
   });
+
+  // Show creator panel link for teachers and admins
+  if (user.role === 'teacher' || user.role === 'admin') {
+    document.querySelectorAll('#nav-creator-section').forEach(el => {
+      el.style.display = 'block';
+    });
+  }
 }
 
 function toggleNavDropdown() {
