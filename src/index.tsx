@@ -41,12 +41,34 @@ app.get('/api/health', (c) => {
   })
 })
 
-// 404 handler
+// 404 handler — return HTML for page routes, JSON for API routes
 app.notFound((c) => {
-  return c.json({
-    success: false,
-    error: 'Route not found'
-  }, 404)
+  const path = c.req.path
+  if (path.startsWith('/api/')) {
+    return c.json({ success: false, error: 'Route not found' }, 404)
+  }
+  // HTML 404 page
+  return c.html(`<!DOCTYPE html>
+<html lang="pt"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Página não encontrada - VClass</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+</head><body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+<div class="text-center max-w-md">
+  <div class="text-8xl mb-6">🎓</div>
+  <h1 class="text-6xl font-bold text-purple-600 mb-2">404</h1>
+  <h2 class="text-2xl font-bold text-gray-900 mb-3">Página não encontrada</h2>
+  <p class="text-gray-600 mb-8">A página que você procura não existe ou foi movida.</p>
+  <div class="flex flex-col sm:flex-row gap-3 justify-center">
+    <a href="/dashboard.html" class="inline-flex items-center justify-center px-6 py-3 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700 transition">
+      <i class="fas fa-home mr-2"></i> Ir ao Dashboard
+    </a>
+    <a href="/browse.html" class="inline-flex items-center justify-center px-6 py-3 border border-purple-600 text-purple-600 rounded-xl font-semibold hover:bg-purple-50 transition">
+      <i class="fas fa-book mr-2"></i> Explorar Conteúdo
+    </a>
+  </div>
+  <p class="mt-8 text-sm text-gray-400"><a href="/home.html" class="hover:text-purple-600">← Voltar ao início</a></p>
+</div></body></html>`, 404)
 })
 
 // Error handler

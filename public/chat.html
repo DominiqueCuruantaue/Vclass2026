@@ -3,304 +3,425 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suporte - VClass</title>
+    <title>Chat IA - VClass</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <link href="/static/styles.css" rel="stylesheet">
     <style>
-        .chat-bubble-user {
-            background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
-            color: white;
-            border-radius: 18px 18px 4px 18px;
-        }
-        .chat-bubble-bot {
-            background: #f3f4f6;
-            color: #1f2937;
-            border-radius: 18px 18px 18px 4px;
-        }
-        .typing-indicator span {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            background: #9ca3af;
-            border-radius: 50%;
-            margin: 0 2px;
-            animation: typing 1.4s infinite;
-        }
-        .typing-indicator span:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-        .typing-indicator span:nth-child(3) {
-            animation-delay: 0.4s;
-        }
-        @keyframes typing {
-            0%, 60%, 100% {
-                transform: translateY(0);
-            }
-            30% {
-                transform: translateY(-10px);
-            }
-        }
-        .chat-container {
-            height: calc(100vh - 250px);
-            min-height: 400px;
-        }
+        .chat-bubble-user { background: linear-gradient(135deg, #7c3aed, #4f46e5); color: white; border-radius: 18px 4px 18px 18px; }
+        .chat-bubble-bot { background: #f3f4f6; color: #1f2937; border-radius: 4px 18px 18px 18px; }
+        .chat-bubble-bot.error { background: #fef2f2; color: #991b1b; }
+        .typing-dot { width:8px; height:8px; background:#9ca3af; border-radius:50%; display:inline-block; margin:0 2px; animation: bounce 1.4s infinite; }
+        .typing-dot:nth-child(2) { animation-delay:.2s; }
+        .typing-dot:nth-child(3) { animation-delay:.4s; }
+        @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-8px)} }
+        #chat-messages { height: calc(100vh - 280px); min-height: 400px; scroll-behavior: smooth; }
+        .subject-chip { cursor:pointer; transition:all .2s; }
+        .subject-chip:hover, .subject-chip.active { background:#ede9fe; border-color:#7c3aed; color:#7c3aed; }
+        .msg-time { font-size:0.65rem; opacity:0.6; margin-top:4px; }
+        .sidebar-open { transform: translateX(0); }
+        @keyframes msgIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        .msg-new { animation: msgIn 0.25s ease forwards; }
+        .copy-btn:hover { opacity:1; }
+        pre { background:#1e1e1e; color:#d4d4d4; border-radius:8px; padding:12px; font-size:0.8rem; overflow-x:auto; margin:6px 0; }
+        code { font-family:monospace; }
     </style>
 </head>
-<body class="bg-gray-50">
-    <!-- Navigation -->
-    <nav class="bg-white shadow-sm border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center space-x-8">
-                    <a href="/dashboard.html" class="flex items-center space-x-2">
-                        <i class="fas fa-graduation-cap text-2xl text-purple-600"></i>
-                        <span class="text-xl font-bold text-gray-900">VClass</span>
-                    </a>
-                </div>
+<body class="bg-gray-100">
+    <!-- Nav -->
+    <nav class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between h-14">
                 <div class="flex items-center space-x-4">
-                    <a href="/dashboard.html" class="text-sm text-gray-700 hover:text-purple-600">
-                        <i class="fas fa-arrow-left mr-1"></i> Voltar ao Dashboard
+                    <a href="/dashboard.html" class="flex items-center space-x-2 text-purple-600 hover:text-purple-700">
+                        <i class="fas fa-arrow-left text-sm"></i>
+                        <i class="fas fa-graduation-cap text-xl"></i>
+                        <span class="font-bold text-gray-900">VClass</span>
                     </a>
+                    <span class="text-gray-300">|</span>
+                    <span class="text-sm font-semibold text-gray-700">
+                        <i class="fas fa-robot text-purple-600 mr-1"></i>
+                        Assistente IA
+                    </span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="clearChat()" class="px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100 rounded-lg transition">
+                        <i class="fas fa-trash mr-1"></i> Limpar
+                    </button>
+                    <button onclick="toggleHistory()" class="px-3 py-1.5 text-xs text-purple-600 hover:bg-purple-50 rounded-lg transition">
+                        <i class="fas fa-history mr-1"></i> Histórico
+                    </button>
                 </div>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
-            <!-- Header -->
-            <div class="bg-gradient-to-r from-purple-600 to-purple-800 px-6 py-4 text-white">
-                <div class="flex items-center space-x-3">
-                    <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center">
-                        <i class="fas fa-robot text-purple-600 text-xl"></i>
+    <div class="container mx-auto px-4 py-4 max-w-5xl">
+        <div class="flex gap-4">
+            <!-- Main chat -->
+            <div class="flex-1 flex flex-col bg-white rounded-2xl shadow-sm overflow-hidden" style="min-height:calc(100vh - 120px)">
+                <!-- Chat header -->
+                <div class="bg-gradient-to-r from-purple-600 to-indigo-600 px-5 py-4 text-white">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-robot text-lg"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h2 class="font-bold">Assistente VClass IA</h2>
+                            <p class="text-xs text-purple-200 flex items-center">
+                                <span class="w-2 h-2 bg-green-400 rounded-full mr-1.5 animate-pulse"></span>
+                                Online · Especializado em Matemática, Física, Química e mais
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs text-purple-200" id="msg-count">0 mensagens</p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 class="text-xl font-bold">Assistente VClass</h1>
-                        <p class="text-sm text-purple-200">
-                            <span class="inline-block w-2 h-2 bg-green-400 rounded-full mr-1 animate-pulse"></span>
-                            Online - Pronto para ajudar
-                        </p>
+                    <!-- Subject filter -->
+                    <div class="flex flex-wrap gap-2 mt-3">
+                        <button onclick="setSubject('')" id="chip-all" class="subject-chip active px-3 py-1 text-xs bg-white/20 border border-white/30 text-white rounded-full">Geral</button>
+                        <button onclick="setSubject('Matemática')" id="chip-mat" class="subject-chip px-3 py-1 text-xs bg-white/10 border border-white/20 text-white rounded-full">📐 Matemática</button>
+                        <button onclick="setSubject('Física')" id="chip-fis" class="subject-chip px-3 py-1 text-xs bg-white/10 border border-white/20 text-white rounded-full">⚡ Física</button>
+                        <button onclick="setSubject('Química')" id="chip-qui" class="subject-chip px-3 py-1 text-xs bg-white/10 border border-white/20 text-white rounded-full">🧪 Química</button>
+                        <button onclick="setSubject('Biologia')" id="chip-bio" class="subject-chip px-3 py-1 text-xs bg-white/10 border border-white/20 text-white rounded-full">🔬 Biologia</button>
                     </div>
+                </div>
+
+                <!-- Quick suggestions -->
+                <div class="border-b border-gray-100 px-5 py-3 bg-gray-50">
+                    <div class="flex flex-wrap gap-2" id="suggestions">
+                        <button onclick="quickMsg('Explica-me as funções quadráticas')" class="px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-full hover:border-purple-400 hover:text-purple-600 transition">📐 Funções Quadráticas</button>
+                        <button onclick="quickMsg('Quais são as Leis de Newton?')" class="px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-full hover:border-purple-400 hover:text-purple-600 transition">⚡ Leis de Newton</button>
+                        <button onclick="quickMsg('Como funciona a tabela periódica?')" class="px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-full hover:border-purple-400 hover:text-purple-600 transition">🧪 Tabela Periódica</button>
+                        <button onclick="quickMsg('Dicas de estudo para o exame')" class="px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-full hover:border-purple-400 hover:text-purple-600 transition">📝 Dicas de Estudo</button>
+                        <button onclick="quickMsg('Como calcular derivadas?')" class="px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-full hover:border-purple-400 hover:text-purple-600 transition">📈 Derivadas</button>
+                    </div>
+                </div>
+
+                <!-- Messages -->
+                <div id="chat-messages" class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+                    <!-- Welcome -->
+                    <div class="flex items-end space-x-3 msg-new">
+                        <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-robot text-purple-600 text-sm"></i>
+                        </div>
+                        <div class="chat-bubble-bot px-4 py-3 max-w-lg">
+                            <p class="text-sm font-semibold text-purple-700 mb-1">Assistente VClass 🎓</p>
+                            <p class="text-sm">Olá! Sou o assistente inteligente do VClass. Estou aqui para ajudar com suas dúvidas académicas!</p>
+                            <br>
+                            <p class="text-sm">Posso te ajudar com:</p>
+                            <ul class="text-sm mt-1 space-y-1">
+                                <li>📐 <strong>Matemática</strong> — equações, funções, geometria</li>
+                                <li>⚡ <strong>Física</strong> — mecânica, eletricidade, óptica</li>
+                                <li>🧪 <strong>Química</strong> — tabela periódica, reações, ligações</li>
+                                <li>🔬 <strong>Biologia</strong> — células, genética, ecossistemas</li>
+                                <li>📚 <strong>Dúvidas gerais</strong> sobre a plataforma</li>
+                            </ul>
+                            <p class="msg-time">Agora</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input -->
+                <div class="border-t border-gray-100 px-5 py-4 bg-white">
+                    <div id="subject-label" class="hidden mb-2">
+                        <span class="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-full">
+                            <i class="fas fa-book mr-1"></i>
+                            <span id="current-subject-text"></span>
+                        </span>
+                    </div>
+                    <div class="flex items-end space-x-3">
+                        <div class="flex-1 relative">
+                            <textarea id="msg-input" rows="1"
+                                class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                                placeholder="Faça uma pergunta... (Enter para enviar, Shift+Enter para nova linha)"
+                                style="max-height:120px; overflow-y:auto"
+                                onkeydown="handleKey(event)"
+                                oninput="autoResize(this)"></textarea>
+                        </div>
+                        <button onclick="sendMsg()" id="send-btn"
+                            class="w-11 h-11 bg-purple-600 hover:bg-purple-700 text-white rounded-xl flex items-center justify-center flex-shrink-0 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i class="fas fa-paper-plane text-sm"></i>
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2 text-center">
+                        ⚠️ O assistente pode cometer erros. Sempre verifique com o seu professor.
+                    </p>
                 </div>
             </div>
 
-            <!-- Quick Actions -->
-            <div class="border-b border-gray-200 px-6 py-3 bg-gray-50">
-                <div class="flex flex-wrap gap-2">
-                    <button onclick="sendQuickMessage('Como funciona a plataforma?')" 
-                            class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-full hover:bg-gray-100">
-                        📚 Como funciona?
-                    </button>
-                    <button onclick="sendQuickMessage('Tenho dúvidas sobre exercícios')" 
-                            class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-full hover:bg-gray-100">
-                        ✏️ Dúvidas sobre exercícios
-                    </button>
-                    <button onclick="sendQuickMessage('Como acompanhar meu progresso?')" 
-                            class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-full hover:bg-gray-100">
-                        📈 Acompanhar progresso
-                    </button>
-                    <button onclick="sendQuickMessage('Preciso de ajuda técnica')" 
-                            class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-full hover:bg-gray-100">
-                        🛠️ Ajuda técnica
-                    </button>
-                </div>
-            </div>
-
-            <!-- Chat Container -->
-            <div id="chat-container" class="chat-container overflow-y-auto px-6 py-4 space-y-4">
-                <!-- Welcome Message -->
-                <div class="flex items-start space-x-3">
-                    <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <i class="fas fa-robot text-purple-600"></i>
+            <!-- Sidebar: history (hidden on mobile) -->
+            <div id="history-panel" class="hidden lg:block w-64 flex-shrink-0">
+                <div class="bg-white rounded-2xl shadow-sm p-4 sticky top-20">
+                    <h3 class="font-bold text-gray-900 text-sm mb-3">
+                        <i class="fas fa-history text-purple-600 mr-2"></i>Histórico
+                    </h3>
+                    <div id="history-list" class="space-y-2 max-h-96 overflow-y-auto">
+                        <p class="text-xs text-gray-400">Sem histórico ainda</p>
                     </div>
-                    <div class="chat-bubble-bot px-4 py-3 max-w-md">
-                        <p class="text-sm">
-                            Olá! 👋 Sou o assistente virtual do VClass. Como posso ajudá-lo hoje?
-                            <br><br>
-                            Você pode me perguntar sobre:
-                            <br>• Funcionamento da plataforma
-                            <br>• Dúvidas sobre lições e exercícios
-                            <br>• Acompanhamento de progresso
-                            <br>• Problemas técnicos
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Input Area -->
-            <div class="border-t border-gray-200 px-6 py-4 bg-gray-50">
-                <div class="flex items-center space-x-3">
-                    <button class="p-2 text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-paperclip text-xl"></i>
-                    </button>
-                    <input type="text" 
-                           id="message-input"
-                           placeholder="Digite sua mensagem..."
-                           class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                           onkeypress="if(event.key === 'Enter') sendMessage()">
-                    <button onclick="sendMessage()" 
-                            class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium">
-                        <i class="fas fa-paper-plane mr-2"></i>
-                        Enviar
-                    </button>
                 </div>
             </div>
         </div>
-    </main>
+    </div>
 
     <script src="/static/app.js"></script>
     <script>
-        const chatContainer = document.getElementById('chat-container');
-        const messageInput = document.getElementById('message-input');
+        if (!VClass.isAuthenticated()) window.location.href = '/login.html';
 
-        // Auto-responses database
-        const responses = {
-            'plataforma': {
-                keywords: ['como funciona', 'plataforma', 'usar', 'começar'],
-                response: 'A VClass é uma plataforma de educação digital que oferece:' +
-                         '<br><br>📚 <b>Lições em vídeo</b> organizadas por disciplina' +
-                         '<br>✏️ <b>Exercícios interativos</b> com correção automática' +
-                         '<br>📊 <b>Acompanhamento de progresso</b> em tempo real' +
-                         '<br>🏆 <b>Sistema de conquistas</b> para motivar seus estudos' +
-                         '<br><br>Para começar, acesse o menu "Conteúdo" e escolha sua disciplina!'
-            },
-            'exercícios': {
-                keywords: ['exercício', 'dúvida', 'questão', 'responder', 'correção'],
-                response: 'Sobre os exercícios:' +
-                         '<br><br>✓ Cada lição possui exercícios práticos' +
-                         '<br>✓ As respostas são corrigidas automaticamente' +
-                         '<br>✓ Você recebe feedback imediato' +
-                         '<br>✓ Pode refazer exercícios para melhorar sua nota' +
-                         '<br><br>Dica: Revise o conteúdo da lição antes de fazer os exercícios!'
-            },
-            'progresso': {
-                keywords: ['progresso', 'acompanhar', 'desempenho', 'estatísticas', 'notas'],
-                response: 'Para acompanhar seu progresso:' +
-                         '<br><br>📊 Acesse a aba <b>"Progresso"</b> no menu' +
-                         '<br>📈 Veja gráficos detalhados por disciplina' +
-                         '<br>📝 Consulte seu histórico de atividades' +
-                         '<br>🎯 Acompanhe suas médias e tempo de estudo' +
-                         '<br><br>Seu progresso é atualizado em tempo real!'
-            },
-            'técnica': {
-                keywords: ['erro', 'problema', 'não funciona', 'bug', 'técnica', 'vídeo', 'carrega'],
-                response: 'Para problemas técnicos:' +
-                         '<br><br>🔄 Tente recarregar a página (F5)' +
-                         '<br>🌐 Verifique sua conexão com a internet' +
-                         '<br>🔍 Limpe o cache do navegador' +
-                         '<br>📱 Teste em outro dispositivo ou navegador' +
-                         '<br><br>Se o problema persistir, entre em contato:' +
-                         '<br>📧 suporte@vclass.mz' +
-                         '<br>📞 +258 84 123 4567'
-            },
-            'default': {
-                response: 'Desculpe, não entendi sua pergunta. 🤔' +
-                         '<br><br>Tente usar as sugestões rápidas acima ou reformule sua pergunta.' +
-                         '<br><br>Se preferir, entre em contato direto:' +
-                         '<br>📧 suporte@vclass.mz'
-            }
+        const user = VClass.getCurrentUser();
+        const userInitials = (user?.full_name || user?.name || 'U').split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+
+        let currentSubject = '';
+        let msgCount = 0;
+        let chatHistory = VClass.storage.get('chat_history') || [];
+
+        // Subject chip data
+        const subjectChips = {
+            '': 'chip-all', 'Matemática': 'chip-mat', 'Física': 'chip-fis',
+            'Química': 'chip-qui', 'Biologia': 'chip-bio'
         };
 
-        function sendMessage() {
-            const message = messageInput.value.trim();
-            if (!message) return;
-
-            // Add user message
-            addMessage(message, 'user');
-            messageInput.value = '';
-
-            // Show typing indicator
-            showTypingIndicator();
-
-            // Simulate bot response delay
-            setTimeout(() => {
-                hideTypingIndicator();
-                const response = getBotResponse(message);
-                addMessage(response, 'bot');
-            }, 1500);
-        }
-
-        function sendQuickMessage(message) {
-            messageInput.value = message;
-            sendMessage();
-        }
-
-        function addMessage(text, sender) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'flex items-start space-x-3';
-            
-            if (sender === 'user') {
-                messageDiv.className += ' flex-row-reverse space-x-reverse';
-                messageDiv.innerHTML = `
-                    <div class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0 text-white">
-                        <i class="fas fa-user"></i>
-                    </div>
-                    <div class="chat-bubble-user px-4 py-3 max-w-md">
-                        <p class="text-sm">${text}</p>
-                    </div>
-                `;
+        function setSubject(subject) {
+            currentSubject = subject;
+            Object.entries(subjectChips).forEach(([s, id]) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (s === subject) {
+                    el.classList.add('active');
+                    el.style.background = 'rgba(255,255,255,0.3)';
+                    el.style.fontWeight = '600';
+                } else {
+                    el.classList.remove('active');
+                    el.style.background = '';
+                    el.style.fontWeight = '';
+                }
+            });
+            const label = document.getElementById('subject-label');
+            const labelText = document.getElementById('current-subject-text');
+            if (subject) {
+                label.classList.remove('hidden');
+                labelText.textContent = `Contexto: ${subject}`;
+                document.getElementById('msg-input').placeholder = `Pergunta sobre ${subject}...`;
             } else {
-                messageDiv.innerHTML = `
-                    <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <i class="fas fa-robot text-purple-600"></i>
-                    </div>
-                    <div class="chat-bubble-bot px-4 py-3 max-w-md">
-                        <p class="text-sm">${text}</p>
-                    </div>
-                `;
+                label.classList.add('hidden');
+                document.getElementById('msg-input').placeholder = 'Faça uma pergunta...';
             }
-            
-            chatContainer.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        function showTypingIndicator() {
-            const indicator = document.createElement('div');
-            indicator.id = 'typing-indicator';
-            indicator.className = 'flex items-start space-x-3';
-            indicator.innerHTML = `
+        function quickMsg(text) {
+            document.getElementById('msg-input').value = text;
+            sendMsg();
+        }
+
+        function handleKey(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMsg();
+            }
+        }
+
+        function autoResize(el) {
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+        }
+
+        function sendMsg() {
+            const input = document.getElementById('msg-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            addMsg(text, 'user');
+            input.value = '';
+            input.style.height = 'auto';
+
+            showTyping();
+            setTimeout(() => {
+                hideTyping();
+                const response = getBotResponse(text);
+                addMsg(response, 'bot');
+                saveToHistory(text);
+            }, 800 + Math.random() * 700);
+        }
+
+        function addMsg(text, sender) {
+            msgCount++;
+            document.getElementById('msg-count').textContent = `${msgCount} mensagens`;
+            const container = document.getElementById('chat-messages');
+            const now = new Date().toLocaleTimeString('pt', {hour:'2-digit', minute:'2-digit'});
+
+            const div = document.createElement('div');
+            div.className = `flex items-end space-x-3 msg-new ${sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`;
+
+            if (sender === 'user') {
+                div.innerHTML = `
+                    <div class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-bold">${userInitials}</div>
+                    <div class="chat-bubble-user px-4 py-3 max-w-lg">
+                        <p class="text-sm">${escHtml(text)}</p>
+                        <p class="msg-time">${now}</p>
+                    </div>`;
+            } else {
+                const formattedText = formatBotText(text);
+                div.innerHTML = `
+                    <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-robot text-purple-600 text-sm"></i>
+                    </div>
+                    <div class="chat-bubble-bot px-4 py-3 max-w-lg group relative">
+                        <p class="text-sm font-semibold text-purple-700 mb-1">Assistente VClass</p>
+                        <div class="text-sm">${formattedText}</div>
+                        <p class="msg-time">${now}</p>
+                        <button onclick="copyMsg(this)" class="copy-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 text-xs transition" title="Copiar">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>`;
+            }
+
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function showTyping() {
+            const div = document.createElement('div');
+            div.id = 'typing';
+            div.className = 'flex items-end space-x-3 msg-new';
+            div.innerHTML = `
                 <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <i class="fas fa-robot text-purple-600"></i>
+                    <i class="fas fa-robot text-purple-600 text-sm"></i>
                 </div>
                 <div class="chat-bubble-bot px-4 py-3">
-                    <div class="typing-indicator">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </div>
-                </div>
-            `;
-            chatContainer.appendChild(indicator);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+                    <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+                </div>`;
+            document.getElementById('chat-messages').appendChild(div);
+            document.getElementById('chat-messages').scrollTop = 99999;
         }
 
-        function hideTypingIndicator() {
-            const indicator = document.getElementById('typing-indicator');
-            if (indicator) {
-                indicator.remove();
-            }
+        function hideTyping() {
+            document.getElementById('typing')?.remove();
         }
+
+        function copyMsg(btn) {
+            const bubble = btn.closest('.chat-bubble-bot');
+            const text = bubble.querySelector('div').innerText;
+            navigator.clipboard?.writeText(text);
+            VClass.showNotification('Resposta copiada!', 'success', 2000);
+        }
+
+        function clearChat() {
+            if (!confirm('Limpar o chat?')) return;
+            const container = document.getElementById('chat-messages');
+            container.innerHTML = '';
+            msgCount = 0;
+            document.getElementById('msg-count').textContent = '0 mensagens';
+        }
+
+        function toggleHistory() {
+            const panel = document.getElementById('history-panel');
+            panel.classList.toggle('hidden');
+        }
+
+        function saveToHistory(msg) {
+            chatHistory.unshift({ text: msg.substring(0,60), time: new Date().toISOString() });
+            if (chatHistory.length > 20) chatHistory.pop();
+            VClass.storage.set('chat_history', chatHistory);
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('history-list');
+            if (!chatHistory.length) { list.innerHTML = '<p class="text-xs text-gray-400">Sem histórico</p>'; return; }
+            list.innerHTML = chatHistory.map(h => `
+                <button onclick="quickMsg('${escAttr(h.text)}')" class="w-full text-left p-2 rounded-lg hover:bg-gray-50 border border-gray-100 transition">
+                    <p class="text-xs text-gray-700 truncate">${escHtml(h.text)}...</p>
+                    <p class="text-xs text-gray-400">${VClass.formatRelativeTime(h.time)}</p>
+                </button>`).join('');
+        }
+
+        function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        function escAttr(s) { return s.replace(/'/g,'&#39;').replace(/"/g,'&quot;').substring(0,60); }
+
+        function formatBotText(text) {
+            // Bold **text**
+            text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            // Code blocks
+            text = text.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+            // Inline code
+            text = text.replace(/`(.*?)`/g, '<code class="bg-gray-200 px-1 rounded text-sm">$1</code>');
+            // Line breaks
+            text = text.replace(/\n/g, '<br>');
+            return text;
+        }
+
+        // ─── Bot responses ─────────────────────────────────────────────────────
+        const KB = [
+            {
+                tags: ['função quadrática', 'equação quadrática', 'parábola', 'baskara', 'bhaskara', 'delta', 'discriminante'],
+                subject: 'Matemática',
+                response: `**Funções Quadráticas** 📐\n\nUma função quadrática tem a forma:\n\n**f(x) = ax² + bx + c** (a ≠ 0)\n\n**Fórmula de Bhaskara:**\n\nx = (-b ± √Δ) / 2a\n\nonde **Δ = b² - 4ac**\n\n**Casos do discriminante:**\n• Δ > 0 → 2 raízes reais\n• Δ = 0 → 1 raiz real (dupla)\n• Δ < 0 → sem raízes reais\n\n**Vértice da parábola:**\nxᵥ = -b/2a | yᵥ = -Δ/4a`
+            },
+            {
+                tags: ['newton', 'lei de newton', 'força', 'massa', 'aceleração', 'inércia', 'ação reação'],
+                subject: 'Física',
+                response: `**Leis de Newton** ⚡\n\n**1ª Lei - Inércia:**\nUm corpo em repouso permanece em repouso e em movimento permanece em movimento, a menos que uma força externa atue sobre ele.\n\n**2ª Lei - F = m·a:**\nA força resultante é proporcional ao produto da massa pela aceleração.\n\nF = m × a (em Newtons)\n\n**3ª Lei - Ação e Reação:**\nPara cada ação existe uma reação igual e contrária.\n\n💡 *Dica: Lembre-se que F resultante = ΣF (soma de todas as forças)*`
+            },
+            {
+                tags: ['tabela periódica', 'elemento', 'período', 'grupo', 'número atômico', 'átomo'],
+                subject: 'Química',
+                response: `**Tabela Periódica** 🧪\n\nA tabela periódica organiza os **118 elementos** conhecidos.\n\n**Organização:**\n• **Períodos** (linhas) → mesmo nível de energia\n• **Grupos** (colunas) → mesmas propriedades químicas\n\n**Grupos importantes:**\n• Grupo 1 → Metais Alcalinos (Li, Na, K...)\n• Grupo 17 → Halogênios (F, Cl, Br...)\n• Grupo 18 → Gases Nobres (He, Ne, Ar...)\n\n**Número Atômico (Z)** = número de prótons\n**Número de Massa (A)** = prótons + nêutrons`
+            },
+            {
+                tags: ['derivada', 'derivação', 'derivar', 'cálculo diferencial', 'taxa de variação'],
+                subject: 'Matemática',
+                response: `**Derivadas** 📈\n\nA derivada mede a taxa de variação de uma função.\n\n**Regras básicas:**\n• Constante: f(x) = c → f'(x) = 0\n• Potência: f(x) = xⁿ → f'(x) = n·xⁿ⁻¹\n• Soma: (f+g)' = f' + g'\n• Produto: (f·g)' = f'·g + f·g'\n• Quociente: (f/g)' = (f'·g - f·g') / g²\n\n**Exemplos:**\n• f(x) = x³ → f'(x) = 3x²\n• f(x) = 5x² + 3x → f'(x) = 10x + 3`
+            },
+            {
+                tags: ['célula', 'mitose', 'meiose', 'dna', 'gene', 'cromossomo', 'genética'],
+                subject: 'Biologia',
+                response: `**Biologia Celular** 🔬\n\n**Tipos de células:**\n• **Procariótica** → sem núcleo definido (bactérias)\n• **Eucariótica** → com núcleo definido (animais, plantas)\n\n**Divisão Celular:**\n• **Mitose** → 2 células filhas idênticas (crescimento)\n• **Meiose** → 4 células com metade dos cromossomos (reprodução)\n\n**DNA:**\n• Ácido desoxirribonucleico\n• Possui 4 bases: **A, T, C, G**\n• A-T e C-G são pares complementares\n• **Gene** = segmento de DNA que codifica proteína`
+            },
+            {
+                tags: ['energia', 'trabalho', 'potência', 'cinemática', 'velocidade', 'aceleração', 'queda livre'],
+                subject: 'Física',
+                response: `**Cinemática e Energia** ⚡\n\n**Equações cinemáticas:**\n• v = v₀ + a·t\n• s = s₀ + v₀·t + ½·a·t²\n• v² = v₀² + 2·a·Δs\n\n**Queda Livre:** a = g ≈ 10 m/s²\n\n**Energia:**\n• Cinética: Ec = ½·m·v²\n• Potencial: Ep = m·g·h\n• Mecânica: Em = Ec + Ep (conservada)\n\n**Trabalho:** W = F·d·cos(θ)\n**Potência:** P = W/t (em Watts)`
+            },
+            {
+                tags: ['trigonometria', 'seno', 'cosseno', 'tangente', 'triângulo', 'pitagoras', 'pitágoras'],
+                subject: 'Matemática',
+                response: `**Trigonometria** 📐\n\n**No triângulo retângulo:**\n• **sen(θ)** = cateto oposto / hipotenusa\n• **cos(θ)** = cateto adjacente / hipotenusa\n• **tg(θ)** = cateto oposto / cateto adjacente\n\n**Valores especiais:**\n\n| θ | sen | cos | tg |\n|---|-----|-----|----|\n| 30° | 1/2 | √3/2 | √3/3 |\n| 45° | √2/2 | √2/2 | 1 |\n| 60° | √3/2 | 1/2 | √3 |\n\n**Pitágoras:** a² = b² + c²`
+            },
+            {
+                tags: ['plataforma', 'como funciona', 'usar', 'começar', 'vclass', 'ajuda'],
+                subject: '',
+                response: `**Sobre o VClass** 🎓\n\nO VClass é uma plataforma de educação digital para estudantes do ensino médio em Moçambique e outros países.\n\n**Como usar:**\n1. Acesse **Conteúdo** → selecione seu país, série e disciplina\n2. Escolha um capítulo e assista as lições em vídeo\n3. Faça os exercícios no final de cada lição\n4. Acompanhe seu progresso no **Dashboard**\n\n**Funcionalidades:**\n• 📹 Lições em vídeo\n• ✏️ Exercícios com correção automática\n• 📊 Gráficos de progresso\n• 🏆 Sistema de conquistas\n• 📚 Biblioteca digital`
+            },
+            {
+                tags: ['dica', 'estudo', 'estudar', 'memorizar', 'aprender', 'método', 'aprovado', 'exame', 'prova'],
+                subject: '',
+                response: `**Dicas de Estudo** 📝\n\n**Método Pomodoro:**\n• Estude 25 min → pausa 5 min\n• A cada 4 ciclos, pausa de 15-30 min\n\n**Técnicas eficazes:**\n1. **Revisão espaçada** → revisar em intervalos crescentes\n2. **Prática ativa** → resolver exercícios, não só ler\n3. **Ensinar para aprender** → explique o conteúdo em voz alta\n4. **Mind maps** → organize visualmente os conceitos\n\n**Para o exame:**\n• Comece a revisar 2 semanas antes\n• Faça exames antigos dos anos anteriores\n• Durma bem na noite anterior\n• Leia todas as questões antes de responder`
+            }
+        ];
 
         function getBotResponse(message) {
-            const lowerMessage = message.toLowerCase();
-            
-            // Check each response category
-            for (const [key, data] of Object.entries(responses)) {
-                if (key === 'default') continue;
-                
-                for (const keyword of data.keywords) {
-                    if (lowerMessage.includes(keyword)) {
-                        return data.response;
-                    }
+            const lower = message.toLowerCase();
+            // Subject-aware search
+            let best = null;
+            let bestScore = 0;
+
+            for (const entry of KB) {
+                // Boost if matches current subject
+                const subjectBoost = (currentSubject && entry.subject === currentSubject) ? 2 : 1;
+                let score = 0;
+                for (const tag of entry.tags) {
+                    if (lower.includes(tag)) score += subjectBoost;
                 }
+                if (score > bestScore) { bestScore = score; best = entry; }
             }
-            
-            return responses.default.response;
+
+            if (best && bestScore > 0) return best.response;
+
+            // Default
+            return `Boa pergunta! 🤔\n\nNão encontrei uma resposta específica sobre **"${escHtml(message.substring(0,50))}"** na minha base de conhecimento.\n\n**Sugestões:**\n• Reformule a pergunta com palavras-chave específicas\n• Escolha uma disciplina nos chips acima\n• Consulte diretamente as lições relacionadas\n\n**Tópicos disponíveis:** Funções, Equações, Newton, Tabela Periódica, Derivadas, Trigonometria, Células, DNA e muito mais!`;
         }
 
-        // Track analytics
-        VClass.analytics.trackPageView('Chat Support');
+        renderHistory();
     </script>
 </body>
 </html>
