@@ -714,5 +714,129 @@ export const mockLessons = [
     duration_seconds: 1100,
     display_order: 1,
     is_free: true
+  },
+  {
+    id: 'lesson-6',
+    chapter_id: 'ch-fis-1',
+    title: 'Movimento Uniformemente Variado',
+    description: 'Aceleração e movimento acelerado',
+    thumbnail_url: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    duration_seconds: 1300,
+    display_order: 2,
+    is_free: true
+  },
+  {
+    id: 'lesson-7',
+    chapter_id: 'ch-fis-1',
+    title: 'Queda Livre',
+    description: 'Movimento vertical sob ação da gravidade',
+    thumbnail_url: 'https://images.unsplash.com/photo-1614728894747-a83421e2b9c9?w=400',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    duration_seconds: 950,
+    display_order: 3,
+    is_free: false
+  },
+  // Dinâmica (Física)
+  {
+    id: 'lesson-8',
+    chapter_id: 'ch-fis-2',
+    title: '1ª Lei de Newton',
+    description: 'Lei da Inércia',
+    thumbnail_url: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    duration_seconds: 1000,
+    display_order: 1,
+    is_free: true
+  },
+  {
+    id: 'lesson-9',
+    chapter_id: 'ch-fis-2',
+    title: '2ª Lei de Newton',
+    description: 'Força = massa × aceleração',
+    thumbnail_url: 'https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=400',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    duration_seconds: 1200,
+    display_order: 2,
+    is_free: true
+  },
+  {
+    id: 'lesson-10',
+    chapter_id: 'ch-fis-2',
+    title: '3ª Lei de Newton',
+    description: 'Ação e reação',
+    thumbnail_url: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    duration_seconds: 1100,
+    display_order: 3,
+    is_free: false
+  },
+  // Trabalho e Energia (Física)
+  {
+    id: 'lesson-11',
+    chapter_id: 'ch-fis-3',
+    title: 'Trabalho de uma Força',
+    description: 'Cálculo do trabalho realizado',
+    thumbnail_url: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=400',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    duration_seconds: 1050,
+    display_order: 1,
+    is_free: true
+  },
+  {
+    id: 'lesson-12',
+    chapter_id: 'ch-fis-3',
+    title: 'Energia Cinética',
+    description: 'Energia do movimento',
+    thumbnail_url: 'https://images.unsplash.com/photo-1596495577886-d920f1fb7238?w=400',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    duration_seconds: 980,
+    display_order: 2,
+    is_free: true
+  },
+  {
+    id: 'lesson-13',
+    chapter_id: 'ch-fis-3',
+    title: 'Energia Potencial',
+    description: 'Energia armazenada e conservação',
+    thumbnail_url: 'https://images.unsplash.com/photo-1635372722656-389f87a941b7?w=400',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    duration_seconds: 1150,
+    display_order: 3,
+    is_free: false
+  },
+  // Termodinâmica (Física)
+  {
+    id: 'lesson-14',
+    chapter_id: 'ch-fis-4',
+    title: 'Temperatura e Calor',
+    description: 'Diferença entre temperatura e calor',
+    thumbnail_url: 'https://images.unsplash.com/photo-1614728894747-a83421e2b9c9?w=400',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    duration_seconds: 1100,
+    display_order: 1,
+    is_free: true
+  },
+  {
+    id: 'lesson-15',
+    chapter_id: 'ch-fis-4',
+    title: 'Dilatação Térmica',
+    description: 'Expansão dos corpos com o calor',
+    thumbnail_url: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    duration_seconds: 1050,
+    display_order: 2,
+    is_free: true
+  },
+  {
+    id: 'lesson-16',
+    chapter_id: 'ch-fis-4',
+    title: 'Calorimetria',
+    description: 'Medição de calor e capacidade térmica',
+    thumbnail_url: 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?w=400',
+    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    duration_seconds: 1250,
+    display_order: 3,
+    is_free: false
   }
 ]
