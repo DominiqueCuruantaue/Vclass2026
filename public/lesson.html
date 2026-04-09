@@ -422,6 +422,26 @@
         </div>
     </nav>
 
+    <!-- Sticky progress bar on scroll -->
+    <div id="sticky-progress-bar" class="fixed top-0 left-0 right-0 z-50 hidden">
+        <div class="h-1 bg-gray-200">
+            <div id="sticky-progress-fill" class="h-1 bg-blue-500 transition-all duration-300" style="width:0%"></div>
+        </div>
+        <div class="bg-white border-b shadow-sm px-6 py-2 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="/browse.html" class="text-blue-600 hover:text-blue-800 text-sm"><i class="fas fa-arrow-left mr-1"></i>Voltar</a>
+                <span class="text-gray-400">|</span>
+                <span id="sticky-lesson-title" class="text-sm font-semibold text-gray-800 truncate max-w-xs"></span>
+            </div>
+            <div class="flex items-center gap-4 text-xs text-gray-500">
+                <span><i class="fas fa-chart-pie text-blue-500 mr-1"></i><span id="sticky-progress-pct">0</span>% assistido</span>
+                <button onclick="markComplete()" class="px-3 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 transition text-xs font-semibold">
+                    <i class="fas fa-check mr-1"></i>Concluir
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Breadcrumb -->
     <div class="bg-white border-b py-3">
         <div class="container mx-auto px-6">
@@ -487,117 +507,214 @@
 
             <!-- CENTER: Video Player & Info -->
             <div class="main-content">
-                <!-- Lesson Header -->
-                <div class="bg-white rounded-lg shadow-md p-6 mb-5">
-                    <h1 id="lesson-title" class="text-3xl font-bold text-gray-900 mb-3">Carregando...</h1>
-                    <p id="lesson-description" class="text-gray-600 mb-4">Carregando descrição...</p>
-                    <div class="flex items-center space-x-6 text-sm text-gray-500">
-                        <span><i class="fas fa-clock mr-1"></i> <span id="lesson-duration">--</span></span>
-                        <span><i class="fas fa-eye mr-1"></i> <span id="lesson-views">--</span> visualizações</span>
-                        <span><i class="fas fa-calendar mr-1"></i> <span id="lesson-date">--</span></span>
+
+                <!-- ── Lesson Header ── -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-4">
+                    <!-- Subject chip + free badge -->
+                    <div class="flex items-center gap-2 mb-3">
+                        <span id="lesson-subject-chip" class="text-xs font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-700">Matemática</span>
+                        <span id="lesson-free-badge" class="text-xs font-bold px-3 py-1 rounded-full bg-green-100 text-green-700 hidden">
+                            <i class="fas fa-unlock-alt mr-1"></i>Gratuita
+                        </span>
+                        <span id="lesson-premium-badge" class="text-xs font-bold px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 hidden">
+                            <i class="fas fa-crown mr-1"></i>Premium
+                        </span>
+                    </div>
+                    <h1 id="lesson-title" class="text-2xl font-bold text-gray-900 mb-2 leading-tight">Carregando...</h1>
+                    <p id="lesson-description" class="text-gray-500 text-sm mb-4 leading-relaxed">Carregando descrição...</p>
+                    <!-- Meta row -->
+                    <div class="flex flex-wrap items-center gap-4 text-xs text-gray-500 border-t border-gray-100 pt-3">
+                        <span class="flex items-center gap-1"><i class="fas fa-clock text-blue-400"></i><span id="lesson-duration">--</span></span>
+                        <span class="flex items-center gap-1"><i class="fas fa-eye text-purple-400"></i><span id="lesson-views">--</span> views</span>
+                        <span class="flex items-center gap-1"><i class="fas fa-calendar text-green-400"></i><span id="lesson-date">--</span></span>
+                        <span class="flex items-center gap-1"><i class="fas fa-signal text-orange-400"></i>Nível Médio</span>
+                        <!-- nav buttons right-aligned -->
+                        <div class="ml-auto flex gap-2">
+                            <button onclick="previousLesson()" id="btn-prev-lesson"
+                                class="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition">
+                                <i class="fas fa-chevron-left"></i> Anterior
+                            </button>
+                            <button onclick="nextLesson()" id="btn-next-lesson"
+                                class="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                                Próxima <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Video Player -->
-                <div class="bg-white rounded-lg shadow-md overflow-hidden mb-5">
+                <!-- ── Video Player ── -->
+                <div class="bg-black rounded-2xl overflow-hidden shadow-lg mb-4">
                     <div id="video-container">
-                        <video id="lesson-video" class="video-js vjs-default-skin" controls preload="auto">
-                            <p class="vjs-no-js">
-                                Para assistir este vídeo, por favor ative o JavaScript ou use um navegador que suporte HTML5 video.
-                            </p>
+                        <video id="lesson-video" class="video-js vjs-default-skin w-full" controls preload="auto">
+                            <p class="vjs-no-js">Active o JavaScript para ver este vídeo.</p>
                         </video>
                     </div>
-                    <div id="video-error" class="p-8 text-center hidden">
-                        <i class="fas fa-exclamation-circle text-4xl text-red-500 mb-4"></i>
-                        <h3 class="text-xl font-bold text-gray-900 mb-2">Erro ao Carregar Vídeo</h3>
-                        <p class="text-gray-600 mb-4">Não foi possível carregar o vídeo desta lição.</p>
-                        <button onclick="loadVideo()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                            Tentar Novamente
+                    <div id="video-error" class="p-10 text-center hidden bg-gray-900">
+                        <i class="fas fa-exclamation-circle text-4xl text-red-400 mb-4"></i>
+                        <h3 class="text-lg font-bold text-white mb-2">Erro ao Carregar Vídeo</h3>
+                        <p class="text-gray-400 text-sm mb-4">Não foi possível carregar o vídeo desta lição.</p>
+                        <button onclick="loadVideo()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+                            <i class="fas fa-redo mr-2"></i>Tentar Novamente
                         </button>
                     </div>
                 </div>
 
-                <!-- Action Buttons -->
-                <div class="bg-white rounded-lg shadow-md p-4 mb-5">
-                    <div class="flex items-center justify-between">
-                        <div class="flex space-x-3">
-                            <button onclick="markComplete()" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
-                                <i class="fas fa-check mr-2"></i> Marcar como Completa
-                            </button>
-                            <button onclick="addToFavorites()" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
-                                <i class="far fa-heart mr-2"></i> Favoritar
+                <!-- ── Video Toolbar (below player) ── -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <button onclick="markComplete()" id="btn-complete"
+                            class="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-xl transition">
+                            <i class="fas fa-check-circle"></i> Marcar como Concluída
+                        </button>
+                        <button onclick="toggleFavorite()" id="btn-favorite"
+                            class="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-500 text-sm font-semibold rounded-xl transition">
+                            <i class="far fa-heart" id="heart-icon"></i> Favoritar
+                        </button>
+                        <button onclick="addBookmark()"
+                            class="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-blue-50 text-gray-600 hover:text-blue-600 text-sm font-semibold rounded-xl transition">
+                            <i class="fas fa-bookmark"></i> Marcador
+                        </button>
+                        <button onclick="shareLesson()"
+                            class="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-purple-50 text-gray-600 hover:text-purple-600 text-sm font-semibold rounded-xl transition">
+                            <i class="fas fa-share-alt"></i> Partilhar
+                        </button>
+                        <!-- Speed selector -->
+                        <div class="ml-auto flex items-center gap-2 text-sm">
+                            <span class="text-gray-500 text-xs">Velocidade:</span>
+                            <select id="speed-selector" onchange="changeSpeed(this.value)"
+                                class="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                                <option value="0.5">0.5×</option>
+                                <option value="0.75">0.75×</option>
+                                <option value="1" selected>1× (Normal)</option>
+                                <option value="1.25">1.25×</option>
+                                <option value="1.5">1.5×</option>
+                                <option value="2">2×</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Tabbed Section: Notas / Marcadores / Q&A ── -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-4">
+                    <!-- Tab Headers -->
+                    <div class="flex border-b border-gray-100">
+                        <button onclick="switchTab('notes')" id="tab-notes"
+                            class="tab-btn flex-1 py-3 text-sm font-semibold text-blue-600 border-b-2 border-blue-500 transition">
+                            <i class="fas fa-sticky-note mr-2"></i>Minhas Notas
+                        </button>
+                        <button onclick="switchTab('bookmarks')" id="tab-bookmarks"
+                            class="tab-btn flex-1 py-3 text-sm font-semibold text-gray-500 hover:text-gray-700 border-b-2 border-transparent transition">
+                            <i class="fas fa-bookmark mr-2"></i>Marcadores
+                            <span id="bookmark-count-badge" class="ml-1 text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-bold hidden">0</span>
+                        </button>
+                        <button onclick="switchTab('qa')" id="tab-qa"
+                            class="tab-btn flex-1 py-3 text-sm font-semibold text-gray-500 hover:text-gray-700 border-b-2 border-transparent transition">
+                            <i class="fas fa-comments mr-2"></i>Dúvidas
+                            <span class="ml-1 text-xs bg-green-100 text-green-600 px-1.5 py-0.5 rounded-full font-bold">2</span>
+                        </button>
+                    </div>
+
+                    <!-- Tab: Notas -->
+                    <div id="tab-content-notes" class="p-5">
+                        <div class="flex items-center justify-between mb-3">
+                            <p class="text-xs text-gray-400">As notas são guardadas automaticamente no seu dispositivo</p>
+                            <span id="notes-saved-indicator" class="text-xs text-green-600 hidden font-semibold">
+                                <i class="fas fa-check-circle mr-1"></i>Guardado
+                            </span>
+                        </div>
+                        <textarea id="lesson-notes" rows="5"
+                            class="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none text-sm text-gray-700 placeholder-gray-400 transition"
+                            placeholder="📝  Escreva aqui as suas anotações sobre esta lição..."
+                            oninput="scheduleAutoSaveNotes()"></textarea>
+                        <div class="flex items-center justify-between mt-3">
+                            <span id="notes-char-count" class="text-xs text-gray-400">0 caracteres</span>
+                            <button onclick="saveNotes()"
+                                class="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition">
+                                <i class="fas fa-save"></i> Guardar Notas
                             </button>
                         </div>
-                        <div class="flex space-x-3">
-                            <button onclick="previousLesson()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
-                                <i class="fas fa-chevron-left mr-2"></i> Anterior
-                            </button>
-                            <button onclick="nextLesson()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                                Próxima <i class="fas fa-chevron-right ml-2"></i>
-                            </button>
+                    </div>
+
+                    <!-- Tab: Marcadores -->
+                    <div id="tab-content-bookmarks" class="p-5 hidden">
+                        <p class="text-xs text-gray-400 mb-4">Clique em "Marcador" na barra acima enquanto o vídeo estiver a tocar para guardar um ponto.</p>
+                        <div id="bookmarks-list" class="space-y-2 mb-4">
+                            <div class="text-center py-6 text-gray-400">
+                                <i class="fas fa-bookmark text-3xl mb-2 opacity-30"></i>
+                                <p class="text-sm">Nenhum marcador adicionado ainda</p>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Video Bookmarks Section -->
-                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4">
-                        <i class="fas fa-bookmark text-blue-500 mr-2"></i> Marcadores de Tempo
-                    </h3>
-                    <div id="bookmarks-list" class="space-y-2 mb-4">
-                        <!-- Bookmarks will be added here dynamically -->
-                    </div>
-                    <button onclick="addBookmark()" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                        <i class="fas fa-plus mr-2"></i> Adicionar Marcador no Tempo Atual
-                    </button>
-                </div>
-
-                <!-- Notes Section -->
-                <div class="bg-white rounded-lg shadow-md p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-bold text-gray-900">
-                            <i class="fas fa-sticky-note text-yellow-500 mr-2"></i> Minhas Anotações
-                        </h3>
-                        <span id="notes-saved-indicator" class="text-sm text-green-600 hidden">
-                            <i class="fas fa-check-circle mr-1"></i> Salvo
-                        </span>
-                    </div>
-                    <textarea id="lesson-notes" rows="4" 
-                              class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              placeholder="Escreva suas anotações sobre esta lição..." 
-                              oninput="scheduleAutoSaveNotes()"></textarea>
-                    <button onclick="saveNotes()" class="mt-3 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                        <i class="fas fa-save mr-2"></i> Salvar Anotações
-                    </button>
-                </div>
-
-                <!-- Q&A Section -->
-                <div class="bg-white rounded-lg shadow-md p-6 mt-6">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4">
-                        <i class="fas fa-comments text-green-500 mr-2"></i> Perguntas e Respostas
-                    </h3>
-                    <div id="qa-list" class="space-y-4 mb-4 max-h-64 overflow-y-auto">
-                        <div class="p-4 bg-gray-50 rounded-lg">
-                            <div class="flex items-start space-x-3">
-                                <div class="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                                    JS
+                    <!-- Tab: Q&A -->
+                    <div id="tab-content-qa" class="p-5 hidden">
+                        <div id="qa-list" class="space-y-4 mb-4 max-h-72 overflow-y-auto pr-1">
+                            <!-- Question 1 -->
+                            <div class="p-4 bg-gray-50 rounded-xl">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-9 h-9 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">JS</div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2">
+                                            <p class="text-sm font-semibold text-gray-900">João Silva</p>
+                                            <span class="text-xs text-gray-400">• há 2 horas</span>
+                                        </div>
+                                        <p class="text-sm text-gray-700 mt-1">Como calcular a velocidade média neste exemplo?</p>
+                                        <div class="flex gap-2 mt-2">
+                                            <button class="text-xs text-gray-400 hover:text-blue-600 transition"><i class="fas fa-thumbs-up mr-1"></i>4</button>
+                                            <button class="text-xs text-gray-400 hover:text-blue-600 transition"><i class="fas fa-reply mr-1"></i>Responder</button>
+                                        </div>
+                                        <!-- Reply -->
+                                        <div class="mt-3 ml-4 p-3 bg-white rounded-xl border-l-4 border-green-400">
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <div class="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold">MS</div>
+                                                <p class="text-xs font-semibold text-gray-900">Prof. Maria Santos</p>
+                                                <span class="text-xs bg-green-100 text-green-700 px-1.5 rounded font-bold">Professor</span>
+                                            </div>
+                                            <p class="text-sm text-gray-700">Use a fórmula v = Δs/Δt. No exemplo, divida a distância pelo tempo gasto.</p>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="flex-1">
-                                    <p class="text-sm font-semibold text-gray-900">João Silva</p>
-                                    <p class="text-sm text-gray-600 mt-1">Como calcular a velocidade média neste exemplo?</p>
-                                    <p class="text-xs text-gray-400 mt-2">Há 2 horas</p>
-                                    <div class="mt-3 ml-6 p-3 bg-white rounded-lg border-l-4 border-green-500">
-                                        <p class="text-sm font-semibold text-gray-900">Prof. Maria Santos</p>
-                                        <p class="text-sm text-gray-600 mt-1">Use a fórmula v = Δs/Δt. No exemplo, divida a distância percorrida pelo tempo.</p>
+                            </div>
+                            <!-- Question 2 -->
+                            <div class="p-4 bg-gray-50 rounded-xl">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-9 h-9 bg-purple-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">AM</div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2">
+                                            <p class="text-sm font-semibold text-gray-900">Ana Machava</p>
+                                            <span class="text-xs text-gray-400">• ontem</span>
+                                        </div>
+                                        <p class="text-sm text-gray-700 mt-1">Qual é a diferença entre MU e MUV?</p>
+                                        <div class="flex gap-2 mt-2">
+                                            <button class="text-xs text-gray-400 hover:text-blue-600 transition"><i class="fas fa-thumbs-up mr-1"></i>7</button>
+                                            <button class="text-xs text-gray-400 hover:text-blue-600 transition"><i class="fas fa-reply mr-1"></i>Responder</button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        <button onclick="openQAModal()"
+                            class="w-full py-2.5 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2">
+                            <i class="fas fa-plus-circle"></i> Fazer uma Pergunta
+                        </button>
                     </div>
-                    <button onclick="openQAModal()" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
-                        <i class="fas fa-question-circle mr-2"></i> Fazer uma Pergunta
-                    </button>
                 </div>
+
+                <!-- ── Lesson Rating ── -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-4">
+                    <h3 class="text-sm font-bold text-gray-800 mb-3"><i class="fas fa-star text-yellow-400 mr-2"></i>Avalie esta Lição</h3>
+                    <div class="flex items-center gap-3">
+                        <div class="flex gap-1" id="star-rating">
+                            <button onclick="rateLesson(1)" class="star-btn text-2xl text-gray-300 hover:text-yellow-400 transition">★</button>
+                            <button onclick="rateLesson(2)" class="star-btn text-2xl text-gray-300 hover:text-yellow-400 transition">★</button>
+                            <button onclick="rateLesson(3)" class="star-btn text-2xl text-gray-300 hover:text-yellow-400 transition">★</button>
+                            <button onclick="rateLesson(4)" class="star-btn text-2xl text-gray-300 hover:text-yellow-400 transition">★</button>
+                            <button onclick="rateLesson(5)" class="star-btn text-2xl text-gray-300 hover:text-yellow-400 transition">★</button>
+                        </div>
+                        <span id="rating-label" class="text-sm text-gray-400">Ainda não avaliaste</span>
+                    </div>
+                </div>
+
             </div>
 
             <!-- RIGHT SIDEBAR -->
@@ -951,6 +1068,8 @@
                     await loadProgress();
                     loadBookmarks();
                     loadNotes();
+                    loadFavoriteState();
+                    loadRating();
                 } else {
                     VClass.showNotification(result.error || 'Erro ao carregar lição', 'error');
                 }
@@ -962,38 +1081,126 @@
             }
         }
 
+        // Rich lesson content per lesson
+        const RICH_CONTENT = {
+            'lesson-1': `
+                <div class="space-y-4">
+                    <div class="p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-xl">
+                        <p class="text-xs font-bold text-blue-700 mb-1">📌 Definição</p>
+                        <p class="text-xs text-blue-900">Uma <strong>função</strong> é uma relação entre dois conjuntos (Domínio e Contradomínio) onde cada elemento do domínio tem <strong>exatamente uma imagem</strong>.</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-700 mb-2">🎯 Objetivos</p>
+                        <ul class="space-y-1">
+                            <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Compreender o conceito de função</li>
+                            <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Identificar domínio e imagem</li>
+                            <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Representar funções graficamente</li>
+                        </ul>
+                    </div>
+                    <div class="p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+                        <p class="text-xs font-bold text-yellow-700 mb-1">⚡ Fórmula Chave</p>
+                        <code class="text-sm font-mono text-yellow-900">f: A → B  |  f(x) = y</code>
+                    </div>
+                </div>`,
+            'lesson-2': `
+                <div class="space-y-4">
+                    <div class="p-3 bg-purple-50 border-l-4 border-purple-400 rounded-r-xl">
+                        <p class="text-xs font-bold text-purple-700 mb-1">📌 Definição</p>
+                        <p class="text-xs text-purple-900">O <strong>domínio</strong> é o conjunto de entrada (valores de x). O <strong>contradomínio</strong> é o conjunto de saída possível. A <strong>imagem</strong> são os valores efetivamente obtidos.</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-700 mb-2">🎯 Objetivos</p>
+                        <ul class="space-y-1">
+                            <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Distinguir domínio e contradomínio</li>
+                            <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Calcular a imagem de uma função</li>
+                            <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Aplicar em problemas reais</li>
+                        </ul>
+                    </div>
+                    <div class="p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+                        <p class="text-xs font-bold text-yellow-700 mb-1">⚡ Exemplo</p>
+                        <code class="text-xs font-mono text-yellow-900">f(x)=x² → Dom: ℝ, Im: [0,+∞)</code>
+                    </div>
+                </div>`,
+            'lesson-5': `
+                <div class="space-y-4">
+                    <div class="p-3 bg-teal-50 border-l-4 border-teal-400 rounded-r-xl">
+                        <p class="text-xs font-bold text-teal-700 mb-1">📌 Conceito</p>
+                        <p class="text-xs text-teal-900">No <strong>Movimento Uniforme (MU)</strong> a velocidade é constante e a aceleração é nula. O espaço percorrido varia linearmente com o tempo.</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-700 mb-2">🎯 Objetivos</p>
+                        <ul class="space-y-1">
+                            <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Calcular velocidade escalar média</li>
+                            <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Construir gráficos espaço-tempo</li>
+                            <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Resolver problemas de cinemática</li>
+                        </ul>
+                    </div>
+                    <div class="p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+                        <p class="text-xs font-bold text-yellow-700 mb-1">⚡ Fórmulas</p>
+                        <div class="space-y-1 font-mono text-xs text-yellow-900">
+                            <div>s = s₀ + v·t</div>
+                            <div>v = Δs / Δt</div>
+                            <div>a = 0 (constante)</div>
+                        </div>
+                    </div>
+                </div>`
+        };
+
+        const DEFAULT_RICH_CONTENT = (desc) => `
+            <div class="space-y-4">
+                <div class="p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-xl">
+                    <p class="text-xs font-bold text-blue-700 mb-1">📌 Sobre esta Lição</p>
+                    <p class="text-xs text-blue-900">${desc || 'Conteúdo disponível no vídeo.'}</p>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-gray-700 mb-2">🎯 Objetivos</p>
+                    <ul class="space-y-1">
+                        <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Compreender os conceitos fundamentais</li>
+                        <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Aplicar o conhecimento em exercícios</li>
+                        <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Desenvolver raciocínio crítico</li>
+                    </ul>
+                </div>
+            </div>`;
+
         function displayLessonInfo() {
             document.getElementById('lesson-title').textContent = lessonData.title;
+            document.getElementById('sticky-lesson-title').textContent = lessonData.title;
             document.getElementById('lesson-description').textContent = lessonData.description || 'Sem descrição disponível';
             document.getElementById('lesson-duration').textContent = VClass.formatDuration(lessonData.duration);
             document.getElementById('lesson-views').textContent = lessonData.views || '0';
             document.getElementById('lesson-date').textContent = VClass.formatDate(lessonData.created_at);
 
-            // Display lesson content
+            // Free/premium badge
+            if (lessonData.is_free) {
+                document.getElementById('lesson-free-badge').classList.remove('hidden');
+            } else {
+                document.getElementById('lesson-premium-badge').classList.remove('hidden');
+            }
+
+            // Subject chip from URL param
+            const subjectParam = urlParams.get('subject');
+            if (subjectParam) document.getElementById('lesson-subject-chip').textContent = subjectParam;
+
+            // Rich content for left sidebar
             const contentDiv = document.getElementById('lesson-content');
             if (lessonData.content_text) {
                 contentDiv.innerHTML = lessonData.content_text;
             } else {
-                contentDiv.innerHTML = `
-                    <h2>Sobre esta lição</h2>
-                    <p>${lessonData.description || 'Conteúdo não disponível.'}</p>
-                    <h3>Objetivos de Aprendizagem</h3>
-                    <ul>
-                        <li>Compreender os conceitos fundamentais</li>
-                        <li>Aplicar o conhecimento em exercícios práticos</li>
-                        <li>Desenvolver habilidades de resolução de problemas</li>
-                    </ul>
-                `;
+                contentDiv.innerHTML = RICH_CONTENT[lessonId] || DEFAULT_RICH_CONTENT(lessonData.description);
             }
 
-            // Update breadcrumb
+            // Breadcrumb
+            const chapterParam = urlParams.get('chapter') || 'Capítulo';
+            const gradeParam = urlParams.get('grade') || '';
+            const countryParam = urlParams.get('country') || '';
+            const subjectFull = subjectParam || 'Disciplina';
             const breadcrumb = document.getElementById('breadcrumb');
             breadcrumb.innerHTML = `
-                <li><a href="/dashboard.html" class="text-blue-600 hover:underline">Dashboard</a></li>
-                <li><span class="text-gray-400 mx-2">/</span></li>
                 <li><a href="/browse.html" class="text-blue-600 hover:underline">Conteúdo</a></li>
                 <li><span class="text-gray-400 mx-2">/</span></li>
-                <li><span class="text-gray-600">${lessonData.title}</span></li>
+                <li><a href="/chapters.html?gs=${encodeURIComponent(urlParams.get('gs')||'')}&subject=${encodeURIComponent(subjectFull)}&grade=${encodeURIComponent(gradeParam)}&country=${encodeURIComponent(countryParam)}" class="text-blue-600 hover:underline">${chapterParam}</a></li>
+                <li><span class="text-gray-400 mx-2">/</span></li>
+                <li class="text-gray-600 max-w-xs truncate">${lessonData.title}</li>
             `;
         }
 
@@ -1061,6 +1268,8 @@
                 if (watchedBar) {
                     watchedBar.style.width = `${progressPercent}%`;
                 }
+                // Update sticky bar
+                updateStickyProgress(progressPercent);
                 
                 // Save progress every 30 seconds
                 if (Math.floor(currentTime) % 30 === 0) {
@@ -1107,20 +1316,47 @@
         // Action functions
         function markComplete() {
             updateProgressRing(100);
+            updateStickyProgress(100);
             document.getElementById('lesson-status').textContent = 'Concluída';
-            VClass.showNotification('Lição marcada como completa!', 'success');
+            const btn = document.getElementById('btn-complete');
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-check-double"></i> Concluída!';
+                btn.classList.replace('bg-green-500','bg-green-600');
+            }
+            VClass.showNotification('Parabéns! Lição concluída! 🎉', 'success');
         }
 
         function addToFavorites() {
-            VClass.showNotification('Adicionado aos favoritos!', 'success');
+            toggleFavorite();
         }
 
         function previousLesson() {
-            VClass.showNotification('Função em desenvolvimento', 'info');
+            // Navigate to prev lesson in OTHER_LESSONS_DATA
+            const idx = OTHER_LESSONS_DATA.findIndex(l => l.id === lessonId);
+            if (idx > 0) {
+                const prev = OTHER_LESSONS_DATA[idx - 1];
+                const p = new URLSearchParams(window.location.search);
+                p.set('id', prev.id);
+                window.location.search = p.toString();
+            } else {
+                VClass.showNotification('Esta é a primeira lição do capítulo', 'info');
+            }
         }
 
         function nextLesson() {
-            VClass.showNotification('Função em desenvolvimento', 'info');
+            const idx = OTHER_LESSONS_DATA.findIndex(l => l.id === lessonId);
+            if (idx >= 0 && idx < OTHER_LESSONS_DATA.length - 1) {
+                const next = OTHER_LESSONS_DATA[idx + 1];
+                if (next.locked) {
+                    VClass.showNotification('Complete os quizzes desta lição primeiro!', 'warning');
+                    return;
+                }
+                const p = new URLSearchParams(window.location.search);
+                p.set('id', next.id);
+                window.location.search = p.toString();
+            } else {
+                VClass.showNotification('Esta é a última lição disponível', 'info');
+            }
         }
 
         // Bookmarks management
@@ -1137,21 +1373,28 @@
         function displayBookmarks() {
             const container = document.getElementById('bookmarks-list');
             if (bookmarks.length === 0) {
-                container.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">Nenhum marcador adicionado ainda</p>';
+                container.innerHTML = `
+                    <div class="text-center py-6 text-gray-400">
+                        <i class="fas fa-bookmark text-3xl mb-2 opacity-30"></i>
+                        <p class="text-sm">Nenhum marcador adicionado ainda</p>
+                    </div>`;
+                updateBookmarkBadge();
                 return;
             }
-            
             container.innerHTML = bookmarks.map((bookmark, index) => `
-                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
-                    <div class="flex-1 cursor-pointer" onclick="jumpToBookmark(${bookmark.time})">
-                        <p class="text-sm font-medium text-gray-900">${bookmark.title || 'Sem título'}</p>
-                        <p class="text-xs text-blue-600">${formatTime(bookmark.time)}</p>
+                <div class="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition">
+                    <div class="flex-shrink-0 px-2 py-1 bg-blue-500 text-white text-xs font-mono font-bold rounded-lg cursor-pointer" onclick="jumpToBookmark(${bookmark.time})">
+                        ${formatTime(bookmark.time)}
                     </div>
-                    <button onclick="deleteBookmark(${index})" class="text-red-600 hover:text-red-700 ml-2">
-                        <i class="fas fa-trash text-sm"></i>
+                    <div class="flex-1 cursor-pointer" onclick="jumpToBookmark(${bookmark.time})">
+                        <p class="text-sm font-semibold text-gray-800">${bookmark.title || 'Marcador'}</p>
+                    </div>
+                    <button onclick="deleteBookmark(${index})" class="text-gray-400 hover:text-red-500 transition">
+                        <i class="fas fa-times text-sm"></i>
                     </button>
                 </div>
             `).join('');
+            updateBookmarkBadge();
         }
         
         function addBookmark() {
@@ -1291,6 +1534,140 @@
 
         function viewAllMeetings() {
             VClass.showNotification('Ver todos os encontros', 'info');
+        }
+
+        // ─────────────────────────────────────────
+        //  TABS (Notes / Bookmarks / Q&A)
+        // ─────────────────────────────────────────
+        function switchTab(tab) {
+            ['notes','bookmarks','qa'].forEach(t => {
+                document.getElementById(`tab-content-${t}`).classList.add('hidden');
+                const btn = document.getElementById(`tab-${t}`);
+                btn.classList.remove('text-blue-600','border-blue-500');
+                btn.classList.add('text-gray-500','border-transparent');
+            });
+            document.getElementById(`tab-content-${tab}`).classList.remove('hidden');
+            const active = document.getElementById(`tab-${tab}`);
+            active.classList.add('text-blue-600','border-blue-500');
+            active.classList.remove('text-gray-500','border-transparent');
+        }
+
+        // ─────────────────────────────────────────
+        //  NOTES — character counter
+        // ─────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', () => {
+            const ta = document.getElementById('lesson-notes');
+            if (ta) {
+                ta.addEventListener('input', () => {
+                    document.getElementById('notes-char-count').textContent = `${ta.value.length} caracteres`;
+                });
+            }
+        });
+
+        // ─────────────────────────────────────────
+        //  STICKY PROGRESS BAR
+        // ─────────────────────────────────────────
+        let currentProgressPct = 0;
+        window.addEventListener('scroll', () => {
+            const bar = document.getElementById('sticky-progress-bar');
+            if (window.scrollY > 200) {
+                bar.classList.remove('hidden');
+            } else {
+                bar.classList.add('hidden');
+            }
+        });
+
+        function updateStickyProgress(pct) {
+            currentProgressPct = pct;
+            document.getElementById('sticky-progress-fill').style.width = `${pct}%`;
+            document.getElementById('sticky-progress-pct').textContent = pct;
+        }
+
+        // ─────────────────────────────────────────
+        //  VIDEO SPEED
+        // ─────────────────────────────────────────
+        function changeSpeed(val) {
+            if (player) {
+                player.playbackRate(parseFloat(val));
+                VClass.showNotification(`Velocidade: ${val}×`, 'info');
+            }
+        }
+
+        // ─────────────────────────────────────────
+        //  FAVORITE TOGGLE
+        // ─────────────────────────────────────────
+        let isFavorite = false;
+        function toggleFavorite() {
+            isFavorite = !isFavorite;
+            const btn = document.getElementById('btn-favorite');
+            const icon = document.getElementById('heart-icon');
+            if (isFavorite) {
+                icon.classList.replace('far','fas');
+                icon.classList.add('text-red-500');
+                btn.classList.add('bg-red-50','text-red-500');
+                btn.classList.remove('bg-gray-100','text-gray-600');
+                localStorage.setItem(`fav_${lessonId}`, '1');
+                VClass.showNotification('Adicionado aos favoritos! ❤️', 'success');
+            } else {
+                icon.classList.replace('fas','far');
+                icon.classList.remove('text-red-500');
+                btn.classList.remove('bg-red-50','text-red-500');
+                btn.classList.add('bg-gray-100','text-gray-600');
+                localStorage.removeItem(`fav_${lessonId}`);
+                VClass.showNotification('Removido dos favoritos', 'info');
+            }
+        }
+        function loadFavoriteState() {
+            if (localStorage.getItem(`fav_${lessonId}`)) {
+                isFavorite = false;
+                toggleFavorite(); // will flip to true
+            }
+        }
+
+        // ─────────────────────────────────────────
+        //  LESSON RATING
+        // ─────────────────────────────────────────
+        const RATING_LABELS = ['','😟 Muito fraca','😐 Fraca','😊 Boa','😃 Muito boa','🌟 Excelente!'];
+        function rateLesson(stars) {
+            document.querySelectorAll('.star-btn').forEach((btn, i) => {
+                btn.classList.toggle('text-yellow-400', i < stars);
+                btn.classList.toggle('text-gray-300', i >= stars);
+            });
+            document.getElementById('rating-label').textContent = RATING_LABELS[stars];
+            localStorage.setItem(`rating_${lessonId}`, stars);
+            if (stars >= 4) VClass.showNotification('Obrigado pela avaliação! 🌟', 'success');
+            else VClass.showNotification('Avaliação guardada. Obrigado!', 'info');
+        }
+        function loadRating() {
+            const saved = parseInt(localStorage.getItem(`rating_${lessonId}`) || '0');
+            if (saved > 0) rateLesson(saved);
+        }
+
+        // ─────────────────────────────────────────
+        //  SHARE
+        // ─────────────────────────────────────────
+        function shareLesson() {
+            const url = window.location.href;
+            if (navigator.share) {
+                navigator.share({ title: lessonData?.title || 'VClass', url });
+            } else {
+                navigator.clipboard.writeText(url).then(() => {
+                    VClass.showNotification('Link copiado para a área de transferência!', 'success');
+                });
+            }
+        }
+
+        // ─────────────────────────────────────────
+        //  BOOKMARK COUNT BADGE
+        // ─────────────────────────────────────────
+        function updateBookmarkBadge() {
+            const badge = document.getElementById('bookmark-count-badge');
+            if (bookmarks.length > 0) {
+                badge.textContent = bookmarks.length;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
         }
 
         // ─────────────────────────────────────────
