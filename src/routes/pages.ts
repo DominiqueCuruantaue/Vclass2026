@@ -19,6 +19,7 @@ import achievementsHtml from '../pages/achievements.html?raw'
 import chatHtml from '../pages/chat.html?raw'
 import newsHtml from '../pages/news.html?raw'
 import searchHtml from '../pages/search.html?raw'
+import testBrowseHtml from '../pages/test-browse.html?raw'
 
 // Serve HTML pages
 app.get('/', (c) => c.html(homeHtml))
@@ -38,5 +39,6 @@ app.get('/achievements.html', (c) => c.html(achievementsHtml))
 app.get('/chat.html', (c) => c.html(chatHtml))
 app.get('/news.html', (c) => c.html(newsHtml))
 app.get('/search.html', (c) => c.html(searchHtml))
+app.get('/test-browse.html', (c) => c.html(testBrowseHtml))
 
 export default app
