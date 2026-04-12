@@ -552,6 +552,7 @@
                     <button id="home-btn-yearly" onclick="homeSetBilling('yearly')"
                         class="home-billing-btn px-5 py-2 rounded-full text-sm font-semibold transition text-gray-600">
                         Anual <span class="bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full ml-1">-30%</span>
+                    <!-- 30% discount: MT 99×12×0.70 = MT 830 / MT 199×12×0.70 = MT 1670 -->
                     </button>
                 </div>
             </div>
@@ -570,7 +571,7 @@
                         <span class="text-gray-400 text-sm ml-1">para sempre</span>
                     </div>
                     <ul class="space-y-2 mb-6 text-sm">
-                        <li class="flex items-center gap-2 text-gray-700"><i class="fas fa-check-circle text-green-500 text-xs"></i>5 aulas por mês</li>
+                        <li class="flex items-center gap-2 text-gray-700"><i class="fas fa-check-circle text-green-500 text-xs"></i>10 aulas por mês</li>
                         <li class="flex items-center gap-2 text-gray-700"><i class="fas fa-check-circle text-green-500 text-xs"></i>Exercícios básicos</li>
                         <li class="flex items-center gap-2 text-gray-700"><i class="fas fa-check-circle text-green-500 text-xs"></i>Biblioteca limitada</li>
                         <li class="flex items-center gap-2 text-gray-400 line-through"><i class="fas fa-times-circle text-gray-300 text-xs"></i>Download de PDFs</li>
@@ -591,7 +592,7 @@
                     <div class="mb-1">
                         <div class="flex items-end gap-1">
                             <span class="text-gray-500 font-semibold text-lg">MT</span>
-                            <span class="text-4xl font-extrabold text-blue-600 home-basic-price">299</span>
+                            <span class="text-4xl font-extrabold text-blue-600 home-basic-price">99</span>
                             <span class="text-gray-400 text-sm mb-1 home-billing-label">/mês</span>
                         </div>
                     </div>
@@ -621,7 +622,7 @@
                     <div class="mb-1">
                         <div class="flex items-end gap-1">
                             <span class="text-purple-200 font-semibold text-lg">MT</span>
-                            <span class="text-4xl font-extrabold text-white home-premium-price">599</span>
+                            <span class="text-4xl font-extrabold text-white home-premium-price">199</span>
                             <span class="text-purple-200 text-sm mb-1 home-billing-label">/mês</span>
                         </div>
                     </div>
@@ -649,11 +650,11 @@
 
     <script>
     function homeSetBilling(billing) {
-        const monthly = { basic: 299, premium: 599 }
-        const yearly  = { basic: 2690, premium: 5390 }
+        const monthly = { basic: 99, premium: 199 }
+        const yearly  = { basic: 830, premium: 1670 }
         const data    = billing === 'monthly' ? monthly : yearly
         const label   = billing === 'monthly' ? '/mês' : '/ano'
-        const saving  = billing === 'yearly' ? '💰 Poupa 25% com o plano anual' : ''
+        const saving  = billing === 'yearly' ? '💰 Poupa 30% com o plano anual' : ''
 
         document.querySelectorAll('.home-basic-price').forEach(el => el.textContent = data.basic)
         document.querySelectorAll('.home-premium-price').forEach(el => el.textContent = data.premium)

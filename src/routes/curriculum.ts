@@ -1,7 +1,9 @@
 // ============================================================
 //  VClass — Rota /api/curriculum
 //  Fornece dados curriculares por país, nível, classe e disciplina
-//  POLÍTICA: todos os endpoints exigem autenticação
+//  POLÍTICA:
+//    - Endpoints de leitura pública (GET /full, /countries, /tree, /search) → SEM auth
+//    - Endpoints detalhados (/levels, /grades, /subjects, /chapters) → COM auth
 // ============================================================
 import { Hono } from 'hono'
 import { authMiddleware } from '../middleware/auth'
@@ -21,45 +23,34 @@ import {
 
 const curriculum = new Hono()
 
-// ── Todos os endpoints do currículo exigem sessão autenticada ────────────────
-curriculum.use('/*', authMiddleware)
+// ── Endpoints PÚBLICOS (sem autenticação) ────────────────────────────────────
 
-// GET /api/curriculum/countries
+// GET /api/curriculum/countries — lista países disponíveis (público)
 curriculum.get('/countries', (c) => {
   return c.json({ success: true, data: getCountries() })
 })
 
-// GET /api/curriculum/countries/:countryId/levels
-curriculum.get('/countries/:countryId/levels', (c) => {
-  const { countryId } = c.req.param()
-  const levels = getLevelsByCountry(countryId)
-  if (!levels.length) return c.json({ success: false, error: 'País não encontrado' }, 404)
-  return c.json({ success: true, data: levels })
+// GET /api/curriculum/full — JSON completo de todos os currículos (para browse.html)
+curriculum.get('/full', (c) => {
+  const tree = COUNTRIES
+    .filter(ct => ct.is_active)
+    .map(country => ({
+      ...country,
+      levels: getLevelsByCountry(country.id).map(level => ({
+        ...level,
+        grades: getGradesByLevel(level.id).map(grade => ({
+          ...grade,
+          subjects: getSubjectsByGrade(grade.id).map(subject => ({
+            ...subject,
+            chapters: getChaptersBySubject(subject.id),
+          })),
+        })),
+      })),
+    }))
+  return c.json({ success: true, data: tree })
 })
 
-// GET /api/curriculum/levels/:levelId/grades
-curriculum.get('/levels/:levelId/grades', (c) => {
-  const { levelId } = c.req.param()
-  const grades = getGradesByLevel(levelId)
-  return c.json({ success: true, data: grades })
-})
-
-// GET /api/curriculum/grades/:gradeId/subjects
-curriculum.get('/grades/:gradeId/subjects', (c) => {
-  const { gradeId } = c.req.param()
-  const subjects = getSubjectsByGrade(gradeId)
-  return c.json({ success: true, data: subjects })
-})
-
-// GET /api/curriculum/subjects/:subjectId/chapters?term=1
-curriculum.get('/subjects/:subjectId/chapters', (c) => {
-  const { subjectId } = c.req.param()
-  const term = c.req.query('term') ? parseInt(c.req.query('term')!) : undefined
-  const chapters = getChaptersBySubject(subjectId, term)
-  return c.json({ success: true, data: chapters })
-})
-
-// GET /api/curriculum/tree/:countryId  — árvore completa
+// GET /api/curriculum/tree/:countryId — árvore completa de um país (público)
 curriculum.get('/tree/:countryId', (c) => {
   const { countryId } = c.req.param()
   const country = COUNTRIES.find(ct => ct.id === countryId)
@@ -67,7 +58,7 @@ curriculum.get('/tree/:countryId', (c) => {
   return c.json({ success: true, data: { country, curriculum: getCurriculumTree(countryId) } })
 })
 
-// GET /api/curriculum/search?q=newton&countryId=mz
+// GET /api/curriculum/search?q=newton&countryId=mz (público)
 curriculum.get('/search', (c) => {
   const q = (c.req.query('q') || '').toLowerCase()
   const countryId = c.req.query('countryId')
@@ -75,7 +66,6 @@ curriculum.get('/search', (c) => {
 
   let chapters = CHAPTERS
   if (countryId) {
-    // Filtrar capítulos pelo país
     const gradeIds = GRADES
       .filter(g => EDUCATION_LEVELS.some(l => l.id === g.levelId && l.countryId === countryId))
       .map(g => g.id)
@@ -103,24 +93,36 @@ curriculum.get('/search', (c) => {
   return c.json({ success: true, count: results.length, data: results })
 })
 
-// GET /api/curriculum/full — JSON completo de todos os currículos (para o frontend)
-curriculum.get('/full', (c) => {
-  const tree = COUNTRIES
-    .filter(ct => ct.is_active)
-    .map(country => ({
-      ...country,
-      levels: getLevelsByCountry(country.id).map(level => ({
-        ...level,
-        grades: getGradesByLevel(level.id).map(grade => ({
-          ...grade,
-          subjects: getSubjectsByGrade(grade.id).map(subject => ({
-            ...subject,
-            chapters: getChaptersBySubject(subject.id),
-          })),
-        })),
-      })),
-    }))
-  return c.json({ success: true, data: tree })
+// ── Endpoints AUTENTICADOS (requerem sessão) ─────────────────────────────────
+
+// GET /api/curriculum/countries/:countryId/levels
+curriculum.get('/countries/:countryId/levels', authMiddleware, (c) => {
+  const { countryId } = c.req.param()
+  const levels = getLevelsByCountry(countryId)
+  if (!levels.length) return c.json({ success: false, error: 'País não encontrado' }, 404)
+  return c.json({ success: true, data: levels })
+})
+
+// GET /api/curriculum/levels/:levelId/grades
+curriculum.get('/levels/:levelId/grades', authMiddleware, (c) => {
+  const { levelId } = c.req.param()
+  const grades = getGradesByLevel(levelId)
+  return c.json({ success: true, data: grades })
+})
+
+// GET /api/curriculum/grades/:gradeId/subjects
+curriculum.get('/grades/:gradeId/subjects', authMiddleware, (c) => {
+  const { gradeId } = c.req.param()
+  const subjects = getSubjectsByGrade(gradeId)
+  return c.json({ success: true, data: subjects })
+})
+
+// GET /api/curriculum/subjects/:subjectId/chapters?term=1
+curriculum.get('/subjects/:subjectId/chapters', authMiddleware, (c) => {
+  const { subjectId } = c.req.param()
+  const term = c.req.query('term') ? parseInt(c.req.query('term')!) : undefined
+  const chapters = getChaptersBySubject(subjectId, term)
+  return c.json({ success: true, data: chapters })
 })
 
 export default curriculum

@@ -104,12 +104,7 @@
     <script src="/static/app.js"></script>
     <script>
         // ─── Init ───────────────────────────────────────────────────────────────
-        if (!VClass.isAuthenticated()) {
-            // Allow guest browsing with limited access
-            localStorage.setItem('accessToken', 'guest_token_browse');
-            localStorage.setItem('user', JSON.stringify({ id: 'guest', email: '', full_name: 'Visitante', role: 'student' }));
-        }
-
+        // /api/curriculum/full é público — não precisa de token para navegar
         VClass.initNavbar('browse');
 
         // Navigation state
