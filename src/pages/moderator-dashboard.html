@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel do Moderador — VClass</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    .sidebar { width:240px; min-height:100vh; }
+    .stat-card { transition:transform .15s; }
+    .stat-card:hover { transform:translateY(-2px); }
+    .tab-btn.active { border-bottom:3px solid #be185d; color:#be185d; font-weight:700; }
+    #overlay { background:rgba(0,0,0,.5); }
+    .badge-pending  { background:#fef3c7; color:#92400e; }
+    .badge-in_review{ background:#dbeafe; color:#1e3a8a; }
+    .badge-resolved { background:#d1fae5; color:#065f46; }
+    .badge-high     { background:#fee2e2; color:#991b1b; }
+    .badge-medium   { background:#fef3c7; color:#92400e; }
+    .badge-low      { background:#f3f4f6; color:#6b7280; }
+  </style>
+</head>
+<body class="bg-gray-50 flex">
+
+<!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+<aside class="sidebar bg-white border-r border-gray-200 flex flex-col fixed top-0 left-0 h-full z-20">
+  <div class="p-5 border-b border-gray-100">
+    <div class="flex items-center gap-2">
+      <div class="w-9 h-9 bg-pink-700 rounded-xl flex items-center justify-center text-white font-bold text-lg">V</div>
+      <div>
+        <div class="font-bold text-gray-900 text-sm">VClass</div>
+        <div class="text-xs text-pink-600 font-semibold">Moderador</div>
+      </div>
+    </div>
+  </div>
+  <nav class="flex-1 p-4 space-y-1">
+    <button onclick="showTab('reports')"       class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-pink-50 hover:text-pink-700 transition text-sm font-medium">
+      <i class="fas fa-flag w-5 text-center text-red-500"></i> Relatórios
+      <span class="ml-auto bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full" id="reports-badge">5</span>
+    </button>
+    <button onclick="showTab('messages')"      class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-pink-50 hover:text-pink-700 transition text-sm font-medium">
+      <i class="fas fa-comments w-5 text-center text-blue-500"></i> Mensagens
+    </button>
+    <button onclick="showTab('banned')"        class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-pink-50 hover:text-pink-700 transition text-sm font-medium">
+      <i class="fas fa-ban w-5 text-center text-gray-500"></i> Banimentos
+    </button>
+    <button onclick="showTab('announcements')" class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-pink-50 hover:text-pink-700 transition text-sm font-medium">
+      <i class="fas fa-bullhorn w-5 text-center text-purple-500"></i> Comunicados
+    </button>
+    <button onclick="showTab('overview')"      class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-pink-50 hover:text-pink-700 transition text-sm font-medium">
+      <i class="fas fa-chart-bar w-5 text-center text-green-500"></i> Estatísticas
+    </button>
+  </nav>
+  <div class="p-4 border-t border-gray-100">
+    <div class="flex items-center gap-3">
+      <div id="avatar-circle" class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold" style="background:#be185d">TB</div>
+      <div>
+        <div class="text-sm font-semibold text-gray-900" id="user-name-sidebar">Tânia Bila</div>
+        <div class="text-xs text-gray-500">Moderador</div>
+      </div>
+    </div>
+    <button onclick="logout()" class="mt-3 w-full text-xs text-gray-500 hover:text-red-500 flex items-center gap-2 transition">
+      <i class="fas fa-sign-out-alt"></i> Sair
+    </button>
+  </div>
+</aside>
+
+<!-- ── Main ────────────────────────────────────────────────────────────── -->
+<main class="ml-60 flex-1 min-h-screen">
+  <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+    <div>
+      <h1 class="text-xl font-bold text-gray-900" id="page-title">Relatórios de Conteúdo</h1>
+      <p class="text-sm text-gray-500">Gestão de denúncias e moderação da comunidade</p>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="relative">
+        <input id="search-input" type="text" placeholder="Pesquisar…" class="pl-9 pr-4 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 w-56">
+        <i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-sm"></i>
+      </div>
+    </div>
+  </header>
+
+  <!-- KPI Cards -->
+  <div class="p-6 pb-0 grid grid-cols-4 gap-4">
+    <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center"><i class="fas fa-flag text-red-500"></i></div>
+        <span class="text-xs text-red-600 font-medium bg-red-50 px-2 py-1 rounded-full" id="kpi-urgent-label">2 urgentes</span>
+      </div>
+      <div class="text-3xl font-bold text-gray-900" id="kpi-pending">5</div>
+      <div class="text-sm text-gray-500">Relatórios pendentes</div>
+    </div>
+    <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center"><i class="fas fa-comments text-yellow-500"></i></div>
+      </div>
+      <div class="text-3xl font-bold text-gray-900">3</div>
+      <div class="text-sm text-gray-500">Mensagens sinalizadas</div>
+    </div>
+    <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center"><i class="fas fa-ban text-gray-500"></i></div>
+      </div>
+      <div class="text-3xl font-bold text-gray-900">2</div>
+      <div class="text-sm text-gray-500">Utilizadores banidos</div>
+    </div>
+    <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center"><i class="fas fa-check-circle text-green-500"></i></div>
+        <span class="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded-full">esta semana</span>
+      </div>
+      <div class="text-3xl font-bold text-gray-900">18</div>
+      <div class="text-sm text-gray-500">Acções tomadas</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="px-6 pt-6 border-b border-gray-200 bg-white mx-6 mt-6 rounded-t-2xl flex gap-6">
+    <button onclick="showTab('reports')"       class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-pink-600 transition" id="tab-reports">Relatórios</button>
+    <button onclick="showTab('messages')"      class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-pink-600 transition" id="tab-messages">Mensagens</button>
+    <button onclick="showTab('banned')"        class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-pink-600 transition" id="tab-banned">Banimentos</button>
+    <button onclick="showTab('announcements')" class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-pink-600 transition" id="tab-announcements">Comunicados</button>
+    <button onclick="showTab('overview')"      class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-pink-600 transition" id="tab-overview">Estatísticas</button>
+  </div>
+
+  <!-- ── Reports ────────────────────────────────────────────────────────── -->
+  <section id="tab-content-reports" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
+    <div class="flex gap-3 mb-4">
+      <select id="rep-status-filter" onchange="renderReports()" class="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-300">
+        <option value="all">Todos os estados</option>
+        <option value="pending">Pendente</option>
+        <option value="in_review">Em análise</option>
+        <option value="resolved">Resolvido</option>
+      </select>
+      <select id="rep-type-filter" onchange="renderReports()" class="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-300">
+        <option value="all">Todos os tipos</option>
+        <option value="chat">Chat</option>
+        <option value="comment">Comentário</option>
+      </select>
+    </div>
+    <div id="reports-list" class="space-y-4"></div>
+  </section>
+
+  <!-- ── Messages ──────────────────────────────────────────────────────── -->
+  <section id="tab-content-messages" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
+    <div class="flex items-center gap-3 mb-4">
+      <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+        <input type="checkbox" id="flagged-only" onchange="renderMessages()" class="accent-pink-600" checked>
+        Apenas sinalizadas
+      </label>
+    </div>
+    <div id="messages-list" class="space-y-3"></div>
+  </section>
+
+  <!-- ── Banned ────────────────────────────────────────────────────────── -->
+  <section id="tab-content-banned" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="font-semibold text-gray-800">Utilizadores Banidos</h3>
+      <button onclick="openBanModal()" class="flex items-center gap-2 px-4 py-2 bg-pink-600 text-white rounded-xl text-sm hover:bg-pink-700 transition">
+        <i class="fas fa-ban"></i> Banir Utilizador
+      </button>
+    </div>
+    <div id="banned-list" class="space-y-4"></div>
+  </section>
+
+  <!-- ── Announcements ─────────────────────────────────────────────────── -->
+  <section id="tab-content-announcements" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
+    <div class="grid grid-cols-2 gap-6">
+      <div>
+        <h3 class="font-semibold text-gray-800 mb-4">Novo Comunicado</h3>
+        <div class="space-y-4">
+          <div><label class="text-xs text-gray-600">Título</label><input id="ann-title" type="text" placeholder="Título do comunicado…" class="w-full mt-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"></div>
+          <div><label class="text-xs text-gray-600">Mensagem</label><textarea id="ann-message" rows="4" placeholder="Mensagem para os utilizadores…" class="w-full mt-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"></textarea></div>
+          <div><label class="text-xs text-gray-600">Audiência</label>
+            <select id="ann-audience" class="w-full mt-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300">
+              <option value="all">Todos os utilizadores</option>
+              <option value="students">Apenas estudantes</option>
+              <option value="teachers">Apenas professores</option>
+            </select>
+          </div>
+          <button onclick="sendAnnouncement()" class="w-full py-2.5 bg-pink-600 text-white rounded-xl text-sm font-medium hover:bg-pink-700 transition">
+            <i class="fas fa-paper-plane mr-2"></i>Enviar Comunicado
+          </button>
+        </div>
+      </div>
+      <div>
+        <h3 class="font-semibold text-gray-800 mb-4">Histórico de Comunicados</h3>
+        <div id="ann-history" class="space-y-3"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Overview ──────────────────────────────────────────────────────── -->
+  <section id="tab-content-overview" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
+    <div class="grid grid-cols-2 gap-6">
+      <div class="bg-gray-50 rounded-2xl p-5">
+        <h3 class="font-semibold text-gray-800 mb-4"><i class="fas fa-chart-pie mr-2 text-pink-500"></i>Tipos de Relatórios</h3>
+        <div class="space-y-3">
+          <div class="flex items-center gap-3"><span class="text-sm text-gray-700 w-32">Conteúdo impróprio</span><div class="flex-1 bg-gray-200 rounded-full h-3"><div class="bg-red-500 h-3 rounded-full" style="width:45%"></div></div><span class="text-xs text-gray-500">45%</span></div>
+          <div class="flex items-center gap-3"><span class="text-sm text-gray-700 w-32">Spam</span><div class="flex-1 bg-gray-200 rounded-full h-3"><div class="bg-yellow-500 h-3 rounded-full" style="width:28%"></div></div><span class="text-xs text-gray-500">28%</span></div>
+          <div class="flex items-center gap-3"><span class="text-sm text-gray-700 w-32">Assédio</span><div class="flex-1 bg-gray-200 rounded-full h-3"><div class="bg-orange-500 h-3 rounded-full" style="width:18%"></div></div><span class="text-xs text-gray-500">18%</span></div>
+          <div class="flex items-center gap-3"><span class="text-sm text-gray-700 w-32">Fora do tema</span><div class="flex-1 bg-gray-200 rounded-full h-3"><div class="bg-blue-500 h-3 rounded-full" style="width:9%"></div></div><span class="text-xs text-gray-500">9%</span></div>
+        </div>
+      </div>
+      <div class="bg-gray-50 rounded-2xl p-5">
+        <h3 class="font-semibold text-gray-800 mb-4"><i class="fas fa-gavel mr-2 text-purple-500"></i>Acções Totais</h3>
+        <div class="grid grid-cols-3 gap-3 text-center">
+          <div class="bg-white rounded-xl p-3 border"><div class="text-2xl font-bold text-gray-800">67</div><div class="text-xs text-gray-500">Remoções</div></div>
+          <div class="bg-white rounded-xl p-3 border"><div class="text-2xl font-bold text-gray-800">54</div><div class="text-xs text-gray-500">Avisos</div></div>
+          <div class="bg-white rounded-xl p-3 border"><div class="text-2xl font-bold text-gray-800">22</div><div class="text-xs text-gray-500">Banimentos</div></div>
+        </div>
+        <div class="mt-4 grid grid-cols-2 gap-3 text-center">
+          <div class="bg-white rounded-xl p-3 border"><div class="text-2xl font-bold text-green-600">847</div><div class="text-xs text-gray-500">Msg hoje</div></div>
+          <div class="bg-white rounded-xl p-3 border"><div class="text-2xl font-bold text-blue-600">12</div><div class="text-xs text-gray-500">Salas activas</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Modal -->
+<div id="overlay" class="fixed inset-0 z-40 hidden items-center justify-center">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4">
+    <div class="border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+      <h2 class="font-bold text-gray-900" id="modal-title">Resolver Relatório</h2>
+      <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="p-6" id="modal-body"></div>
+    <div class="border-t border-gray-100 px-6 py-4 flex gap-3 justify-end" id="modal-actions"></div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!VClass.isAuthenticated()) { window.location.href = '/login.html'; return }
+  const user = VClass.getCurrentUser()
+  if (!user || !['moderator','admin'].includes(user.role)) { window.location.href = '/dashboard.html'; return }
+  document.getElementById('user-name-sidebar').textContent = user.full_name || user.name || 'Moderador'
+  if (user.avatar_color) document.getElementById('avatar-circle').style.background = user.avatar_color
+  const initials = (user.full_name || user.name || 'MD').split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()
+  document.getElementById('avatar-circle').textContent = initials
+  showTab('reports')
+})
+
+const REPORTS = [
+  { id:'rep-001', type:'chat',    category:'inappropriate', reporter:'Ana Silva',     reported_user:'user_xyz',    content:'Este conteúdo é inadequado para o contexto escolar.', context:'Chat geral — Matemática 12ª',  status:'pending',   priority:'high',   created_at: new Date(Date.now()-1800000).toISOString() },
+  { id:'rep-002', type:'comment', category:'spam',          reporter:'Prof. Carlos',  reported_user:'spammer_99',  content:'Clique aqui para ganhar créditos grátis!!!',            context:'Comentário — Funções 2º Grau',status:'pending',   priority:'medium', created_at: new Date(Date.now()-3600000).toISOString() },
+  { id:'rep-003', type:'chat',    category:'harassment',    reporter:'Mário Costa',   reported_user:'bully_user',  content:'Mensagem ofensiva dirigida a outro estudante.',           context:'Chat privado — Angola Física', status:'in_review', priority:'high',   created_at: new Date(Date.now()-7200000).toISOString() },
+  { id:'rep-004', type:'comment', category:'off_topic',     reporter:'Sara Chissano', reported_user:'troll_001',   content:'Comentário completamente fora do assunto académico.',     context:'Comentário — Cinemática',     status:'resolved',  priority:'low',    created_at: new Date(Date.now()-86400000).toISOString(), resolution:'removed' },
+  { id:'rep-005', type:'chat',    category:'inappropriate', reporter:'Pedro Mateus',  reported_user:'anon_user_12',content:'Partilha de material externo não autorizado.',            context:'Chat geral — Portugal Química',status:'pending',   priority:'medium', created_at: new Date(Date.now()-10800000).toISOString() },
+]
+
+const MESSAGES = [
+  { id:'msg-001', room:'math-12',    user:'estudante_a',  content:'Alguém pode explicar a regra da cadeia?', flagged:false, time:'há 10 min' },
+  { id:'msg-002', room:'math-12',    user:'user_xyz',     content:'Este conteúdo é inadequado…',              flagged:true,  time:'há 30 min' },
+  { id:'msg-003', room:'physics-ao', user:'mario.costa',  content:'Qual é a diferença entre velocidade e aceleração?', flagged:false, time:'há 15 min' },
+  { id:'msg-004', room:'physics-ao', user:'bully_user',   content:'Mensagem ofensiva…',                       flagged:true,  time:'há 2h' },
+  { id:'msg-005', room:'general',    user:'spammer_99',   content:'Clique aqui para ganhar créditos grátis!!!',flagged:true,  time:'há 1h' },
+]
+
+const BANNED = [
+  { id:'ban-001', user:'spammer_99',  email:'spam@external.com', reason:'Spam repetido',               banned_at:'2025-04-09', expires:'2025-05-09', permanent:false },
+  { id:'ban-002', user:'bully_user',  email:'bully@fake.com',    reason:'Assédio a outros utilizadores',banned_at:'2025-04-11', expires:null,         permanent:true },
+]
+
+const ANNOUNCEMENTS = [
+  { id:'ann-m001', title:'Regras de Conduta Actualizadas', message:'Lembramos que a plataforma exige respeito mútuo.', audience:'all', sent_at:'2025-04-07', sent_by:'Tânia Bila' },
+  { id:'ann-m002', title:'Aviso: uso inapropriado do chat', message:'Detectámos mensagens fora das normas. Contas suspensas.', audience:'all', sent_at:'2025-04-10', sent_by:'Tânia Bila' },
+]
+
+function showTab(name) {
+  ['reports','messages','banned','announcements','overview'].forEach(t => {
+    document.getElementById(`tab-content-${t}`).style.display = 'none'
+    document.getElementById(`tab-${t}`).classList.remove('active')
+  })
+  document.getElementById(`tab-content-${name}`).style.display = 'block'
+  document.getElementById(`tab-${name}`).classList.add('active')
+  const titles = { reports:'Relatórios de Conteúdo', messages:'Mensagens', banned:'Banimentos', announcements:'Comunicados', overview:'Estatísticas' }
+  document.getElementById('page-title').textContent = titles[name] || name
+  if (name === 'reports')       renderReports()
+  if (name === 'messages')      renderMessages()
+  if (name === 'banned')        renderBanned()
+  if (name === 'announcements') renderAnnouncements()
+}
+
+function priorityBadge(p) {
+  const map = { high:'badge-high', medium:'badge-medium', low:'badge-low' }
+  const label = { high:'Alta', medium:'Média', low:'Baixa' }
+  return `<span class="text-xs px-2 py-0.5 rounded-full font-medium ${map[p]}">${label[p]}</span>`
+}
+function statusBadge(s) {
+  const map = { pending:'badge-pending', in_review:'badge-in_review', resolved:'badge-resolved' }
+  const label = { pending:'Pendente', in_review:'Em análise', resolved:'Resolvido' }
+  return `<span class="text-xs px-2 py-0.5 rounded-full font-medium ${map[s]}">${label[s]}</span>`
+}
+const catLabel = { inappropriate:'Conteúdo impróprio', spam:'Spam', harassment:'Assédio', off_topic:'Fora do tema' }
+
+function renderReports() {
+  const sf = document.getElementById('rep-status-filter').value
+  const tf = document.getElementById('rep-type-filter').value
+  let items = [...REPORTS]
+  if (sf !== 'all') items = items.filter(r => r.status === sf)
+  if (tf !== 'all') items = items.filter(r => r.type   === tf)
+  items.sort((a,b) => { const o={high:0,medium:1,low:2}; return o[a.priority]-o[b.priority] })
+  const el = document.getElementById('reports-list')
+  if (!items.length) { el.innerHTML = '<div class="text-center py-12 text-gray-400"><i class="fas fa-flag text-4xl mb-3"></i><p>Nenhum relatório</p></div>'; return }
+  el.innerHTML = items.map(r => `
+    <div class="border border-gray-200 rounded-2xl p-5 hover:border-pink-200 hover:bg-pink-50/20 transition">
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-1">
+            ${priorityBadge(r.priority)} ${statusBadge(r.status)}
+            <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">${catLabel[r.category]}</span>
+            <span class="text-xs text-gray-400">${r.type === 'chat' ? '💬 Chat' : '📝 Comentário'}</span>
+          </div>
+          <p class="text-sm font-medium text-gray-800 mt-1 line-clamp-2 italic">"${r.content}"</p>
+          <p class="text-xs text-gray-500 mt-1">Contexto: ${r.context}</p>
+          <p class="text-xs text-gray-400 mt-1">Denunciado por: <strong>${r.reporter}</strong> · Utilizador: <code class="bg-gray-100 px-1 rounded">${r.reported_user}</code></p>
+        </div>
+        <div class="flex flex-col gap-2 flex-shrink-0">
+          ${r.status !== 'resolved' ? `
+          <button onclick="openReportModal('${r.id}')" class="px-3 py-1.5 bg-pink-600 text-white text-xs rounded-xl hover:bg-pink-700 transition">Resolver</button>
+          <button onclick="quickWarn('${r.reported_user}')" class="px-3 py-1.5 border border-yellow-300 text-yellow-700 text-xs rounded-xl hover:bg-yellow-50 transition">Avisar</button>
+          <button onclick="quickBan('${r.reported_user}')" class="px-3 py-1.5 border border-red-300 text-red-600 text-xs rounded-xl hover:bg-red-50 transition">Banir</button>` : `<span class="text-xs text-green-600">✅ Resolvido</span>`}
+        </div>
+      </div>
+    </div>`).join('')
+}
+
+function renderMessages() {
+  const flaggedOnly = document.getElementById('flagged-only')?.checked
+  let items = flaggedOnly ? MESSAGES.filter(m => m.flagged) : MESSAGES
+  const el = document.getElementById('messages-list')
+  el.innerHTML = items.map(m => `
+    <div class="flex items-start gap-4 p-4 rounded-xl border ${m.flagged ? 'border-red-200 bg-red-50' : 'border-gray-200'}">
+      <div class="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-bold text-sm flex-shrink-0">
+        ${m.user.slice(0,2).toUpperCase()}
+      </div>
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-sm font-medium text-gray-800">${m.user}</span>
+          <span class="text-xs text-gray-400">em #${m.room}</span>
+          <span class="text-xs text-gray-400">· ${m.time}</span>
+          ${m.flagged ? '<span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">🚩 Sinalizada</span>' : ''}
+        </div>
+        <p class="text-sm text-gray-700">${m.content}</p>
+      </div>
+      ${m.flagged ? `<button onclick="deleteMessage('${m.id}')" class="text-xs px-3 py-1.5 bg-red-500 text-white rounded-xl hover:bg-red-600 transition">Remover</button>` : ''}
+    </div>`).join('')
+  if (!items.length) el.innerHTML = '<div class="text-center py-8 text-gray-400">Nenhuma mensagem sinalizada</div>'
+}
+
+function renderBanned() {
+  const el = document.getElementById('banned-list')
+  el.innerHTML = BANNED.map(b => `
+    <div class="flex items-center gap-4 border border-gray-200 rounded-2xl p-5">
+      <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center"><i class="fas fa-ban text-red-500"></i></div>
+      <div class="flex-1">
+        <div class="font-semibold text-gray-900">${b.user}</div>
+        <div class="text-xs text-gray-400">${b.email}</div>
+        <div class="text-sm text-gray-600 mt-1"><i class="fas fa-info-circle mr-1 text-gray-400"></i>${b.reason}</div>
+        <div class="text-xs text-gray-400 mt-1">${b.permanent ? '⛔ Permanente' : `Até ${b.expires}`} · Desde ${b.banned_at}</div>
+      </div>
+      <button onclick="unban('${b.id}')" class="px-4 py-2 border border-green-200 text-green-700 text-sm rounded-xl hover:bg-green-50 transition">Levantar Ban</button>
+    </div>`).join('')
+  if (!BANNED.length) el.innerHTML = '<div class="text-center py-8 text-gray-400">Nenhum utilizador banido</div>'
+}
+
+function renderAnnouncements() {
+  document.getElementById('ann-history').innerHTML = ANNOUNCEMENTS.map(a => `
+    <div class="border border-gray-200 rounded-xl p-4">
+      <div class="font-semibold text-gray-800 text-sm">${a.title}</div>
+      <div class="text-xs text-gray-500 mt-1">${a.message.slice(0,80)}…</div>
+      <div class="text-xs text-gray-400 mt-2">Enviado em ${a.sent_at} por ${a.sent_by}</div>
+    </div>`).join('')
+}
+
+function openReportModal(id) {
+  const r = REPORTS.find(x => x.id === id)
+  document.getElementById('modal-title').textContent = 'Resolver Relatório'
+  document.getElementById('modal-body').innerHTML = `
+    <div class="mb-4 p-3 bg-gray-50 rounded-xl text-sm italic text-gray-600">"${r.content}"</div>
+    <p class="text-sm text-gray-600 mb-3">Seleccione a acção a tomar:</p>
+    <div class="space-y-2">
+      <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="radio" name="action" value="warning" class="accent-yellow-500" checked> Enviar aviso ao utilizador</label>
+      <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="radio" name="action" value="remove"  class="accent-red-500"> Remover o conteúdo</label>
+      <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="radio" name="action" value="ban"     class="accent-gray-500"> Banir o utilizador (7 dias)</label>
+      <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="radio" name="action" value="dismiss" class="accent-green-500"> Dispensar (sem acção)</label>
+    </div>`
+  document.getElementById('modal-actions').innerHTML = `
+    <button onclick="closeModal()" class="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm">Cancelar</button>
+    <button onclick="resolveReport('${id}')" class="px-4 py-2 bg-pink-600 text-white rounded-xl text-sm">Confirmar Acção</button>`
+  document.getElementById('overlay').classList.remove('hidden')
+  document.getElementById('overlay').classList.add('flex')
+}
+
+function openBanModal() {
+  document.getElementById('modal-title').textContent = 'Banir Utilizador'
+  document.getElementById('modal-body').innerHTML = `
+    <div class="space-y-3">
+      <div><label class="text-xs text-gray-600">Username</label><input id="ban-user" type="text" placeholder="username…" class="w-full mt-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none"></div>
+      <div><label class="text-xs text-gray-600">Motivo</label><input id="ban-reason" type="text" placeholder="Motivo do banimento…" class="w-full mt-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none"></div>
+      <div><label class="text-xs text-gray-600">Duração (dias)</label><input id="ban-days" type="number" value="7" class="w-full mt-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none"></div>
+      <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="ban-permanent" class="accent-red-600"> Banimento permanente</label>
+    </div>`
+  document.getElementById('modal-actions').innerHTML = `
+    <button onclick="closeModal()" class="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm">Cancelar</button>
+    <button onclick="confirmBan()" class="px-4 py-2 bg-red-600 text-white rounded-xl text-sm">Banir</button>`
+  document.getElementById('overlay').classList.remove('hidden')
+  document.getElementById('overlay').classList.add('flex')
+}
+
+function resolveReport(id) { closeModal(); showToast('✅ Relatório resolvido') }
+function quickWarn(user)   { showToast(`📢 Aviso enviado a ${user}`) }
+function quickBan(user)    { showToast(`🚫 ${user} banido temporariamente`) }
+function deleteMessage(id) { showToast('🗑 Mensagem removida') }
+function unban(id)         { showToast('✅ Banimento levantado') }
+function confirmBan()      { closeModal(); showToast('🚫 Utilizador banido') }
+function sendAnnouncement() {
+  const title = document.getElementById('ann-title').value
+  if (!title) { showToast('❌ Preencha o título'); return }
+  showToast(`📢 Comunicado "${title}" enviado!`)
+  document.getElementById('ann-title').value = ''
+  document.getElementById('ann-message').value = ''
+}
+function closeModal() { document.getElementById('overlay').classList.add('hidden'); document.getElementById('overlay').classList.remove('flex') }
+function showToast(msg) {
+  const t = document.createElement('div')
+  t.className = 'fixed bottom-6 right-6 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-lg z-50 text-sm'
+  t.textContent = msg
+  document.body.appendChild(t)
+  setTimeout(() => t.remove(), 3000)
+}
+function logout() { VClass.logout ? VClass.logout() : localStorage.clear(); window.location.href = '/login.html' }
+
+document.getElementById('search-input')?.addEventListener('input', function() {
+  const q = this.value.toLowerCase()
+  const filtered = REPORTS.filter(r => r.content.toLowerCase().includes(q) || r.reporter.toLowerCase().includes(q) || r.reported_user.toLowerCase().includes(q))
+  // simple re-render
+})
+</script>
+</body>
+</html>

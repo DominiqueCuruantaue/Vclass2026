@@ -306,8 +306,15 @@
         }
         const user = VClass.getCurrentUser();
         // Redirecionar roles especiais para os seus painéis
-        if (user?.role === 'support') { window.location.href = '/support-dashboard.html'; }
-        if (user?.role === 'admin')   { window.location.href = '/admin-dashboard.html'; }
+        const _staffRedirects = {
+          admin: '/admin-dashboard.html',
+          support: '/support-dashboard.html',
+          editor: '/editor-dashboard.html',
+          country_manager: '/country-dashboard.html',
+          finance: '/finance-dashboard.html',
+          moderator: '/moderator-dashboard.html'
+        };
+        if (_staffRedirects[user?.role]) { window.location.href = _staffRedirects[user.role]; }
 
         // Dropdown
         function toggleDropdown() {

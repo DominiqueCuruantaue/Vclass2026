@@ -188,9 +188,29 @@
                             <span>Administrador</span>
                         </button>
                         <button type="button" onclick="fillDemo('suporte@vclass.mz')"
-                            class="demo-chip flex items-center space-x-2 px-3 py-2 border border-gray-200 rounded-xl text-xs font-medium text-gray-700 bg-white hover:border-cyan-300 transition col-span-2">
+                            class="demo-chip flex items-center space-x-2 px-3 py-2 border border-gray-200 rounded-xl text-xs font-medium text-gray-700 bg-white hover:border-cyan-300 transition">
                             <i class="fas fa-headset text-cyan-600"></i>
                             <span>Suporte</span>
+                        </button>
+                        <button type="button" onclick="fillDemo('editor@vclass.mz')"
+                            class="demo-chip flex items-center space-x-2 px-3 py-2 border border-gray-200 rounded-xl text-xs font-medium text-gray-700 bg-white hover:border-violet-300 transition">
+                            <i class="fas fa-clipboard-check text-violet-600"></i>
+                            <span>Editor</span>
+                        </button>
+                        <button type="button" onclick="fillDemo('gestora.ao@vclass.mz')"
+                            class="demo-chip flex items-center space-x-2 px-3 py-2 border border-gray-200 rounded-xl text-xs font-medium text-gray-700 bg-white hover:border-amber-300 transition">
+                            <i class="fas fa-globe-africa text-amber-600"></i>
+                            <span>Gestor País</span>
+                        </button>
+                        <button type="button" onclick="fillDemo('financeiro@vclass.mz')"
+                            class="demo-chip flex items-center space-x-2 px-3 py-2 border border-gray-200 rounded-xl text-xs font-medium text-gray-700 bg-white hover:border-green-700 transition">
+                            <i class="fas fa-coins text-green-700"></i>
+                            <span>Financeiro</span>
+                        </button>
+                        <button type="button" onclick="fillDemo('moderador@vclass.mz')"
+                            class="demo-chip flex items-center space-x-2 px-3 py-2 border border-gray-200 rounded-xl text-xs font-medium text-gray-700 bg-white hover:border-pink-300 transition">
+                            <i class="fas fa-gavel text-pink-600"></i>
+                            <span>Moderador</span>
                         </button>
                     </div>
 
@@ -250,6 +270,34 @@
                             <p class="text-xs text-gray-400 truncate">suporte@vclass.mz</p>
                         </div>
                     </button>
+                    <button onclick="fillDemo('editor@vclass.mz')" class="text-left flex items-center gap-2.5 px-3 py-2 bg-white rounded-xl border border-indigo-100 hover:border-violet-300 transition group">
+                        <span class="text-base">✏️</span>
+                        <div class="min-w-0">
+                            <p class="text-xs font-semibold text-gray-800 group-hover:text-violet-700">Isabel Guambe <span class="font-normal text-gray-400">— Editor</span></p>
+                            <p class="text-xs text-gray-400 truncate">editor@vclass.mz</p>
+                        </div>
+                    </button>
+                    <button onclick="fillDemo('gestora.ao@vclass.mz')" class="text-left flex items-center gap-2.5 px-3 py-2 bg-white rounded-xl border border-indigo-100 hover:border-amber-500 transition group">
+                        <span class="text-base">🌍</span>
+                        <div class="min-w-0">
+                            <p class="text-xs font-semibold text-gray-800 group-hover:text-amber-700">Filomena Andrade <span class="font-normal text-gray-400">— Gestor País</span></p>
+                            <p class="text-xs text-gray-400 truncate">gestora.ao@vclass.mz</p>
+                        </div>
+                    </button>
+                    <button onclick="fillDemo('financeiro@vclass.mz')" class="text-left flex items-center gap-2.5 px-3 py-2 bg-white rounded-xl border border-indigo-100 hover:border-green-600 transition group">
+                        <span class="text-base">💰</span>
+                        <div class="min-w-0">
+                            <p class="text-xs font-semibold text-gray-800 group-hover:text-green-700">Ricardo Cossa <span class="font-normal text-gray-400">— Financeiro</span></p>
+                            <p class="text-xs text-gray-400 truncate">financeiro@vclass.mz</p>
+                        </div>
+                    </button>
+                    <button onclick="fillDemo('moderador@vclass.mz')" class="text-left flex items-center gap-2.5 px-3 py-2 bg-white rounded-xl border border-indigo-100 hover:border-pink-300 transition group">
+                        <span class="text-base">🔨</span>
+                        <div class="min-w-0">
+                            <p class="text-xs font-semibold text-gray-800 group-hover:text-pink-700">Tânia Bila <span class="font-normal text-gray-400">— Moderador</span></p>
+                            <p class="text-xs text-gray-400 truncate">moderador@vclass.mz</p>
+                        </div>
+                    </button>
                 </div>
             </div>
         </div>
@@ -260,10 +308,16 @@
         // Redirect if already logged in
         if (VClass.isAuthenticated()) {
             const u = VClass.getCurrentUser();
-            if (u?.role === 'admin')   window.location.href = '/admin-dashboard.html';
-            else if (u?.role === 'teacher') window.location.href = '/creator-dashboard.html';
-            else if (u?.role === 'support') window.location.href = '/support-dashboard.html';
-            else window.location.href = '/dashboard.html';
+            const roleRedirects = {
+              admin: '/admin-dashboard.html',
+              teacher: '/creator-dashboard.html',
+              support: '/support-dashboard.html',
+              editor: '/editor-dashboard.html',
+              country_manager: '/country-dashboard.html',
+              finance: '/finance-dashboard.html',
+              moderator: '/moderator-dashboard.html'
+            };
+            window.location.href = roleRedirects[u?.role] || '/dashboard.html';
         }
 
         function togglePwd() {
@@ -342,10 +396,16 @@
                     showAlert('✅ Login realizado com sucesso! Redirecionando...', 'success');
                     setTimeout(() => {
                         const role = result.data.user.role;
-                        if (role === 'admin')   window.location.href = '/admin-dashboard.html';
-                        else if (role === 'teacher') window.location.href = '/creator-dashboard.html';
-                        else if (role === 'support') window.location.href = '/support-dashboard.html';
-                        else window.location.href = '/dashboard.html';
+                        const roleRedirects = {
+                          admin: '/admin-dashboard.html',
+                          teacher: '/creator-dashboard.html',
+                          support: '/support-dashboard.html',
+                          editor: '/editor-dashboard.html',
+                          country_manager: '/country-dashboard.html',
+                          finance: '/finance-dashboard.html',
+                          moderator: '/moderator-dashboard.html'
+                        };
+                        window.location.href = roleRedirects[role] || '/dashboard.html';
                     }, 1000);
                 } else {
                     showAlert(result.error || 'Credenciais inválidas. Tente novamente.', 'error');

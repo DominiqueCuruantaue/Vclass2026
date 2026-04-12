@@ -101,6 +101,35 @@ export const requireSupportOrAdmin = requireRole('support', 'admin')
 export const requireStaff = requireRole('support', 'teacher', 'admin')
 
 /**
+ * Editor routes — revisão e aprovação de conteúdo
+ */
+export const requireEditor = requireRole('editor')
+export const requireEditorOrAdmin = requireRole('editor', 'admin')
+
+/**
+ * Country Manager routes — gestão por país/região
+ */
+export const requireCountryManager = requireRole('country_manager')
+export const requireCountryManagerOrAdmin = requireRole('country_manager', 'admin')
+
+/**
+ * Finance routes — subscrições, pagamentos, receitas
+ */
+export const requireFinance = requireRole('finance')
+export const requireFinanceOrAdmin = requireRole('finance', 'admin')
+
+/**
+ * Moderator routes — moderação de chat e comunidade
+ */
+export const requireModerator = requireRole('moderator')
+export const requireModeratorOrAdmin = requireRole('moderator', 'admin')
+
+/**
+ * Qualquer role de gestão (todos excepto student)
+ */
+export const requireAnyStaff = requireRole('teacher', 'admin', 'support', 'editor', 'country_manager', 'finance', 'moderator')
+
+/**
  * Optional auth middleware — não bloqueia se não houver token,
  * mas popula c.get('user') se o token for válido.
  * Útil para rotas públicas que beneficiam de dados do utilizador autenticado.

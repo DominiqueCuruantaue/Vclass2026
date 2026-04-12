@@ -146,6 +146,76 @@ export const mockUsers = [
     tickets_resolved: 238,
     avg_response_minutes: 18,
     created_at: new Date('2025-03-01').toISOString()
+  },
+  // ── Editor de Conteúdo ────────────────────────────────────────────────────
+  {
+    id: '77777777-7777-7777-7777-777777777777',
+    email: 'editor@vclass.mz',
+    full_name: 'Isabel Guambe',
+    role: 'editor',
+    country_id: 'mz',
+    country_name: 'Moçambique',
+    country_flag: '🇲🇿',
+    phone: '+258 84 777 0000',
+    avatar_color: '#7c3aed',
+    is_verified: true,
+    is_active: true,
+    pending_reviews: 7,
+    approved_total: 312,
+    rejected_total: 28,
+    specialization: 'Ciências Exactas',
+    created_at: new Date('2025-05-10').toISOString()
+  },
+  // ── Gestor de País ────────────────────────────────────────────────────────
+  {
+    id: '88888888-8888-8888-8888-888888888888',
+    email: 'gestora.ao@vclass.mz',
+    full_name: 'Filomena Andrade',
+    role: 'country_manager',
+    country_id: 'ao',
+    country_name: 'Angola',
+    country_flag: '🇦🇴',
+    phone: '+244 923 888 000',
+    avatar_color: '#b45309',
+    is_verified: true,
+    is_active: true,
+    managed_country: 'ao',
+    managed_country_name: 'Angola',
+    students_count: 4820,
+    teachers_count: 38,
+    created_at: new Date('2025-07-15').toISOString()
+  },
+  // ── Financeiro ────────────────────────────────────────────────────────────
+  {
+    id: '99999999-9999-9999-9999-999999999999',
+    email: 'financeiro@vclass.mz',
+    full_name: 'Ricardo Cossa',
+    role: 'finance',
+    country_id: 'mz',
+    country_name: 'Moçambique',
+    country_flag: '🇲🇿',
+    phone: '+258 82 999 0000',
+    avatar_color: '#166534',
+    is_verified: true,
+    is_active: true,
+    created_at: new Date('2025-02-01').toISOString()
+  },
+  // ── Moderador ─────────────────────────────────────────────────────────────
+  {
+    id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    email: 'moderador@vclass.mz',
+    full_name: 'Tânia Bila',
+    role: 'moderator',
+    country_id: 'mz',
+    country_name: 'Moçambique',
+    country_flag: '🇲🇿',
+    phone: '+258 84 aaa 0000',
+    avatar_color: '#be185d',
+    is_verified: true,
+    is_active: true,
+    reports_pending: 5,
+    actions_taken: 143,
+    created_at: new Date('2025-06-01').toISOString()
   }
 ]
 

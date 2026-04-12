@@ -27,6 +27,10 @@ import creatorStudentsHtml from '../pages/creator-students.html?raw'
 import creatorAnalyticsHtml from '../pages/creator-analytics.html?raw'
 import adminDashboardHtml from '../pages/admin-dashboard.html?raw'
 import supportDashboardHtml from '../pages/support-dashboard.html?raw'
+import editorDashboardHtml from '../pages/editor-dashboard.html?raw'
+import countryDashboardHtml from '../pages/country-dashboard.html?raw'
+import financeDashboardHtml from '../pages/finance-dashboard.html?raw'
+import moderatorDashboardHtml from '../pages/moderator-dashboard.html?raw'
 
 // Serve HTML pages
 app.get('/', (c) => c.html(homeHtml))
@@ -61,5 +65,11 @@ app.get('/admin-dashboard.html', (c) => c.html(adminDashboardHtml))
 
 // Support Panel
 app.get('/support-dashboard.html', (c) => c.html(supportDashboardHtml))
+
+// Management Panels (4 novos roles)
+app.get('/editor-dashboard.html',    (c) => c.html(editorDashboardHtml))
+app.get('/country-dashboard.html',   (c) => c.html(countryDashboardHtml))
+app.get('/finance-dashboard.html',   (c) => c.html(financeDashboardHtml))
+app.get('/moderator-dashboard.html', (c) => c.html(moderatorDashboardHtml))
 
 export default app

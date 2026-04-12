@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel do Gestor de País — VClass</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    .sidebar { width:240px; min-height:100vh; }
+    .stat-card { transition:transform .15s; }
+    .stat-card:hover { transform:translateY(-2px); }
+    .tab-btn.active { border-bottom:3px solid #b45309; color:#b45309; font-weight:700; }
+    #overlay { background:rgba(0,0,0,.5); }
+    .bar { transition: width .6s ease; }
+  </style>
+</head>
+<body class="bg-gray-50 flex">
+
+<!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+<aside class="sidebar bg-white border-r border-gray-200 flex flex-col fixed top-0 left-0 h-full z-20">
+  <div class="p-5 border-b border-gray-100">
+    <div class="flex items-center gap-2">
+      <div class="w-9 h-9 bg-amber-600 rounded-xl flex items-center justify-center text-white font-bold text-lg">V</div>
+      <div>
+        <div class="font-bold text-gray-900 text-sm">VClass</div>
+        <div class="text-xs text-amber-600 font-semibold">Gestor de País</div>
+      </div>
+    </div>
+  </div>
+  <nav class="flex-1 p-4 space-y-1">
+    <button onclick="showTab('overview')"    class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition text-sm font-medium">
+      <i class="fas fa-globe-africa w-5 text-center"></i> Visão Geral
+    </button>
+    <button onclick="showTab('users')"      class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition text-sm font-medium">
+      <i class="fas fa-users w-5 text-center text-blue-500"></i> Utilizadores
+    </button>
+    <button onclick="showTab('curriculum')" class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition text-sm font-medium">
+      <i class="fas fa-book-open w-5 text-center text-green-500"></i> Currículo
+    </button>
+    <button onclick="showTab('content')"    class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition text-sm font-medium">
+      <i class="fas fa-video w-5 text-center text-purple-500"></i> Conteúdo
+    </button>
+    <button onclick="showTab('analytics')"  class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition text-sm font-medium">
+      <i class="fas fa-chart-line w-5 text-center text-indigo-500"></i> Análises
+    </button>
+    <button onclick="showTab('alerts')"     class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition text-sm font-medium">
+      <i class="fas fa-bell w-5 text-center text-red-500"></i> Alertas
+      <span class="ml-auto bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full" id="alerts-badge">3</span>
+    </button>
+  </nav>
+  <div class="p-4 border-t border-gray-100">
+    <div class="flex items-center gap-3">
+      <div id="avatar-circle" class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold" style="background:#b45309">FA</div>
+      <div>
+        <div class="text-sm font-semibold text-gray-900" id="user-name-sidebar">Filomena Andrade</div>
+        <div class="text-xs text-gray-500" id="country-label">🇦🇴 Angola</div>
+      </div>
+    </div>
+    <button onclick="logout()" class="mt-3 w-full text-xs text-gray-500 hover:text-red-500 flex items-center gap-2 transition">
+      <i class="fas fa-sign-out-alt"></i> Sair
+    </button>
+  </div>
+</aside>
+
+<!-- ── Main ────────────────────────────────────────────────────────────── -->
+<main class="ml-60 flex-1 min-h-screen">
+  <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+    <div>
+      <h1 class="text-xl font-bold text-gray-900" id="page-title">Visão Geral</h1>
+      <p class="text-sm text-gray-500" id="page-sub">Gestão do país e métricas locais</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 bg-amber-50 border border-amber-200 px-3 py-2 rounded-xl">
+        <span class="text-xl" id="country-flag">🇦🇴</span>
+        <span class="text-sm font-semibold text-amber-800" id="country-name">Angola</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- KPI Cards -->
+  <div class="p-6 pb-0 grid grid-cols-4 gap-4">
+    <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center"><i class="fas fa-user-graduate text-blue-500"></i></div>
+        <span class="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded-full">+48 esta semana</span>
+      </div>
+      <div class="text-3xl font-bold text-gray-900" id="kpi-students">4.820</div>
+      <div class="text-sm text-gray-500">Estudantes</div>
+    </div>
+    <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center"><i class="fas fa-chalkboard-teacher text-green-500"></i></div>
+        <span class="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-full">+2 este mês</span>
+      </div>
+      <div class="text-3xl font-bold text-gray-900" id="kpi-teachers">38</div>
+      <div class="text-sm text-gray-500">Professores</div>
+    </div>
+    <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center"><i class="fas fa-video text-purple-500"></i></div>
+        <span class="text-xs text-purple-600 font-medium bg-purple-50 px-2 py-1 rounded-full">104 pub.</span>
+      </div>
+      <div class="text-3xl font-bold text-gray-900" id="kpi-lessons">120</div>
+      <div class="text-sm text-gray-500">Lições</div>
+    </div>
+    <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center"><i class="fas fa-star text-amber-500"></i></div>
+        <span class="text-xs text-amber-600 font-medium bg-amber-50 px-2 py-1 rounded-full">+1.2 pts</span>
+      </div>
+      <div class="text-3xl font-bold text-gray-900" id="kpi-score">71.3%</div>
+      <div class="text-sm text-gray-500">Nota média</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="px-6 pt-6 border-b border-gray-200 bg-white mx-6 mt-6 rounded-t-2xl flex gap-6">
+    <button onclick="showTab('overview')"    class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-amber-600 transition" id="tab-overview">Visão Geral</button>
+    <button onclick="showTab('users')"       class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-amber-600 transition" id="tab-users">Utilizadores</button>
+    <button onclick="showTab('curriculum')"  class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-amber-600 transition" id="tab-curriculum">Currículo</button>
+    <button onclick="showTab('content')"     class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-amber-600 transition" id="tab-content">Conteúdo</button>
+    <button onclick="showTab('analytics')"   class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-amber-600 transition" id="tab-analytics">Análises</button>
+    <button onclick="showTab('alerts')"      class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-amber-600 transition" id="tab-alerts">Alertas</button>
+  </div>
+
+  <!-- ── Overview ──────────────────────────────────────────────────────── -->
+  <section id="tab-content-overview" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
+    <div class="grid grid-cols-2 gap-6">
+      <div class="bg-gray-50 rounded-2xl p-5">
+        <h3 class="font-semibold text-gray-800 mb-4"><i class="fas fa-fire mr-2 text-orange-500"></i>Top 3 Lições</h3>
+        <div id="top-lessons" class="space-y-3"></div>
+      </div>
+      <div class="bg-gray-50 rounded-2xl p-5">
+        <h3 class="font-semibold text-gray-800 mb-4"><i class="fas fa-chart-bar mr-2 text-blue-500"></i>Actividade esta semana</h3>
+        <div id="activity-bars" class="space-y-2"></div>
+      </div>
+      <div class="bg-gray-50 rounded-2xl p-5">
+        <h3 class="font-semibold text-gray-800 mb-4"><i class="fas fa-book mr-2 text-purple-500"></i>Disciplinas Activas</h3>
+        <div id="subjects-list" class="flex flex-wrap gap-2"></div>
+      </div>
+      <div class="bg-gray-50 rounded-2xl p-5">
+        <h3 class="font-semibold text-gray-800 mb-4"><i class="fas fa-graduation-cap mr-2 text-green-500"></i>Distribuição por Classe</h3>
+        <div id="grades-dist" class="space-y-2"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Users ─────────────────────────────────────────────────────────── -->
+  <section id="tab-content-users" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
+    <div class="flex gap-4 mb-6">
+      <input type="text" id="user-search" placeholder="Pesquisar utilizador…" class="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300">
+      <select id="user-role-filter" class="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300">
+        <option value="all">Todos os roles</option>
+        <option value="student">Estudante</option>
+        <option value="teacher">Professor</option>
+      </select>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="bg-gray-50 text-gray-600">
+          <th class="px-4 py-3 text-left rounded-l-xl">Utilizador</th>
+          <th class="px-4 py-3 text-left">Role</th>
+          <th class="px-4 py-3 text-left">Classe</th>
+          <th class="px-4 py-3 text-left">Nota Média</th>
+          <th class="px-4 py-3 text-left">Último Acesso</th>
+          <th class="px-4 py-3 text-left rounded-r-xl">Estado</th>
+        </tr></thead>
+        <tbody id="users-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── Curriculum ─────────────────────────────────────────────────────── -->
+  <section id="tab-content-curriculum" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
+    <div class="mb-4 flex items-center justify-between">
+      <h3 class="font-semibold text-gray-800">Currículo Nacional — <span id="curr-country-name">Angola</span></h3>
+      <span class="text-sm text-gray-500">Classes e disciplinas configuradas</span>
+    </div>
+    <div id="curriculum-grid" class="space-y-4"></div>
+  </section>
+
+  <!-- ── Content ───────────────────────────────────────────────────────── -->
+  <section id="tab-content-content" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
+    <div class="grid grid-cols-2 gap-4 mb-6">
+      <div class="bg-green-50 border border-green-100 rounded-2xl p-4 text-center">
+        <div class="text-2xl font-bold text-green-700" id="published-count">104</div>
+        <div class="text-sm text-gray-500">Lições publicadas</div>
+      </div>
+      <div class="bg-yellow-50 border border-yellow-100 rounded-2xl p-4 text-center">
+        <div class="text-2xl font-bold text-yellow-700" id="draft-count">16</div>
+        <div class="text-sm text-gray-500">Em rascunho</div>
+      </div>
+    </div>
+    <h4 class="font-semibold text-gray-800 mb-3">Lições por disciplina</h4>
+    <div id="content-by-subject" class="space-y-3"></div>
+  </section>
+
+  <!-- ── Analytics ─────────────────────────────────────────────────────── -->
+  <section id="tab-content-analytics" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
+    <div class="grid grid-cols-3 gap-4 mb-6">
+      <div class="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-center">
+        <div class="text-2xl font-bold text-blue-700">312</div>
+        <div class="text-sm text-gray-500">Activos hoje</div>
+      </div>
+      <div class="bg-purple-50 border border-purple-100 rounded-2xl p-4 text-center">
+        <div class="text-2xl font-bold text-purple-700">18.420</div>
+        <div class="text-sm text-gray-500">Horas totais de aprendizagem</div>
+      </div>
+      <div class="bg-green-50 border border-green-100 rounded-2xl p-4 text-center">
+        <div class="text-2xl font-bold text-green-700">71.3%</div>
+        <div class="text-sm text-gray-500">Nota média nacional</div>
+      </div>
+    </div>
+    <div class="bg-gray-50 rounded-2xl p-5">
+      <h3 class="font-semibold text-gray-800 mb-4">Distribuição de Planos</h3>
+      <div class="space-y-3">
+        <div class="flex items-center gap-3">
+          <span class="text-sm text-gray-700 w-24">Gratuito</span>
+          <div class="flex-1 bg-gray-200 rounded-full h-3"><div class="bg-gray-500 h-3 rounded-full bar" style="width:97.4%"></div></div>
+          <span class="text-sm text-gray-600">4.693</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-sm text-gray-700 w-24">Básico</span>
+          <div class="flex-1 bg-gray-200 rounded-full h-3"><div class="bg-blue-500 h-3 rounded-full bar" style="width:2.3%"></div></div>
+          <span class="text-sm text-gray-600">110</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-sm text-gray-700 w-24">Premium</span>
+          <div class="flex-1 bg-gray-200 rounded-full h-3"><div class="bg-purple-500 h-3 rounded-full bar" style="width:0.35%"></div></div>
+          <span class="text-sm text-gray-600">17</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Alerts ─────────────────────────────────────────────────────────── -->
+  <section id="tab-content-alerts" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
+    <div id="alerts-list" class="space-y-4"></div>
+  </section>
+
+</main>
+
+<script src="/static/app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!VClass.isAuthenticated()) { window.location.href = '/login.html'; return }
+  const user = VClass.getCurrentUser()
+  if (!user || !['country_manager','admin'].includes(user.role)) { window.location.href = '/dashboard.html'; return }
+  document.getElementById('user-name-sidebar').textContent = user.full_name || user.name || 'Gestor'
+  if (user.avatar_color) document.getElementById('avatar-circle').style.background = user.avatar_color
+  const initials = (user.full_name || user.name || 'GM').split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()
+  document.getElementById('avatar-circle').textContent = initials
+  await loadCountryData()
+  showTab('overview')
+})
+
+const COUNTRY_DATA = {
+  ao: {
+    name:'Angola', flag:'🇦🇴', currency:'AOA',
+    stats: { total_students:4820, active_today:312, new_week:48, total_teachers:38, total_lessons:120, published_lessons:104, avg_score:71.3, total_time_hours:18420, premium_users:17, basic_users:110 },
+    grades: ['7ª','8ª','9ª','10ª','11ª','12ª'].map(g => g+' Classe'),
+    subjects: ['Matemática','Língua Portuguesa','Ciências Físicas','Ciências Naturais','História','Geografia','Educação Física'],
+    top_lessons: [
+      { title:'Funções do 1º Grau', subject:'Matemática', views:842, rating:4.7 },
+      { title:'Gramática — Verbos', subject:'Língua Portuguesa', views:618, rating:4.5 },
+      { title:'Leis de Newton', subject:'Ciências Físicas', views:534, rating:4.8 },
+    ],
+    activity_week: [38,52,41,67,58,89,74],
+    alerts: [
+      { id:'a1', type:'warning', title:'Conteúdo em falta — 8ª Classe', description:'A disciplina de Ciências Naturais da 8ª Classe não tem lições publicadas.', date: new Date(Date.now()-86400000).toISOString() },
+      { id:'a2', type:'error',   title:'Queda de engagement — 9ª Classe', description:'Redução de 23% no número de aulas completadas esta semana.', date: new Date(Date.now()-43200000).toISOString() },
+      { id:'a3', type:'info',    title:'Novo professor registado', description:'Prof. Domingos Kosi registou-se e aguarda activação.', date: new Date(Date.now()-3600000).toISOString() },
+    ],
+    content_by_subject: [
+      { subject:'Matemática', published:28, draft:4 },
+      { subject:'Língua Portuguesa', published:22, draft:3 },
+      { subject:'Ciências Físicas', published:20, draft:5 },
+      { subject:'Ciências Naturais', published:15, draft:2 },
+      { subject:'História', published:12, draft:1 },
+      { subject:'Geografia', published:7, draft:1 },
+    ]
+  }
+}
+
+const MOCK_USERS_COUNTRY = [
+  { name:'António Ferreira',  email:'antonio@vclass.ao', role:'student', grade:'12ª Classe', avg_score:82, last_access:'há 2h',  active:true },
+  { name:'Fátima Mbala',      email:'fatima@vclass.ao',  role:'student', grade:'10ª Classe', avg_score:71, last_access:'há 1d',  active:true },
+  { name:'Prof. Domingos',    email:'domingos@vclass.ao',role:'teacher', grade:'—',          avg_score:null,last_access:'há 3h', active:true },
+  { name:'Cristina Leal',     email:'cristina@vclass.ao',role:'student', grade:'11ª Classe', avg_score:65, last_access:'há 5d',  active:false },
+  { name:'Eduardo Kapango',   email:'eduardo@vclass.ao', role:'student', grade:'9ª Classe',  avg_score:78, last_access:'há 1h',  active:true },
+]
+
+let countryData = COUNTRY_DATA.ao
+
+async function loadCountryData() {
+  const user = VClass.getCurrentUser()
+  const managedCountry = user?.managed_country || 'ao'
+  countryData = COUNTRY_DATA[managedCountry] || COUNTRY_DATA.ao
+
+  document.getElementById('country-flag').textContent  = countryData.flag
+  document.getElementById('country-name').textContent  = countryData.name
+  document.getElementById('country-label').textContent = `${countryData.flag} ${countryData.name}`
+  document.getElementById('curr-country-name').textContent = countryData.name
+  document.getElementById('kpi-students').textContent  = countryData.stats.total_students.toLocaleString()
+  document.getElementById('kpi-teachers').textContent  = countryData.stats.total_teachers
+  document.getElementById('kpi-lessons').textContent   = countryData.stats.total_lessons
+  document.getElementById('kpi-score').textContent     = countryData.stats.avg_score + '%'
+  document.getElementById('published-count').textContent = countryData.stats.published_lessons
+  document.getElementById('draft-count').textContent    = countryData.stats.total_lessons - countryData.stats.published_lessons
+  document.getElementById('alerts-badge').textContent   = countryData.alerts.length
+
+  // Top lessons
+  document.getElementById('top-lessons').innerHTML = countryData.top_lessons.map((l,i) => `
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-full bg-amber-100 text-amber-700 font-bold flex items-center justify-center text-sm">${i+1}</div>
+      <div class="flex-1"><div class="text-sm font-medium text-gray-800">${l.title}</div><div class="text-xs text-gray-500">${l.subject} · ${l.views} vistas</div></div>
+      <div class="text-sm font-semibold text-amber-600">⭐ ${l.rating}</div>
+    </div>`).join('')
+
+  // Activity bars
+  const days = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom']
+  const maxVal = Math.max(...countryData.activity_week)
+  document.getElementById('activity-bars').innerHTML = countryData.activity_week.map((v,i) => `
+    <div class="flex items-center gap-3">
+      <span class="text-xs text-gray-500 w-8">${days[i]}</span>
+      <div class="flex-1 bg-gray-200 rounded-full h-3"><div class="bg-amber-500 h-3 rounded-full bar" style="width:${(v/maxVal*100).toFixed(0)}%"></div></div>
+      <span class="text-xs text-gray-600 w-6">${v}</span>
+    </div>`).join('')
+
+  // Subjects
+  document.getElementById('subjects-list').innerHTML = countryData.subjects.map(s => `
+    <span class="text-xs bg-amber-100 text-amber-800 px-3 py-1 rounded-full">${s}</span>`).join('')
+
+  // Grades distribution
+  const gradeVal = [120,180,165,210,190,155]
+  document.getElementById('grades-dist').innerHTML = countryData.grades.map((g,i) => `
+    <div class="flex items-center gap-3">
+      <span class="text-xs text-gray-600 w-20">${g}</span>
+      <div class="flex-1 bg-gray-200 rounded-full h-2"><div class="bg-green-500 h-2 rounded-full bar" style="width:${(gradeVal[i]/210*100).toFixed(0)}%"></div></div>
+      <span class="text-xs text-gray-500">${gradeVal[i]}</span>
+    </div>`).join('')
+
+  // Content by subject
+  document.getElementById('content-by-subject').innerHTML = (countryData.content_by_subject || []).map(s => `
+    <div class="flex items-center gap-3">
+      <span class="text-sm text-gray-700 w-32">${s.subject}</span>
+      <div class="flex-1 bg-gray-200 rounded-full h-3">
+        <div class="bg-green-500 h-3 rounded-full bar" style="width:${(s.published/(s.published+s.draft)*100).toFixed(0)}%"></div>
+      </div>
+      <span class="text-xs text-gray-600">${s.published} pub / ${s.draft} rascunho</span>
+    </div>`).join('')
+
+  // Users table
+  renderUsers(MOCK_USERS_COUNTRY)
+
+  // Alerts
+  renderAlerts(countryData.alerts)
+
+  // Curriculum
+  renderCurriculum()
+}
+
+function renderUsers(users) {
+  document.getElementById('users-tbody').innerHTML = users.map(u => `
+    <tr class="border-b border-gray-100 hover:bg-gray-50">
+      <td class="px-4 py-3">
+        <div class="font-medium text-gray-800">${u.name}</div>
+        <div class="text-xs text-gray-400">${u.email}</div>
+      </td>
+      <td class="px-4 py-3"><span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">${u.role === 'student' ? 'Estudante' : 'Professor'}</span></td>
+      <td class="px-4 py-3 text-gray-600 text-xs">${u.grade}</td>
+      <td class="px-4 py-3 font-medium ${u.avg_score >= 70 ? 'text-green-600' : u.avg_score ? 'text-red-500' : 'text-gray-400'}">${u.avg_score != null ? u.avg_score + '%' : '—'}</td>
+      <td class="px-4 py-3 text-gray-500 text-xs">${u.last_access}</td>
+      <td class="px-4 py-3"><span class="text-xs px-2 py-0.5 rounded-full ${u.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}">${u.active ? 'Activo' : 'Inactivo'}</span></td>
+    </tr>`).join('')
+}
+
+function renderAlerts(alerts) {
+  const icons = { error:'fa-exclamation-circle text-red-500', warning:'fa-exclamation-triangle text-yellow-500', info:'fa-info-circle text-blue-500' }
+  const bg    = { error:'bg-red-50 border-red-100', warning:'bg-yellow-50 border-yellow-100', info:'bg-blue-50 border-blue-100' }
+  document.getElementById('alerts-list').innerHTML = alerts.map(a => `
+    <div class="flex items-start gap-4 p-4 rounded-2xl border ${bg[a.type]}">
+      <i class="fas ${icons[a.type]} text-xl mt-0.5"></i>
+      <div class="flex-1">
+        <div class="font-semibold text-gray-800">${a.title}</div>
+        <div class="text-sm text-gray-600 mt-1">${a.description}</div>
+        <div class="text-xs text-gray-400 mt-2">${new Date(a.date).toLocaleString('pt-PT')}</div>
+      </div>
+      <button class="text-xs text-gray-500 hover:text-gray-700 px-3 py-1 border border-gray-200 rounded-lg">Resolver</button>
+    </div>`).join('')
+}
+
+function renderCurriculum() {
+  const grades = countryData.grades || []
+  document.getElementById('curriculum-grid').innerHTML = grades.map((g,i) => `
+    <div class="border border-gray-200 rounded-2xl p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h4 class="font-semibold text-gray-800">${g}</h4>
+        <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Activo</span>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        ${countryData.subjects.map(s => `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-lg">${s}</span>`).join('')}
+      </div>
+    </div>`).join('')
+}
+
+function showTab(name) {
+  ['overview','users','curriculum','content','analytics','alerts'].forEach(t => {
+    document.getElementById(`tab-content-${t}`).style.display = 'none'
+    document.getElementById(`tab-${t}`).classList.remove('active')
+  })
+  document.getElementById(`tab-content-${name}`).style.display = 'block'
+  document.getElementById(`tab-${name}`).classList.add('active')
+  const titles = { overview:'Visão Geral', users:'Utilizadores', curriculum:'Currículo', content:'Conteúdo', analytics:'Análises', alerts:'Alertas' }
+  document.getElementById('page-title').textContent = titles[name] || name
+}
+
+document.getElementById('user-search')?.addEventListener('input', function() {
+  const q = this.value.toLowerCase()
+  renderUsers(MOCK_USERS_COUNTRY.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)))
+})
+
+function logout() {
+  VClass.logout ? VClass.logout() : localStorage.clear()
+  window.location.href = '/login.html'
+}
+</script>
+</body>
+</html>

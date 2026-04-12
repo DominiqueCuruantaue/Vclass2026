@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel do Editor — VClass</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    .sidebar { width: 240px; min-height: 100vh; }
+    .badge-pending  { background:#fef3c7; color:#92400e; }
+    .badge-approved { background:#d1fae5; color:#065f46; }
+    .badge-rejected { background:#fee2e2; color:#991b1b; }
+    .badge-revision { background:#e0e7ff; color:#3730a3; }
+    .stat-card { transition: transform .15s; }
+    .stat-card:hover { transform: translateY(-2px); }
+    .diff-add { background:#d1fae5; }
+    .diff-rem { background:#fee2e2; }
+    .tab-btn.active { border-bottom: 3px solid #7c3aed; color:#7c3aed; font-weight:700; }
+    #overlay { background:rgba(0,0,0,.5); }
+  </style>
+</head>
+<body class="bg-gray-50 flex">
+
+<!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+<aside class="sidebar bg-white border-r border-gray-200 flex flex-col fixed top-0 left-0 h-full z-20">
+  <div class="p-5 border-b border-gray-100">
+    <div class="flex items-center gap-2">
+      <div class="w-9 h-9 bg-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-lg">V</div>
+      <div>
+        <div class="font-bold text-gray-900 text-sm">VClass</div>
+        <div class="text-xs text-purple-600 font-semibold">Editor</div>
+      </div>
+    </div>
+  </div>
+  <nav class="flex-1 p-4 space-y-1">
+    <button onclick="showTab('queue')"    class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition text-sm font-medium" id="nav-queue">
+      <i class="fas fa-inbox w-5 text-center"></i> Fila de Revisão
+      <span class="ml-auto bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full" id="queue-badge">7</span>
+    </button>
+    <button onclick="showTab('approved')" class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition text-sm font-medium" id="nav-approved">
+      <i class="fas fa-check-circle w-5 text-center text-green-500"></i> Aprovados
+    </button>
+    <button onclick="showTab('rejected')" class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition text-sm font-medium" id="nav-rejected">
+      <i class="fas fa-times-circle w-5 text-center text-red-500"></i> Rejeitados
+    </button>
+    <button onclick="showTab('stats')"   class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition text-sm font-medium" id="nav-stats">
+      <i class="fas fa-chart-bar w-5 text-center text-blue-500"></i> Estatísticas
+    </button>
+    <button onclick="showTab('criteria')" class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition text-sm font-medium" id="nav-criteria">
+      <i class="fas fa-clipboard-list w-5 text-center text-purple-500"></i> Critérios
+    </button>
+  </nav>
+  <div class="p-4 border-t border-gray-100">
+    <div class="flex items-center gap-3">
+      <div id="avatar-circle" class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold" style="background:#7c3aed">IG</div>
+      <div>
+        <div class="text-sm font-semibold text-gray-900" id="user-name-sidebar">Isabel Guambe</div>
+        <div class="text-xs text-gray-500">Editor</div>
+      </div>
+    </div>
+    <button onclick="logout()" class="mt-3 w-full text-xs text-gray-500 hover:text-red-500 flex items-center gap-2 transition">
+      <i class="fas fa-sign-out-alt"></i> Sair
+    </button>
+  </div>
+</aside>
+
+<!-- ── Main content ────────────────────────────────────────────────────── -->
+<main class="ml-60 flex-1 min-h-screen">
+
+  <!-- Topbar -->
+  <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+    <div>
+      <h1 class="text-xl font-bold text-gray-900" id="page-title">Fila de Revisão</h1>
+      <p class="text-sm text-gray-500">Conteúdos aguardando aprovação pedagógica</p>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="relative">
+        <input id="search-input" type="text" placeholder="Pesquisar conteúdo…" class="pl-9 pr-4 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 w-64">
+        <i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-sm"></i>
+      </div>
+      <button class="relative p-2 text-gray-600 hover:text-purple-600 transition">
+        <i class="fas fa-bell text-lg"></i>
+        <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- KPI Cards -->
+  <div class="p-6 pb-0 grid grid-cols-4 gap-4">
+    <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center"><i class="fas fa-hourglass-half text-orange-500"></i></div>
+        <span class="text-xs text-orange-600 font-medium bg-orange-50 px-2 py-1 rounded-full">Pendentes</span>
+      </div>
+      <div class="text-3xl font-bold text-gray-900" id="kpi-pending">7</div>
+      <div class="text-sm text-gray-500">Para revisão</div>
+    </div>
+    <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center"><i class="fas fa-check text-green-500"></i></div>
+        <span class="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded-full">Aprovados</span>
+      </div>
+      <div class="text-3xl font-bold text-gray-900" id="kpi-approved">312</div>
+      <div class="text-sm text-gray-500">Total aprovados</div>
+    </div>
+    <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center"><i class="fas fa-times text-red-500"></i></div>
+        <span class="text-xs text-red-600 font-medium bg-red-50 px-2 py-1 rounded-full">Rejeitados</span>
+      </div>
+      <div class="text-3xl font-bold text-gray-900" id="kpi-rejected">28</div>
+      <div class="text-sm text-gray-500">Total rejeitados</div>
+    </div>
+    <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center"><i class="fas fa-percentage text-purple-500"></i></div>
+        <span class="text-xs text-purple-600 font-medium bg-purple-50 px-2 py-1 rounded-full">Taxa</span>
+      </div>
+      <div class="text-3xl font-bold text-gray-900" id="kpi-rate">91.8%</div>
+      <div class="text-sm text-gray-500">Taxa de aprovação</div>
+    </div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="px-6 pt-6 border-b border-gray-200 bg-white mx-6 mt-6 rounded-t-2xl flex gap-6">
+    <button onclick="showTab('queue')"    class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-purple-600 transition" id="tab-queue">Fila de Revisão</button>
+    <button onclick="showTab('approved')" class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-purple-600 transition" id="tab-approved">Aprovados</button>
+    <button onclick="showTab('rejected')" class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-purple-600 transition" id="tab-rejected">Rejeitados</button>
+    <button onclick="showTab('stats')"    class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-purple-600 transition" id="tab-stats">Estatísticas</button>
+    <button onclick="showTab('criteria')" class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-purple-600 transition" id="tab-criteria">Critérios</button>
+  </div>
+
+  <!-- ── Queue Tab ────────────────────────────────────────────────────── -->
+  <section id="tab-content-queue" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex gap-2">
+        <select id="filter-priority" onchange="applyFilters()" class="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-300">
+          <option value="all">Todas prioridades</option>
+          <option value="high">Alta prioridade</option>
+          <option value="medium">Média prioridade</option>
+          <option value="low">Baixa prioridade</option>
+        </select>
+        <select id="filter-subject" onchange="applyFilters()" class="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-300">
+          <option value="all">Todas disciplinas</option>
+          <option value="Matemática">Matemática</option>
+          <option value="Física">Física</option>
+          <option value="Química">Química</option>
+          <option value="Biologia">Biologia</option>
+          <option value="Português">Português</option>
+        </select>
+        <select id="filter-country" onchange="applyFilters()" class="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-300">
+          <option value="all">Todos os países</option>
+          <option value="Moçambique">Moçambique</option>
+          <option value="Angola">Angola</option>
+          <option value="Portugal">Portugal</option>
+          <option value="Brasil">Brasil</option>
+        </select>
+      </div>
+      <span class="text-sm text-gray-500"><span id="queue-count">0</span> lições na fila</span>
+    </div>
+    <div id="queue-list" class="space-y-4"></div>
+  </section>
+
+  <!-- ── Approved Tab ─────────────────────────────────────────────────── -->
+  <section id="tab-content-approved" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
+    <div id="approved-list" class="space-y-3"></div>
+  </section>
+
+  <!-- ── Rejected Tab ─────────────────────────────────────────────────── -->
+  <section id="tab-content-rejected" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
+    <div id="rejected-list" class="space-y-3"></div>
+  </section>
+
+  <!-- ── Stats Tab ────────────────────────────────────────────────────── -->
+  <section id="tab-content-stats" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
+    <div class="grid grid-cols-2 gap-6">
+      <div class="bg-gray-50 rounded-2xl p-5">
+        <h3 class="font-semibold text-gray-800 mb-4"><i class="fas fa-globe-africa mr-2 text-purple-500"></i>Por País</h3>
+        <div class="space-y-3" id="stats-country"></div>
+      </div>
+      <div class="bg-gray-50 rounded-2xl p-5">
+        <h3 class="font-semibold text-gray-800 mb-4"><i class="fas fa-book mr-2 text-blue-500"></i>Por Disciplina</h3>
+        <div class="space-y-3" id="stats-subject"></div>
+      </div>
+      <div class="bg-gray-50 rounded-2xl p-5 col-span-2">
+        <h3 class="font-semibold text-gray-800 mb-4"><i class="fas fa-clock mr-2 text-green-500"></i>Tempo Médio de Revisão</h3>
+        <div class="grid grid-cols-3 gap-4 text-center">
+          <div><div class="text-3xl font-bold text-green-600">1.8h</div><div class="text-sm text-gray-500">Revisão rápida</div></div>
+          <div><div class="text-3xl font-bold text-blue-600">4.2h</div><div class="text-sm text-gray-500">Revisão completa</div></div>
+          <div><div class="text-3xl font-bold text-purple-600">12h</div><div class="text-sm text-gray-500">SLA máximo</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Criteria Tab ─────────────────────────────────────────────────── -->
+  <section id="tab-content-criteria" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
+    <div class="grid grid-cols-2 gap-6">
+      <div class="space-y-4">
+        <h3 class="font-semibold text-gray-800 text-lg">✅ Critérios de Aprovação</h3>
+        <div class="space-y-3">
+          <div class="flex items-start gap-3 p-3 bg-green-50 rounded-xl border border-green-100">
+            <i class="fas fa-check-circle text-green-500 mt-0.5"></i>
+            <div><div class="font-medium text-sm text-gray-800">Alinhamento curricular</div><div class="text-xs text-gray-500">Conteúdo deve seguir o programa nacional do país</div></div>
+          </div>
+          <div class="flex items-start gap-3 p-3 bg-green-50 rounded-xl border border-green-100">
+            <i class="fas fa-check-circle text-green-500 mt-0.5"></i>
+            <div><div class="font-medium text-sm text-gray-800">Qualidade pedagógica</div><div class="text-xs text-gray-500">Explicações claras, progressão lógica, exemplos adequados</div></div>
+          </div>
+          <div class="flex items-start gap-3 p-3 bg-green-50 rounded-xl border border-green-100">
+            <i class="fas fa-check-circle text-green-500 mt-0.5"></i>
+            <div><div class="font-medium text-sm text-gray-800">Qualidade técnica</div><div class="text-xs text-gray-500">Vídeo nítido (720p+), áudio claro, sem ruído excessivo</div></div>
+          </div>
+          <div class="flex items-start gap-3 p-3 bg-green-50 rounded-xl border border-green-100">
+            <i class="fas fa-check-circle text-green-500 mt-0.5"></i>
+            <div><div class="font-medium text-sm text-gray-800">Exercícios correctivos</div><div class="text-xs text-gray-500">Mínimo 3 exercícios com respostas correctas verificadas</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="space-y-4">
+        <h3 class="font-semibold text-gray-800 text-lg">❌ Motivos de Rejeição</h3>
+        <div class="space-y-3">
+          <div class="flex items-start gap-3 p-3 bg-red-50 rounded-xl border border-red-100">
+            <i class="fas fa-times-circle text-red-500 mt-0.5"></i>
+            <div><div class="font-medium text-sm text-gray-800">Erros de conteúdo</div><div class="text-xs text-gray-500">Informação factualmente incorrecta ou desactualizada</div></div>
+          </div>
+          <div class="flex items-start gap-3 p-3 bg-red-50 rounded-xl border border-red-100">
+            <i class="fas fa-times-circle text-red-500 mt-0.5"></i>
+            <div><div class="font-medium text-sm text-gray-800">Qualidade de vídeo insuficiente</div><div class="text-xs text-gray-500">Resolução abaixo de 480p ou áudio inaudível</div></div>
+          </div>
+          <div class="flex items-start gap-3 p-3 bg-red-50 rounded-xl border border-red-100">
+            <i class="fas fa-times-circle text-red-500 mt-0.5"></i>
+            <div><div class="font-medium text-sm text-gray-800">Direitos autorais</div><div class="text-xs text-gray-500">Material protegido sem licença adequada</div></div>
+          </div>
+          <div class="flex items-start gap-3 p-3 bg-red-50 rounded-xl border border-red-100">
+            <i class="fas fa-times-circle text-red-500 mt-0.5"></i>
+            <div><div class="font-medium text-sm text-gray-800">Conteúdo inadequado</div><div class="text-xs text-gray-500">Material inapropriado para faixa etária escolar</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ── Modal de Revisão ────────────────────────────────────────────────────── -->
+<div id="overlay" class="fixed inset-0 z-40 hidden items-center justify-center">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 max-h-screen overflow-y-auto">
+    <div class="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+      <h2 class="font-bold text-gray-900 text-lg" id="modal-title">Revisão de Lição</h2>
+      <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 p-1"><i class="fas fa-times text-xl"></i></button>
+    </div>
+    <div class="p-6" id="modal-body"></div>
+    <div class="border-t border-gray-100 px-6 py-4 flex gap-3 justify-end" id="modal-actions"></div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+<script>
+// ── Auth check ────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!VClass.isAuthenticated()) { window.location.href = '/login.html'; return }
+  const user = VClass.getCurrentUser()
+  if (!user || !['editor','admin'].includes(user.role)) { window.location.href = '/dashboard.html'; return }
+  document.getElementById('user-name-sidebar').textContent = user.full_name || user.name || 'Editor'
+  if (user.avatar_color) document.getElementById('avatar-circle').style.background = user.avatar_color
+  const initials = (user.full_name || user.name || 'ED').split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()
+  document.getElementById('avatar-circle').textContent = initials
+  await loadEditorData()
+  showTab('queue')
+})
+
+// ── Data ─────────────────────────────────────────────────────────────────────
+let allLessons = []
+
+const MOCK_QUEUE = [
+  { id:'les-p01', title:'Derivadas — Regra da Cadeia', subject:'Matemática', chapter:'Cálculo Diferencial', grade:'12ª Classe', country:'Moçambique', country_flag:'🇲🇿', creator:'Prof. Carlos Machava', duration_min:18, exercises_count:5, difficulty:'hard', status:'pending_review', submitted_at: new Date(Date.now()-3600000).toISOString(), priority:'high', description:'Introdução à regra da cadeia para derivadas de funções compostas.', video_url:'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' },
+  { id:'les-p02', title:'Tabela Periódica — Metais de Transição', subject:'Química', chapter:'Química Inorgânica', grade:'11ª Classe', country:'Angola', country_flag:'🇦🇴', creator:'Beatriz Nhamposse', duration_min:14, exercises_count:4, difficulty:'medium', status:'pending_review', submitted_at: new Date(Date.now()-7200000).toISOString(), priority:'medium', description:'Propriedades dos metais de transição e aplicações industriais.', video_url:'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' },
+  { id:'les-p03', title:'Leis de Mendel — Genética', subject:'Biologia', chapter:'Hereditariedade', grade:'11ª Classe', country:'Moçambique', country_flag:'🇲🇿', creator:'Prof. Carlos Machava', duration_min:22, exercises_count:6, difficulty:'medium', status:'pending_review', submitted_at: new Date(Date.now()-14400000).toISOString(), priority:'high', description:'Primeira e segunda leis de Mendel com problemas resolvidos.', video_url:'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' },
+  { id:'les-p04', title:'Análise Sintáctica — Sujeito e Predicado', subject:'Português', chapter:'Gramática', grade:'10ª Classe', country:'Angola', country_flag:'🇦🇴', creator:'Beatriz Nhamposse', duration_min:16, exercises_count:8, difficulty:'easy', status:'pending_review', submitted_at: new Date(Date.now()-21600000).toISOString(), priority:'low', description:'Identificação e análise de sujeito e predicado em frases complexas.', video_url:'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' },
+  { id:'les-p05', title:'Óptica Geométrica — Reflexão', subject:'Física', chapter:'Óptica', grade:'10ª Classe', country:'Portugal', country_flag:'🇵🇹', creator:'Prof. Carlos Machava', duration_min:19, exercises_count:5, difficulty:'medium', status:'pending_review', submitted_at: new Date(Date.now()-28800000).toISOString(), priority:'medium', description:'Leis da reflexão e espelhos planos.', video_url:'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' },
+  { id:'les-a01', title:'Cinemática — MRU', subject:'Física', chapter:'Cinemática', grade:'10ª Classe', country:'Moçambique', country_flag:'🇲🇿', creator:'Prof. Carlos Machava', duration_min:20, exercises_count:6, difficulty:'easy', status:'approved', submitted_at: new Date(Date.now()-86400000*3).toISOString(), priority:'medium', description:'Movimento rectilíneo uniforme — conceitos e exercícios.' },
+  { id:'les-a02', title:'Funções Quadráticas', subject:'Matemática', chapter:'Funções', grade:'11ª Classe', country:'Moçambique', country_flag:'🇲🇿', creator:'Beatriz Nhamposse', duration_min:25, exercises_count:7, difficulty:'hard', status:'approved', submitted_at: new Date(Date.now()-86400000*5).toISOString(), priority:'high', description:'Estudo completo das funções do 2º grau.' },
+  { id:'les-r01', title:'Energias Renováveis', subject:'Física', chapter:'Energia', grade:'12ª Classe', country:'Angola', country_flag:'🇦🇴', creator:'Beatriz Nhamposse', duration_min:12, exercises_count:2, difficulty:'easy', status:'rejected', submitted_at: new Date(Date.now()-86400000*2).toISOString(), priority:'low', description:'Conteúdo incompleto — rejeitado.', rejection_reason:'Exercícios insuficientes e vídeo com qualidade baixa (360p).' },
+]
+
+const STATS_COUNTRY = [
+  { name:'🇲🇿 Moçambique', pending:3, approved:180, rejected:12 },
+  { name:'🇦🇴 Angola',     pending:2, approved:98,  rejected:10 },
+  { name:'🇵🇹 Portugal',   pending:1, approved:24,  rejected:4 },
+  { name:'🇧🇷 Brasil',     pending:1, approved:10,  rejected:2 },
+]
+const STATS_SUBJECT = [
+  { name:'Matemática', count:98,  avg_time:'3.2h' },
+  { name:'Física',     count:84,  avg_time:'2.8h' },
+  { name:'Química',    count:56,  avg_time:'4.1h' },
+  { name:'Biologia',   count:42,  avg_time:'3.7h' },
+  { name:'Português',  count:32,  avg_time:'1.9h' },
+]
+
+async function loadEditorData() {
+  allLessons = MOCK_QUEUE
+  const pending = allLessons.filter(l => l.status === 'pending_review').length
+  document.getElementById('kpi-pending').textContent = pending
+  document.getElementById('queue-badge').textContent = pending
+  document.getElementById('queue-count').textContent = pending
+  renderStatsCountry()
+  renderStatsSubject()
+}
+
+// ── Tabs ─────────────────────────────────────────────────────────────────────
+function showTab(name) {
+  ['queue','approved','rejected','stats','criteria'].forEach(t => {
+    document.getElementById(`tab-content-${t}`).style.display = 'none'
+    document.getElementById(`tab-${t}`).classList.remove('active')
+  })
+  document.getElementById(`tab-content-${name}`).style.display = 'block'
+  document.getElementById(`tab-${name}`).classList.add('active')
+  const titles = { queue:'Fila de Revisão', approved:'Lições Aprovadas', rejected:'Lições Rejeitadas', stats:'Estatísticas', criteria:'Critérios de Avaliação' }
+  document.getElementById('page-title').textContent = titles[name] || name
+  if (name === 'queue')    renderQueue()
+  if (name === 'approved') renderApproved()
+  if (name === 'rejected') renderRejected()
+}
+
+// ── Render helpers ────────────────────────────────────────────────────────────
+function priorityBadge(p) {
+  const map = { high:'bg-red-100 text-red-700', medium:'bg-yellow-100 text-yellow-700', low:'bg-gray-100 text-gray-600' }
+  const label = { high:'Alta', medium:'Média', low:'Baixa' }
+  return `<span class="text-xs px-2 py-0.5 rounded-full font-medium ${map[p]}">${label[p]}</span>`
+}
+function difficultyBadge(d) {
+  const map = { easy:'bg-green-100 text-green-700', medium:'bg-blue-100 text-blue-700', hard:'bg-purple-100 text-purple-700' }
+  const label = { easy:'Fácil', medium:'Médio', hard:'Difícil' }
+  return `<span class="text-xs px-2 py-0.5 rounded-full ${map[d]}">${label[d]}</span>`
+}
+function timeAgo(iso) {
+  const diff = Date.now() - new Date(iso).getTime()
+  const h = Math.floor(diff/3600000)
+  const m = Math.floor((diff%3600000)/60000)
+  if (h > 24) return `${Math.floor(h/24)}d atrás`
+  if (h > 0)  return `${h}h atrás`
+  return `${m}min atrás`
+}
+
+function applyFilters() {
+  const pri  = document.getElementById('filter-priority').value
+  const subj = document.getElementById('filter-subject').value
+  const cou  = document.getElementById('filter-country').value
+  let items  = allLessons.filter(l => l.status === 'pending_review')
+  if (pri  !== 'all') items = items.filter(l => l.priority === pri)
+  if (subj !== 'all') items = items.filter(l => l.subject  === subj)
+  if (cou  !== 'all') items = items.filter(l => l.country  === cou)
+  renderQueueItems(items)
+}
+
+function renderQueue() {
+  const items = allLessons.filter(l => l.status === 'pending_review')
+  renderQueueItems(items)
+  document.getElementById('queue-count').textContent = items.length
+}
+
+function renderQueueItems(items) {
+  const el = document.getElementById('queue-list')
+  if (!items.length) { el.innerHTML = '<div class="text-center py-12 text-gray-400"><i class="fas fa-inbox text-4xl mb-3"></i><p>Nenhuma lição na fila</p></div>'; return }
+  el.innerHTML = items.map(l => `
+    <div class="border border-gray-200 rounded-2xl p-5 hover:border-purple-200 hover:bg-purple-50/30 transition cursor-pointer" onclick="openModal('${l.id}')">
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-1">
+            ${priorityBadge(l.priority)} ${difficultyBadge(l.difficulty)}
+            <span class="text-xs text-gray-400">${l.country_flag} ${l.country}</span>
+          </div>
+          <h3 class="font-semibold text-gray-900 text-base">${l.title}</h3>
+          <p class="text-sm text-gray-500 mt-1">${l.subject} · ${l.chapter} · ${l.grade}</p>
+          <p class="text-xs text-gray-400 mt-1">Por <strong>${l.creator}</strong> · ${timeAgo(l.submitted_at)}</p>
+        </div>
+        <div class="text-right flex-shrink-0">
+          <div class="text-sm text-gray-600"><i class="fas fa-play-circle mr-1 text-purple-400"></i>${l.duration_min} min</div>
+          <div class="text-sm text-gray-600 mt-1"><i class="fas fa-question-circle mr-1 text-blue-400"></i>${l.exercises_count} exercícios</div>
+          <button class="mt-3 px-4 py-1.5 bg-purple-600 text-white text-xs rounded-xl hover:bg-purple-700 transition">Rever</button>
+        </div>
+      </div>
+    </div>`).join('')
+}
+
+function renderApproved() {
+  const items = allLessons.filter(l => l.status === 'approved')
+  const el = document.getElementById('approved-list')
+  el.innerHTML = items.map(l => `
+    <div class="flex items-center gap-4 border border-green-100 bg-green-50/50 rounded-xl p-4">
+      <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center"><i class="fas fa-check text-green-600"></i></div>
+      <div class="flex-1">
+        <div class="font-semibold text-gray-900 text-sm">${l.title}</div>
+        <div class="text-xs text-gray-500">${l.country_flag} ${l.country} · ${l.subject} · ${l.grade} · ${timeAgo(l.submitted_at)}</div>
+      </div>
+      <span class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-medium">Aprovado</span>
+    </div>`).join('')
+}
+
+function renderRejected() {
+  const items = allLessons.filter(l => l.status === 'rejected')
+  const el = document.getElementById('rejected-list')
+  el.innerHTML = items.map(l => `
+    <div class="flex items-center gap-4 border border-red-100 bg-red-50/50 rounded-xl p-4">
+      <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center"><i class="fas fa-times text-red-600"></i></div>
+      <div class="flex-1">
+        <div class="font-semibold text-gray-900 text-sm">${l.title}</div>
+        <div class="text-xs text-gray-500">${l.country_flag} ${l.country} · ${l.subject} · ${l.grade}</div>
+        ${l.rejection_reason ? `<div class="text-xs text-red-600 mt-1"><i class="fas fa-info-circle mr-1"></i>${l.rejection_reason}</div>` : ''}
+      </div>
+      <span class="text-xs bg-red-100 text-red-700 px-3 py-1 rounded-full font-medium">Rejeitado</span>
+    </div>`).join('')
+}
+
+function renderStatsCountry() {
+  document.getElementById('stats-country').innerHTML = STATS_COUNTRY.map(c => `
+    <div class="flex items-center gap-3">
+      <span class="text-sm text-gray-700 w-32">${c.name}</span>
+      <div class="flex-1 bg-gray-200 rounded-full h-2">
+        <div class="bg-purple-500 h-2 rounded-full" style="width:${Math.min(100, c.approved/3.5)}%"></div>
+      </div>
+      <span class="text-xs text-gray-500 w-8">${c.approved}</span>
+    </div>`).join('')
+}
+
+function renderStatsSubject() {
+  document.getElementById('stats-subject').innerHTML = STATS_SUBJECT.map(s => `
+    <div class="flex items-center gap-3">
+      <span class="text-sm text-gray-700 w-24">${s.name}</span>
+      <div class="flex-1 bg-gray-200 rounded-full h-2">
+        <div class="bg-blue-500 h-2 rounded-full" style="width:${Math.min(100, s.count)}%"></div>
+      </div>
+      <span class="text-xs text-gray-500 w-8">${s.count}</span>
+    </div>`).join('')
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function openModal(id) {
+  const lesson = allLessons.find(l => l.id === id)
+  if (!lesson) return
+  document.getElementById('modal-title').textContent = `Revisão: ${lesson.title}`
+  document.getElementById('modal-body').innerHTML = `
+    <div class="space-y-5">
+      <div class="grid grid-cols-2 gap-4 text-sm">
+        <div><span class="text-gray-500">Disciplina:</span> <strong>${lesson.subject}</strong></div>
+        <div><span class="text-gray-500">Capítulo:</span> <strong>${lesson.chapter}</strong></div>
+        <div><span class="text-gray-500">Classe:</span> <strong>${lesson.grade}</strong></div>
+        <div><span class="text-gray-500">País:</span> <strong>${lesson.country_flag} ${lesson.country}</strong></div>
+        <div><span class="text-gray-500">Criador:</span> <strong>${lesson.creator}</strong></div>
+        <div><span class="text-gray-500">Duração:</span> <strong>${lesson.duration_min} min</strong></div>
+        <div><span class="text-gray-500">Exercícios:</span> <strong>${lesson.exercises_count}</strong></div>
+        <div><span class="text-gray-500">Dificuldade:</span> ${difficultyBadge(lesson.difficulty)}</div>
+      </div>
+      <div class="bg-gray-50 rounded-xl p-4">
+        <div class="text-sm font-medium text-gray-700 mb-1">Descrição</div>
+        <p class="text-sm text-gray-600">${lesson.description}</p>
+      </div>
+      <div class="bg-gray-50 rounded-xl p-4">
+        <div class="text-sm font-medium text-gray-700 mb-2">Checklist de Revisão</div>
+        <div class="space-y-2">
+          ${['Alinhamento curricular correcto','Qualidade pedagógica adequada','Vídeo com boa qualidade (≥720p)','Áudio claro e perceptível','Exercícios correctamente formulados','Linguagem adequada ao nível da classe'].map((item,i) => `
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="check-${i}" class="w-4 h-4 accent-purple-600">
+            <span class="text-sm text-gray-700">${item}</span>
+          </label>`).join('')}
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Feedback ao criador</label>
+        <textarea id="modal-feedback" rows="3" placeholder="Comentários e sugestões de melhoria…" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none"></textarea>
+      </div>
+    </div>`
+  document.getElementById('modal-actions').innerHTML = `
+    <button onclick="closeModal()" class="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-50 transition">Cancelar</button>
+    <button onclick="submitReview('${id}','revision')" class="px-4 py-2 bg-yellow-500 text-white rounded-xl text-sm hover:bg-yellow-600 transition"><i class="fas fa-edit mr-1"></i>Solicitar Revisão</button>
+    <button onclick="submitReview('${id}','rejected')" class="px-4 py-2 bg-red-500 text-white rounded-xl text-sm hover:bg-red-600 transition"><i class="fas fa-times mr-1"></i>Rejeitar</button>
+    <button onclick="submitReview('${id}','approved')" class="px-4 py-2 bg-green-500 text-white rounded-xl text-sm hover:bg-green-600 transition"><i class="fas fa-check mr-1"></i>Aprovar</button>`
+  document.getElementById('overlay').classList.remove('hidden')
+  document.getElementById('overlay').classList.add('flex')
+}
+
+function closeModal() {
+  document.getElementById('overlay').classList.add('hidden')
+  document.getElementById('overlay').classList.remove('flex')
+}
+
+function submitReview(id, action) {
+  const feedback = document.getElementById('modal-feedback')?.value || ''
+  const lesson = allLessons.find(l => l.id === id)
+  if (lesson) lesson.status = action
+  closeModal()
+  const msgs = { approved:'✅ Lição aprovada com sucesso!', rejected:'❌ Lição rejeitada.', revision:'📝 Revisão solicitada ao criador.' }
+  showToast(msgs[action] || 'Actualizado')
+  renderQueue()
+  document.getElementById('kpi-pending').textContent = allLessons.filter(l => l.status === 'pending_review').length
+}
+
+function showToast(msg) {
+  const t = document.createElement('div')
+  t.className = 'fixed bottom-6 right-6 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-lg z-50 text-sm'
+  t.textContent = msg
+  document.body.appendChild(t)
+  setTimeout(() => t.remove(), 3000)
+}
+
+function logout() {
+  VClass.logout ? VClass.logout() : localStorage.clear()
+  window.location.href = '/login.html'
+}
+
+document.getElementById('search-input').addEventListener('input', function() {
+  const q = this.value.toLowerCase()
+  const items = allLessons.filter(l => l.status === 'pending_review' && (l.title.toLowerCase().includes(q) || l.subject.toLowerCase().includes(q) || l.creator.toLowerCase().includes(q)))
+  renderQueueItems(items)
+})
+</script>
+</body>
+</html>

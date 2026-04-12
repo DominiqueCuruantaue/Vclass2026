@@ -18,6 +18,10 @@ import notificationsRoutes from './routes/notifications'
 import newsRoutes from './routes/news'
 import libraryRoutes from './routes/library'
 import supportRoutes from './routes/support'
+import editorRoutes from './routes/editor'
+import countryRoutes from './routes/country'
+import financeRoutes from './routes/finance'
+import moderatorRoutes from './routes/moderator'
 import pagesRoutes from './routes/pages'
 
 const app = new Hono()
@@ -58,13 +62,17 @@ app.route('/api/notifications', notificationsRoutes)
 app.route('/api/news', newsRoutes)
 app.route('/api/library', libraryRoutes)
 app.route('/api/support', supportRoutes)
+app.route('/api/editor', editorRoutes)
+app.route('/api/country', countryRoutes)
+app.route('/api/finance', financeRoutes)
+app.route('/api/moderator', moderatorRoutes)
 
 // Health check
 app.get('/api/health', (c) => {
   return c.json({
     success: true,
     message: 'VClass API is running',
-    version: '1.2.0',
+    version: '1.3.0',
     timestamp: new Date().toISOString()
   })
 })
