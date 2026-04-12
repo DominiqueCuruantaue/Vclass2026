@@ -86,6 +86,21 @@ export const requireAdmin = requireRole('admin')
 export const requireTeacherOrAdmin = requireRole('teacher', 'admin')
 
 /**
+ * Support-only routes
+ */
+export const requireSupport = requireRole('support')
+
+/**
+ * Support or Admin routes (acesso a ferramentas de suporte)
+ */
+export const requireSupportOrAdmin = requireRole('support', 'admin')
+
+/**
+ * Support, Teacher or Admin routes
+ */
+export const requireStaff = requireRole('support', 'teacher', 'admin')
+
+/**
  * Optional auth middleware — não bloqueia se não houver token,
  * mas popula c.get('user') se o token for válido.
  * Útil para rotas públicas que beneficiam de dados do utilizador autenticado.

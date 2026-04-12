@@ -1,6 +1,6 @@
 // TypeScript types for the application
 
-export type UserRole = 'student' | 'teacher' | 'admin'
+export type UserRole = 'student' | 'teacher' | 'admin' | 'support'
 
 export type LessonStatus = 'draft' | 'published' | 'archived'
 

@@ -128,6 +128,24 @@ export const mockUsers = [
     is_verified: true,
     is_active: true,
     created_at: new Date('2025-01-01').toISOString()
+  },
+  // ── Suporte ───────────────────────────────────────────────────────────────
+  {
+    id: '66666666-6666-6666-6666-666666666666',
+    email: 'suporte@vclass.mz',
+    full_name: 'Equipa de Suporte',
+    role: 'support',
+    country_id: 'mz',
+    country_name: 'Moçambique',
+    country_flag: '🇲🇿',
+    phone: '+258 84 000 0000',
+    avatar_color: '#0891b2',
+    is_verified: true,
+    is_active: true,
+    tickets_open: 14,
+    tickets_resolved: 238,
+    avg_response_minutes: 18,
+    created_at: new Date('2025-03-01').toISOString()
   }
 ]
 
