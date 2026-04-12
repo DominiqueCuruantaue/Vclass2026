@@ -101,9 +101,12 @@
     <!-- Main Content -->
     <div class="container mx-auto px-4 py-8 max-w-5xl">
         <!-- Tabs -->
-        <div class="flex space-x-2 mb-6 bg-gray-100 p-1 rounded-xl w-full md:w-fit">
+        <div class="flex flex-wrap gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-full md:w-fit">
             <button onclick="switchTab('info')" id="tab-info" class="tab-btn active px-5 py-2 rounded-lg text-sm font-medium">
                 <i class="fas fa-user mr-2"></i>Perfil
+            </button>
+            <button onclick="switchTab('subscription')" id="tab-subscription" class="tab-btn px-5 py-2 rounded-lg text-sm font-medium text-gray-600">
+                <i class="fas fa-credit-card mr-2"></i>Subscrição
             </button>
             <button onclick="switchTab('achievements')" id="tab-achievements" class="tab-btn px-5 py-2 rounded-lg text-sm font-medium text-gray-600">
                 <i class="fas fa-trophy mr-2"></i>Conquistas
@@ -114,6 +117,74 @@
             <button onclick="switchTab('settings')" id="tab-settings" class="tab-btn px-5 py-2 rounded-lg text-sm font-medium text-gray-600">
                 <i class="fas fa-cog mr-2"></i>Configurações
             </button>
+        </div>
+
+        <!-- ── Tab: Subscrição ─────────────────────────────────────────────── -->
+        <div id="content-subscription" class="tab-content" style="display:none">
+            <div class="max-w-3xl space-y-6">
+
+                <!-- Card plano atual -->
+                <div id="sub-current-plan" class="bg-white rounded-2xl shadow-sm p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-gray-900">
+                            <i class="fas fa-credit-card text-purple-600 mr-2"></i>
+                            Plano Actual
+                        </h3>
+                        <span id="sub-status-badge" class="text-xs font-bold px-3 py-1 rounded-full bg-green-100 text-green-700">
+                            <i class="fas fa-circle text-xs mr-1"></i>Activo
+                        </span>
+                    </div>
+                    <div id="sub-plan-details" class="flex items-center gap-5 p-4 rounded-xl border-2 border-gray-100 mb-5">
+                        <div id="sub-plan-icon" class="w-14 h-14 rounded-xl flex items-center justify-center bg-purple-100">
+                            <i class="fas fa-seedling text-purple-600 text-2xl"></i>
+                        </div>
+                        <div>
+                            <p id="sub-plan-name" class="font-bold text-gray-900 text-lg">Carregando…</p>
+                            <p id="sub-plan-tagline" class="text-gray-500 text-sm">—</p>
+                            <div id="sub-plan-expiry" class="mt-1 text-xs text-gray-400"></div>
+                        </div>
+                        <div class="ml-auto text-right">
+                            <p id="sub-plan-price" class="font-bold text-2xl text-gray-900"></p>
+                            <p id="sub-plan-cycle" class="text-xs text-gray-400"></p>
+                        </div>
+                    </div>
+
+                    <!-- Limits / features -->
+                    <div id="sub-limits" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+                        <!-- filled by JS -->
+                    </div>
+
+                    <!-- Actions -->
+                    <div id="sub-actions" class="flex flex-wrap gap-3">
+                        <!-- filled by JS -->
+                    </div>
+                </div>
+
+                <!-- Histórico de pagamentos (mock) -->
+                <div class="bg-white rounded-2xl shadow-sm p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">
+                        <i class="fas fa-receipt text-blue-600 mr-2"></i>
+                        Histórico de Pagamentos
+                    </h3>
+                    <div id="payment-history" class="space-y-3">
+                        <div class="text-center py-6 text-gray-400 text-sm">
+                            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                            <p>A carregar…</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Explorar outros planos -->
+                <div class="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl border border-purple-200 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div>
+                        <p class="font-bold text-gray-900">Explorar outros planos</p>
+                        <p class="text-sm text-gray-500 mt-0.5">Compare todas as funcionalidades e escolha o melhor para si.</p>
+                    </div>
+                    <a href="/plans.html" class="flex-shrink-0 bg-purple-600 text-white px-6 py-2.5 rounded-xl font-semibold hover:bg-purple-700 transition text-sm">
+                        <i class="fas fa-th-list mr-2"></i>Ver todos os planos
+                    </a>
+                </div>
+            </div>
         </div>
 
         <!-- Tab: Perfil (Info) -->
@@ -428,14 +499,19 @@
 
         // Tabs
         function switchTab(name) {
-            ['info','achievements','activity','settings'].forEach(t => {
-                document.getElementById(`tab-${t}`).classList.remove('active');
-                document.getElementById(`content-${t}`).classList.remove('active');
+            ['info','subscription','achievements','activity','settings'].forEach(t => {
+                const tabEl  = document.getElementById(`tab-${t}`);
+                const contEl = document.getElementById(`content-${t}`);
+                if (tabEl)  tabEl.classList.remove('active');
+                if (contEl) { contEl.classList.remove('active'); contEl.style.display = 'none'; }
             });
-            document.getElementById(`tab-${name}`).classList.add('active');
-            document.getElementById(`content-${name}`).classList.add('active');
-            if (name === 'achievements') loadAchievements();
-            if (name === 'activity') loadActivity();
+            const activeTab  = document.getElementById(`tab-${name}`);
+            const activeCont = document.getElementById(`content-${name}`);
+            if (activeTab)  activeTab.classList.add('active');
+            if (activeCont) { activeCont.classList.add('active'); activeCont.style.display = ''; }
+            if (name === 'achievements')  loadAchievements();
+            if (name === 'activity')      loadActivity();
+            if (name === 'subscription')  loadSubscriptionTab();
         }
 
         // Edit profile
@@ -660,6 +736,119 @@
         }
 
         setupProfile();
+
+        // Check URL hash para abrir a aba de subscrição directamente
+        if (window.location.hash === '#subscription') {
+            setTimeout(() => switchTab('subscription'), 300);
+        }
+
+        // ── Subscription Tab ─────────────────────────────────────────────────
+        const PLAN_META = {
+            free:    { icon:'fa-seedling', label:'Gratuito',  color:'#6b7280', bg:'#f3f4f6', price:0,   cycle:'-',    tagline:'Conta gratuita' },
+            basic:   { icon:'fa-book-open',label:'Básico',    color:'#2563eb', bg:'#eff6ff', price:299, cycle:'/mês', tagline:'Para estudantes dedicados' },
+            premium: { icon:'fa-crown',    label:'Premium',   color:'#7c3aed', bg:'#f5f3ff', price:599, cycle:'/mês', tagline:'A melhor experiência educativa' },
+        };
+
+        async function loadSubscriptionTab() {
+            const token = localStorage.getItem('vclass_token');
+            if (!token) return;
+            try {
+                const res  = await fetch('/api/plans/my', { headers: { Authorization: `Bearer ${token}` } });
+                const json = await res.json();
+                if (!json.success) return;
+                const plan = json.data.current_plan;
+                const meta = PLAN_META[plan.id] || PLAN_META.free;
+
+                // Icon & name
+                document.getElementById('sub-plan-icon').innerHTML = `<i class="fas ${meta.icon} text-2xl" style="color:${meta.color}"></i>`;
+                document.getElementById('sub-plan-icon').style.background = meta.bg;
+                document.getElementById('sub-plan-name').textContent    = `Plano ${meta.label}`;
+                document.getElementById('sub-plan-tagline').textContent  = meta.tagline;
+                document.getElementById('sub-plan-details').style.borderColor = meta.color + '44';
+
+                // Price
+                if (plan.id === 'free') {
+                    document.getElementById('sub-plan-price').textContent = 'Grátis';
+                    document.getElementById('sub-plan-cycle').textContent = 'Para sempre';
+                } else {
+                    document.getElementById('sub-plan-price').textContent = `MT ${meta.price}`;
+                    document.getElementById('sub-plan-cycle').textContent  = meta.cycle;
+                    if (plan.expires_at) {
+                        const exp = new Date(plan.expires_at).toLocaleDateString('pt', { day:'2-digit', month:'long', year:'numeric' });
+                        document.getElementById('sub-plan-expiry').innerHTML = `<i class="fas fa-calendar-alt mr-1"></i>Válido até ${exp} ${plan.auto_renew ? ' · <span class="text-green-600">Renovação automática</span>' : ''}`;
+                    }
+                }
+
+                // Status badge
+                const badge = document.getElementById('sub-status-badge');
+                if (plan.status === 'free')   { badge.className = 'text-xs font-bold px-3 py-1 rounded-full bg-gray-100 text-gray-600'; badge.innerHTML = '<i class="fas fa-circle text-xs mr-1"></i>Gratuito'; }
+                if (plan.status === 'active') { badge.className = 'text-xs font-bold px-3 py-1 rounded-full bg-green-100 text-green-700'; badge.innerHTML = '<i class="fas fa-circle text-xs mr-1"></i>Activo'; }
+
+                // Limits
+                const limits = plan.limits || {};
+                document.getElementById('sub-limits').innerHTML = [
+                    { icon:'fa-play-circle', color:'text-purple-600', label:'Aulas', val: limits.lessons_per_month ?? '5' },
+                    { icon:'fa-pencil-alt',  color:'text-blue-600',   label:'Exercícios', val: limits.exercises ?? 'básicos' },
+                    { icon:'fa-download',    color:'text-green-600',  label:'Downloads', val: limits.downloads ? (limits.downloads === true ? '✓' : limits.downloads) : '✗' },
+                    { icon:'fa-robot',       color:'text-orange-500', label:'Chat IA', val: limits.ai_chat ? (limits.ai_chat === true ? '✓' : limits.ai_chat) : '✗' },
+                ].map(item => `
+                    <div class="bg-gray-50 rounded-xl p-3 text-center">
+                        <i class="fas ${item.icon} ${item.color} mb-1 text-lg"></i>
+                        <p class="font-bold text-gray-900 text-sm">${item.val}</p>
+                        <p class="text-xs text-gray-500">${item.label}</p>
+                    </div>`).join('');
+
+                // Actions
+                const actions = document.getElementById('sub-actions');
+                if (plan.id === 'free') {
+                    actions.innerHTML = `
+                        <a href="/plans.html" class="flex-1 text-center bg-purple-600 text-white py-2.5 px-4 rounded-xl font-semibold hover:bg-purple-700 transition text-sm">
+                            <i class="fas fa-crown mr-2"></i>Subscrever Premium
+                        </a>
+                        <a href="/plans.html" class="flex-1 text-center border-2 border-blue-300 text-blue-700 py-2.5 px-4 rounded-xl font-semibold hover:bg-blue-50 transition text-sm">
+                            <i class="fas fa-book-open mr-2"></i>Subscrever Básico
+                        </a>`;
+                } else {
+                    actions.innerHTML = `
+                        ${json.data.upgrade_available ? `<a href="/plans.html" class="bg-purple-600 text-white py-2.5 px-5 rounded-xl font-semibold hover:bg-purple-700 transition text-sm"><i class="fas fa-arrow-up mr-2"></i>Fazer Upgrade</a>` : ''}
+                        <button onclick="cancelSubscription()" class="border-2 border-red-200 text-red-600 py-2.5 px-5 rounded-xl font-semibold hover:bg-red-50 transition text-sm">
+                            <i class="fas fa-times mr-2"></i>Cancelar Subscrição
+                        </button>`;
+                }
+
+                // Payment history (mock)
+                const mockPayments = plan.id === 'free' ? [] : [
+                    { date: new Date(Date.now()-86400000*2).toLocaleDateString('pt'), ref:'VC-A1B2', plan: meta.label, amount:`MT ${meta.price}`, status:'Sucesso' },
+                    { date: new Date(Date.now()-86400000*32).toLocaleDateString('pt'), ref:'VC-C3D4', plan: meta.label, amount:`MT ${meta.price}`, status:'Sucesso' },
+                ];
+                document.getElementById('payment-history').innerHTML = mockPayments.length === 0
+                    ? `<p class="text-center text-gray-400 text-sm py-6"><i class="fas fa-receipt text-3xl mb-2 block"></i>Sem pagamentos registados</p>`
+                    : mockPayments.map(p => `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">${p.plan}</p>
+                            <p class="text-xs text-gray-400">${p.date} · Ref: ${p.ref}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-bold text-sm text-gray-900">${p.amount}</p>
+                            <span class="text-xs font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">${p.status}</span>
+                        </div>
+                    </div>`).join('');
+
+            } catch(e) { console.error('Subscription load error:', e); }
+        }
+
+        async function cancelSubscription() {
+            if (!confirm('Tem a certeza que pretende cancelar a sua subscrição? O acesso continua activo até ao fim do período pago.')) return;
+            try {
+                const res  = await fetch('/api/plans/cancel', { method:'POST', headers: { Authorization:`Bearer ${localStorage.getItem('vclass_token')}`, 'Content-Type':'application/json' }, body: JSON.stringify({ reason:'Pedido do utilizador' }) });
+                const json = await res.json();
+                if (json.success) {
+                    VClass.showNotification('Subscrição cancelada. Acesso mantido até ao fim do período.', 'info');
+                    loadSubscriptionTab();
+                }
+            } catch(e) { VClass.showNotification('Erro ao cancelar. Tente novamente.', 'error'); }
+        }
     </script>
 </body>
 </html>

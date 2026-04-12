@@ -23,6 +23,7 @@ import countryRoutes from './routes/country'
 import financeRoutes from './routes/finance'
 import moderatorRoutes from './routes/moderator'
 import teacherVerificationRoutes from './routes/teacher-verification'
+import plansRoutes from './routes/plans'
 import pagesRoutes from './routes/pages'
 
 const app = new Hono()
@@ -68,13 +69,14 @@ app.route('/api/country', countryRoutes)
 app.route('/api/finance', financeRoutes)
 app.route('/api/moderator', moderatorRoutes)
 app.route('/api/teacher-verification', teacherVerificationRoutes)
+app.route('/api/plans', plansRoutes)
 
 // Health check
 app.get('/api/health', (c) => {
   return c.json({
     success: true,
     message: 'VClass API is running',
-    version: '1.4.0',
+    version: '1.5.0',
     timestamp: new Date().toISOString()
   })
 })

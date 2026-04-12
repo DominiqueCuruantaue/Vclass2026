@@ -532,6 +532,145 @@
         </div>
     </section>
 
+    <!-- ── PLANOS ─────────────────────────────────────────────────────────── -->
+    <section id="planos" class="py-20 bg-gray-50">
+        <div class="container mx-auto px-6">
+            <!-- Cabeçalho -->
+            <div class="text-center mb-12">
+                <span class="inline-block bg-purple-100 text-purple-700 text-sm font-semibold px-4 py-1.5 rounded-full mb-3">
+                    <i class="fas fa-tag mr-1"></i> Planos e Preços
+                </span>
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-3">Escolha o seu plano</h2>
+                <p class="text-gray-500 max-w-xl mx-auto">Comece gratuitamente ou desbloqueie todo o potencial com um plano pago. Cancele a qualquer momento.</p>
+
+                <!-- Toggle mensal/anual -->
+                <div class="inline-flex items-center bg-gray-200 rounded-full p-1 mt-6 gap-1">
+                    <button id="home-btn-monthly" onclick="homeSetBilling('monthly')"
+                        class="home-billing-btn px-5 py-2 rounded-full text-sm font-semibold transition bg-white text-purple-700 shadow-sm">
+                        Mensal
+                    </button>
+                    <button id="home-btn-yearly" onclick="homeSetBilling('yearly')"
+                        class="home-billing-btn px-5 py-2 rounded-full text-sm font-semibold transition text-gray-600">
+                        Anual <span class="bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full ml-1">-25%</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Cards -->
+            <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                <!-- Gratuito -->
+                <div class="bg-white rounded-2xl border-2 border-gray-200 p-6 hover:shadow-lg transition-shadow">
+                    <div class="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center mb-4">
+                        <i class="fas fa-seedling text-gray-500 text-lg"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900">Gratuito</h3>
+                    <p class="text-xs text-gray-500 mb-4">Começa sem custo</p>
+                    <div class="mb-6">
+                        <span class="text-3xl font-extrabold text-gray-900">Grátis</span>
+                        <span class="text-gray-400 text-sm ml-1">para sempre</span>
+                    </div>
+                    <ul class="space-y-2 mb-6 text-sm">
+                        <li class="flex items-center gap-2 text-gray-700"><i class="fas fa-check-circle text-green-500 text-xs"></i>5 aulas por mês</li>
+                        <li class="flex items-center gap-2 text-gray-700"><i class="fas fa-check-circle text-green-500 text-xs"></i>Exercícios básicos</li>
+                        <li class="flex items-center gap-2 text-gray-700"><i class="fas fa-check-circle text-green-500 text-xs"></i>Biblioteca limitada</li>
+                        <li class="flex items-center gap-2 text-gray-400 line-through"><i class="fas fa-times-circle text-gray-300 text-xs"></i>Download de PDFs</li>
+                        <li class="flex items-center gap-2 text-gray-400 line-through"><i class="fas fa-times-circle text-gray-300 text-xs"></i>Chat com IA</li>
+                    </ul>
+                    <a href="/register.html" class="block w-full text-center border-2 border-gray-300 text-gray-700 py-2.5 rounded-xl font-semibold hover:border-gray-400 hover:bg-gray-50 transition text-sm">
+                        Começar Grátis
+                    </a>
+                </div>
+
+                <!-- Básico -->
+                <div class="bg-white rounded-2xl border-2 border-blue-300 p-6 hover:shadow-lg transition-shadow">
+                    <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
+                        <i class="fas fa-book-open text-blue-600 text-lg"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900">Básico</h3>
+                    <p class="text-xs text-gray-500 mb-4">Para estudantes dedicados</p>
+                    <div class="mb-1">
+                        <div class="flex items-end gap-1">
+                            <span class="text-gray-500 font-semibold text-lg">MT</span>
+                            <span class="text-4xl font-extrabold text-blue-600 home-basic-price">299</span>
+                            <span class="text-gray-400 text-sm mb-1 home-billing-label">/mês</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 mb-6 home-basic-saving">&nbsp;</p>
+                    <ul class="space-y-2 mb-6 text-sm">
+                        <li class="flex items-center gap-2 text-gray-700"><i class="fas fa-check-circle text-green-500 text-xs"></i>50 aulas por mês</li>
+                        <li class="flex items-center gap-2 text-gray-700"><i class="fas fa-check-circle text-green-500 text-xs"></i>Todos os exercícios</li>
+                        <li class="flex items-center gap-2 text-gray-700"><i class="fas fa-check-circle text-green-500 text-xs"></i>Biblioteca completa</li>
+                        <li class="flex items-center gap-2 text-gray-700"><i class="fas fa-check-circle text-green-500 text-xs"></i>Download de PDFs</li>
+                        <li class="flex items-center gap-2 text-gray-700"><i class="fas fa-check-circle text-green-500 text-xs"></i>Chat com IA (20/dia)</li>
+                    </ul>
+                    <a href="/plans.html" class="block w-full text-center bg-blue-600 text-white py-2.5 rounded-xl font-semibold hover:bg-blue-700 transition text-sm">
+                        Subscrever Básico
+                    </a>
+                </div>
+
+                <!-- Premium -->
+                <div class="bg-gradient-to-br from-purple-600 to-purple-800 rounded-2xl border-2 border-purple-400 p-6 hover:shadow-xl transition-shadow relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded-bl-xl">
+                        <i class="fas fa-star mr-1"></i>POPULAR
+                    </div>
+                    <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mb-4">
+                        <i class="fas fa-crown text-yellow-300 text-lg"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white">Premium</h3>
+                    <p class="text-xs text-purple-200 mb-4">A melhor experiência educativa</p>
+                    <div class="mb-1">
+                        <div class="flex items-end gap-1">
+                            <span class="text-purple-200 font-semibold text-lg">MT</span>
+                            <span class="text-4xl font-extrabold text-white home-premium-price">599</span>
+                            <span class="text-purple-200 text-sm mb-1 home-billing-label">/mês</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-purple-200 mb-6 home-premium-saving">&nbsp;</p>
+                    <ul class="space-y-2 mb-6 text-sm">
+                        <li class="flex items-center gap-2 text-white"><i class="fas fa-check-circle text-green-300 text-xs"></i>Aulas ilimitadas</li>
+                        <li class="flex items-center gap-2 text-white"><i class="fas fa-check-circle text-green-300 text-xs"></i>Exercícios ilimitados</li>
+                        <li class="flex items-center gap-2 text-white"><i class="fas fa-check-circle text-green-300 text-xs"></i>Downloads ilimitados</li>
+                        <li class="flex items-center gap-2 text-white"><i class="fas fa-check-circle text-green-300 text-xs"></i>Chat com IA ilimitado</li>
+                        <li class="flex items-center gap-2 text-white"><i class="fas fa-check-circle text-green-300 text-xs"></i>Certificados de conclusão</li>
+                    </ul>
+                    <a href="/plans.html" class="block w-full text-center bg-yellow-400 text-yellow-900 py-2.5 rounded-xl font-semibold hover:bg-yellow-300 transition text-sm font-bold">
+                        Subscrever Premium
+                    </a>
+                </div>
+            </div>
+
+            <div class="text-center mt-8">
+                <a href="/plans.html" class="text-purple-600 hover:text-purple-700 font-semibold text-sm">
+                    Ver comparação completa de planos <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <script>
+    function homeSetBilling(billing) {
+        const monthly = { basic: 299, premium: 599 }
+        const yearly  = { basic: 2690, premium: 5390 }
+        const data    = billing === 'monthly' ? monthly : yearly
+        const label   = billing === 'monthly' ? '/mês' : '/ano'
+        const saving  = billing === 'yearly' ? '💰 Poupa 25% com o plano anual' : ''
+
+        document.querySelectorAll('.home-basic-price').forEach(el => el.textContent = data.basic)
+        document.querySelectorAll('.home-premium-price').forEach(el => el.textContent = data.premium)
+        document.querySelectorAll('.home-billing-label').forEach(el => el.textContent = label)
+        document.querySelectorAll('.home-basic-saving').forEach(el => el.textContent = saving)
+        document.querySelectorAll('.home-premium-saving').forEach(el => el.textContent = saving)
+
+        document.querySelectorAll('.home-billing-btn').forEach(b => {
+            const isActive = b.id === `home-btn-${billing}`
+            b.classList.toggle('bg-white', isActive)
+            b.classList.toggle('text-purple-700', isActive)
+            b.classList.toggle('shadow-sm', isActive)
+            b.classList.toggle('text-gray-600', !isActive)
+        })
+    }
+    </script>
+
     <!-- Footer -->
     <footer class="bg-gray-900 text-white py-12">
         <div class="container mx-auto px-6">

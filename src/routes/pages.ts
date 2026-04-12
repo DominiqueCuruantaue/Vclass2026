@@ -33,6 +33,7 @@ import financeDashboardHtml from '../pages/finance-dashboard.html?raw'
 import moderatorDashboardHtml from '../pages/moderator-dashboard.html?raw'
 import registerTeacherHtml from '../pages/register-teacher.html?raw'
 import teacherVerificationHtml from '../pages/teacher-verification.html?raw'
+import plansHtml from '../pages/plans.html?raw'
 
 // Serve HTML pages
 app.get('/', (c) => c.html(homeHtml))
@@ -77,5 +78,8 @@ app.get('/moderator-dashboard.html', (c) => c.html(moderatorDashboardHtml))
 // Teacher Verification Flow
 app.get('/register-teacher.html',    (c) => c.html(registerTeacherHtml))
 app.get('/teacher-verification.html',(c) => c.html(teacherVerificationHtml))
+
+// Plans & Pricing
+app.get('/plans.html', (c) => c.html(plansHtml))
 
 export default app

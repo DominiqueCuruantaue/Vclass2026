@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planos e Preços — VClass</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; background: #f8fafc; }
+    .gradient-hero { background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4c1d95 70%, #7c3aed 100%); }
+    .plan-card { transition: transform .25s, box-shadow .25s; }
+    .plan-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,.12); }
+    .plan-card.popular { box-shadow: 0 8px 32px rgba(124,58,237,.25); }
+    .toggle-pill { transition: transform .3s; }
+    .badge-popular { animation: pulse-badge 2s infinite; }
+    @keyframes pulse-badge { 0%,100% { box-shadow: 0 0 0 0 rgba(124,58,237,.4); } 50% { box-shadow: 0 0 0 8px rgba(124,58,237,0); } }
+    .faq-answer { max-height: 0; overflow: hidden; transition: max-height .35s ease; }
+    .faq-answer.open { max-height: 200px; }
+    .faq-chevron { transition: transform .3s; }
+    .faq-item.open .faq-chevron { transform: rotate(180deg); }
+    .currency-btn.active { background: #7c3aed; color: white; }
+    .currency-btn { transition: all .2s; }
+    .price-num { transition: opacity .2s; }
+    .price-num.fade { opacity: 0; }
+    .method-card { transition: all .2s; }
+    .method-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+    .modal-overlay { background: rgba(0,0,0,.5); backdrop-filter: blur(4px); }
+    .stripe-gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ──────────────────────────────────────────────────────────────────── -->
+<nav class="bg-white border-b border-gray-200 sticky top-0 z-40">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+      <a href="/home.html" class="flex items-center space-x-2">
+        <div class="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+          <i class="fas fa-graduation-cap text-white text-sm"></i>
+        </div>
+        <span class="font-bold text-gray-900 text-lg">VClass</span>
+      </a>
+      <div class="hidden md:flex items-center space-x-6 text-sm font-medium text-gray-600">
+        <a href="/browse.html" class="hover:text-purple-600 transition">Aulas</a>
+        <a href="/plans.html" class="text-purple-600 font-semibold">Planos</a>
+        <a href="/news.html" class="hover:text-purple-600 transition">Notícias</a>
+      </div>
+      <div class="flex items-center space-x-3" id="nav-auth">
+        <a href="/login.html" class="text-sm text-gray-600 hover:text-purple-600 transition font-medium">Entrar</a>
+        <a href="/register.html" class="bg-purple-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-purple-700 transition font-medium">Registar</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ── HERO ──────────────────────────────────────────────────────────────────── -->
+<section class="gradient-hero text-white py-20 px-4 text-center relative overflow-hidden">
+  <div class="absolute inset-0 opacity-10">
+    <div class="absolute top-10 left-10 w-32 h-32 rounded-full bg-white"></div>
+    <div class="absolute bottom-10 right-20 w-48 h-48 rounded-full bg-white"></div>
+    <div class="absolute top-1/2 left-1/3 w-20 h-20 rounded-full bg-white"></div>
+  </div>
+  <div class="relative max-w-3xl mx-auto">
+    <span class="inline-block bg-white/20 text-white text-sm font-semibold px-4 py-1.5 rounded-full mb-4">
+      <i class="fas fa-star mr-1 text-yellow-300"></i> Escolha o seu plano
+    </span>
+    <h1 class="text-4xl md:text-5xl font-extrabold mb-4 leading-tight">
+      Invista no seu<br>
+      <span class="text-yellow-300">futuro educativo</span>
+    </h1>
+    <p class="text-lg text-purple-100 mb-8 max-w-xl mx-auto">
+      Aceda a centenas de aulas, exercícios interactivos e ferramentas de IA. Cancele a qualquer momento.
+    </p>
+
+    <!-- Toggle mensal / anual -->
+    <div class="inline-flex items-center bg-white/15 rounded-full p-1 gap-1">
+      <button id="btn-monthly" onclick="setBilling('monthly')"
+        class="billing-btn px-6 py-2 rounded-full text-sm font-semibold transition bg-white text-purple-700">
+        Mensal
+      </button>
+      <button id="btn-yearly" onclick="setBilling('yearly')"
+        class="billing-btn px-6 py-2 rounded-full text-sm font-semibold transition text-white">
+        Anual
+        <span class="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-0.5 rounded-full ml-1">-25%</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ── CURRENCY SELECTOR ──────────────────────────────────────────────────────── -->
+<div class="bg-white border-b border-gray-100">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-center gap-2 flex-wrap">
+    <span class="text-xs text-gray-500 font-medium mr-1">Moeda:</span>
+    <button onclick="setCurrency('MZN')" class="currency-btn active text-xs px-3 py-1.5 rounded-full border border-gray-200 font-medium">🇲🇿 MZN</button>
+    <button onclick="setCurrency('AOA')" class="currency-btn text-xs px-3 py-1.5 rounded-full border border-gray-200 font-medium text-gray-600">🇦🇴 AOA</button>
+    <button onclick="setCurrency('BRL')" class="currency-btn text-xs px-3 py-1.5 rounded-full border border-gray-200 font-medium text-gray-600">🇧🇷 BRL</button>
+    <button onclick="setCurrency('EUR')" class="currency-btn text-xs px-3 py-1.5 rounded-full border border-gray-200 font-medium text-gray-600">🇪🇺 EUR</button>
+  </div>
+</div>
+
+<!-- ── CARDS DE PLANOS ─────────────────────────────────────────────────────────── -->
+<section class="max-w-7xl mx-auto px-4 py-16">
+  <div id="plans-grid" class="grid md:grid-cols-3 gap-8 items-start">
+    <!-- Gerado por JS -->
+    <div class="md:col-span-3 text-center py-12 text-gray-400">
+      <i class="fas fa-spinner fa-spin text-3xl mb-3"></i>
+      <p>A carregar planos…</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── TABELA COMPARATIVA ──────────────────────────────────────────────────────── -->
+<section class="bg-white py-16">
+  <div class="max-w-5xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-center text-gray-900 mb-3">Comparação detalhada</h2>
+    <p class="text-center text-gray-500 mb-10 text-sm">Veja exactamente o que está incluído em cada plano</p>
+    <div class="overflow-x-auto rounded-2xl border border-gray-200">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-200">
+            <th class="text-left p-4 font-semibold text-gray-700 bg-gray-50 w-1/2">Funcionalidade</th>
+            <th class="text-center p-4 bg-gray-50 font-semibold text-gray-500">Gratuito</th>
+            <th class="text-center p-4 bg-blue-50 font-semibold text-blue-700">Básico</th>
+            <th class="text-center p-4 bg-purple-50 font-semibold text-purple-700">Premium <i class="fas fa-crown text-yellow-500 ml-1"></i></th>
+          </tr>
+        </thead>
+        <tbody id="compare-tbody">
+          <!-- Gerado por JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ── MÉTODOS DE PAGAMENTO ───────────────────────────────────────────────────── -->
+<section class="max-w-5xl mx-auto px-4 py-16">
+  <h2 class="text-2xl font-bold text-center text-gray-900 mb-3">Métodos de pagamento</h2>
+  <p class="text-center text-gray-500 mb-10 text-sm">Pague da forma que for mais conveniente para si</p>
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+    <div class="method-card bg-white rounded-xl p-4 text-center border border-gray-200 cursor-default">
+      <div class="w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center" style="background:#E31E26">
+        <i class="fas fa-mobile-alt text-white text-lg"></i>
+      </div>
+      <p class="font-semibold text-gray-800 text-xs">M-Pesa</p>
+      <p class="text-gray-400 text-xs mt-0.5">🇲🇿 Moçambique</p>
+    </div>
+    <div class="method-card bg-white rounded-xl p-4 text-center border border-gray-200 cursor-default">
+      <div class="w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center" style="background:#FF6B00">
+        <i class="fas fa-mobile-alt text-white text-lg"></i>
+      </div>
+      <p class="font-semibold text-gray-800 text-xs">e-Mola</p>
+      <p class="text-gray-400 text-xs mt-0.5">🇲🇿 Moçambique</p>
+    </div>
+    <div class="method-card bg-white rounded-xl p-4 text-center border border-gray-200 cursor-default">
+      <div class="w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center" style="background:#005b9e">
+        <i class="fas fa-credit-card text-white text-lg"></i>
+      </div>
+      <p class="font-semibold text-gray-800 text-xs">Multicaixa</p>
+      <p class="text-gray-400 text-xs mt-0.5">🇦🇴 Angola</p>
+    </div>
+    <div class="method-card bg-white rounded-xl p-4 text-center border border-gray-200 cursor-default">
+      <div class="w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center" style="background:#635BFF">
+        <i class="fas fa-credit-card text-white text-lg"></i>
+      </div>
+      <p class="font-semibold text-gray-800 text-xs">Cartão</p>
+      <p class="text-gray-400 text-xs mt-0.5">Internacional</p>
+    </div>
+    <div class="method-card bg-white rounded-xl p-4 text-center border border-gray-200 cursor-default">
+      <div class="w-12 h-12 mx-auto mb-2 rounded-full flex items-center justify-center" style="background:#003087">
+        <i class="fab fa-paypal text-white text-lg"></i>
+      </div>
+      <p class="font-semibold text-gray-800 text-xs">PayPal</p>
+      <p class="text-gray-400 text-xs mt-0.5">Internacional</p>
+    </div>
+  </div>
+  <p class="text-center text-xs text-gray-400 mt-6">
+    <i class="fas fa-lock mr-1"></i> Pagamentos seguros e encriptados. Os seus dados financeiros nunca são armazenados nos nossos servidores.
+  </p>
+</section>
+
+<!-- ── FAQ ───────────────────────────────────────────────────────────────────── -->
+<section class="bg-gray-50 py-16">
+  <div class="max-w-3xl mx-auto px-4">
+    <h2 class="text-2xl font-bold text-center text-gray-900 mb-3">Perguntas frequentes</h2>
+    <p class="text-center text-gray-500 mb-10 text-sm">Tem dúvidas? Estamos aqui para ajudar.</p>
+    <div id="faq-list" class="space-y-3">
+      <!-- Gerado por JS -->
+    </div>
+    <div class="text-center mt-10">
+      <p class="text-gray-500 text-sm mb-4">Ainda tem dúvidas?</p>
+      <a href="/chat.html" class="inline-flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-purple-700 transition text-sm">
+        <i class="fas fa-comments"></i> Falar com o suporte
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA FINAL ──────────────────────────────────────────────────────────────── -->
+<section class="gradient-hero text-white py-16 text-center px-4">
+  <div class="max-w-2xl mx-auto">
+    <i class="fas fa-graduation-cap text-5xl text-yellow-300 mb-6"></i>
+    <h2 class="text-3xl font-bold mb-4">Pronto para começar?</h2>
+    <p class="text-purple-100 mb-8">Junte-se a mais de 10.000 estudantes que já aprendem com a VClass todos os dias.</p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      <a href="/register.html" class="bg-yellow-400 text-yellow-900 font-bold px-8 py-4 rounded-xl hover:bg-yellow-300 transition text-sm">
+        <i class="fas fa-rocket mr-2"></i> Começar Gratuitamente
+      </a>
+      <a href="/browse.html" class="border-2 border-white/50 text-white font-semibold px-8 py-4 rounded-xl hover:bg-white/10 transition text-sm">
+        <i class="fas fa-play mr-2"></i> Ver Aulas
+      </a>
+    </div>
+    <p class="text-xs text-purple-300 mt-6">Sem cartão de crédito necessário para o plano gratuito.</p>
+  </div>
+</section>
+
+<!-- ── MODAL DE SUBSCRIÇÃO ────────────────────────────────────────────────────── -->
+<div id="subscribe-modal" class="fixed inset-0 z-50 hidden">
+  <div class="modal-overlay absolute inset-0" onclick="closeModal()"></div>
+  <div class="relative flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md relative z-10 overflow-hidden">
+      <div id="modal-header" class="p-6 text-white text-center">
+        <button onclick="closeModal()" class="absolute top-4 right-4 text-white/70 hover:text-white">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+        <i id="modal-icon" class="fas fa-crown text-4xl mb-3"></i>
+        <h3 id="modal-title" class="text-xl font-bold">Subscrever Premium</h3>
+        <p id="modal-price" class="text-white/80 text-sm mt-1"></p>
+      </div>
+
+      <!-- Passo 1: não logado -->
+      <div id="modal-step-login" class="p-6 hidden">
+        <p class="text-gray-600 text-sm text-center mb-6">Para subscrever, precisa de iniciar sessão primeiro.</p>
+        <div class="space-y-3">
+          <a href="/login.html" class="block w-full bg-purple-600 text-white text-center py-3 rounded-xl font-semibold hover:bg-purple-700 transition text-sm">
+            <i class="fas fa-sign-in-alt mr-2"></i>Entrar na minha conta
+          </a>
+          <a href="/register.html" class="block w-full border border-purple-300 text-purple-700 text-center py-3 rounded-xl font-semibold hover:bg-purple-50 transition text-sm">
+            <i class="fas fa-user-plus mr-2"></i>Criar conta nova
+          </a>
+        </div>
+      </div>
+
+      <!-- Passo 1: logado — escolher método -->
+      <div id="modal-step-method" class="p-6">
+        <h4 class="font-semibold text-gray-900 mb-4 text-sm">Escolha o método de pagamento</h4>
+        <div class="space-y-3" id="method-list">
+          <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:border-purple-400 transition has-[:checked]:border-purple-500 has-[:checked]:bg-purple-50">
+            <input type="radio" name="payment_method" value="mpesa" class="accent-purple-600">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background:#E31E26">
+              <i class="fas fa-mobile-alt text-white text-xs"></i>
+            </div>
+            <span class="font-medium text-gray-800 text-sm">M-Pesa</span>
+            <span class="ml-auto text-xs text-gray-400">🇲🇿 MZ</span>
+          </label>
+          <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:border-purple-400 transition has-[:checked]:border-purple-500 has-[:checked]:bg-purple-50">
+            <input type="radio" name="payment_method" value="emola" class="accent-purple-600">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background:#FF6B00">
+              <i class="fas fa-mobile-alt text-white text-xs"></i>
+            </div>
+            <span class="font-medium text-gray-800 text-sm">e-Mola</span>
+            <span class="ml-auto text-xs text-gray-400">🇲🇿 MZ</span>
+          </label>
+          <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:border-purple-400 transition has-[:checked]:border-purple-500 has-[:checked]:bg-purple-50">
+            <input type="radio" name="payment_method" value="multicaixa" class="accent-purple-600">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background:#005b9e">
+              <i class="fas fa-credit-card text-white text-xs"></i>
+            </div>
+            <span class="font-medium text-gray-800 text-sm">Multicaixa Express</span>
+            <span class="ml-auto text-xs text-gray-400">🇦🇴 AO</span>
+          </label>
+          <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:border-purple-400 transition has-[:checked]:border-purple-500 has-[:checked]:bg-purple-50">
+            <input type="radio" name="payment_method" value="stripe" class="accent-purple-600">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background:#635BFF">
+              <i class="fas fa-credit-card text-white text-xs"></i>
+            </div>
+            <span class="font-medium text-gray-800 text-sm">Cartão de Crédito</span>
+            <span class="ml-auto text-xs text-gray-400">Internacional</span>
+          </label>
+        </div>
+        <button onclick="submitSubscription()" class="mt-5 w-full bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700 transition text-sm flex items-center justify-center gap-2">
+          <i class="fas fa-lock text-xs"></i> Confirmar Subscrição
+        </button>
+        <p class="text-xs text-gray-400 text-center mt-3">
+          <i class="fas fa-shield-alt mr-1"></i>Pagamento seguro. Cancele a qualquer momento.
+        </p>
+      </div>
+
+      <!-- Passo 2: instruções de pagamento -->
+      <div id="modal-step-instructions" class="p-6 hidden">
+        <div class="text-center mb-6">
+          <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <i class="fas fa-check-circle text-green-500 text-3xl"></i>
+          </div>
+          <h4 class="font-bold text-gray-900 mb-1">Subscrição iniciada!</h4>
+          <p class="text-xs text-gray-500">Siga as instruções para concluir o pagamento</p>
+        </div>
+        <div class="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-4">
+          <p class="font-semibold text-purple-900 text-sm mb-2">Referência de pagamento</p>
+          <p id="payment-ref" class="font-mono text-lg font-bold text-purple-700 text-center py-2 bg-white rounded-lg border border-purple-200"></p>
+          <p id="payment-instructions-text" class="text-xs text-purple-700 mt-2 text-center"></p>
+        </div>
+        <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-xs text-yellow-800 mb-4">
+          <i class="fas fa-clock mr-1"></i>Esta referência expira em <strong>30 minutos</strong>. Após o pagamento, o acesso é activado automaticamente.
+        </div>
+        <button onclick="closeModal()" class="w-full border border-gray-300 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-50 transition text-sm">
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ──────────────────────────────────────────────────────────────────── -->
+<div id="toast" class="fixed bottom-6 right-6 z-50 max-w-sm hidden">
+  <div class="bg-gray-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 text-sm">
+    <i id="toast-icon" class="fas fa-info-circle text-blue-400"></i>
+    <span id="toast-msg"></span>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+<script src="/static/app.js"></script>
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let currentBilling  = 'monthly'
+let currentCurrency = 'MZN'
+let plansData       = []
+let selectedPlan    = null
+let isLoggedIn      = false
+
+const SYMBOLS = { MZN: 'MT', AOA: 'Kz', BRL: 'R$', EUR: '€' }
+const CURRENCY_KEYS = { MZN: 'mzn', AOA: 'aoa', BRL: 'brl', EUR: 'eur' }
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  // Check auth
+  const token = localStorage.getItem('vclass_token')
+  if (token) {
+    isLoggedIn = true
+    const navAuth = document.getElementById('nav-auth')
+    if (navAuth) {
+      navAuth.innerHTML = `
+        <a href="/dashboard.html" class="text-sm text-gray-600 hover:text-purple-600 transition font-medium">
+          <i class="fas fa-th-large mr-1"></i>Dashboard
+        </a>
+        <a href="/profile.html" class="bg-purple-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-purple-700 transition font-medium">
+          Perfil
+        </a>
+      `
+    }
+  }
+
+  await loadPlans()
+  await loadComparison()
+  loadFAQ()
+})
+
+// ── Load Plans ────────────────────────────────────────────────────────────────
+async function loadPlans() {
+  try {
+    const res = await axios.get(`/api/plans?currency=${currentCurrency.toLowerCase()}`)
+    plansData = res.data.data.plans
+    renderPlans()
+  } catch (e) {
+    // Fallback mock
+    plansData = [
+      { id:'free',    name:'Gratuito', tagline:'Começa sem custo',         icon:'fa-seedling', popular:false, color:'#6b7280', color_bg:'#f3f4f6', cta:'Começar Grátis',      cta_style:'outline',  price_monthly:{mzn:0,aoa:0,brl:0,eur:0},        price_yearly:{mzn:0,aoa:0,brl:0,eur:0},          features:[{text:'5 aulas por mês',included:true},{text:'Exercícios básicos',included:true},{text:'Biblioteca limitada',included:true},{text:'Chat de suporte',included:true},{text:'Descarregar PDFs',included:false},{text:'Chat com IA',included:false},{text:'Certificados',included:false}] },
+      { id:'basic',   name:'Básico',   tagline:'Para estudantes dedicados', icon:'fa-book-open',popular:false, color:'#2563eb', color_bg:'#eff6ff',  cta:'Subscrever Básico',  cta_style:'primary',  price_monthly:{mzn:299,aoa:2500,brl:29.9,eur:4.99}, price_yearly:{mzn:2690,aoa:22500,brl:269,eur:44.9}, yearly_saving_pct:25, features:[{text:'50 aulas por mês',included:true},{text:'Todos os exercícios',included:true},{text:'Biblioteca completa',included:true},{text:'Chat de suporte',included:true},{text:'Descarregar PDFs',included:true},{text:'Chat com IA (20/dia)',included:true},{text:'Certificados',included:false}] },
+      { id:'premium', name:'Premium',  tagline:'A melhor experiência',      icon:'fa-crown',    popular:true,  color:'#7c3aed', color_bg:'#f5f3ff',  cta:'Subscrever Premium', cta_style:'premium',  price_monthly:{mzn:599,aoa:4900,brl:59.9,eur:9.99}, price_yearly:{mzn:5390,aoa:44100,brl:539,eur:89.9}, yearly_saving_pct:25, features:[{text:'Aulas ilimitadas',included:true},{text:'Exercícios ilimitados',included:true},{text:'Biblioteca + Exclusivos',included:true},{text:'Suporte prioritário',included:true},{text:'Downloads ilimitados',included:true},{text:'Chat com IA ilimitado',included:true},{text:'Certificados',included:true}] },
+    ]
+    renderPlans()
+  }
+}
+
+// ── Render Plans ──────────────────────────────────────────────────────────────
+function renderPlans() {
+  const grid = document.getElementById('plans-grid')
+  const sym  = SYMBOLS[currentCurrency]
+  const key  = CURRENCY_KEYS[currentCurrency]
+
+  grid.innerHTML = plansData.map(plan => {
+    const price = currentBilling === 'monthly'
+      ? plan.price_monthly[key]
+      : (plan.price_yearly ? plan.price_yearly[key] : plan.price_monthly[key])
+    const isFree    = plan.id === 'free'
+    const isPopular = plan.popular
+
+    const featuresHtml = plan.features.map(f => `
+      <li class="flex items-start gap-2.5 text-sm ${f.included ? 'text-gray-700' : 'text-gray-400 line-through'}">
+        <i class="fas ${f.included ? 'fa-check-circle text-green-500' : 'fa-times-circle text-gray-300'} mt-0.5 flex-shrink-0 text-xs"></i>
+        ${f.text}
+      </li>
+    `).join('')
+
+    let ctaClass = ''
+    if (plan.cta_style === 'outline')  ctaClass = 'border-2 border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50'
+    if (plan.cta_style === 'primary')  ctaClass = 'bg-blue-600 text-white hover:bg-blue-700'
+    if (plan.cta_style === 'premium')  ctaClass = 'bg-purple-600 text-white hover:bg-purple-700'
+
+    return `
+    <div class="plan-card bg-white rounded-2xl border-2 overflow-hidden relative ${isPopular ? 'popular border-purple-400' : 'border-gray-200'}">
+      ${isPopular ? `
+      <div class="absolute top-0 left-0 right-0 bg-purple-600 text-white text-xs font-bold text-center py-1.5 tracking-wide badge-popular">
+        <i class="fas fa-star mr-1 text-yellow-300"></i>MAIS POPULAR
+      </div>
+      ` : ''}
+      <div class="p-6 ${isPopular ? 'pt-10' : ''}">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style="background:${plan.color_bg}">
+              <i class="fas ${plan.icon} text-lg" style="color:${plan.color}"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900">${plan.name}</h3>
+            <p class="text-xs text-gray-500 mt-0.5">${plan.tagline}</p>
+          </div>
+        </div>
+
+        <div class="mb-6">
+          ${isFree ? `
+            <div class="text-3xl font-extrabold text-gray-900">Gratuito</div>
+            <p class="text-xs text-gray-500 mt-1">Para sempre, sem cartão</p>
+          ` : `
+            <div class="flex items-end gap-1">
+              <span class="text-lg font-semibold text-gray-500">${sym}</span>
+              <span class="text-4xl font-extrabold price-num" style="color:${plan.color}" data-price="${price}">${formatPrice(price)}</span>
+              <span class="text-gray-400 text-sm mb-1">/${currentBilling === 'monthly' ? 'mês' : 'ano'}</span>
+            </div>
+            ${currentBilling === 'yearly' && plan.yearly_saving_pct ? `
+            <p class="text-xs text-green-600 font-medium mt-1">
+              <i class="fas fa-tag mr-1"></i>Poupa ${plan.yearly_saving_pct}% em relação ao mensal
+            </p>` : `<p class="text-xs text-gray-400 mt-1">Sem compromisso. Cancele quando quiser.</p>`}
+          `}
+        </div>
+
+        <button onclick="handleCTA('${plan.id}')"
+          class="w-full py-3 rounded-xl font-semibold text-sm transition mb-6 ${ctaClass}">
+          <i class="fas ${isFree ? 'fa-play' : 'fa-arrow-right'} mr-2"></i>${plan.cta}
+        </button>
+
+        <ul class="space-y-2.5">
+          ${featuresHtml}
+        </ul>
+      </div>
+    </div>`
+  }).join('')
+}
+
+// ── Load Comparison ───────────────────────────────────────────────────────────
+async function loadComparison() {
+  try {
+    const res = await axios.get('/api/plans/compare')
+    const rows = res.data.data.comparison
+    const tbody = document.getElementById('compare-tbody')
+    tbody.innerHTML = rows.map((r, i) => `
+      <tr class="${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b border-gray-100">
+        <td class="p-4 font-medium text-gray-700">${r.feature}</td>
+        <td class="p-4 text-center text-gray-500 text-sm">${r.free}</td>
+        <td class="p-4 text-center text-blue-700 font-medium text-sm bg-blue-50/50">${r.basic}</td>
+        <td class="p-4 text-center text-purple-700 font-semibold text-sm bg-purple-50/50">${r.premium}</td>
+      </tr>
+    `).join('')
+  } catch(e) {
+    const fallback = [
+      ['Aulas por mês','5','50','Ilimitadas'],['Exercícios','Básicos','Todos','Ilimitados'],
+      ['Descarregar PDFs','✗','✓','✓ Ilimitados'],['Chat com IA','✗','20 msg/dia','Ilimitado'],
+      ['Biblioteca','20 items','Completa','Completa + Exclusivos'],['Certificados','✗','✗','✓'],
+      ['Acesso antecipado','✗','✗','✓'],['Suporte prioritário','✗','✗','✓'],
+    ]
+    document.getElementById('compare-tbody').innerHTML = fallback.map((r,i) => `
+      <tr class="${i%2===0?'bg-white':'bg-gray-50'} border-b border-gray-100">
+        <td class="p-4 font-medium text-gray-700">${r[0]}</td>
+        <td class="p-4 text-center text-gray-500 text-sm">${r[1]}</td>
+        <td class="p-4 text-center text-blue-700 font-medium text-sm bg-blue-50/50">${r[2]}</td>
+        <td class="p-4 text-center text-purple-700 font-semibold text-sm bg-purple-50/50">${r[3]}</td>
+      </tr>`).join('')
+  }
+}
+
+// ── Load FAQ ──────────────────────────────────────────────────────────────────
+function loadFAQ() {
+  const faqs = [
+    ['Posso mudar de plano a qualquer momento?', 'Sim! Pode fazer upgrade ou downgrade do seu plano a qualquer momento. As alterações entram em vigor no próximo ciclo de facturação.'],
+    ['Existe um período de teste gratuito?', 'O plano Gratuito está sempre disponível sem limite de tempo. Os planos pagos não têm período de teste, mas pode cancelar em qualquer altura antes do próximo ciclo.'],
+    ['Como funciona a facturação anual?', 'Com a subscrição anual, paga todo o ano de uma vez e economiza 25% em relação à facturação mensal.'],
+    ['Quais métodos de pagamento são aceites?', 'Aceitamos M-Pesa e e-Mola para Moçambique, Multicaixa para Angola, e cartão de crédito/PayPal para os restantes países.'],
+    ['O que acontece quando o meu plano expira?', 'A conta volta automaticamente ao plano Gratuito. O seu progresso e conquistas são sempre mantidos.'],
+    ['Posso obter reembolso?', 'Oferecemos reembolso integral nos primeiros 7 dias após a subscrição, caso não esteja satisfeito.'],
+  ]
+  document.getElementById('faq-list').innerHTML = faqs.map((faq, i) => `
+    <div class="faq-item bg-white rounded-xl border border-gray-200 overflow-hidden" id="faq-${i}">
+      <button onclick="toggleFAQ(${i})" class="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition">
+        <span class="font-medium text-gray-900 text-sm pr-4">${faq[0]}</span>
+        <i class="fas fa-chevron-down text-gray-400 faq-chevron flex-shrink-0"></i>
+      </button>
+      <div class="faq-answer">
+        <p class="px-4 pb-4 text-sm text-gray-600">${faq[1]}</p>
+      </div>
+    </div>
+  `).join('')
+}
+
+function toggleFAQ(i) {
+  const item = document.getElementById(`faq-${i}`)
+  const ans  = item.querySelector('.faq-answer')
+  const isOpen = item.classList.contains('open')
+  // close all
+  document.querySelectorAll('.faq-item').forEach(el => { el.classList.remove('open'); el.querySelector('.faq-answer').classList.remove('open') })
+  if (!isOpen) { item.classList.add('open'); ans.classList.add('open') }
+}
+
+// ── Billing Toggle ────────────────────────────────────────────────────────────
+function setBilling(billing) {
+  currentBilling = billing
+  document.querySelectorAll('.billing-btn').forEach(b => {
+    b.classList.toggle('bg-white',    b.id === `btn-${billing}`)
+    b.classList.toggle('text-purple-700', b.id === `btn-${billing}`)
+    b.classList.toggle('text-white',  b.id !== `btn-${billing}`)
+  })
+  renderPlans()
+}
+
+// ── Currency ──────────────────────────────────────────────────────────────────
+function setCurrency(cur) {
+  currentCurrency = cur
+  document.querySelectorAll('.currency-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.includes(cur))
+    b.classList.toggle('text-gray-600', !b.textContent.includes(cur))
+  })
+  renderPlans()
+}
+
+// ── Format Price ──────────────────────────────────────────────────────────────
+function formatPrice(p) {
+  if (!p) return '0'
+  if (Number.isInteger(p)) return p.toString()
+  return p.toFixed(2).replace('.', ',')
+}
+
+// ── CTA Handler ───────────────────────────────────────────────────────────────
+function handleCTA(planId) {
+  if (planId === 'free') {
+    if (isLoggedIn) window.location.href = '/dashboard.html'
+    else            window.location.href = '/register.html'
+    return
+  }
+  selectedPlan = plansData.find(p => p.id === planId)
+  openModal(planId)
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function openModal(planId) {
+  const plan  = plansData.find(p => p.id === planId)
+  const sym   = SYMBOLS[currentCurrency]
+  const key   = CURRENCY_KEYS[currentCurrency]
+  const price = currentBilling === 'monthly' ? plan.price_monthly[key] : (plan.price_yearly?.[key] ?? plan.price_monthly[key])
+
+  const modal = document.getElementById('subscribe-modal')
+  document.getElementById('modal-title').textContent = `Subscrever ${plan.name}`
+  document.getElementById('modal-price').textContent  = `${sym} ${formatPrice(price)} / ${currentBilling === 'monthly' ? 'mês' : 'ano'}`
+  document.getElementById('modal-icon').className     = `fas ${plan.icon} text-4xl mb-3`
+  document.getElementById('modal-header').style.background = `linear-gradient(135deg, ${plan.color}cc, ${plan.color})`
+
+  // Show right step
+  document.getElementById('modal-step-login').classList.toggle('hidden', isLoggedIn)
+  document.getElementById('modal-step-method').classList.toggle('hidden', !isLoggedIn)
+  document.getElementById('modal-step-instructions').classList.add('hidden')
+
+  modal.classList.remove('hidden')
+  document.body.style.overflow = 'hidden'
+}
+
+function closeModal() {
+  document.getElementById('subscribe-modal').classList.add('hidden')
+  document.body.style.overflow = ''
+}
+
+async function submitSubscription() {
+  if (!selectedPlan) return
+  const method = document.querySelector('input[name="payment_method"]:checked')?.value
+  if (!method) { showToast('Seleccione um método de pagamento', 'error'); return }
+
+  const key = CURRENCY_KEYS[currentCurrency]
+  try {
+    const res = await axios.post('/api/plans/subscribe', {
+      plan_id: selectedPlan.id,
+      billing: currentBilling,
+      currency: currentCurrency,
+      payment_method: method
+    }, { headers: { Authorization: `Bearer ${localStorage.getItem('vclass_token')}` } })
+
+    const data = res.data.data
+    document.getElementById('payment-ref').textContent = data.payment_instructions.reference
+    document.getElementById('payment-instructions-text').textContent = data.payment_instructions.instructions
+
+    document.getElementById('modal-step-method').classList.add('hidden')
+    document.getElementById('modal-step-instructions').classList.remove('hidden')
+    showToast('Subscrição iniciada! Complete o pagamento.', 'success')
+  } catch (e) {
+    showToast('Erro ao processar. Tente novamente.', 'error')
+  }
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg, type = 'info') {
+  const toast = document.getElementById('toast')
+  const icon  = document.getElementById('toast-icon')
+  const msgEl = document.getElementById('toast-msg')
+  icon.className = `fas ${type === 'success' ? 'fa-check-circle text-green-400' : type === 'error' ? 'fa-exclamation-circle text-red-400' : 'fa-info-circle text-blue-400'}`
+  msgEl.textContent = msg
+  toast.classList.remove('hidden')
+  setTimeout(() => toast.classList.add('hidden'), 3500)
+}
+</script>
+</body>
+</html>

@@ -126,6 +126,11 @@
             </div>
         </div>
 
+        <!-- ── Banner Plano Atual ──────────────────────────────────────────── -->
+        <div id="plan-banner" class="hidden mb-6 rounded-2xl overflow-hidden">
+            <!-- Preenchido por JS com base no plano do utilizador -->
+        </div>
+
         <!-- Stats Cards -->
         <div id="stats-container" class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <!-- Loading skeletons -->
@@ -779,6 +784,64 @@
         createActivityChart();
         loadDashboard();
         updateNotifBadge();
+        loadPlanBanner();
+
+        // ── Plan Banner ───────────────────────────────────────────────────────
+        async function loadPlanBanner() {
+            const token = localStorage.getItem('vclass_token');
+            if (!token) return;
+            try {
+                const res = await fetch('/api/plans/my', { headers: { Authorization: `Bearer ${token}` } });
+                const data = await res.json();
+                if (!data.success) return;
+                const plan = data.data.current_plan;
+                const banner = document.getElementById('plan-banner');
+                if (!banner) return;
+
+                if (plan.id === 'free') {
+                    // Banner de upgrade para plano free
+                    banner.innerHTML = `
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-rocket text-xl text-yellow-300"></i>
+                            </div>
+                            <div>
+                                <p class="font-bold text-sm">Plano Gratuito activo</p>
+                                <p class="text-purple-200 text-xs mt-0.5">Desbloqueie aulas ilimitadas, Chat IA e muito mais com o Premium</p>
+                            </div>
+                        </div>
+                        <a href="/plans.html" class="flex-shrink-0 bg-yellow-400 text-yellow-900 font-bold px-5 py-2.5 rounded-xl hover:bg-yellow-300 transition text-sm whitespace-nowrap">
+                            <i class="fas fa-crown mr-1"></i>Ver Planos
+                        </a>
+                    </div>`;
+                } else {
+                    // Card do plano activo
+                    const planColors = { basic: '#2563eb', premium: '#7c3aed' };
+                    const planIcons  = { basic: 'fa-book-open', premium: 'fa-crown' };
+                    const color = planColors[plan.id] || '#6b7280';
+                    const icon  = planIcons[plan.id] || 'fa-seedling';
+                    const expiry = plan.expires_at ? new Date(plan.expires_at).toLocaleDateString('pt', { day:'2-digit', month:'long', year:'numeric' }) : null;
+                    banner.innerHTML = `
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 bg-white border-2 rounded-2xl" style="border-color:${color}22;">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style="background:${color}22">
+                                <i class="fas ${icon} text-xl" style="color:${color}"></i>
+                            </div>
+                            <div>
+                                <p class="font-bold text-sm text-gray-900">Plano ${plan.name} activo</p>
+                                <p class="text-gray-500 text-xs mt-0.5">${expiry ? `Válido até ${expiry}` : 'Subscrição activa'} ${plan.auto_renew ? '· Renovação automática' : ''}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            ${data.data.upgrade_available ? `<a href="/plans.html" class="text-xs font-semibold px-4 py-2 rounded-xl border-2 hover:bg-purple-50 transition" style="color:${color};border-color:${color}"><i class="fas fa-arrow-up mr-1"></i>Fazer Upgrade</a>` : ''}
+                            <a href="/profile.html#subscription" class="text-xs text-gray-500 hover:text-gray-700 font-medium">Gerir plano</a>
+                        </div>
+                    </div>`;
+                }
+                banner.classList.remove('hidden');
+            } catch(e) { /* silent fail */ }
+        }
     </script>
 </body>
 </html>
