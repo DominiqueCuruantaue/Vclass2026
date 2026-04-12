@@ -290,7 +290,7 @@ function getNavbarHTML(activePage = '') {
             <i class="fas fa-search text-sm"></i>
           </a>
           <!-- Notifications -->
-          <a href="/notifications.html" class="relative p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition" title="Notificações">
+          <a href="/notifications.html" class="relative p-2 ${activePage === 'notifications' ? 'text-purple-600 bg-purple-50' : 'text-gray-500 hover:text-purple-600 hover:bg-purple-50'} rounded-lg transition" title="Notificações">
             <i class="fas fa-bell text-sm"></i>
             <span class="notif-badge absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full hidden"></span>
           </a>

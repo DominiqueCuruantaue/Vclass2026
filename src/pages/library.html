@@ -435,9 +435,39 @@
             if (e.target === this) closeModal();
         });
 
+        // ── Carregar dados da API ──────────────────────────────
+        async function loadFromAPI() {
+            try {
+                const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
+                const res = await fetch('/api/library?limit=50', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error('API error');
+                const json = await res.json();
+                if (json.success && json.data.books && json.data.books.length) {
+                    // Substituir dados estáticos pelos da API
+                    BOOKS.length = 0;
+                    json.data.books.forEach(b => BOOKS.push(b));
+                    // Actualizar stats com dados da API
+                    if (json.data.stats) {
+                        const s = json.data.stats;
+                        document.getElementById('stat-books').textContent     = s.totalBooks;
+                        document.getElementById('stat-handouts').textContent  = s.totalHandouts;
+                        document.getElementById('stat-exercises').textContent = s.totalExercises;
+                        document.getElementById('stat-downloads').textContent = (s.totalDownloads / 1000).toFixed(1) + 'k';
+                    }
+                    applyFilters();
+                }
+            } catch(e) {
+                // fallback silencioso para dados estáticos
+                console.warn('Library API unavailable, using static data');
+            }
+        }
+
         // ── Init ───────────────────────────────────────────────────
         computeStats();
         applyFilters();
+        loadFromAPI(); // enriquecer com dados reais do servidor
     </script>
 </body>
 </html>
