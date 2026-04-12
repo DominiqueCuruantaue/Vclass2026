@@ -8,468 +8,436 @@
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <link href="/static/styles.css" rel="stylesheet">
     <style>
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
         .book-card {
-            transition: all 0.3s ease;
+            animation: fadeInUp 0.4s ease forwards;
+            opacity: 0;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
             cursor: pointer;
         }
-        .book-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.15);
-        }
+        .book-card:nth-child(1)  { animation-delay: 0.05s; }
+        .book-card:nth-child(2)  { animation-delay: 0.10s; }
+        .book-card:nth-child(3)  { animation-delay: 0.15s; }
+        .book-card:nth-child(4)  { animation-delay: 0.20s; }
+        .book-card:nth-child(5)  { animation-delay: 0.25s; }
+        .book-card:nth-child(6)  { animation-delay: 0.30s; }
+        .book-card:hover { transform: translateY(-6px); box-shadow: 0 16px 40px rgba(0,0,0,0.15); }
+
         .book-cover {
             position: relative;
             overflow: hidden;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-        .book-cover::after {
-            content: '';
+        .book-cover .book-actions {
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.7) 100%);
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            background: rgba(0,0,0,0.45);
             opacity: 0;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.25s ease;
         }
-        .book-card:hover .book-cover::after {
-            opacity: 1;
-        }
-        .book-actions {
-            position: absolute;
-            bottom: 1rem;
-            left: 50%;
-            transform: translateX(-50%) translateY(20px);
-            opacity: 0;
-            transition: all 0.3s ease;
-            z-index: 10;
-        }
-        .book-card:hover .book-actions {
-            transform: translateX(-50%) translateY(0);
-            opacity: 1;
+        .book-card:hover .book-actions { opacity: 1; }
+        .featured-badge {
+            position: absolute; top: 0.75rem; right: 0.75rem; z-index: 10;
         }
         .category-tab {
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
         .category-tab.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
             color: white;
-            transform: scale(1.05);
         }
-        .featured-badge {
-            position: absolute;
-            top: 0.5rem;
-            right: 0.5rem;
-            z-index: 10;
-        }
-        .star-rating {
-            color: #fbbf24;
-        }
+        .star-rating { color: #fbbf24; font-size: 11px; }
+        .filter-badge { transition: all 0.2s; }
+        .filter-badge.active { background: #7c3aed; color: white; }
+        .line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+        /* Modal */
+        #book-modal { display: none; }
+        #book-modal.open { display: flex; }
     </style>
 </head>
-<body class="bg-gray-50">
-    <!-- Navigation -->
-    <nav class="bg-white shadow-sm">
-        <div class="container mx-auto px-4">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center space-x-8">
-                    <a href="/" class="flex items-center space-x-2">
-                        <i class="fas fa-graduation-cap text-2xl text-purple-600"></i>
-                        <span class="text-xl font-bold text-gray-900">VClass</span>
-                    </a>
-                    <div class="hidden md:flex space-x-4">
-                        <a href="/dashboard.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
-                            <i class="fas fa-home mr-1"></i> Dashboard
-                        </a>
-                        <a href="/browse.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
-                            <i class="fas fa-video mr-1"></i> Aulas
-                        </a>
-                        <a href="/library.html" class="px-3 py-2 rounded-md text-sm font-medium text-purple-600 bg-purple-50">
-                            <i class="fas fa-book mr-1"></i> Biblioteca
-                        </a>
-                        <a href="/progress.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
-                            <i class="fas fa-chart-line mr-1"></i> Progresso
-                        </a>
-                    </div>
+<body class="bg-gray-50 min-h-screen">
+
+    <div id="navbar-placeholder"></div>
+
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-purple-700 to-indigo-600 text-white py-10">
+        <div class="container mx-auto px-6">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold flex items-center gap-3">
+                        <i class="fas fa-book-open"></i> Biblioteca Digital
+                    </h1>
+                    <p class="text-purple-200 mt-1 text-sm">Livros, apostilas e materiais de estudo</p>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <a href="/profile.html" class="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
-                        <i class="fas fa-user mr-1"></i> <span id="user-name"></span>
-                    </a>
-                    <button onclick="VClass.logout()" class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
-                        <i class="fas fa-sign-out-alt mr-1"></i> Sair
-                    </button>
+                <!-- Search -->
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-sm"></i>
+                    <input type="text" id="search-input" placeholder="Buscar título, autor ou disciplina..."
+                           class="pl-9 pr-4 py-2.5 rounded-lg text-gray-900 text-sm w-64 focus:ring-2 focus:ring-purple-300 focus:outline-none"
+                           oninput="applyFilters()">
                 </div>
             </div>
         </div>
-    </nav>
+    </div>
 
-    <!-- Main Content -->
-    <div class="container mx-auto px-4 py-8">
-        <!-- Header -->
-        <div class="mb-8">
-            <h1 class="text-4xl font-bold text-gray-900 mb-2">
-                <i class="fas fa-book-open text-purple-600 mr-3"></i>
-                Biblioteca Digital
-            </h1>
-            <p class="text-lg text-gray-600">Livros, apostilas e materiais de estudo em PDF</p>
+    <div class="container mx-auto px-4 md:px-6 py-8">
+
+        <!-- Stats row -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white rounded-xl shadow-sm p-5 flex items-center gap-4">
+                <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center"><i class="fas fa-book text-blue-600 text-xl"></i></div>
+                <div><p class="text-xs text-gray-500">Livros</p><p class="text-2xl font-bold text-gray-900" id="stat-books">—</p></div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-5 flex items-center gap-4">
+                <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center"><i class="fas fa-file-pdf text-green-600 text-xl"></i></div>
+                <div><p class="text-xs text-gray-500">Apostilas</p><p class="text-2xl font-bold text-gray-900" id="stat-handouts">—</p></div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-5 flex items-center gap-4">
+                <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center"><i class="fas fa-tasks text-purple-600 text-xl"></i></div>
+                <div><p class="text-xs text-gray-500">Exercícios</p><p class="text-2xl font-bold text-gray-900" id="stat-exercises">—</p></div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-5 flex items-center gap-4">
+                <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center"><i class="fas fa-download text-orange-600 text-xl"></i></div>
+                <div><p class="text-xs text-gray-500">Downloads</p><p class="text-2xl font-bold text-gray-900" id="stat-downloads">—</p></div>
+            </div>
         </div>
 
-        <!-- Search Bar -->
-        <div class="bg-white rounded-xl shadow-sm p-6 mb-8">
-            <div class="flex flex-col md:flex-row gap-4">
-                <div class="flex-1">
-                    <div class="relative">
-                        <i class="fas fa-search absolute left-4 top-4 text-gray-400"></i>
-                        <input 
-                            type="text" 
-                            id="search-input"
-                            placeholder="Buscar por título, autor ou disciplina..." 
-                            class="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            onkeyup="searchBooks()"
-                        >
-                    </div>
+        <!-- Filters -->
+        <div class="bg-white rounded-xl shadow-sm p-4 mb-6 flex flex-wrap items-center gap-3">
+            <!-- Category tabs -->
+            <div class="flex gap-2 flex-wrap">
+                <button class="category-tab active px-4 py-2 rounded-lg text-sm font-medium" onclick="setCategory('all', this)">
+                    <i class="fas fa-th-large mr-1.5"></i>Todos
+                </button>
+                <button class="category-tab px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600" onclick="setCategory('books', this)">
+                    <i class="fas fa-book mr-1.5"></i>Livros
+                </button>
+                <button class="category-tab px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600" onclick="setCategory('handouts', this)">
+                    <i class="fas fa-file-pdf mr-1.5"></i>Apostilas
+                </button>
+                <button class="category-tab px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600" onclick="setCategory('exercises', this)">
+                    <i class="fas fa-tasks mr-1.5"></i>Exercícios
+                </button>
+            </div>
+            <div class="flex gap-2 ml-auto flex-wrap">
+                <select id="subject-filter" class="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-purple-500 focus:outline-none" onchange="applyFilters()">
+                    <option value="">Todas as Disciplinas</option>
+                    <option value="Matemática">Matemática</option>
+                    <option value="Física">Física</option>
+                    <option value="Química">Química</option>
+                    <option value="Biologia">Biologia</option>
+                    <option value="Português">Português</option>
+                    <option value="História">História</option>
+                    <option value="Geografia">Geografia</option>
+                    <option value="Inglês">Inglês</option>
+                </select>
+                <select id="grade-filter" class="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-purple-500 focus:outline-none" onchange="applyFilters()">
+                    <option value="">Todas as Classes</option>
+                    <option value="7">7ª Classe</option>
+                    <option value="8">8ª Classe</option>
+                    <option value="9">9ª Classe</option>
+                    <option value="10">10ª Classe</option>
+                    <option value="11">11ª Classe</option>
+                    <option value="12">12ª Classe</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Featured -->
+        <div id="featured-section" class="mb-10">
+            <h2 class="text-xl font-bold text-gray-900 mb-4"><i class="fas fa-star text-yellow-500 mr-2"></i>Em Destaque</h2>
+            <div id="featured-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+        </div>
+
+        <!-- All books -->
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-gray-900">Todos os Materiais</h2>
+            <span id="books-count" class="text-sm text-gray-500"></span>
+        </div>
+        <div id="books-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-8"></div>
+
+        <!-- Empty state -->
+        <div id="empty-state" class="hidden text-center py-20">
+            <i class="fas fa-search text-6xl text-gray-200 mb-4"></i>
+            <p class="text-xl text-gray-500">Nenhum material encontrado</p>
+            <p class="text-sm text-gray-400 mt-1">Tente ajustar os filtros ou a pesquisa</p>
+        </div>
+    </div>
+
+    <!-- Book Modal -->
+    <div id="book-modal" class="fixed inset-0 z-50 items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+            <div id="modal-cover" class="h-40 flex items-center justify-center relative">
+                <div id="modal-cover-icon" class="text-5xl text-white/80"></div>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                <button onclick="closeModal()" class="absolute top-4 right-4 w-8 h-8 bg-black/40 rounded-full flex items-center justify-center text-white hover:bg-black/60">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="flex items-center gap-2 mb-3" id="modal-badges"></div>
+                <h3 class="text-xl font-bold text-gray-900 mb-1" id="modal-title"></h3>
+                <p class="text-sm text-gray-500 mb-1" id="modal-author"></p>
+                <p class="text-sm text-gray-600 mb-4 leading-relaxed" id="modal-desc"></p>
+                <div class="grid grid-cols-3 gap-3 text-center text-xs text-gray-500 mb-5">
+                    <div class="bg-gray-50 rounded-lg p-2"><i class="fas fa-file-alt text-gray-400 mb-1"></i><div id="modal-pages" class="font-semibold text-gray-700"></div><div>páginas</div></div>
+                    <div class="bg-gray-50 rounded-lg p-2"><i class="fas fa-hdd text-gray-400 mb-1"></i><div id="modal-size" class="font-semibold text-gray-700"></div><div>tamanho</div></div>
+                    <div class="bg-gray-50 rounded-lg p-2"><i class="fas fa-download text-gray-400 mb-1"></i><div id="modal-downloads" class="font-semibold text-gray-700"></div><div>downloads</div></div>
                 </div>
                 <div class="flex gap-3">
-                    <select id="subject-filter" class="px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500" onchange="filterBooks()">
-                        <option value="">Todas as Disciplinas</option>
-                        <option value="Matemática">Matemática</option>
-                        <option value="Português">Português</option>
-                        <option value="Física">Física</option>
-                        <option value="Química">Química</option>
-                        <option value="Biologia">Biologia</option>
-                        <option value="História">História</option>
-                        <option value="Geografia">Geografia</option>
-                        <option value="Inglês">Inglês</option>
-                    </select>
-                    <select id="grade-filter" class="px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500" onchange="filterBooks()">
-                        <option value="">Todas as Classes</option>
-                        <option value="10">10ª Classe</option>
-                        <option value="11">11ª Classe</option>
-                        <option value="12">12ª Classe</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <!-- Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-xl shadow-sm">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-600 mb-1">Total de Livros</p>
-                        <p id="stat-books" class="text-3xl font-bold text-gray-900">124</p>
-                    </div>
-                    <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center">
-                        <i class="fas fa-book text-blue-600 text-2xl"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-600 mb-1">Apostilas</p>
-                        <p id="stat-handouts" class="text-3xl font-bold text-gray-900">68</p>
-                    </div>
-                    <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
-                        <i class="fas fa-file-pdf text-green-600 text-2xl"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-600 mb-1">Exercícios</p>
-                        <p id="stat-exercises" class="text-3xl font-bold text-gray-900">89</p>
-                    </div>
-                    <div class="w-14 h-14 bg-purple-100 rounded-full flex items-center justify-center">
-                        <i class="fas fa-tasks text-purple-600 text-2xl"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-600 mb-1">Downloads</p>
-                        <p id="stat-downloads" class="text-3xl font-bold text-gray-900">1.2k</p>
-                    </div>
-                    <div class="w-14 h-14 bg-orange-100 rounded-full flex items-center justify-center">
-                        <i class="fas fa-download text-orange-600 text-2xl"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Categories Tabs -->
-        <div class="mb-8">
-            <div class="bg-white rounded-xl shadow-sm p-2">
-                <div class="flex flex-wrap gap-2">
-                    <button onclick="showCategory('all')" class="category-tab active flex-1 min-w-[120px] px-6 py-3 rounded-lg font-medium text-gray-700">
-                        <i class="fas fa-th-large mr-2"></i>Todos
+                    <button onclick="viewBook()" class="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold text-sm transition">
+                        <i class="fas fa-eye mr-2"></i>Visualizar PDF
                     </button>
-                    <button onclick="showCategory('books')" class="category-tab flex-1 min-w-[120px] px-6 py-3 rounded-lg font-medium text-gray-700">
-                        <i class="fas fa-book mr-2"></i>Livros
-                    </button>
-                    <button onclick="showCategory('handouts')" class="category-tab flex-1 min-w-[120px] px-6 py-3 rounded-lg font-medium text-gray-700">
-                        <i class="fas fa-file-pdf mr-2"></i>Apostilas
-                    </button>
-                    <button onclick="showCategory('exercises')" class="category-tab flex-1 min-w-[120px] px-6 py-3 rounded-lg font-medium text-gray-700">
-                        <i class="fas fa-tasks mr-2"></i>Exercícios
+                    <button onclick="downloadBook()" class="flex-1 py-2.5 border-2 border-purple-600 text-purple-600 hover:bg-purple-50 rounded-xl font-semibold text-sm transition">
+                        <i class="fas fa-download mr-2"></i>Descarregar
                     </button>
                 </div>
             </div>
-        </div>
-
-        <!-- Featured Books Section -->
-        <div id="featured-section" class="mb-12">
-            <div class="flex items-center justify-between mb-6">
-                <h2 class="text-2xl font-bold text-gray-900">
-                    <i class="fas fa-star text-yellow-500 mr-2"></i>Livros em Destaque
-                </h2>
-            </div>
-            <div id="featured-books" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <!-- Populated by JS -->
-            </div>
-        </div>
-
-        <!-- All Books Section -->
-        <div class="mb-8">
-            <div class="flex items-center justify-between mb-6">
-                <h2 class="text-2xl font-bold text-gray-900">Todos os Materiais</h2>
-                <span id="books-count" class="text-gray-600"></span>
-            </div>
-        </div>
-
-        <!-- Books Grid -->
-        <div id="books-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
-            <!-- Populated by JS -->
-        </div>
-
-        <!-- Empty State -->
-        <div id="empty-state" class="text-center py-16 hidden">
-            <i class="fas fa-search text-7xl text-gray-300 mb-4"></i>
-            <p class="text-2xl text-gray-600 mb-2">Nenhum material encontrado</p>
-            <p class="text-gray-500">Tente ajustar os filtros de busca</p>
         </div>
     </div>
 
     <script src="/static/app.js"></script>
-    <script src="/static/library-data.js"></script>
     <script>
-        // Check authentication
-        if (!VClass.isAuthenticated()) {
-            window.location.href = '/login.html';
+        // ── Auth & Navbar ──────────────────────────────────────────
+        if (!VClass.isAuthenticated()) window.location.href = '/login.html';
+        VClass.initNavbar('library');
+
+        // ── Gradientes por disciplina ──────────────────────────────
+        const SUBJECT_STYLES = {
+            'Matemática': { grad: 'from-purple-600 to-indigo-700',   icon: 'fa-calculator',    bg: '#7c3aed' },
+            'Física':     { grad: 'from-blue-600 to-cyan-700',       icon: 'fa-atom',          bg: '#2563eb' },
+            'Química':    { grad: 'from-green-500 to-emerald-700',   icon: 'fa-flask',         bg: '#059669' },
+            'Biologia':   { grad: 'from-lime-500 to-green-600',      icon: 'fa-leaf',          bg: '#16a34a' },
+            'Português':  { grad: 'from-red-500 to-rose-700',        icon: 'fa-book-open',     bg: '#dc2626' },
+            'História':   { grad: 'from-orange-500 to-amber-600',    icon: 'fa-landmark',      bg: '#d97706' },
+            'Geografia':  { grad: 'from-sky-500 to-blue-600',        icon: 'fa-globe-africa',  bg: '#0284c7' },
+            'Inglês':     { grad: 'from-violet-500 to-purple-700',   icon: 'fa-language',      bg: '#7c3aed' },
+        };
+        function subStyle(subject) {
+            return SUBJECT_STYLES[subject] || { grad:'from-gray-500 to-gray-700', icon:'fa-file-alt', bg:'#6b7280' };
         }
 
-        const user = VClass.getCurrentUser();
-        if (user) {
-            document.getElementById('user-name').textContent = user.full_name || user.name;
-        }
+        // ── Dados da biblioteca ────────────────────────────────────
+        const BOOKS = [
+            // ── Livros em destaque ─────────────────────────────────
+            { id:1, title:'Matemática — 12ª Classe', author:'Ministério da Educação', subject:'Matemática', grade:12, category:'books', pages:320, downloads:2456, rating:4.8, size:'12.5 MB', featured:true, desc:'Livro oficial de Matemática para a 12ª Classe — Funções, Trigonometria, Geometria Analítica e Probabilidades.' },
+            { id:2, title:'Física — 11ª Classe',     author:'Ministério da Educação', subject:'Física',     grade:11, category:'books', pages:280, downloads:1892, rating:4.7, size:'10.8 MB', featured:true, desc:'Manual de Física para a 11ª Classe — Mecânica, Termodinâmica, Electricidade e Magnetismo.' },
+            { id:3, title:'Química — 10ª Classe',    author:'Ministério da Educação', subject:'Química',    grade:10, category:'books', pages:260, downloads:1654, rating:4.6, size:'9.2 MB',  featured:true, desc:'Química Geral e Inorgânica para a 10ª Classe — Tabela periódica, ligações e reacções.' },
 
-        // Global state
+            // ── Livros ─────────────────────────────────────────────
+            { id:4,  title:'Biologia — 12ª Classe',   author:'MINED', subject:'Biologia',   grade:12, category:'books',     pages:298, downloads:1341, rating:4.5, size:'11.3 MB', featured:false, desc:'Genética, Evolução, Ecologia e Fisiologia humana.' },
+            { id:5,  title:'Português — 11ª Classe',  author:'MINED', subject:'Português',  grade:11, category:'books',     pages:240, downloads:1120, rating:4.4, size:'8.7 MB',  featured:false, desc:'Literatura, gramática avançada e produção textual.' },
+            { id:6,  title:'História — 10ª Classe',   author:'MINED', subject:'História',   grade:10, category:'books',     pages:210, downloads:980,  rating:4.3, size:'7.5 MB',  featured:false, desc:'História de África e do Mundo contemporâneo.' },
+            { id:7,  title:'Geografia — 11ª Classe',  author:'MINED', subject:'Geografia',  grade:11, category:'books',     pages:225, downloads:876, rating:4.2, size:'8.1 MB',   featured:false, desc:'Cartografia, clima, recursos naturais e globalização.' },
+            { id:8,  title:'Inglês — 12ª Classe',     author:'MINED', subject:'Inglês',     grade:12, category:'books',     pages:200, downloads:740, rating:4.1, size:'6.9 MB',   featured:false, desc:'Gramática avançada, leitura e comunicação em inglês.' },
+            { id:9,  title:'Matemática — 10ª Classe', author:'MINED', subject:'Matemática', grade:10, category:'books',     pages:290, downloads:2100, rating:4.7, size:'11.0 MB', featured:false, desc:'Funções, equações, matrizes e determinantes.' },
+            { id:10, title:'Biologia — 10ª Classe',   author:'MINED', subject:'Biologia',   grade:10, category:'books',     pages:275, downloads:1230, rating:4.5, size:'10.2 MB', featured:false, desc:'Citologia, genética básica e ecossistemas.' },
+
+            // ── Apostilas ──────────────────────────────────────────
+            { id:11, title:'Apostila: Funções Quadráticas',       author:'Prof. Maria Santos',   subject:'Matemática', grade:10, category:'handouts',  pages:48,  downloads:3210, rating:4.9, size:'2.1 MB', featured:false, desc:'Resumo completo com teoria, exemplos resolvidos e exercícios de funções do 2º grau.' },
+            { id:12, title:'Apostila: Cinemática e Dinâmica',     author:'Prof. João Ferreira',  subject:'Física',     grade:11, category:'handouts',  pages:56,  downloads:2876, rating:4.8, size:'2.8 MB', featured:false, desc:'Leis de Newton, MRU, MRUV e energia cinética — resumo prático.' },
+            { id:13, title:'Apostila: Reacções Químicas',         author:'Prof. Ana Lima',       subject:'Química',    grade:10, category:'handouts',  pages:42,  downloads:2340, rating:4.7, size:'1.9 MB', featured:false, desc:'Tipos de reacções, balanceamento e estequiometria.' },
+            { id:14, title:'Apostila: Genética Mendeliana',       author:'Prof. Carlos Neto',    subject:'Biologia',   grade:12, category:'handouts',  pages:38,  downloads:1980, rating:4.6, size:'1.7 MB', featured:false, desc:'Leis de Mendel, heredograma e probabilidade genética.' },
+            { id:15, title:'Apostila: Gramática Portuguesa',      author:'Prof. Sofia Pinto',    subject:'Português',  grade:11, category:'handouts',  pages:64,  downloads:1720, rating:4.5, size:'3.2 MB', featured:false, desc:'Morfologia, sintaxe e análise de texto — guia completo.' },
+            { id:16, title:'Apostila: Trigonometria',             author:'Prof. Rui Mendes',     subject:'Matemática', grade:11, category:'handouts',  pages:52,  downloads:2650, rating:4.8, size:'2.4 MB', featured:false, desc:'Seno, cosseno, tangente e aplicações em triângulos.' },
+            { id:17, title:'Apostila: Electricidade e Circuitos', author:'Prof. Luís Carvalho',  subject:'Física',     grade:12, category:'handouts',  pages:60,  downloads:2100, rating:4.7, size:'2.9 MB', featured:false, desc:'Lei de Ohm, circuitos em série e paralelo, potência eléctrica.' },
+            { id:18, title:'Apostila: Solubilidade e pH',         author:'Prof. Beatriz Cruz',   subject:'Química',    grade:11, category:'handouts',  pages:36,  downloads:1560, rating:4.4, size:'1.6 MB', featured:false, desc:'Ácidos, bases, sais e indicadores de pH.' },
+
+            // ── Exercícios / Provas ────────────────────────────────
+            { id:19, title:'Provas Nacionais: Matemática 2019–2025', author:'MINED / VClass',    subject:'Matemática', grade:12, category:'exercises', pages:120, downloads:5432, rating:4.9, size:'4.8 MB', featured:false, desc:'Colecção de 7 provas nacionais com resolução passo a passo.' },
+            { id:20, title:'Provas Nacionais: Física 2019–2025',     author:'MINED / VClass',    subject:'Física',     grade:12, category:'exercises', pages:96,  downloads:4210, rating:4.8, size:'3.9 MB', featured:false, desc:'7 provas nacionais de Física com critérios de classificação.' },
+            { id:21, title:'Provas Nacionais: Química 2019–2025',    author:'MINED / VClass',    subject:'Química',    grade:12, category:'exercises', pages:88,  downloads:3870, rating:4.7, size:'3.5 MB', featured:false, desc:'Provas completas de Química com resoluções detalhadas.' },
+            { id:22, title:'Simulados: 10ª Classe — Matemática',     author:'Equipa VClass',      subject:'Matemática', grade:10, category:'exercises', pages:64,  downloads:3120, rating:4.8, size:'2.6 MB', featured:false, desc:'10 simulados completos no formato da prova nacional.' },
+            { id:23, title:'Simulados: 12ª Classe — Física',         author:'Equipa VClass',      subject:'Física',     grade:12, category:'exercises', pages:72,  downloads:2890, rating:4.7, size:'3.0 MB', featured:false, desc:'Simulados com questões de múltipla escolha e resposta aberta.' },
+            { id:24, title:'Banco de Questões: Biologia',            author:'Equipa VClass',      subject:'Biologia',   grade:11, category:'exercises', pages:80,  downloads:2340, rating:4.6, size:'3.2 MB', featured:false, desc:'500+ questões de Biologia organizadas por tema e nível.' },
+            { id:25, title:'Simulados: 11ª Classe — Português',      author:'Equipa VClass',      subject:'Português',  grade:11, category:'exercises', pages:56,  downloads:1980, rating:4.5, size:'2.2 MB', featured:false, desc:'Testes de compreensão leitora, gramática e redacção.' },
+        ];
+
         let currentCategory = 'all';
-        let allBooks = [];
+        let activeBook = null;
 
-        // Initialize library
-        function init() {
-            allBooks = VClassLibrary.getAllBooks();
-            
-            // Update stats
-            const stats = VClassLibrary.stats;
-            document.getElementById('stat-books').textContent = stats.totalBooks;
-            document.getElementById('stat-handouts').textContent = stats.totalHandouts;
-            document.getElementById('stat-exercises').textContent = stats.totalExercises;
-            document.getElementById('stat-downloads').textContent = formatNumber(stats.totalDownloads);
-            
-            // Render featured books
-            renderFeaturedBooks();
-            
-            // Render all books
-            renderBooks(allBooks);
+        // ── Computed stats ─────────────────────────────────────────
+        function computeStats() {
+            document.getElementById('stat-books').textContent     = BOOKS.filter(b => b.category === 'books').length;
+            document.getElementById('stat-handouts').textContent  = BOOKS.filter(b => b.category === 'handouts').length;
+            document.getElementById('stat-exercises').textContent = BOOKS.filter(b => b.category === 'exercises').length;
+            const total = BOOKS.reduce((s, b) => s + b.downloads, 0);
+            document.getElementById('stat-downloads').textContent = (total / 1000).toFixed(1) + 'k';
         }
 
-        function renderFeaturedBooks() {
-            const container = document.getElementById('featured-books');
-            const featured = VClassLibrary.featured;
-
-            container.innerHTML = featured.map(book => createFeaturedBookCard(book)).join('');
+        // ── Rendering ──────────────────────────────────────────────
+        function starHtml(rating) {
+            const full = Math.floor(rating), half = (rating % 1) >= 0.5;
+            return Array.from({length: full}, () => '<i class="fas fa-star"></i>').join('') +
+                   (half ? '<i class="fas fa-star-half-alt"></i>' : '');
         }
 
-        function createFeaturedBookCard(book) {
-            return `
-                <div class="book-card bg-white rounded-xl shadow-md overflow-hidden" onclick="viewBook(${book.id})">
-                    <div class="relative">
-                        <div class="book-cover h-80 bg-gradient-to-br from-purple-100 to-purple-50 flex items-center justify-center">
-                            <img src="${book.cover}" alt="${book.title}" class="w-full h-full object-cover">
-                            <div class="book-actions flex gap-2">
-                                <button class="px-4 py-2 bg-white text-purple-600 rounded-lg hover:bg-purple-600 hover:text-white transition">
-                                    <i class="fas fa-eye mr-2"></i>Visualizar
-                                </button>
-                                <button class="px-4 py-2 bg-white text-purple-600 rounded-lg hover:bg-purple-600 hover:text-white transition">
-                                    <i class="fas fa-download mr-2"></i>Baixar
-                                </button>
-                            </div>
-                        </div>
-                        <div class="featured-badge">
-                            <span class="px-3 py-1 bg-yellow-500 text-white text-xs font-bold rounded-full shadow-lg">
-                                <i class="fas fa-star mr-1"></i>DESTAQUE
-                            </span>
-                        </div>
-                    </div>
-                    <div class="p-6">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
-                                ${book.subject}
-                            </span>
-                            <div class="star-rating">
-                                ${renderStars(book.rating)}
-                            </div>
-                        </div>
-                        <h3 class="text-xl font-bold text-gray-900 mb-2 line-clamp-1">${book.title}</h3>
-                        <p class="text-sm text-gray-600 mb-3">${book.author}</p>
-                        <p class="text-sm text-gray-500 mb-4 line-clamp-2">${book.description}</p>
-                        <div class="flex items-center justify-between text-xs text-gray-500">
-                            <span><i class="fas fa-file-alt mr-1"></i>${book.pages} páginas</span>
-                            <span><i class="fas fa-download mr-1"></i>${formatNumber(book.downloads)}</span>
-                        </div>
-                    </div>
+        function coverHtml(book, tall = false) {
+            const s = subStyle(book.subject);
+            const h = tall ? 'h-72' : 'h-48';
+            return `<div class="book-cover ${h} bg-gradient-to-br ${s.grad} flex flex-col items-center justify-center relative">
+                <i class="fas ${s.icon} text-5xl text-white/80 mb-2"></i>
+                <p class="text-white font-bold text-sm text-center px-4 line-clamp-2">${book.title}</p>
+                <div class="book-actions">
+                    <button class="px-3 py-2 bg-white text-purple-700 rounded-lg text-sm font-semibold hover:bg-purple-50 transition">
+                        <i class="fas fa-eye mr-1"></i>Ver
+                    </button>
+                    <button class="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition">
+                        <i class="fas fa-download mr-1"></i>Baixar
+                    </button>
                 </div>
-            `;
+                ${book.featured ? `<div class="featured-badge"><span class="px-2 py-1 bg-yellow-400 text-yellow-900 text-xs font-bold rounded-full shadow"><i class="fas fa-star mr-1"></i>DESTAQUE</span></div>` : ''}
+            </div>`;
         }
 
-        function renderBooks(books) {
-            const container = document.getElementById('books-grid');
-            const emptyState = document.getElementById('empty-state');
-            const nonFeatured = books.filter(b => !b.isFeatured);
-
-            if (nonFeatured.length === 0) {
-                container.classList.add('hidden');
-                emptyState.classList.remove('hidden');
-            } else {
-                container.classList.remove('hidden');
-                emptyState.classList.add('hidden');
-                container.innerHTML = nonFeatured.map(book => createBookCard(book)).join('');
-            }
-
-            document.getElementById('books-count').textContent = `${nonFeatured.length} materiais`;
-        }
-
-        function createBookCard(book) {
-            return `
-                <div class="book-card bg-white rounded-xl shadow-md overflow-hidden" onclick="viewBook(${book.id})">
-                    <div class="relative">
-                        <div class="book-cover h-64 bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center">
-                            <img src="${book.cover}" alt="${book.title}" class="w-full h-full object-cover">
-                            <div class="book-actions flex gap-2">
-                                <button class="px-3 py-2 bg-white text-purple-600 rounded-lg hover:bg-purple-600 hover:text-white transition text-sm">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <button class="px-3 py-2 bg-white text-purple-600 rounded-lg hover:bg-purple-600 hover:text-white transition text-sm">
-                                    <i class="fas fa-download"></i>
-                                </button>
-                            </div>
+        function renderFeatured(list) {
+            const feat = list.filter(b => b.featured);
+            const sec = document.getElementById('featured-section');
+            const grid = document.getElementById('featured-grid');
+            if (!feat.length) { sec.classList.add('hidden'); return; }
+            sec.classList.remove('hidden');
+            grid.innerHTML = feat.map(b => {
+                const s = subStyle(b.subject);
+                return `<div class="book-card bg-white rounded-2xl shadow overflow-hidden" onclick="openModal(${b.id})">
+                    ${coverHtml(b, true)}
+                    <div class="p-5">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full text-white" style="background:${s.bg}">${b.subject}</span>
+                            <span class="text-xs text-gray-400">${b.grade}ª Classe</span>
+                        </div>
+                        <h3 class="font-bold text-gray-900 mb-1 line-clamp-1">${b.title}</h3>
+                        <p class="text-xs text-gray-500 mb-2">${b.author}</p>
+                        <div class="flex items-center justify-between text-xs text-gray-400">
+                            <span class="star-rating">${starHtml(b.rating)} ${b.rating}</span>
+                            <span><i class="fas fa-download mr-1"></i>${(b.downloads/1000).toFixed(1)}k</span>
                         </div>
                     </div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderBooks(list) {
+            const nonFeat = list.filter(b => !b.featured);
+            const grid = document.getElementById('books-grid');
+            const empty = document.getElementById('empty-state');
+            document.getElementById('books-count').textContent = `${list.length} materiais`;
+
+            if (list.length === 0) {
+                grid.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+            empty.classList.add('hidden');
+            grid.innerHTML = nonFeat.map(b => {
+                const s = subStyle(b.subject);
+                return `<div class="book-card bg-white rounded-2xl shadow-sm overflow-hidden" onclick="openModal(${b.id})">
+                    ${coverHtml(b)}
                     <div class="p-4">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded">
-                                ${book.subject}
-                            </span>
-                            <span class="text-xs text-gray-500">${book.grade}ª Classe</span>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full text-white" style="background:${s.bg}">${b.subject}</span>
+                            <span class="text-xs text-gray-400">${b.grade}ª Cl.</span>
                         </div>
-                        <h3 class="text-lg font-bold text-gray-900 mb-1 line-clamp-1">${book.title}</h3>
-                        <p class="text-xs text-gray-600 mb-2">${book.author}</p>
-                        <div class="flex items-center justify-between text-xs text-gray-500">
-                            <span><i class="fas fa-file-alt mr-1"></i>${book.pages}p</span>
-                            <div class="star-rating text-xs">
-                                ${renderStars(book.rating)}
-                            </div>
+                        <h3 class="font-bold text-gray-900 text-sm mb-0.5 line-clamp-2">${b.title}</h3>
+                        <p class="text-xs text-gray-500 mb-2">${b.author}</p>
+                        <div class="flex items-center justify-between text-xs text-gray-400">
+                            <span class="star-rating">${starHtml(b.rating)}</span>
+                            <span><i class="fas fa-file-alt mr-0.5"></i>${b.pages}p</span>
                         </div>
                     </div>
-                </div>
-            `;
+                </div>`;
+            }).join('');
         }
 
-        function renderStars(rating) {
-            const fullStars = Math.floor(rating);
-            const hasHalf = rating % 1 >= 0.5;
-            let html = '';
-            
-            for (let i = 0; i < fullStars; i++) {
-                html += '<i class="fas fa-star"></i>';
-            }
-            if (hasHalf) {
-                html += '<i class="fas fa-star-half-alt"></i>';
-            }
-            
-            return html;
-        }
-
-        function showCategory(category) {
-            currentCategory = category;
-            
-            // Update tab styles
-            document.querySelectorAll('.category-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            event.target.closest('.category-tab').classList.add('active');
-            
-            // Show/hide featured section
-            if (category === 'all') {
-                document.getElementById('featured-section').style.display = 'block';
-            } else {
-                document.getElementById('featured-section').style.display = 'none';
-            }
-            
-            // Filter books
-            filterBooks();
-        }
-
-        function filterBooks() {
-            let filtered = VClassLibrary.getBooksByCategory(currentCategory);
-            
+        // ── Filters ────────────────────────────────────────────────
+        function getFiltered() {
+            const q       = (document.getElementById('search-input').value || '').toLowerCase();
             const subject = document.getElementById('subject-filter').value;
-            if (subject) {
-                filtered = filtered.filter(book => book.subject === subject);
-            }
-            
-            const grade = document.getElementById('grade-filter').value;
-            if (grade) {
-                filtered = filtered.filter(book => book.grade === parseInt(grade));
-            }
-            
+            const grade   = document.getElementById('grade-filter').value;
+            return BOOKS.filter(b => {
+                const matchCat   = currentCategory === 'all' || b.category === currentCategory;
+                const matchSubj  = !subject || b.subject === subject;
+                const matchGrade = !grade   || b.grade === parseInt(grade);
+                const matchQ     = !q || b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q) || b.subject.toLowerCase().includes(q);
+                return matchCat && matchSubj && matchGrade && matchQ;
+            });
+        }
+
+        function applyFilters() {
+            const filtered = getFiltered();
+            renderFeatured(filtered);
             renderBooks(filtered);
         }
 
-        function searchBooks() {
-            const query = document.getElementById('search-input').value;
-            
-            if (query.trim() === '') {
-                filterBooks();
-                return;
-            }
-            
-            const results = VClassLibrary.searchBooks(query);
-            renderBooks(results);
+        function setCategory(cat, btn) {
+            currentCategory = cat;
+            document.querySelectorAll('.category-tab').forEach(t => {
+                t.classList.remove('active');
+                t.classList.add('bg-gray-100', 'text-gray-600');
+            });
+            btn.classList.add('active');
+            btn.classList.remove('bg-gray-100', 'text-gray-600');
+            applyFilters();
         }
 
-        function viewBook(id) {
-            const book = VClassLibrary.getBookById(id);
-            if (book) {
-                alert(`Visualizando: ${book.title}\n\nEsta funcionalidade será implementada em breve com visualizador de PDF integrado.`);
-            }
+        // ── Modal ──────────────────────────────────────────────────
+        function openModal(id) {
+            activeBook = BOOKS.find(b => b.id === id);
+            if (!activeBook) return;
+            const b = activeBook;
+            const s = subStyle(b.subject);
+
+            document.getElementById('modal-cover').className = `h-40 bg-gradient-to-br ${s.grad} flex items-center justify-center relative`;
+            document.getElementById('modal-cover-icon').innerHTML = `<i class="fas ${s.icon} text-5xl text-white/80"></i>`;
+            document.getElementById('modal-title').textContent = b.title;
+            document.getElementById('modal-author').textContent = `Autor: ${b.author}`;
+            document.getElementById('modal-desc').textContent = b.desc;
+            document.getElementById('modal-pages').textContent = b.pages;
+            document.getElementById('modal-size').textContent = b.size;
+            document.getElementById('modal-downloads').textContent = b.downloads >= 1000 ? (b.downloads/1000).toFixed(1)+'k' : b.downloads;
+
+            const catLabels = { books:'Livro', handouts:'Apostila', exercises:'Exercício' };
+            document.getElementById('modal-badges').innerHTML =
+                `<span class="px-2 py-1 text-xs font-semibold rounded-full text-white" style="background:${s.bg}">${b.subject}</span>
+                 <span class="px-2 py-1 text-xs font-semibold bg-gray-100 text-gray-600 rounded-full">${b.grade}ª Classe</span>
+                 <span class="px-2 py-1 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full">${catLabels[b.category]}</span>`;
+
+            document.getElementById('book-modal').classList.add('open');
         }
 
-        function formatNumber(num) {
-            if (num >= 1000) {
-                return (num / 1000).toFixed(1) + 'k';
-            }
-            return num.toString();
+        function closeModal() {
+            document.getElementById('book-modal').classList.remove('open');
+            activeBook = null;
         }
 
-        // Initialize
-        init();
+        function viewBook() {
+            if (!activeBook) return;
+            VClass.showNotification(`A abrir "${activeBook.title}" no visualizador de PDF...`, 'info');
+            setTimeout(() => VClass.showNotification('Visualizador de PDF será disponibilizado em breve', 'warning'), 1500);
+        }
+
+        function downloadBook() {
+            if (!activeBook) return;
+            VClass.showNotification(`A preparar download de "${activeBook.title}"...`, 'info');
+            setTimeout(() => VClass.showNotification('Download disponível em breve. Os livros são protegidos contra pirataria.', 'warning'), 1500);
+        }
+
+        // Fechar modal clicando fora
+        document.getElementById('book-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        // ── Init ───────────────────────────────────────────────────
+        computeStats();
+        applyFilters();
     </script>
 </body>
 </html>

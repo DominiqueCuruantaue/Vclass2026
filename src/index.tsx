@@ -15,6 +15,8 @@ import searchRoutes from './routes/search'
 import adminRoutes from './routes/admin'
 import chatRoutes from './routes/chat'
 import notificationsRoutes from './routes/notifications'
+import newsRoutes from './routes/news'
+import libraryRoutes from './routes/library'
 import pagesRoutes from './routes/pages'
 
 const app = new Hono()
@@ -52,6 +54,8 @@ app.route('/api/search', searchRoutes)
 app.route('/api/admin', adminRoutes)
 app.route('/api/chat', chatRoutes)
 app.route('/api/notifications', notificationsRoutes)
+app.route('/api/news', newsRoutes)
+app.route('/api/library', libraryRoutes)
 
 // Health check
 app.get('/api/health', (c) => {

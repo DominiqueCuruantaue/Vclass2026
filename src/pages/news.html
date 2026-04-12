@@ -6,502 +6,375 @@
     <title>Notícias - VClass</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/styles.css" rel="stylesheet">
     <style>
-        .gradient-primary {
-            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        .card-hover {
-            transition: all 0.3s ease;
+        .news-card {
+            animation: fadeInUp 0.4s ease forwards;
+            opacity: 0;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
         }
-        .card-hover:hover {
+        .news-card:hover {
             transform: translateY(-4px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.12);
         }
+        .news-card:nth-child(1) { animation-delay: 0.05s; }
+        .news-card:nth-child(2) { animation-delay: 0.10s; }
+        .news-card:nth-child(3) { animation-delay: 0.15s; }
+        .news-card:nth-child(4) { animation-delay: 0.20s; }
+        .news-card:nth-child(5) { animation-delay: 0.25s; }
+        .news-card:nth-child(6) { animation-delay: 0.30s; }
+        .filter-btn { transition: all 0.2s ease; }
+        .filter-btn.active { background: #1d4ed8; color: white; }
         .category-badge {
-            display: inline-block;
-            padding: 6px 12px;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 12px;
-            text-transform: uppercase;
-        }
-        .filter-btn {
-            transition: all 0.2s ease;
-        }
-        .filter-btn.active {
-            transform: scale(1.05);
+            display: inline-block; padding: 4px 10px;
+            border-radius: 9999px; font-weight: 600; font-size: 11px;
+            text-transform: uppercase; letter-spacing: 0.5px;
         }
         .featured-overlay {
-            background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+            background: linear-gradient(to top, rgba(0,0,0,0.80) 0%, rgba(0,0,0,0.15) 60%, transparent 100%);
         }
+        .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .newsletter-input:focus { outline: none; ring: none; }
+        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
     </style>
 </head>
-<body class="bg-gray-50">
-    <!-- Header -->
-    <nav class="gradient-primary text-white shadow-lg">
-        <div class="container mx-auto px-6 py-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <a href="/" class="flex items-center space-x-2">
-                        <div class="bg-white rounded-full p-2">
-                            <i class="fas fa-graduation-cap text-blue-600 text-2xl"></i>
-                        </div>
-                        <div>
-                            <h1 class="text-2xl font-bold">VClass</h1>
-                            <p class="text-xs text-blue-100">Educação Digital</p>
-                        </div>
-                    </a>
-                </div>
-                <div class="flex items-center space-x-6">
-                    <a href="/" class="hover:text-blue-200 transition flex items-center space-x-2">
-                        <i class="fas fa-home"></i>
-                        <span>Início</span>
-                    </a>
-                    <a href="/browse.html" class="hover:text-blue-200 transition flex items-center space-x-2">
-                        <i class="fas fa-book-open"></i>
-                        <span>Aulas</span>
-                    </a>
-                    <a href="/news.html" class="text-blue-100 font-semibold flex items-center space-x-2">
-                        <i class="fas fa-newspaper"></i>
-                        <span>Notícias</span>
-                    </a>
-                </div>
-            </div>
-        </div>
-    </nav>
+<body class="bg-gray-50 min-h-screen">
+
+    <div id="navbar-placeholder"></div>
 
     <!-- Page Header -->
-    <section class="bg-white border-b py-8">
+    <section class="bg-gradient-to-r from-blue-800 via-blue-700 to-indigo-700 text-white py-10">
         <div class="container mx-auto px-6">
-            <div class="flex items-center justify-between">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    <h2 class="text-4xl font-bold text-gray-800 mb-2">
-                        <i class="fas fa-newspaper text-blue-600 mr-3"></i>
-                        Últimas Notícias
-                    </h2>
-                    <p class="text-gray-600">Fique por dentro das novidades da educação em Moçambique</p>
+                    <h1 class="text-3xl md:text-4xl font-bold flex items-center gap-3">
+                        <i class="fas fa-newspaper"></i> Notícias & Informações
+                    </h1>
+                    <p class="text-blue-200 mt-1 text-sm">Fique por dentro das novidades em educação</p>
                 </div>
-                <div class="flex items-center space-x-3">
-                    <button onclick="toggleView('grid')" id="viewGrid" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                        <i class="fas fa-th"></i> Grade
-                    </button>
-                    <button onclick="toggleView('list')" id="viewList" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
-                        <i class="fas fa-list"></i> Lista
-                    </button>
+                <div class="flex items-center gap-3">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-sm"></i>
+                        <input type="text" id="searchNews" placeholder="Pesquisar notícias..."
+                               class="pl-9 pr-4 py-2.5 rounded-lg text-gray-900 text-sm w-56 focus:ring-2 focus:ring-blue-300 focus:outline-none"
+                               oninput="searchNews()">
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Filters -->
-    <section class="bg-white border-b py-4 sticky top-0 z-10 shadow-sm">
-        <div class="container mx-auto px-6">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <span class="text-gray-600 font-medium">Categorias:</span>
-                    <button onclick="filterCategory('all')" class="filter-btn active px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium" data-category="all">
-                        Todas
-                    </button>
-                    <button onclick="filterCategory('educacao')" class="filter-btn px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300" data-category="educacao">
-                        <i class="fas fa-graduation-cap mr-1"></i> Educação
-                    </button>
-                    <button onclick="filterCategory('exames')" class="filter-btn px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300" data-category="exames">
-                        <i class="fas fa-file-alt mr-1"></i> Exames
-                    </button>
-                    <button onclick="filterCategory('bolsas')" class="filter-btn px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300" data-category="bolsas">
-                        <i class="fas fa-award mr-1"></i> Bolsas
-                    </button>
-                    <button onclick="filterCategory('eventos')" class="filter-btn px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300" data-category="eventos">
-                        <i class="fas fa-calendar-alt mr-1"></i> Eventos
-                    </button>
-                </div>
-                <div class="flex items-center space-x-3">
-                    <input type="text" id="searchNews" placeholder="Pesquisar notícias..." 
-                           class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
-                           onkeyup="searchNews()">
-                    <button class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
-                        <i class="fas fa-search"></i>
-                    </button>
-                </div>
+    <section class="bg-white border-b shadow-sm sticky top-0 z-20">
+        <div class="container mx-auto px-6 py-3">
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-gray-500 text-sm font-medium mr-1">Filtrar:</span>
+                <button onclick="filterCategory('all')" class="filter-btn active px-4 py-1.5 rounded-full text-sm font-medium bg-blue-700 text-white" data-category="all">
+                    Todas
+                </button>
+                <button onclick="filterCategory('vclass')" class="filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200" data-category="vclass">
+                    <i class="fas fa-graduation-cap mr-1"></i> VClass
+                </button>
+                <button onclick="filterCategory('exames')" class="filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200" data-category="exames">
+                    <i class="fas fa-file-alt mr-1"></i> Exames
+                </button>
+                <button onclick="filterCategory('bolsas')" class="filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200" data-category="bolsas">
+                    <i class="fas fa-award mr-1"></i> Bolsas
+                </button>
+                <button onclick="filterCategory('eventos')" class="filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200" data-category="eventos">
+                    <i class="fas fa-calendar-alt mr-1"></i> Eventos
+                </button>
+                <button onclick="filterCategory('educacao')" class="filter-btn px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200" data-category="educacao">
+                    <i class="fas fa-book-open mr-1"></i> Educação
+                </button>
+                <div class="ml-auto text-sm text-gray-500" id="news-count"></div>
             </div>
         </div>
     </section>
 
     <!-- News Content -->
-    <section class="py-8">
-        <div class="container mx-auto px-6">
-            <div id="newsGrid" class="grid md:grid-cols-3 gap-8">
-                <!-- Featured News (Full Width) -->
-                <div class="md:col-span-3 news-item" data-category="educacao">
-                    <div class="card-hover bg-white rounded-lg shadow-lg overflow-hidden">
-                        <div class="relative h-96">
-                            <img src="https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=1200" alt="Notícia destaque" class="w-full h-full object-cover">
-                            <div class="featured-overlay absolute inset-0"></div>
-                            <div class="absolute bottom-0 left-0 right-0 p-8 text-white">
-                                <div class="flex items-center space-x-3 mb-4">
-                                    <span class="category-badge bg-red-500 text-white">DESTAQUE</span>
-                                    <span class="category-badge bg-blue-500 text-white">Educação</span>
-                                    <span class="text-sm"><i class="far fa-clock mr-1"></i> 15 Mar 2024</span>
-                                    <span class="text-sm"><i class="far fa-user mr-1"></i> João Silva</span>
-                                </div>
-                                <h3 class="text-4xl font-bold mb-4">Novas Aulas de Matemática Disponíveis para 10ª Classe</h3>
-                                <p class="text-lg text-gray-200 mb-4">Acabamos de adicionar 25 novas aulas em vídeo sobre Funções e Trigonometria. Conteúdo preparado por professores especializados com exercícios práticos e provas anteriores.</p>
-                                <a href="#" class="inline-flex items-center text-white font-semibold hover:text-blue-200 transition">
-                                    Ler artigo completo <i class="fas fa-arrow-right ml-2"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <main class="container mx-auto px-4 md:px-6 py-8">
 
-                <!-- News Grid -->
-                <!-- Exames -->
-                <div class="news-item" data-category="exames">
-                    <div class="card-hover bg-white rounded-lg shadow-md overflow-hidden h-full">
-                        <img src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600" alt="Exames 2024" class="w-full h-48 object-cover">
-                        <div class="p-6">
-                            <div class="flex items-center space-x-2 mb-3">
-                                <span class="category-badge bg-green-500 text-white">Exames</span>
-                                <span class="text-gray-500 text-sm">12 Mar 2024</span>
-                            </div>
-                            <h4 class="text-xl font-bold mb-3 text-gray-800 line-clamp-2">Calendário de Exames Nacionais 2024 já Disponível</h4>
-                            <p class="text-gray-600 mb-4 line-clamp-3">Confira as datas oficiais dos exames nacionais das classes 10ª, 11ª e 12ª. Prepare-se com antecedência para os testes finais.</p>
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-500"><i class="far fa-eye mr-1"></i> 2.543 visualizações</span>
-                                <a href="#" class="text-blue-600 hover:text-blue-700 font-semibold inline-flex items-center">
-                                    Ler mais <i class="fas fa-arrow-right ml-2 text-sm"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <!-- Featured (hero) -->
+        <div id="featured-hero" class="mb-10"></div>
 
-                <!-- Bolsas -->
-                <div class="news-item" data-category="bolsas">
-                    <div class="card-hover bg-white rounded-lg shadow-md overflow-hidden h-full">
-                        <img src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=600" alt="Bolsas" class="w-full h-48 object-cover">
-                        <div class="p-6">
-                            <div class="flex items-center space-x-2 mb-3">
-                                <span class="category-badge bg-yellow-500 text-white">Bolsas</span>
-                                <span class="text-gray-500 text-sm">10 Mar 2024</span>
-                            </div>
-                            <h4 class="text-xl font-bold mb-3 text-gray-800 line-clamp-2">Bolsas de Estudo Universitárias 2024 - Inscrições Abertas</h4>
-                            <p class="text-gray-600 mb-4 line-clamp-3">O Governo anuncia 500 bolsas para estudantes destaque. Saiba como candidatar-se e os requisitos necessários.</p>
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-500"><i class="far fa-eye mr-1"></i> 4.821 visualizações</span>
-                                <a href="#" class="text-blue-600 hover:text-blue-700 font-semibold inline-flex items-center">
-                                    Ler mais <i class="fas fa-arrow-right ml-2 text-sm"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <!-- Grid -->
+        <div id="news-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            <!-- Populated by JS -->
+        </div>
 
-                <!-- Eventos -->
-                <div class="news-item" data-category="eventos">
-                    <div class="card-hover bg-white rounded-lg shadow-md overflow-hidden h-full">
-                        <img src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600" alt="Feira" class="w-full h-48 object-cover">
-                        <div class="p-6">
-                            <div class="flex items-center space-x-2 mb-3">
-                                <span class="category-badge bg-purple-500 text-white">Eventos</span>
-                                <span class="text-gray-500 text-sm">08 Mar 2024</span>
-                            </div>
-                            <h4 class="text-xl font-bold mb-3 text-gray-800 line-clamp-2">Feira de Ciências 2024 - Inscrições Até 20 de Março</h4>
-                            <p class="text-gray-600 mb-4 line-clamp-3">Participe da maior feira de ciências do país. Estudantes de todas as classes podem apresentar seus projetos.</p>
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-500"><i class="far fa-eye mr-1"></i> 1.892 visualizações</span>
-                                <a href="#" class="text-blue-600 hover:text-blue-700 font-semibold inline-flex items-center">
-                                    Ler mais <i class="fas fa-arrow-right ml-2 text-sm"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <!-- Empty state -->
+        <div id="empty-state" class="hidden text-center py-20">
+            <i class="fas fa-newspaper text-6xl text-gray-200 mb-4"></i>
+            <p class="text-xl text-gray-500">Nenhuma notícia encontrada</p>
+            <p class="text-sm text-gray-400 mt-1">Tente outro filtro ou termo de pesquisa</p>
+        </div>
 
-                <!-- Educação -->
-                <div class="news-item" data-category="educacao">
-                    <div class="card-hover bg-white rounded-lg shadow-md overflow-hidden h-full">
-                        <img src="https://images.unsplash.com/photo-1509062522246-3755977927d7?w=600" alt="Tecnologia" class="w-full h-48 object-cover">
-                        <div class="p-6">
-                            <div class="flex items-center space-x-2 mb-3">
-                                <span class="category-badge bg-blue-500 text-white">Educação</span>
-                                <span class="text-gray-500 text-sm">05 Mar 2024</span>
-                            </div>
-                            <h4 class="text-xl font-bold mb-3 text-gray-800 line-clamp-2">Novo Programa de Tecnologia nas Escolas Secundárias</h4>
-                            <p class="text-gray-600 mb-4 line-clamp-3">Ministério da Educação lança iniciativa para equipar 200 escolas com computadores e internet de alta velocidade.</p>
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-500"><i class="far fa-eye mr-1"></i> 3.214 visualizações</span>
-                                <a href="#" class="text-blue-600 hover:text-blue-700 font-semibold inline-flex items-center">
-                                    Ler mais <i class="fas fa-arrow-right ml-2 text-sm"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Exames -->
-                <div class="news-item" data-category="exames">
-                    <div class="card-hover bg-white rounded-lg shadow-md overflow-hidden h-full">
-                        <img src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=600" alt="Resultados" class="w-full h-48 object-cover">
-                        <div class="p-6">
-                            <div class="flex items-center space-x-2 mb-3">
-                                <span class="category-badge bg-green-500 text-white">Exames</span>
-                                <span class="text-gray-500 text-sm">03 Mar 2024</span>
-                            </div>
-                            <h4 class="text-xl font-bold mb-3 text-gray-800 line-clamp-2">Resultados dos Exames de 2023 Superam Expectativas</h4>
-                            <p class="text-gray-600 mb-4 line-clamp-3">Taxa de aprovação nas classes 10ª e 12ª atinge 78%, maior índice dos últimos 5 anos em Moçambique.</p>
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-500"><i class="far fa-eye mr-1"></i> 5.632 visualizações</span>
-                                <a href="#" class="text-blue-600 hover:text-blue-700 font-semibold inline-flex items-center">
-                                    Ler mais <i class="fas fa-arrow-right ml-2 text-sm"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Educação -->
-                <div class="news-item" data-category="educacao">
-                    <div class="card-hover bg-white rounded-lg shadow-md overflow-hidden h-full">
-                        <img src="https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?w=600" alt="Professores" class="w-full h-48 object-cover">
-                        <div class="p-6">
-                            <div class="flex items-center space-x-2 mb-3">
-                                <span class="category-badge bg-blue-500 text-white">Educação</span>
-                                <span class="text-gray-500 text-sm">01 Mar 2024</span>
-                            </div>
-                            <h4 class="text-xl font-bold mb-3 text-gray-800 line-clamp-2">Formação Contínua de Professores: 1000 Docentes Capacitados</h4>
-                            <p class="text-gray-600 mb-4 line-clamp-3">Programa nacional de formação capacita professores em metodologias modernas de ensino e tecnologias educacionais.</p>
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-500"><i class="far fa-eye mr-1"></i> 1.453 visualizações</span>
-                                <a href="#" class="text-blue-600 hover:text-blue-700 font-semibold inline-flex items-center">
-                                    Ler mais <i class="fas fa-arrow-right ml-2 text-sm"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Bolsas -->
-                <div class="news-item" data-category="bolsas">
-                    <div class="card-hover bg-white rounded-lg shadow-md overflow-hidden h-full">
-                        <img src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=600" alt="Internacional" class="w-full h-48 object-cover">
-                        <div class="p-6">
-                            <div class="flex items-center space-x-2 mb-3">
-                                <span class="category-badge bg-yellow-500 text-white">Bolsas</span>
-                                <span class="text-gray-500 text-sm">28 Fev 2024</span>
-                            </div>
-                            <h4 class="text-xl font-bold mb-3 text-gray-800 line-clamp-2">Bolsas Internacionais para Mestrado em Portugal e Brasil</h4>
-                            <p class="text-gray-600 mb-4 line-clamp-3">Programa de cooperação oferece 50 bolsas integrais para estudos de pós-graduação em universidades parceiras.</p>
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-500"><i class="far fa-eye mr-1"></i> 6.781 visualizações</span>
-                                <a href="#" class="text-blue-600 hover:text-blue-700 font-semibold inline-flex items-center">
-                                    Ler mais <i class="fas fa-arrow-right ml-2 text-sm"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Eventos -->
-                <div class="news-item" data-category="eventos">
-                    <div class="card-hover bg-white rounded-lg shadow-md overflow-hidden h-full">
-                        <img src="https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=600" alt="Workshop" class="w-full h-48 object-cover">
-                        <div class="p-6">
-                            <div class="flex items-center space-x-2 mb-3">
-                                <span class="category-badge bg-purple-500 text-white">Eventos</span>
-                                <span class="text-gray-500 text-sm">25 Fev 2024</span>
-                            </div>
-                            <h4 class="text-xl font-bold mb-3 text-gray-800 line-clamp-2">Workshop de Preparação para Exames - Inscreva-se Gratuitamente</h4>
-                            <p class="text-gray-600 mb-4 line-clamp-3">VClass oferece workshop gratuito de 3 dias com estratégias de estudo e simulados para classes 10ª, 11ª e 12ª.</p>
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-500"><i class="far fa-eye mr-1"></i> 2.198 visualizações</span>
-                                <a href="#" class="text-blue-600 hover:text-blue-700 font-semibold inline-flex items-center">
-                                    Ler mais <i class="fas fa-arrow-right ml-2 text-sm"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Pagination -->
-            <div class="mt-12 flex items-center justify-center space-x-2">
-                <button class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition disabled:opacity-50" disabled>
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-                <button class="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium">1</button>
-                <button class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">2</button>
-                <button class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">3</button>
-                <button class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">4</button>
-                <span class="px-4 py-2 text-gray-500">...</span>
-                <button class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">10</button>
-                <button class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
-                    <i class="fas fa-chevron-right"></i>
+        <!-- Newsletter -->
+        <div class="bg-gradient-to-r from-blue-700 to-indigo-700 rounded-2xl p-8 text-white text-center">
+            <h3 class="text-2xl font-bold mb-2"><i class="fas fa-envelope-open-text mr-2"></i>Receba novidades por email</h3>
+            <p class="text-blue-200 text-sm mb-5">Inscreva-se e fique sempre informado sobre educação e oportunidades</p>
+            <div class="flex flex-col sm:flex-row max-w-md mx-auto gap-2">
+                <input type="email" id="newsletter-email" placeholder="Seu email..."
+                       class="newsletter-input flex-1 px-4 py-3 rounded-lg text-gray-900 text-sm">
+                <button onclick="subscribeNewsletter()" class="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition text-sm whitespace-nowrap">
+                    <i class="fas fa-paper-plane mr-1"></i> Inscrever
                 </button>
             </div>
         </div>
-    </section>
+    </main>
 
-    <!-- Newsletter Subscription -->
-    <section class="bg-blue-600 py-12">
-        <div class="container mx-auto px-6">
-            <div class="max-w-3xl mx-auto text-center">
-                <h3 class="text-3xl font-bold text-white mb-4">
-                    <i class="fas fa-envelope-open-text mr-2"></i>
-                    Receba as Notícias no seu Email
-                </h3>
-                <p class="text-blue-100 mb-6">Inscreva-se na nossa newsletter e fique por dentro de todas as novidades</p>
-                <div class="flex max-w-md mx-auto">
-                    <input type="email" placeholder="Seu email..." 
-                           class="flex-1 px-6 py-3 rounded-l-lg focus:outline-none">
-                    <button class="px-8 py-3 bg-green-500 text-white rounded-r-lg hover:bg-green-600 transition font-semibold">
-                        Inscrever
-                    </button>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="bg-gray-900 text-white py-12">
-        <div class="container mx-auto px-6">
-            <div class="grid md:grid-cols-4 gap-8 mb-8">
-                <div>
-                    <div class="flex items-center space-x-2 mb-4">
-                        <i class="fas fa-graduation-cap text-2xl text-blue-400"></i>
-                        <span class="text-xl font-bold">VClass</span>
-                    </div>
-                    <p class="text-gray-400 text-sm">
-                        Plataforma de educação digital para Moçambique
-                    </p>
-                </div>
-                
-                <div>
-                    <h5 class="font-bold mb-4">Links Rápidos</h5>
-                    <ul class="space-y-2 text-sm">
-                        <li><a href="/" class="text-gray-400 hover:text-blue-400 transition">Início</a></li>
-                        <li><a href="/browse.html" class="text-gray-400 hover:text-blue-400 transition">Aulas Online</a></li>
-                        <li><a href="/news.html" class="text-gray-400 hover:text-blue-400 transition">Notícias</a></li>
-                        <li><a href="/library.html" class="text-gray-400 hover:text-blue-400 transition">Biblioteca</a></li>
-                    </ul>
-                </div>
-                
-                <div>
-                    <h5 class="font-bold mb-4">Suporte</h5>
-                    <ul class="space-y-2 text-sm">
-                        <li><a href="/help.html" class="text-gray-400 hover:text-blue-400 transition">Central de Ajuda</a></li>
-                        <li><a href="/chat.html" class="text-gray-400 hover:text-blue-400 transition">Chat de Suporte</a></li>
-                    </ul>
-                </div>
-                
-                <div>
-                    <h5 class="font-bold mb-4">Contacto</h5>
-                    <ul class="space-y-2 text-sm text-gray-400">
-                        <li><i class="fas fa-map-marker-alt mr-2"></i> Nampula, Moçambique</li>
-                        <li><i class="fas fa-phone mr-2"></i> +258 84 553 3100</li>
-                        <li><i class="fas fa-envelope mr-2"></i> info@vclass.co.mz</li>
-                    </ul>
-                </div>
-            </div>
-            
-            <div class="border-t border-gray-800 pt-8 text-center text-gray-400 text-sm">
-                <p>© 2024 VClass. Todos os direitos reservados.</p>
-            </div>
-        </div>
-    </footer>
-
-    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
     <script src="/static/app.js"></script>
     <script>
-        // Filter by category
-        function filterCategory(category) {
-            const newsItems = document.querySelectorAll('.news-item');
-            const filterBtns = document.querySelectorAll('.filter-btn');
-            
-            // Update button styles
-            filterBtns.forEach(btn => {
-                if (btn.getAttribute('data-category') === category) {
-                    btn.classList.remove('bg-gray-200', 'text-gray-700');
-                    btn.classList.add('bg-blue-600', 'text-white', 'active');
-                } else {
-                    btn.classList.remove('bg-blue-600', 'text-white', 'active');
-                    btn.classList.add('bg-gray-200', 'text-gray-700');
-                }
-            });
-            
-            // Filter news items
-            newsItems.forEach(item => {
-                const itemCategory = item.getAttribute('data-category');
-                if (category === 'all' || itemCategory === category) {
-                    item.style.display = '';
-                    setTimeout(() => {
-                        item.style.opacity = '1';
-                        item.style.transform = 'translateY(0)';
-                    }, 50);
-                } else {
-                    item.style.opacity = '0';
-                    item.style.transform = 'translateY(20px)';
-                    setTimeout(() => {
-                        item.style.display = 'none';
-                    }, 300);
-                }
-            });
-        }
+        // ── Setup ──────────────────────────────────────────────────
+        VClass.initNavbar('news');
 
-        // Search news
-        function searchNews() {
-            const searchTerm = document.getElementById('searchNews').value.toLowerCase();
-            const newsItems = document.querySelectorAll('.news-item');
-            
-            newsItems.forEach(item => {
-                const title = item.querySelector('h3, h4').textContent.toLowerCase();
-                const content = item.querySelector('p').textContent.toLowerCase();
-                
-                if (title.includes(searchTerm) || content.includes(searchTerm)) {
-                    item.style.display = '';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-        }
-
-        // Toggle view (grid/list)
-        function toggleView(view) {
-            const newsGrid = document.getElementById('newsGrid');
-            const viewGrid = document.getElementById('viewGrid');
-            const viewList = document.getElementById('viewList');
-            
-            if (view === 'grid') {
-                newsGrid.classList.remove('space-y-6');
-                newsGrid.classList.add('grid', 'md:grid-cols-3', 'gap-8');
-                viewGrid.classList.remove('bg-gray-200', 'text-gray-700');
-                viewGrid.classList.add('bg-blue-600', 'text-white');
-                viewList.classList.remove('bg-blue-600', 'text-white');
-                viewList.classList.add('bg-gray-200', 'text-gray-700');
-            } else {
-                newsGrid.classList.remove('grid', 'md:grid-cols-3', 'gap-8');
-                newsGrid.classList.add('space-y-6');
-                viewList.classList.remove('bg-gray-200', 'text-gray-700');
-                viewList.classList.add('bg-blue-600', 'text-white');
-                viewGrid.classList.remove('bg-blue-600', 'text-white');
-                viewGrid.classList.add('bg-gray-200', 'text-gray-700');
+        // ── Dados ──────────────────────────────────────────────────
+        const NEWS = [
+            {
+                id: 1, category: 'vclass', featured: true,
+                title: 'VClass lança 120 novas aulas para 10ª, 11ª e 12ª Classe',
+                excerpt: 'A maior actualização de conteúdo da plataforma: Matemática, Física, Química, Biologia e História com exercícios práticos e provas anteriores comentadas.',
+                date: '2026-04-10', views: 8241, author: 'Equipa VClass',
+                color: '#1d4ed8', icon: 'fa-graduation-cap',
+                coverGradient: 'from-blue-600 to-indigo-700',
+                coverIcon: 'fa-play-circle text-6xl text-white/80'
+            },
+            {
+                id: 2, category: 'exames', featured: false,
+                title: 'Calendário de Exames Nacionais 2026 publicado pelo MINED',
+                excerpt: 'Confira as datas oficiais dos exames das 10ª, 11ª e 12ª classes. Inscrições abertas até 30 de Abril.',
+                date: '2026-04-05', views: 5832, author: 'Redacção',
+                color: '#16a34a', icon: 'fa-file-alt',
+                coverGradient: 'from-green-500 to-emerald-700',
+                coverIcon: 'fa-calendar-check text-5xl text-white/80'
+            },
+            {
+                id: 3, category: 'bolsas', featured: false,
+                title: 'Bolsas de estudo universitárias 2026 — candidaturas abertas',
+                excerpt: 'Governo anuncia 500 bolsas para estudantes destaque nas classes finais. Prazo de candidatura: 15 de Maio.',
+                date: '2026-04-02', views: 7104, author: 'Redacção',
+                color: '#d97706', icon: 'fa-award',
+                coverGradient: 'from-yellow-500 to-orange-600',
+                coverIcon: 'fa-award text-5xl text-white/80'
+            },
+            {
+                id: 4, category: 'vclass', featured: false,
+                title: 'Nova funcionalidade: Chat com IA para dúvidas de estudo',
+                excerpt: 'O assistente virtual VClass responde perguntas de Matemática, Física, Química e Biologia em tempo real.',
+                date: '2026-03-28', views: 4219, author: 'Equipa VClass',
+                color: '#7c3aed', icon: 'fa-robot',
+                coverGradient: 'from-purple-600 to-violet-700',
+                coverIcon: 'fa-robot text-5xl text-white/80'
+            },
+            {
+                id: 5, category: 'eventos', featured: false,
+                title: 'Feira Nacional de Ciências 2026 — inscrições até 20 de Maio',
+                excerpt: 'Estudantes de todas as classes podem apresentar projectos científicos na maior feira do país.',
+                date: '2026-03-20', views: 2876, author: 'Redacção',
+                color: '#9333ea', icon: 'fa-flask',
+                coverGradient: 'from-purple-500 to-fuchsia-600',
+                coverIcon: 'fa-flask text-5xl text-white/80'
+            },
+            {
+                id: 6, category: 'educacao', featured: false,
+                title: 'Programa Escola Digital equipa 200 escolas com internet de alta velocidade',
+                excerpt: 'Ministério da Educação lança iniciativa para levar conectividade a escolas públicas em todo o país.',
+                date: '2026-03-15', views: 3641, author: 'Redacção',
+                color: '#0ea5e9', icon: 'fa-wifi',
+                coverGradient: 'from-sky-500 to-cyan-600',
+                coverIcon: 'fa-wifi text-5xl text-white/80'
+            },
+            {
+                id: 7, category: 'bolsas', featured: false,
+                title: 'Bolsas internacionais para Mestrado em Portugal e Brasil',
+                excerpt: 'Programa de cooperação oferece 50 bolsas integrais para estudos de pós-graduação. Elegíveis: formandos de 2024 e 2025.',
+                date: '2026-03-10', views: 6790, author: 'Redacção',
+                color: '#d97706', icon: 'fa-globe',
+                coverGradient: 'from-amber-500 to-yellow-600',
+                coverIcon: 'fa-globe text-5xl text-white/80'
+            },
+            {
+                id: 8, category: 'exames', featured: false,
+                title: 'Taxa de aprovação nos exames 2025 atinge 81% — recorde histórico',
+                excerpt: 'Resultados superam expectativas: 10ª e 12ª classes registam os melhores índices dos últimos 10 anos.',
+                date: '2026-03-05', views: 9123, author: 'Redacção',
+                color: '#16a34a', icon: 'fa-chart-line',
+                coverGradient: 'from-green-600 to-teal-700',
+                coverIcon: 'fa-chart-line text-5xl text-white/80'
+            },
+            {
+                id: 9, category: 'vclass', featured: false,
+                title: 'VClass ultrapassa 10 mil alunos registados na plataforma',
+                excerpt: 'Marcos histórico: a plataforma de educação digital serve hoje estudantes em Moçambique, Angola, Brasil e Portugal.',
+                date: '2026-02-28', views: 5532, author: 'Equipa VClass',
+                color: '#1d4ed8', icon: 'fa-users',
+                coverGradient: 'from-blue-500 to-blue-700',
+                coverIcon: 'fa-users text-5xl text-white/80'
+            },
+            {
+                id: 10, category: 'eventos', featured: false,
+                title: 'Workshop gratuito de preparação para exames — inscreva-se',
+                excerpt: 'VClass oferece workshop de 3 dias com estratégias de estudo, simulados e resolução de provas antigas para as classes 10ª–12ª.',
+                date: '2026-02-20', views: 3410, author: 'Equipa VClass',
+                color: '#9333ea', icon: 'fa-chalkboard-teacher',
+                coverGradient: 'from-violet-500 to-purple-700',
+                coverIcon: 'fa-chalkboard-teacher text-5xl text-white/80'
+            },
+            {
+                id: 11, category: 'educacao', featured: false,
+                title: '1000 professores capacitados em metodologias digitais de ensino',
+                excerpt: 'Programa nacional forma docentes em tecnologias educacionais, incluindo uso de plataformas como VClass em sala de aula.',
+                date: '2026-02-14', views: 2145, author: 'Redacção',
+                color: '#0ea5e9', icon: 'fa-chalkboard',
+                coverGradient: 'from-sky-600 to-blue-700',
+                coverIcon: 'fa-chalkboard text-5xl text-white/80'
+            },
+            {
+                id: 12, category: 'vclass', featured: false,
+                title: 'Painel de Criadores VClass: professores já podem publicar conteúdo',
+                excerpt: 'Qualquer professor aprovado pode agora criar lições, exercícios e acompanhar o progresso dos seus alunos directamente na plataforma.',
+                date: '2026-02-05', views: 3872, author: 'Equipa VClass',
+                color: '#7c3aed', icon: 'fa-pen-to-square',
+                coverGradient: 'from-purple-600 to-indigo-700',
+                coverIcon: 'fa-pen-to-square text-5xl text-white/80'
             }
+        ];
+
+        const CATEGORY_META = {
+            all:      { label: 'Todas',    color: 'bg-gray-500' },
+            vclass:   { label: 'VClass',   color: 'bg-blue-600' },
+            exames:   { label: 'Exames',   color: 'bg-green-600' },
+            bolsas:   { label: 'Bolsas',   color: 'bg-yellow-600' },
+            eventos:  { label: 'Eventos',  color: 'bg-purple-600' },
+            educacao: { label: 'Educação', color: 'bg-sky-600' }
+        };
+
+        let currentCategory = 'all';
+        let searchTerm = '';
+
+        function fmtDate(d) {
+            return new Date(d).toLocaleDateString('pt', { day:'2-digit', month:'short', year:'numeric' });
+        }
+        function fmtViews(n) {
+            return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : n;
         }
 
-        // Initialize animations
-        document.addEventListener('DOMContentLoaded', () => {
-            const newsItems = document.querySelectorAll('.news-item');
-            newsItems.forEach((item, index) => {
-                item.style.opacity = '0';
-                item.style.transform = 'translateY(20px)';
-                item.style.transition = 'all 0.6s ease-out';
-                
-                setTimeout(() => {
-                    item.style.opacity = '1';
-                    item.style.transform = 'translateY(0)';
-                }, index * 100);
+        function getFiltered() {
+            return NEWS.filter(n => {
+                const matchCat = currentCategory === 'all' || n.category === currentCategory;
+                const q = searchTerm.toLowerCase();
+                const matchSearch = !q || n.title.toLowerCase().includes(q) || n.excerpt.toLowerCase().includes(q);
+                return matchCat && matchSearch;
             });
-        });
+        }
+
+        function renderFeatured(list) {
+            const hero = document.getElementById('featured-hero');
+            const feat = list.find(n => n.featured);
+            if (!feat) { hero.innerHTML = ''; return; }
+            hero.innerHTML = `
+            <div class="rounded-2xl overflow-hidden shadow-lg relative cursor-pointer group" onclick="openNews(${feat.id})">
+                <div class="h-72 md:h-96 bg-gradient-to-br ${feat.coverGradient} flex items-center justify-center relative">
+                    <i class="fas ${feat.coverIcon}"></i>
+                    <div class="absolute inset-0 featured-overlay"></div>
+                    <div class="absolute bottom-0 left-0 right-0 p-6 md:p-10 text-white">
+                        <div class="flex flex-wrap items-center gap-2 mb-3">
+                            <span class="category-badge ${CATEGORY_META[feat.category]?.color} text-white">${CATEGORY_META[feat.category]?.label}</span>
+                            <span class="category-badge bg-red-500 text-white">DESTAQUE</span>
+                            <span class="text-xs text-white/70"><i class="far fa-clock mr-1"></i>${fmtDate(feat.date)}</span>
+                        </div>
+                        <h2 class="text-2xl md:text-3xl font-bold mb-2 group-hover:text-blue-200 transition">${feat.title}</h2>
+                        <p class="text-white/80 text-sm md:text-base line-clamp-2">${feat.excerpt}</p>
+                        <div class="flex items-center gap-4 mt-4 text-xs text-white/60">
+                            <span><i class="far fa-user mr-1"></i>${feat.author}</span>
+                            <span><i class="far fa-eye mr-1"></i>${fmtViews(feat.views)} visualizações</span>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function renderGrid(list) {
+            const grid = document.getElementById('news-grid');
+            const empty = document.getElementById('empty-state');
+            const nonFeat = list.filter(n => !n.featured);
+            document.getElementById('news-count').textContent = `${list.length} notícia(s)`;
+
+            if (list.length === 0) {
+                grid.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+            empty.classList.add('hidden');
+            grid.innerHTML = nonFeat.map((n, i) => `
+            <div class="news-card bg-white rounded-2xl shadow-sm overflow-hidden cursor-pointer" style="animation-delay:${i * 0.05}s" onclick="openNews(${n.id})">
+                <div class="h-40 bg-gradient-to-br ${n.coverGradient} flex items-center justify-center relative overflow-hidden">
+                    <i class="fas ${n.coverIcon.split(' ').slice(-1)[0]} text-4xl text-white/70"></i>
+                    <div class="absolute inset-0 featured-overlay opacity-50"></div>
+                    <div class="absolute top-3 left-3">
+                        <span class="category-badge ${CATEGORY_META[n.category]?.color} text-white">${CATEGORY_META[n.category]?.label}</span>
+                    </div>
+                </div>
+                <div class="p-5">
+                    <h3 class="font-bold text-gray-900 text-sm leading-snug mb-2 line-clamp-2">${n.title}</h3>
+                    <p class="text-xs text-gray-500 line-clamp-3 mb-4">${n.excerpt}</p>
+                    <div class="flex items-center justify-between text-xs text-gray-400">
+                        <span><i class="far fa-clock mr-1"></i>${fmtDate(n.date)}</span>
+                        <span><i class="far fa-eye mr-1"></i>${fmtViews(n.views)}</span>
+                    </div>
+                </div>
+            </div>`).join('');
+        }
+
+        function render() {
+            const list = getFiltered();
+            renderFeatured(list);
+            renderGrid(list);
+        }
+
+        function filterCategory(cat) {
+            currentCategory = cat;
+            document.querySelectorAll('.filter-btn').forEach(b => {
+                b.classList.remove('active', 'bg-blue-700', 'text-white');
+                b.classList.add('bg-gray-100', 'text-gray-700');
+            });
+            const active = document.querySelector(`[data-category="${cat}"]`);
+            if (active) {
+                active.classList.add('active', 'bg-blue-700', 'text-white');
+                active.classList.remove('bg-gray-100', 'text-gray-700');
+            }
+            render();
+        }
+
+        function searchNews() {
+            searchTerm = document.getElementById('searchNews').value;
+            render();
+        }
+
+        function openNews(id) {
+            const n = NEWS.find(x => x.id === id);
+            if (!n) return;
+            VClass.showNotification(`A abrir: "${n.title}"`, 'info');
+        }
+
+        function subscribeNewsletter() {
+            const email = document.getElementById('newsletter-email').value.trim();
+            if (!email || !email.includes('@')) {
+                VClass.showNotification('Introduza um email válido', 'error'); return;
+            }
+            VClass.showNotification('Subscrito com sucesso! ✅', 'success');
+            document.getElementById('newsletter-email').value = '';
+        }
+
+        // Init
+        render();
     </script>
 </body>
 </html>
