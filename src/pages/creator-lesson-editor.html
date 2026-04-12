@@ -69,7 +69,8 @@
         .marker-item:hover { border-color: #86efac; }
 
         /* Fullscreen overlay */
-        #fullscreen-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #fullscreen-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; display: none; }
+        #fullscreen-overlay.active { display: flex; }
         #fullscreen-video { max-width: 90vw; max-height: 85vh; border-radius: 8px; }
 
         /* Adjust tab active */
@@ -2419,10 +2420,12 @@
         function openFullscreen() {
             const v = document.getElementById('preview-video');
             if (!v.src) { VClass.showNotification('Seleccione um vídeo primeiro.', 'warning'); return; }
-            if (v.requestFullscreen) { v.requestFullscreen(); }
-            else if (v.webkitRequestFullscreen) { v.webkitRequestFullscreen(); }
-            else if (v.mozRequestFullScreen) { v.mozRequestFullScreen(); }
-            else { VClass.showNotification('Fullscreen não suportado neste browser.', 'warning'); }
+            // Tentar fullscreen nativo primeiro
+            if (v.requestFullscreen) { v.requestFullscreen(); return; }
+            if (v.webkitRequestFullscreen) { v.webkitRequestFullscreen(); return; }
+            if (v.mozRequestFullScreen)    { v.mozRequestFullScreen(); return; }
+            // Fallback: overlay manual
+            openFullscreenOverlay();
         }
 
         // ════════════════════════════════════════════════════════════════
@@ -2482,25 +2485,28 @@
             scheduleAutoSave();
         }
 
-        // Injectar metadados de edição no payload de upload
-        const _originalStartUpload = startUpload;
-        // (startUpload já lê lessonData.videoEdits que é actualizado em updateEditSummary)
-
     </script>
 
     <!-- Modal Fullscreen (fallback manual) -->
-    <div id="fullscreen-overlay" class="hidden" onclick="closeFullscreenOverlay()">
+    <div id="fullscreen-overlay" onclick="closeFullscreenOverlay()">
         <button class="absolute top-4 right-4 text-white text-2xl hover:text-gray-300 transition z-50" onclick="closeFullscreenOverlay()">
             <i class="fas fa-times"></i>
         </button>
-        <video id="fullscreen-video" controls class="max-w-full max-h-full rounded-xl shadow-2xl"></video>
+        <video id="fullscreen-video" controls class="max-w-full max-h-full rounded-xl shadow-2xl" onclick="event.stopPropagation()"></video>
         <p class="text-gray-400 text-xs mt-3">Clique fora do vídeo para fechar</p>
     </div>
     <script>
-        // Fallback fullscreen para browsers que não suportam nativo
-        // (o openFullscreen() acima tenta o nativo primeiro)
+        function openFullscreenOverlay() {
+            const src = document.getElementById('preview-video').src;
+            const fv  = document.getElementById('fullscreen-video');
+            fv.src = src;
+            fv.currentTime = document.getElementById('preview-video').currentTime;
+            document.getElementById('fullscreen-overlay').classList.add('active');
+            fv.play();
+        }
+
         function closeFullscreenOverlay() {
-            document.getElementById('fullscreen-overlay').classList.add('hidden');
+            document.getElementById('fullscreen-overlay').classList.remove('active');
             document.getElementById('fullscreen-video').pause();
         }
     </script>
