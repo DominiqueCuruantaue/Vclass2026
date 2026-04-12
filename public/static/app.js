@@ -352,6 +352,9 @@ function getNavbarHTML(activePage = '') {
         <a href="/profile.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
           <i class="fas fa-user w-4 text-center text-gray-400"></i> Perfil
         </a>
+        <a href="/help.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm ${activePage === 'help' ? 'bg-purple-50 text-purple-700' : 'text-gray-700 hover:bg-gray-50'}">
+          <i class="fas fa-question-circle w-4 text-center text-gray-400"></i> Ajuda & Suporte
+        </a>
         <button onclick="VClass.logout()" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-red-600 hover:bg-red-50 w-full text-left">
           <i class="fas fa-sign-out-alt w-4 text-center"></i> Sair
         </button>

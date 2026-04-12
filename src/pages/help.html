@@ -3,200 +3,359 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ajuda e FAQ - VClass</title>
+    <title>Suporte & Ajuda - VClass</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <link href="/static/styles.css" rel="stylesheet">
     <style>
-        .faq-item { border: 1.5px solid #f3f4f6; transition: border-color 0.2s; }
-        .faq-item.open { border-color: #e9d5ff; }
-        .faq-btn { transition: background 0.15s; }
-        .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1); }
-        .faq-answer.open { max-height: 500px; }
+        /* ── Accordion ── */
+        .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.38s cubic-bezier(0.4,0,0.2,1), padding 0.2s; }
+        .faq-answer.open { max-height: 600px; }
         .faq-icon { transition: transform 0.3s; flex-shrink: 0; }
         .faq-item.open .faq-icon { transform: rotate(180deg); }
-        .quick-link { transition: all 0.2s; border: 1.5px solid transparent; }
-        .quick-link:hover { border-color: #7c3aed; transform: translateY(-2px); }
-        .section-heading { display: flex; align-items: center; gap: 0.75rem; font-size: 1.125rem; font-weight: 700; color: #111827; padding: 1rem 0 0.75rem; border-bottom: 2px solid #f3f4f6; margin-bottom: 1rem; }
+        .faq-item { border: 1.5px solid #f3f4f6; transition: border-color 0.2s, box-shadow 0.2s; }
+        .faq-item:hover { border-color: #e9d5ff; }
+        .faq-item.open { border-color: #c4b5fd; box-shadow: 0 2px 12px rgba(124,58,237,.08); }
+
+        /* ── Category tabs ── */
+        .cat-tab { transition: all .2s; border-bottom: 2px solid transparent; }
+        .cat-tab.active { color: #7c3aed; border-bottom-color: #7c3aed; font-weight: 600; }
+
+        /* ── Quick links ── */
+        .quick-link { transition: all 0.2s; border: 1.5px solid #f3f4f6; }
+        .quick-link:hover { border-color: #7c3aed; transform: translateY(-3px); box-shadow: 0 8px 20px rgba(124,58,237,.12); }
+
+        /* ── Ticket form ── */
+        .ticket-input { border: 1.5px solid #e5e7eb; transition: border-color .2s, box-shadow .2s; }
+        .ticket-input:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,.12); }
+
+        /* ── Status badge ── */
+        .badge-new { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+        .badge-updated { background: #fefce8; color: #ca8a04; border: 1px solid #fde68a; }
+
+        /* ── Search highlight ── */
+        .faq-highlight { background: #fef9c3; border-radius: 3px; padding: 0 2px; }
+
+        /* ── Section heading ── */
+        .sec-heading { display:flex; align-items:center; gap:.75rem; font-size:1rem; font-weight:700; color:#111827; padding:.75rem 0; border-bottom:2px solid #f3f4f6; margin-bottom:.75rem; }
+
+        /* ── Scroll smooth ── */
+        html { scroll-behavior: smooth; }
+
+        /* ── Contact card hover ── */
+        .contact-card { transition: transform .2s, box-shadow .2s; }
+        .contact-card:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(0,0,0,.12); }
+
+        /* ── No results ── */
+        #no-results { display: none; }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
 
     <div id="navbar-placeholder"></div>
 
-    <!-- Hero -->
-    <div class="bg-gradient-to-br from-purple-700 to-indigo-600 py-14 px-4 text-white text-center">
-        <div class="max-w-2xl mx-auto">
-            <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
-                <i class="fas fa-question-circle text-2xl text-white"></i>
+    <!-- ══ Hero ══════════════════════════════════════════════════════════════ -->
+    <div class="bg-gradient-to-br from-purple-700 via-purple-600 to-indigo-600 py-16 px-4 text-white text-center relative overflow-hidden">
+        <!-- Decorative circles -->
+        <div class="absolute -top-16 -right-16 w-64 h-64 bg-white/5 rounded-full"></div>
+        <div class="absolute -bottom-12 -left-12 w-48 h-48 bg-white/5 rounded-full"></div>
+        <div class="relative max-w-2xl mx-auto">
+            <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-5 backdrop-blur-sm shadow-lg">
+                <i class="fas fa-headset text-2xl text-white"></i>
             </div>
             <h1 class="text-3xl md:text-4xl font-bold mb-2">Como podemos ajudar?</h1>
-            <p class="text-purple-200 mb-6">Encontre respostas rápidas para as dúvidas mais comuns</p>
+            <p class="text-purple-200 mb-7">Encontre respostas rápidas ou fale com nossa equipe de suporte</p>
             <!-- Search -->
             <div class="max-w-lg mx-auto relative">
-                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                <input type="text" id="faq-search" placeholder="Buscar por palavra-chave..."
-                    class="w-full pl-11 pr-4 py-3.5 rounded-xl text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-md"
-                    oninput="filterFAQ(this.value)">
+                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                <input type="text" id="faq-search" placeholder="Buscar dúvidas (ex: senha, vídeo, exercício)…"
+                    class="w-full pl-11 pr-12 py-4 rounded-2xl text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-lg"
+                    oninput="searchFAQ(this.value)" autocomplete="off">
+                <button onclick="clearSearch()" id="search-clear" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 hidden">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <!-- Search suggestions -->
+            <div class="flex flex-wrap justify-center gap-2 mt-4" id="search-tags">
+                <button onclick="setSearch('senha')" class="px-3 py-1 bg-white/15 hover:bg-white/25 text-white/90 rounded-full text-xs transition">senha</button>
+                <button onclick="setSearch('vídeo')" class="px-3 py-1 bg-white/15 hover:bg-white/25 text-white/90 rounded-full text-xs transition">vídeo</button>
+                <button onclick="setSearch('exercício')" class="px-3 py-1 bg-white/15 hover:bg-white/25 text-white/90 rounded-full text-xs transition">exercício</button>
+                <button onclick="setSearch('conta')" class="px-3 py-1 bg-white/15 hover:bg-white/25 text-white/90 rounded-full text-xs transition">conta</button>
+                <button onclick="setSearch('progresso')" class="px-3 py-1 bg-white/15 hover:bg-white/25 text-white/90 rounded-full text-xs transition">progresso</button>
+                <button onclick="setSearch('certificado')" class="px-3 py-1 bg-white/15 hover:bg-white/25 text-white/90 rounded-full text-xs transition">certificado</button>
             </div>
         </div>
     </div>
 
-    <div class="container mx-auto px-4 py-10 max-w-4xl">
+    <div class="container mx-auto px-4 py-10 max-w-5xl">
 
-        <!-- Quick Links -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-            <a href="#getting-started" class="quick-link bg-white rounded-2xl p-4 text-center shadow-sm hover:shadow-md">
+        <!-- ══ Quick Links ═══════════════════════════════════════════════════ -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-10">
+            <a href="#getting-started" class="quick-link bg-white rounded-2xl p-4 text-center shadow-sm hover:shadow-lg">
                 <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-2">
                     <i class="fas fa-rocket text-blue-600"></i>
                 </div>
-                <p class="text-sm font-semibold text-gray-800">Começar</p>
+                <p class="text-xs font-semibold text-gray-700">Começar</p>
             </a>
-            <a href="#video-player" class="quick-link bg-white rounded-2xl p-4 text-center shadow-sm hover:shadow-md">
+            <a href="#video-player" class="quick-link bg-white rounded-2xl p-4 text-center shadow-sm hover:shadow-lg">
                 <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-2">
                     <i class="fas fa-play-circle text-purple-600"></i>
                 </div>
-                <p class="text-sm font-semibold text-gray-800">Assistir Aulas</p>
+                <p class="text-xs font-semibold text-gray-700">Aulas</p>
             </a>
-            <a href="#exercises" class="quick-link bg-white rounded-2xl p-4 text-center shadow-sm hover:shadow-md">
+            <a href="#exercises" class="quick-link bg-white rounded-2xl p-4 text-center shadow-sm hover:shadow-lg">
                 <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-2">
                     <i class="fas fa-tasks text-green-600"></i>
                 </div>
-                <p class="text-sm font-semibold text-gray-800">Exercícios</p>
+                <p class="text-xs font-semibold text-gray-700">Exercícios</p>
             </a>
-            <a href="#technical" class="quick-link bg-white rounded-2xl p-4 text-center shadow-sm hover:shadow-md">
+            <a href="#account" class="quick-link bg-white rounded-2xl p-4 text-center shadow-sm hover:shadow-lg">
                 <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center mx-auto mb-2">
-                    <i class="fas fa-wrench text-orange-600"></i>
+                    <i class="fas fa-user-cog text-orange-600"></i>
                 </div>
-                <p class="text-sm font-semibold text-gray-800">Problemas</p>
+                <p class="text-xs font-semibold text-gray-700">Conta</p>
+            </a>
+            <a href="#technical" class="quick-link bg-white rounded-2xl p-4 text-center shadow-sm hover:shadow-lg">
+                <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-2">
+                    <i class="fas fa-wrench text-red-600"></i>
+                </div>
+                <p class="text-xs font-semibold text-gray-700">Problemas</p>
+            </a>
+            <a href="#ticket" class="quick-link bg-white rounded-2xl p-4 text-center shadow-sm hover:shadow-lg">
+                <div class="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center mx-auto mb-2">
+                    <i class="fas fa-ticket-alt text-indigo-600"></i>
+                </div>
+                <p class="text-xs font-semibold text-gray-700">Ticket</p>
             </a>
         </div>
 
-        <!-- FAQ Sections -->
+        <!-- ══ Search Result Counter ══════════════════════════════════════════ -->
+        <div id="search-info" class="hidden mb-4 text-sm text-gray-500 flex items-center gap-2">
+            <i class="fas fa-filter text-purple-400"></i>
+            <span id="search-count">0 resultados</span> para "<span id="search-term" class="font-medium text-gray-700"></span>"
+            <button onclick="clearSearch()" class="ml-2 text-purple-600 hover:underline">limpar</button>
+        </div>
+
+        <!-- ══ No Results ═════════════════════════════════════════════════════ -->
+        <div id="no-results" class="text-center py-16">
+            <div class="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-search text-gray-300 text-2xl"></i>
+            </div>
+            <p class="text-gray-500 font-medium mb-1">Nenhum resultado encontrado</p>
+            <p class="text-gray-400 text-sm mb-4">Tente outras palavras ou abra um ticket de suporte</p>
+            <a href="#ticket" class="px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 transition">
+                <i class="fas fa-ticket-alt mr-1.5"></i>Abrir Ticket
+            </a>
+        </div>
+
+        <!-- ══ FAQ Sections ═══════════════════════════════════════════════════ -->
         <div id="faq-container" class="space-y-8">
 
-            <!-- Getting Started -->
-            <section id="getting-started">
-                <div class="section-heading">
-                    <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+            <!-- ── Começando ────────────────────────────────────────────── -->
+            <section id="getting-started" data-section>
+                <div class="sec-heading">
+                    <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
                         <i class="fas fa-rocket text-blue-600 text-sm"></i>
                     </div>
                     Começando
                 </div>
                 <div class="space-y-2">
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="como criar conta registro">
+
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="criar conta registro cadastro estudante professor">
                         <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
                             <span class="font-medium text-gray-800 text-sm">Como criar uma conta?</span>
                             <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
                         </button>
                         <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
                             <ol class="list-decimal list-inside space-y-1.5 mt-2">
-                                <li>Clique em <a href="/register.html" class="text-purple-600 font-medium hover:underline">Criar Conta</a> no menu</li>
-                                <li>Preencha nome, email e senha</li>
-                                <li>Selecione seu tipo de conta (Estudante ou Professor)</li>
-                                <li>Aceite os termos e clique em "Criar Conta"</li>
-                                <li>Faça login e comece a estudar!</li>
+                                <li>Acesse <a href="/register.html" class="text-purple-600 font-medium hover:underline">Criar Conta</a></li>
+                                <li>Preencha nome completo, email e senha (mín. 8 caracteres)</li>
+                                <li>Selecione o tipo: <strong>Estudante</strong> ou <strong>Professor</strong></li>
+                                <li>Escolha seu país (Moçambique, Angola, Brasil, Portugal…)</li>
+                                <li>Aceite os termos e clique em <em>"Criar Conta"</em></li>
+                                <li>Faça login e comece a estudar imediatamente!</li>
                             </ol>
+                            <div class="mt-3 p-3 bg-blue-50 rounded-lg text-blue-700 text-xs">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Conta demo disponível: <strong>estudante@vclass.mz</strong> / <strong>password123</strong>
+                            </div>
                         </div>
                     </div>
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="navegar conteúdo disciplinas">
+
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="navegar conteúdo disciplinas matérias série classe">
                         <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">Como navegar pelo conteúdo?</span>
+                            <span class="font-medium text-gray-800 text-sm">Como encontrar minhas disciplinas?</span>
                             <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
                         </button>
                         <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <p class="mt-2 mb-2">A navegação é hierárquica:</p>
-                            <ul class="list-disc list-inside space-y-1.5">
-                                <li><strong>País → Série → Disciplina → Capítulos → Aulas</strong></li>
-                                <li>Acesse via menu <strong>Conteúdo</strong> na navbar</li>
-                                <li>Use a busca para encontrar conteúdo específico</li>
-                            </ul>
+                            <p class="mt-2 mb-2">A navegação segue uma hierarquia simples:</p>
+                            <div class="flex flex-col gap-1.5 mb-3">
+                                <div class="flex items-center gap-2 text-xs">
+                                    <span class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold flex-shrink-0">1</span>
+                                    <span><strong>País</strong> (Moçambique, Angola…)</span>
+                                </div>
+                                <div class="flex items-center gap-2 text-xs pl-3">
+                                    <i class="fas fa-arrow-down text-gray-300"></i>
+                                </div>
+                                <div class="flex items-center gap-2 text-xs">
+                                    <span class="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold flex-shrink-0">2</span>
+                                    <span><strong>Série/Classe</strong> (10ª, 11ª, 12ª…)</span>
+                                </div>
+                                <div class="flex items-center gap-2 text-xs pl-3">
+                                    <i class="fas fa-arrow-down text-gray-300"></i>
+                                </div>
+                                <div class="flex items-center gap-2 text-xs">
+                                    <span class="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold flex-shrink-0">3</span>
+                                    <span><strong>Disciplina</strong> (Matemática, Física…)</span>
+                                </div>
+                                <div class="flex items-center gap-2 text-xs pl-3">
+                                    <i class="fas fa-arrow-down text-gray-300"></i>
+                                </div>
+                                <div class="flex items-center gap-2 text-xs">
+                                    <span class="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 font-bold flex-shrink-0">4</span>
+                                    <span><strong>Capítulos → Aulas</strong></span>
+                                </div>
+                            </div>
+                            <p class="text-xs">Clique em <strong>Conteúdo</strong> na barra de navegação para começar, ou use a <a href="/search.html" class="text-purple-600 hover:underline">busca</a>.</p>
                         </div>
                     </div>
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="offline funciona internet">
+
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="offline funciona internet conexão dados">
                         <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">O VClass funciona offline?</span>
+                            <span class="font-medium text-gray-800 text-sm">O VClass funciona sem internet?</span>
                             <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
                         </button>
                         <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
                             <ul class="list-disc list-inside space-y-1.5 mt-2">
-                                <li>Vídeos requerem conexão (streaming)</li>
-                                <li>PDFs podem ser baixados para leitura offline</li>
+                                <li>Vídeos requerem conexão (streaming protegido)</li>
+                                <li>PDFs e materiais textuais ficam em cache do navegador</li>
                                 <li>Progresso é sincronizado quando voltar online</li>
+                                <li>App mobile com download offline — em breve!</li>
                             </ul>
                         </div>
                     </div>
+
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="países disponíveis moçambique angola brasil portugal cabo verde">
+                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                            <span class="font-medium text-gray-800 text-sm">Em quais países o VClass está disponível?</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
+                        </button>
+                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
+                            <div class="grid grid-cols-2 gap-2 mt-2">
+                                <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg text-xs">🇲🇿 <span>Moçambique</span></div>
+                                <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg text-xs">🇦🇴 <span>Angola</span></div>
+                                <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg text-xs">🇧🇷 <span>Brasil</span></div>
+                                <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg text-xs">🇵🇹 <span>Portugal</span></div>
+                                <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg text-xs">🇨🇻 <span>Cabo Verde</span></div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2">Cada país tem um currículo adaptado ao seu sistema de ensino nacional.</p>
+                        </div>
+                    </div>
+
                 </div>
             </section>
 
-            <!-- Video Player -->
-            <section id="video-player">
-                <div class="section-heading">
-                    <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+            <!-- ── Player de Vídeo ───────────────────────────────────────── -->
+            <section id="video-player" data-section>
+                <div class="sec-heading">
+                    <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
                         <i class="fas fa-play-circle text-purple-600 text-sm"></i>
                     </div>
-                    Player de Vídeo
+                    Aulas e Player de Vídeo
                 </div>
                 <div class="space-y-2">
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="qualidade vídeo resolução">
+
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="qualidade vídeo resolução lento buffering">
                         <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
                             <span class="font-medium text-gray-800 text-sm">Como controlar a qualidade do vídeo?</span>
                             <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
                         </button>
                         <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
                             <ol class="list-decimal list-inside space-y-1.5 mt-2">
-                                <li>Clique no ícone ⚙️ no player</li>
-                                <li>Selecione "Qualidade"</li>
+                                <li>Clique no ícone <i class="fas fa-cog text-gray-500"></i> no player</li>
+                                <li>Selecione <strong>"Qualidade"</strong></li>
                                 <li>Escolha: Auto, 240p, 360p, 480p ou 720p</li>
-                                <li>Qualidades mais baixas usam menos dados</li>
                             </ol>
+                            <div class="mt-3 p-3 bg-yellow-50 rounded-lg text-yellow-700 text-xs">
+                                <i class="fas fa-lightbulb mr-1"></i>
+                                Se o vídeo travar, escolha <strong>240p</strong> para economizar dados.
+                            </div>
                         </div>
                     </div>
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="download baixar vídeo">
+
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="download baixar vídeo salvar offline">
                         <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
                             <span class="font-medium text-gray-800 text-sm">Posso baixar vídeos para assistir offline?</span>
                             <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
                         </button>
                         <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <p class="mt-2">Atualmente o download está disponível apenas via app mobile (em breve). Na versão web, os vídeos são transmitidos por streaming.</p>
+                            <p class="mt-2">Os vídeos são transmitidos por <strong>streaming protegido</strong> e não podem ser baixados pela versão web. O download estará disponível no app mobile (em breve).</p>
+                            <div class="mt-3 p-3 bg-purple-50 rounded-lg text-purple-700 text-xs">
+                                <i class="fas fa-shield-alt mr-1"></i>
+                                Esta medida protege o conteúdo dos nossos professores.
+                            </div>
                         </div>
                     </div>
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="legendas subtítulos cc">
+
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="legendas subtítulos cc acessibilidade">
                         <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
                             <span class="font-medium text-gray-800 text-sm">Como ativar legendas?</span>
                             <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
                         </button>
                         <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <p class="mt-2">Clique no botão CC no player. As legendas estão disponíveis em Português para a maioria das aulas.</p>
+                            <p class="mt-2">Clique no botão <strong>CC</strong> no player. Legendas em Português estão disponíveis na maioria das aulas. Mais idiomas serão adicionados em breve.</p>
                         </div>
                     </div>
+
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="velocidade playback velocidade reprodução rápido lento">
+                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                            <span class="font-medium text-gray-800 text-sm">Posso alterar a velocidade do vídeo?</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
+                        </button>
+                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
+                            <p class="mt-2">Sim! Clique em <i class="fas fa-cog text-gray-500"></i> no player e escolha a velocidade: <strong>0.5×, 0.75×, 1×, 1.25×, 1.5×</strong> ou <strong>2×</strong>.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="progresso aula assistida salvo retomar continuar">
+                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                            <span class="font-medium text-gray-800 text-sm">Meu progresso na aula é salvo?</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
+                        </button>
+                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
+                            <p class="mt-2">Sim! O VClass salva automaticamente sua posição a cada 30 segundos. Na próxima vez que abrir a aula, você pode continuar do ponto onde parou.</p>
+                        </div>
+                    </div>
+
                 </div>
             </section>
 
-            <!-- Exercises -->
-            <section id="exercises">
-                <div class="section-heading">
-                    <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+            <!-- ── Exercícios ────────────────────────────────────────────── -->
+            <section id="exercises" data-section>
+                <div class="sec-heading">
+                    <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
                         <i class="fas fa-tasks text-green-600 text-sm"></i>
                     </div>
                     Exercícios e Avaliações
                 </div>
                 <div class="space-y-2">
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="fazer exercícios como resolver">
+
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="fazer exercícios como responder questão resolver">
                         <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
                             <span class="font-medium text-gray-800 text-sm">Como fazer exercícios?</span>
                             <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
                         </button>
                         <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
                             <ol class="list-decimal list-inside space-y-1.5 mt-2">
-                                <li>Assista a aula completa</li>
-                                <li>Role até a seção de exercícios (ou clique em "Exercícios")</li>
-                                <li>Leia cada questão e selecione sua resposta</li>
-                                <li>Clique em "Submeter" para ver o resultado e a explicação</li>
+                                <li>Assista a aula completa (ou pelo menos 80%)</li>
+                                <li>Role até a seção <strong>"Exercícios"</strong> na página da aula</li>
+                                <li>Leia cada questão com atenção e selecione sua resposta</li>
+                                <li>Clique em <strong>"Submeter"</strong> para ver o resultado e a explicação detalhada</li>
                             </ol>
                         </div>
                     </div>
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="progresso acompanhar resultado nota">
+
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="nota progresso resultado pontuação acerto aprovação">
                         <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
                             <span class="font-medium text-gray-800 text-sm">Como ver meu progresso e notas?</span>
                             <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
@@ -204,33 +363,137 @@
                         <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
                             <ul class="list-disc list-inside space-y-1.5 mt-2">
                                 <li>Acesse <a href="/progress.html" class="text-purple-600 font-medium hover:underline">Progresso</a> no menu</li>
-                                <li>Veja gráficos e detalhes por disciplina</li>
-                                <li>O Dashboard mostra um resumo geral</li>
+                                <li>Veja gráficos por disciplina, capítulo e período</li>
+                                <li>O Dashboard exibe um resumo geral com XP e streak</li>
                             </ul>
                         </div>
                     </div>
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="refazer repetir exercício">
+
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="refazer repetir exercício tentar novamente">
                         <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
                             <span class="font-medium text-gray-800 text-sm">Posso refazer exercícios?</span>
                             <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
                         </button>
                         <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <p class="mt-2">Sim! Você pode refazer qualquer exercício. Cada tentativa pode gerar questões diferentes, e sua melhor pontuação é salva automaticamente.</p>
+                            <p class="mt-2">Sim! Você pode refazer qualquer exercício quantas vezes quiser. Cada tentativa pode gerar questões diferentes, e <strong>sua melhor pontuação</strong> é salva automaticamente.</p>
                         </div>
                     </div>
+
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="certificado conclusão diploma certificação">
+                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                            <span class="font-medium text-gray-800 text-sm">Recebo certificado ao concluir uma disciplina?</span>
+                            <span class="badge-new rounded-full px-2 py-0.5 text-xs font-bold flex-shrink-0">Novo</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
+                        </button>
+                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
+                            <p class="mt-2">Ao completar 100% das aulas e exercícios de uma disciplina com nota ≥ 70%, você recebe um <strong>certificado digital VClass</strong>. Acesse em <a href="/achievements.html" class="text-purple-600 hover:underline">Conquistas</a> para baixar.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="xp pontos experiência conquistas badges nível">
+                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                            <span class="font-medium text-gray-800 text-sm">Como funciona o sistema de XP e conquistas?</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
+                        </button>
+                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
+                            <div class="mt-2 space-y-1.5 text-xs">
+                                <div class="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                                    <span><i class="fas fa-play text-purple-500 mr-1.5"></i>Assistir aula completa</span>
+                                    <span class="font-bold text-green-600">+10 XP</span>
+                                </div>
+                                <div class="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                                    <span><i class="fas fa-check text-green-500 mr-1.5"></i>Exercício com 100% acerto</span>
+                                    <span class="font-bold text-green-600">+15 XP</span>
+                                </div>
+                                <div class="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                                    <span><i class="fas fa-fire text-orange-500 mr-1.5"></i>Streak diário</span>
+                                    <span class="font-bold text-green-600">+5 XP/dia</span>
+                                </div>
+                                <div class="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                                    <span><i class="fas fa-book text-blue-500 mr-1.5"></i>Capítulo concluído</span>
+                                    <span class="font-bold text-green-600">+25 XP</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </section>
 
-            <!-- Technical -->
-            <section id="technical">
-                <div class="section-heading">
-                    <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-wrench text-orange-600 text-sm"></i>
+            <!-- ── Conta e Perfil ─────────────────────────────────────────── -->
+            <section id="account" data-section>
+                <div class="sec-heading">
+                    <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-user-cog text-orange-600 text-sm"></i>
+                    </div>
+                    Conta e Perfil
+                </div>
+                <div class="space-y-2">
+
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="alterar email nome dados pessoais perfil atualizar">
+                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                            <span class="font-medium text-gray-800 text-sm">Como alterar meus dados pessoais?</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
+                        </button>
+                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
+                            <ol class="list-decimal list-inside space-y-1.5 mt-2">
+                                <li>Clique no seu avatar no canto superior direito</li>
+                                <li>Selecione <a href="/profile.html" class="text-purple-600 hover:underline">Meu Perfil</a></li>
+                                <li>Edite nome, foto e preferências</li>
+                                <li>Clique em <strong>"Salvar Alterações"</strong></li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="alterar trocar mudar senha password segurança">
+                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                            <span class="font-medium text-gray-800 text-sm">Como alterar minha senha?</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
+                        </button>
+                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
+                            <ol class="list-decimal list-inside space-y-1.5 mt-2">
+                                <li>Acesse <a href="/profile.html" class="text-purple-600 hover:underline">Meu Perfil</a></li>
+                                <li>Clique em <strong>"Alterar Senha"</strong></li>
+                                <li>Insira a senha atual e a nova senha</li>
+                                <li>Confirme e salve</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="excluir deletar conta cancelar encerrar">
+                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                            <span class="font-medium text-gray-800 text-sm">Posso excluir minha conta?</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
+                        </button>
+                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
+                            <p class="mt-2">Para excluir sua conta, entre em contato com nosso suporte via email <strong>suporte@vclass.mz</strong>. Todos os seus dados serão removidos em até 30 dias conforme a lei de proteção de dados.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="notificações alertas email push desativar configurar">
+                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                            <span class="font-medium text-gray-800 text-sm">Como gerenciar notificações?</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
+                        </button>
+                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
+                            <p class="mt-2">Acesse <a href="/notifications.html" class="text-purple-600 hover:underline">Notificações</a> no menu do perfil. Você pode configurar alertas de novos conteúdos, exercícios e comunicados da equipe VClass.</p>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- ── Problemas Técnicos ─────────────────────────────────────── -->
+            <section id="technical" data-section>
+                <div class="sec-heading">
+                    <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-wrench text-red-600 text-sm"></i>
                     </div>
                     Problemas Técnicos
                 </div>
                 <div class="space-y-2">
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="vídeo não carrega trava lento">
+
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="vídeo não carrega trava lento buffering streaming erro">
                         <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
                             <span class="font-medium text-gray-800 text-sm">Vídeo não carrega ou trava</span>
                             <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
@@ -238,14 +501,16 @@
                         <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
                             <ol class="list-decimal list-inside space-y-1.5 mt-2">
                                 <li>Verifique sua conexão de internet</li>
-                                <li>Reduza a qualidade do vídeo para 240p</li>
-                                <li>Limpe o cache do navegador (Ctrl+Shift+R)</li>
-                                <li>Tente outro navegador (Chrome recomendado)</li>
-                                <li>Desative extensões que podem interferir</li>
+                                <li>Reduza a qualidade para <strong>240p</strong></li>
+                                <li>Limpe o cache: <kbd class="bg-gray-100 px-1.5 py-0.5 rounded text-xs">Ctrl+Shift+R</kbd></li>
+                                <li>Tente outro navegador (Chrome ou Edge recomendados)</li>
+                                <li>Desative extensões como AdBlock temporariamente</li>
+                                <li>Se persistir, abra um <a href="#ticket" class="text-purple-600 hover:underline">ticket de suporte</a></li>
                             </ol>
                         </div>
                     </div>
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="esqueci senha recuperar password">
+
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="esqueci senha recuperar reset redefinir password">
                         <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
                             <span class="font-medium text-gray-800 text-sm">Esqueci minha senha</span>
                             <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
@@ -253,14 +518,15 @@
                         <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
                             <ol class="list-decimal list-inside space-y-1.5 mt-2">
                                 <li>Acesse a <a href="/login.html" class="text-purple-600 font-medium hover:underline">página de login</a></li>
-                                <li>Clique em "Esqueceu a senha?"</li>
+                                <li>Clique em <strong>"Esqueceu a senha?"</strong></li>
                                 <li>Insira seu email cadastrado</li>
-                                <li>Verifique sua caixa de entrada (e spam)</li>
-                                <li>Siga o link para criar uma nova senha</li>
+                                <li>Verifique sua caixa de entrada (inclusive spam)</li>
+                                <li>Clique no link e crie uma nova senha</li>
                             </ol>
                         </div>
                     </div>
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-text="login erro autenticação conta bloqueada">
+
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="login erro autenticação conta bloqueada acesso negado 401">
                         <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
                             <span class="font-medium text-gray-800 text-sm">Erro ao fazer login</span>
                             <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
@@ -268,66 +534,290 @@
                         <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
                             <ul class="list-disc list-inside space-y-1.5 mt-2">
                                 <li>Verifique se email e senha estão corretos</li>
-                                <li>Certifique-se de que o CAPS LOCK não está ativo</li>
-                                <li>Use "Esqueceu a senha?" para redefinir</li>
+                                <li>Certifique-se de que <kbd class="bg-gray-100 px-1.5 py-0.5 rounded text-xs">CAPS LOCK</kbd> não está ativo</li>
                                 <li>Limpe cookies do navegador e tente novamente</li>
-                                <li>Conta demo: estudante@vclass.mz / password123</li>
+                                <li>Use <strong>"Esqueceu a senha?"</strong> para redefinir</li>
+                            </ul>
+                            <div class="mt-3 p-3 bg-blue-50 rounded-lg text-blue-700 text-xs">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Conta demo: <strong>estudante@vclass.mz</strong> / <strong>password123</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="página erro 404 não encontrada branco">
+                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                            <span class="font-medium text-gray-800 text-sm">Página em branco ou erro 404</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
+                        </button>
+                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
+                            <ul class="list-disc list-inside space-y-1.5 mt-2">
+                                <li>Atualize a página (<kbd class="bg-gray-100 px-1.5 py-0.5 rounded text-xs">F5</kbd>)</li>
+                                <li>Limpe o cache do navegador</li>
+                                <li>Faça logout e login novamente</li>
+                                <li>Se o problema persistir, reporte via ticket</li>
                             </ul>
                         </div>
                     </div>
+
+                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="navegador compatível suportado chrome firefox safari edge">
+                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                            <span class="font-medium text-gray-800 text-sm">Quais navegadores são suportados?</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
+                        </button>
+                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
+                            <div class="grid grid-cols-2 gap-2 mt-2 text-xs">
+                                <div class="flex items-center gap-2 p-2 bg-green-50 rounded-lg text-green-700"><i class="fab fa-chrome"></i> Chrome 90+ ✓</div>
+                                <div class="flex items-center gap-2 p-2 bg-green-50 rounded-lg text-green-700"><i class="fab fa-edge"></i> Edge 90+ ✓</div>
+                                <div class="flex items-center gap-2 p-2 bg-green-50 rounded-lg text-green-700"><i class="fab fa-firefox"></i> Firefox 85+ ✓</div>
+                                <div class="flex items-center gap-2 p-2 bg-green-50 rounded-lg text-green-700"><i class="fab fa-safari"></i> Safari 14+ ✓</div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2">Para melhor experiência recomendamos Google Chrome.</p>
+                        </div>
+                    </div>
+
                 </div>
             </section>
+
         </div>
 
-        <!-- Contact Support -->
-        <div class="mt-10 bg-gradient-to-r from-purple-700 to-indigo-600 rounded-2xl p-8 text-white text-center shadow-lg">
-            <h3 class="text-xl font-bold mb-2">Ainda precisa de ajuda?</h3>
-            <p class="text-purple-200 text-sm mb-6">Nossa equipe de suporte está pronta para te ajudar</p>
-            <div class="flex flex-col sm:flex-row justify-center gap-3">
-                <a href="/chat.html" class="px-5 py-3 bg-white text-purple-700 rounded-xl font-semibold text-sm hover:bg-purple-50 transition flex items-center justify-center gap-2">
-                    <i class="fas fa-robot"></i> Chat com IA
-                </a>
-                <a href="mailto:suporte@vclass.mz" class="px-5 py-3 bg-purple-500/60 text-white rounded-xl font-semibold text-sm hover:bg-purple-500 transition flex items-center justify-center gap-2">
-                    <i class="fas fa-envelope"></i> suporte@vclass.mz
-                </a>
-                <a href="tel:+258840000000" class="px-5 py-3 bg-purple-500/60 text-white rounded-xl font-semibold text-sm hover:bg-purple-500 transition flex items-center justify-center gap-2">
-                    <i class="fas fa-phone"></i> +258 84 000 0000
-                </a>
+        <!-- ══ Ticket de Suporte ════════════════════════════════════════════ -->
+        <section id="ticket" class="mt-12">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-5 text-white">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-ticket-alt"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg">Abrir Ticket de Suporte</h3>
+                            <p class="text-indigo-200 text-sm">Não encontrou sua resposta? Nossa equipe responde em até 24h.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div id="ticket-success" class="hidden text-center py-8">
+                        <div class="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-check-circle text-green-500 text-3xl"></i>
+                        </div>
+                        <h4 class="font-bold text-gray-800 text-lg mb-1">Ticket enviado com sucesso!</h4>
+                        <p class="text-gray-500 text-sm mb-2">Você receberá uma resposta no email cadastrado em até <strong>24 horas</strong>.</p>
+                        <p class="text-gray-400 text-xs">Nº do ticket: <span id="ticket-number" class="font-mono font-bold text-purple-600">#000000</span></p>
+                        <button onclick="resetTicket()" class="mt-4 px-4 py-2 text-sm text-purple-600 hover:text-purple-700 font-medium hover:underline">Abrir novo ticket</button>
+                    </div>
+                    <form id="ticket-form" class="space-y-4" onsubmit="submitTicket(event)">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1.5">Seu nome <span class="text-red-500">*</span></label>
+                                <input type="text" id="t-name" required placeholder="Nome completo"
+                                    class="ticket-input w-full px-4 py-2.5 rounded-xl text-sm bg-gray-50 focus:bg-white transition">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1.5">Email <span class="text-red-500">*</span></label>
+                                <input type="email" id="t-email" required placeholder="seu@email.com"
+                                    class="ticket-input w-full px-4 py-2.5 rounded-xl text-sm bg-gray-50 focus:bg-white transition">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Categoria <span class="text-red-500">*</span></label>
+                            <select id="t-category" required class="ticket-input w-full px-4 py-2.5 rounded-xl text-sm bg-gray-50 focus:bg-white transition appearance-none">
+                                <option value="">Selecione uma categoria…</option>
+                                <option value="account">Conta e acesso</option>
+                                <option value="video">Problemas com vídeo</option>
+                                <option value="exercises">Exercícios e notas</option>
+                                <option value="content">Conteúdo e currículo</option>
+                                <option value="progress">Progresso e XP</option>
+                                <option value="technical">Problema técnico</option>
+                                <option value="billing">Pagamento / plano</option>
+                                <option value="other">Outro</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Descreva seu problema <span class="text-red-500">*</span></label>
+                            <textarea id="t-message" required rows="4" placeholder="Descreva o problema em detalhes. Inclua mensagens de erro, página onde ocorreu, dispositivo e navegador…"
+                                class="ticket-input w-full px-4 py-2.5 rounded-xl text-sm bg-gray-50 focus:bg-white transition resize-none"></textarea>
+                            <p class="text-xs text-gray-400 mt-1">Quanto mais detalhes você fornecer, mais rápido resolveremos.</p>
+                        </div>
+                        <div class="flex items-center justify-between pt-2">
+                            <p class="text-xs text-gray-400"><i class="fas fa-clock mr-1"></i>Tempo médio de resposta: <strong>4–8 horas</strong></p>
+                            <button type="submit" id="ticket-submit"
+                                class="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:from-purple-700 hover:to-indigo-700 transition shadow-md flex items-center gap-2">
+                                <i class="fas fa-paper-plane"></i> Enviar Ticket
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
+        </section>
+
+        <!-- ══ Contact Options ════════════════════════════════════════════════ -->
+        <div class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <a href="/chat.html" class="contact-card bg-white rounded-2xl p-5 text-center border border-gray-100 shadow-sm hover:shadow-md">
+                <div class="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-robot text-purple-600 text-lg"></i>
+                </div>
+                <p class="font-semibold text-gray-800 text-sm">Chat com IA</p>
+                <p class="text-gray-400 text-xs mt-1">Resposta imediata</p>
+                <span class="inline-block mt-2 px-2.5 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-semibold">Online agora</span>
+            </a>
+            <a href="mailto:suporte@vclass.mz" class="contact-card bg-white rounded-2xl p-5 text-center border border-gray-100 shadow-sm hover:shadow-md">
+                <div class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-envelope text-blue-600 text-lg"></i>
+                </div>
+                <p class="font-semibold text-gray-800 text-sm">Email</p>
+                <p class="text-gray-400 text-xs mt-1">suporte@vclass.mz</p>
+                <span class="inline-block mt-2 px-2.5 py-0.5 bg-blue-50 text-blue-600 rounded-full text-xs font-medium">4–8h resposta</span>
+            </a>
+            <a href="https://wa.me/258840000000" target="_blank" rel="noopener" class="contact-card bg-white rounded-2xl p-5 text-center border border-gray-100 shadow-sm hover:shadow-md">
+                <div class="w-12 h-12 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <i class="fab fa-whatsapp text-green-600 text-lg"></i>
+                </div>
+                <p class="font-semibold text-gray-800 text-sm">WhatsApp</p>
+                <p class="text-gray-400 text-xs mt-1">+258 84 000 0000</p>
+                <span class="inline-block mt-2 px-2.5 py-0.5 bg-yellow-50 text-yellow-700 rounded-full text-xs font-medium">Seg–Sex 8h–18h</span>
+            </a>
         </div>
+
     </div>
 
     <script src="/static/app.js"></script>
     <script>
-        VClass.initNavbar('');
+        // ── Init ──────────────────────────────────────────────────────────────
+        VClass.initNavbar('help');
 
+        // Pre-fill form if user is logged in
+        const _u = VClass.getCurrentUser ? VClass.getCurrentUser() : null;
+        if (_u) {
+            const nameEl  = document.getElementById('t-name');
+            const emailEl = document.getElementById('t-email');
+            if (nameEl  && _u.full_name) nameEl.value  = _u.full_name;
+            if (emailEl && _u.email)     emailEl.value = _u.email;
+        }
+
+        // ── FAQ Accordion ──────────────────────────────────────────────────────
         function toggleFAQ(btn) {
-            const item = btn.closest('.faq-item');
+            const item   = btn.closest('.faq-item');
             const answer = btn.nextElementSibling;
             const isOpen = item.classList.contains('open');
 
             // Close all
             document.querySelectorAll('.faq-item.open').forEach(el => {
                 el.classList.remove('open');
-                el.querySelector('.faq-answer').classList.remove('open');
+                el.querySelector('.faq-answer')?.classList.remove('open');
             });
 
             if (!isOpen) {
                 item.classList.add('open');
                 answer.classList.add('open');
+                // Smooth scroll into view
+                setTimeout(() => item.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
             }
         }
 
-        function filterFAQ(query) {
+        // ── Search ─────────────────────────────────────────────────────────────
+        let _searchTimer;
+        function searchFAQ(query) {
+            clearTimeout(_searchTimer);
+            _searchTimer = setTimeout(() => _doSearch(query), 180);
+
+            const clearBtn = document.getElementById('search-clear');
+            clearBtn.classList.toggle('hidden', !query);
+        }
+
+        function _doSearch(query) {
             const q = query.toLowerCase().trim();
+            const info    = document.getElementById('search-info');
+            const noRes   = document.getElementById('no-results');
+            const faqCont = document.getElementById('faq-container');
+            const searchTags = document.getElementById('search-tags');
+
+            if (!q) {
+                // Reset
+                document.querySelectorAll('.faq-item').forEach(i => i.style.display = '');
+                document.querySelectorAll('section[data-section]').forEach(s => s.style.display = '');
+                info.classList.add('hidden');
+                noRes.style.display = 'none';
+                faqCont.style.display = '';
+                searchTags.style.display = '';
+                return;
+            }
+
+            searchTags.style.display = 'none';
+            let total = 0;
             document.querySelectorAll('.faq-item').forEach(item => {
-                const text = (item.dataset.text + ' ' + item.textContent).toLowerCase();
-                item.style.display = !q || text.includes(q) ? '' : 'none';
+                const keywords = (item.dataset.keywords || '').toLowerCase();
+                const text     = item.textContent.toLowerCase();
+                const match    = keywords.includes(q) || text.includes(q);
+                item.style.display = match ? '' : 'none';
+                if (match) total++;
             });
-            document.querySelectorAll('section').forEach(sec => {
+
+            // Hide empty sections
+            document.querySelectorAll('section[data-section]').forEach(sec => {
                 const visible = [...sec.querySelectorAll('.faq-item')].some(i => i.style.display !== 'none');
                 sec.style.display = visible ? '' : 'none';
             });
+
+            info.classList.toggle('hidden', false);
+            document.getElementById('search-count').textContent = `${total} resultado${total !== 1 ? 's' : ''}`;
+            document.getElementById('search-term').textContent  = query;
+
+            noRes.style.display     = total === 0 ? 'block' : 'none';
+            faqCont.style.display   = total === 0 ? 'none'  : '';
+        }
+
+        function setSearch(term) {
+            const input = document.getElementById('faq-search');
+            input.value = term;
+            searchFAQ(term);
+            input.focus();
+        }
+
+        function clearSearch() {
+            const input = document.getElementById('faq-search');
+            input.value = '';
+            searchFAQ('');
+            input.focus();
+        }
+
+        // ── Ticket ─────────────────────────────────────────────────────────────
+        async function submitTicket(e) {
+            e.preventDefault();
+            const btn = document.getElementById('ticket-submit');
+            btn.disabled  = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Enviando…';
+
+            const payload = {
+                name:     document.getElementById('t-name').value,
+                email:    document.getElementById('t-email').value,
+                category: document.getElementById('t-category').value,
+                message:  document.getElementById('t-message').value,
+                userAgent: navigator.userAgent,
+                timestamp: new Date().toISOString()
+            };
+
+            // Simulate API call (replace with real endpoint when ready)
+            await new Promise(r => setTimeout(r, 1400));
+
+            const ticketNum = '#' + Math.floor(100000 + Math.random() * 900000);
+            document.getElementById('ticket-number').textContent = ticketNum;
+            document.getElementById('ticket-form').classList.add('hidden');
+            document.getElementById('ticket-success').classList.remove('hidden');
+
+            btn.disabled  = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar Ticket';
+        }
+
+        function resetTicket() {
+            document.getElementById('ticket-form').classList.remove('hidden');
+            document.getElementById('ticket-success').classList.add('hidden');
+            document.getElementById('ticket-form').reset();
+            if (_u) {
+                const nameEl  = document.getElementById('t-name');
+                const emailEl = document.getElementById('t-email');
+                if (nameEl  && _u.full_name) nameEl.value  = _u.full_name;
+                if (emailEl && _u.email)     emailEl.value = _u.email;
+            }
         }
     </script>
 </body>
