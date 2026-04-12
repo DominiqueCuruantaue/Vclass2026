@@ -165,27 +165,67 @@
         let currentPeriod = 'week';
         let currentChartType = 'lessons';
 
-        // Chart data by period & type
-        const CHART_DATA = {
-            week: {
-                labels: ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'],
-                lessons: [2,3,1,4,3,5,2],
-                time: [30,45,20,60,40,75,35],
-                score: [72,85,68,90,78,95,80]
-            },
-            month: {
-                labels: ['Sem 1','Sem 2','Sem 3','Sem 4'],
-                lessons: [12,18,9,22],
-                time: [180,270,120,330],
-                score: [75,80,72,88]
-            },
-            all: {
-                labels: ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'],
-                lessons: [5,12,8,18,15,22,10,25,20,30,18,28],
-                time: [80,180,120,270,225,330,150,375,300,450,270,420],
-                score: [65,70,68,75,78,82,72,85,80,88,84,90]
+        // ── Gerar CHART_DATA a partir do histórico real (localStorage) ──────────
+        // Fallback quando a API não tem dados de série temporal detalhados
+        function buildChartDataFromHistory() {
+            const activity = VClass.storage.get('activity_log') || [];
+            const now = new Date();
+
+            // Week: últimos 7 dias
+            const weekLabels = [];
+            const weekLessons = [], weekTime = [], weekScore = [];
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date(now); d.setDate(d.getDate() - i);
+                weekLabels.push(['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][d.getDay()]);
+                const dayStr = d.toISOString().slice(0,10);
+                const dayActs = activity.filter(a => a.date && a.date.slice(0,10) === dayStr);
+                weekLessons.push(dayActs.filter(a => a.type === 'lesson').length);
+                weekTime.push(dayActs.reduce((s,a) => s + (a.duration||0), 0));
+                const scores = dayActs.filter(a => a.score != null).map(a => a.score);
+                weekScore.push(scores.length ? Math.round(scores.reduce((s,x)=>s+x,0)/scores.length) : 0);
             }
-        };
+
+            // Month: últimas 4 semanas
+            const monthLessons=[], monthTime=[], monthScore=[];
+            for (let w = 3; w >= 0; w--) {
+                const start = new Date(now); start.setDate(start.getDate() - (w+1)*7);
+                const end   = new Date(now); end.setDate(end.getDate()   - w*7);
+                const wActs = activity.filter(a => {
+                    if (!a.date) return false;
+                    const d = new Date(a.date);
+                    return d >= start && d < end;
+                });
+                monthLessons.push(wActs.filter(a=>a.type==='lesson').length);
+                monthTime.push(wActs.reduce((s,a)=>s+(a.duration||0),0));
+                const sc = wActs.filter(a=>a.score!=null).map(a=>a.score);
+                monthScore.push(sc.length ? Math.round(sc.reduce((s,x)=>s+x,0)/sc.length) : 0);
+            }
+
+            // All: últimos 6 meses
+            const allLabels=[], allLessons=[], allTime=[], allScore=[];
+            const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+            for (let m = 5; m >= 0; m--) {
+                const ref = new Date(now.getFullYear(), now.getMonth() - m, 1);
+                allLabels.push(MONTHS[ref.getMonth()]);
+                const mActs = activity.filter(a => {
+                    if (!a.date) return false;
+                    const d = new Date(a.date);
+                    return d.getFullYear()===ref.getFullYear() && d.getMonth()===ref.getMonth();
+                });
+                allLessons.push(mActs.filter(a=>a.type==='lesson').length);
+                allTime.push(mActs.reduce((s,a)=>s+(a.duration||0),0));
+                const sc = mActs.filter(a=>a.score!=null).map(a=>a.score);
+                allScore.push(sc.length ? Math.round(sc.reduce((s,x)=>s+x,0)/sc.length) : 0);
+            }
+
+            return {
+                week:  { labels: weekLabels,                             lessons: weekLessons,  time: weekTime,  score: weekScore  },
+                month: { labels: ['Sem 1','Sem 2','Sem 3','Sem 4'],       lessons: monthLessons, time: monthTime, score: monthScore },
+                all:   { labels: allLabels,                               lessons: allLessons,   time: allTime,   score: allScore   }
+            };
+        }
+
+        let CHART_DATA = buildChartDataFromHistory();
 
         const CHART_CONFIG = {
             lessons: { label: 'Aulas Assistidas', color: '#7c3aed', bg: 'rgba(124,58,237,0.1)', type: 'bar' },
@@ -342,7 +382,7 @@
                             <p class="text-2xl font-bold text-gray-900" id="s-time">0h</p>
                         </div>
                     </div>
-                    <p class="text-xs text-gray-400 mt-3"><i class="fas fa-fire text-orange-500 mr-1"></i>Sequência: 7 dias</p>
+                    <p class="text-xs text-gray-400 mt-3"><i class="fas fa-fire text-orange-500 mr-1"></i>Sequência: <span id="s-streak">—</span> dias</p>
                 </div>
             `;
 
@@ -436,59 +476,98 @@
             }).join('');
         }
 
-        function loadActivityTab() {
-            const activities = [
-                { icon:'fa-check-circle', bg:'bg-green-100', color:'text-green-600', title:'Funções Quadráticas - Lição 3', desc:'Aula concluída · Matemática', time:'2 horas atrás', score:null },
-                { icon:'fa-tasks', bg:'bg-blue-100', color:'text-blue-600', title:'Quiz 2 - Álgebra Linear', desc:'Exercício concluído', time:'4 horas atrás', score:80 },
-                { icon:'fa-play-circle', bg:'bg-purple-100', color:'text-purple-600', title:'Derivadas - Introdução', desc:'Vídeo assistido · 32 min', time:'Ontem', score:null },
-                { icon:'fa-star', bg:'bg-yellow-100', color:'text-yellow-600', title:'Conquista: Em Chamas 🔥', desc:'7 dias de sequência consecutiva', time:'Ontem', score:null },
-                { icon:'fa-check-circle', bg:'bg-green-100', color:'text-green-600', title:'Geometria Euclidiana - Lição 1', desc:'Aula concluída · Matemática', time:'2 dias atrás', score:null },
-                { icon:'fa-tasks', bg:'bg-blue-100', color:'text-blue-600', title:'Exercícios - Equações', desc:'Exercício concluído', time:'3 dias atrás', score:95 },
-                { icon:'fa-book', bg:'bg-indigo-100', color:'text-indigo-600', title:'Formulário de Matemática PDF', desc:'Recurso da biblioteca acessado', time:'4 dias atrás', score:null },
-            ];
+        // ── Calcular streak real ───────────────────────────────────────────────────
+        function calcStreak() {
+            const activity = VClass.storage.get('activity_log') || [];
+            if (!activity.length) return 0;
+            const days = new Set(activity.map(a => a.date ? a.date.slice(0,10) : null).filter(Boolean));
+            let streak = 0;
+            const today = new Date();
+            for (let i = 0; i < 365; i++) {
+                const d = new Date(today); d.setDate(d.getDate() - i);
+                if (days.has(d.toISOString().slice(0,10))) streak++;
+                else if (i > 0) break; // interrompeu
+            }
+            return streak;
+        }
 
-            document.getElementById('activity-list').innerHTML = activities.map(a => `
-                <div class="flex items-center space-x-4 p-4 hover:bg-gray-50 transition">
-                    <div class="w-10 h-10 ${a.bg} rounded-xl flex items-center justify-center flex-shrink-0">
-                        <i class="fas ${a.icon} ${a.color} text-sm"></i>
+        function loadActivityTab() {
+            // Primeiro tenta actividade real do localStorage
+            const rawActivity = VClass.storage.get('activity_log') || [];
+            let activities = rawActivity.slice(-20).reverse();
+
+            // Se vazia, usa actividade da API (recentActivity)
+            if (!activities.length && window._recentActivity) {
+                activities = window._recentActivity.map(a => ({
+                    type: 'lesson',
+                    title: a.lesson?.title || 'Aula',
+                    desc: `${a.progress_percent}% concluído`,
+                    date: a.updated_at,
+                    score: null
+                }));
+            }
+
+            if (!activities.length) {
+                document.getElementById('activity-list').innerHTML =
+                    `<div class="text-center py-10 text-gray-400"><i class="fas fa-history text-3xl mb-2"></i><p class="text-sm">Sem actividade registada ainda</p><p class="text-xs mt-1">Assiste a uma aula para começar!</p></div>`;
+                return;
+            }
+
+            const TYPE_MAP = {
+                lesson:    { icon:'fa-play-circle', bg:'bg-purple-100', color:'text-purple-600' },
+                exercise:  { icon:'fa-tasks',        bg:'bg-blue-100',   color:'text-blue-600'   },
+                completed: { icon:'fa-check-circle', bg:'bg-green-100',  color:'text-green-600'  },
+                achievement:{ icon:'fa-trophy',      bg:'bg-yellow-100', color:'text-yellow-600' },
+            };
+
+            document.getElementById('activity-list').innerHTML = activities.map(a => {
+                const t = TYPE_MAP[a.type] || TYPE_MAP.lesson;
+                const timeStr = a.date ? VClass.formatRelativeTime(a.date) : '';
+                return `
+                <div class="flex items-center space-x-4 p-4 hover:bg-gray-50 transition rounded-xl">
+                    <div class="w-10 h-10 ${t.bg} rounded-xl flex items-center justify-center flex-shrink-0">
+                        <i class="fas ${t.icon} ${t.color} text-sm"></i>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm font-semibold text-gray-900">${a.title}</p>
-                        <p class="text-xs text-gray-500">${a.desc}</p>
+                        <p class="text-sm font-semibold text-gray-900 truncate">${a.title || 'Actividade'}</p>
+                        <p class="text-xs text-gray-500">${a.desc || a.subject || ''}</p>
                     </div>
                     <div class="text-right flex-shrink-0">
-                        ${a.score !== null ? `<span class="score-pill ${a.score>=70?'bg-green-100 text-green-700':'bg-orange-100 text-orange-700'} block mb-1">${a.score}%</span>` : ''}
-                        <p class="text-xs text-gray-400">${a.time}</p>
+                        ${a.score != null ? `<span class="score-pill ${a.score>=70?'bg-green-100 text-green-700':'bg-orange-100 text-orange-700'} block mb-1">${a.score}%</span>` : ''}
+                        <p class="text-xs text-gray-400">${timeStr}</p>
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
 
         function loadExercisesTab() {
-            const exercises = [
-                { title:'Quiz 1 - Funções', subject:'Matemática', score:100, date:'Ontem', questions:10, correct:10 },
-                { title:'Quiz 2 - Álgebra Linear', subject:'Matemática', score:80, date:'4 dias atrás', questions:10, correct:8 },
-                { title:'Quiz - Leis de Newton', subject:'Física', score:72, date:'1 semana atrás', questions:10, correct:7 },
-                { title:'Exercícios - Tabela Periódica', subject:'Química', score:60, date:'2 semanas atrás', questions:10, correct:6 },
-            ];
+            // Exercícios reais do localStorage (guardados após submit)
+            const rawEx = VClass.storage.get('exercise_results') || [];
 
-            document.getElementById('exercises-list').innerHTML = exercises.map(e => {
-                const scoreClass = e.score>=80?'text-green-600 bg-green-50':e.score>=60?'text-yellow-600 bg-yellow-50':'text-red-600 bg-red-50';
+            if (!rawEx.length) {
+                document.getElementById('exercises-list').innerHTML =
+                    `<div class="text-center py-10 text-gray-400"><i class="fas fa-tasks text-3xl mb-2"></i><p class="text-sm">Sem exercícios realizados ainda</p><p class="text-xs mt-1">Faz exercícios no final das lições!</p></div>`;
+                return;
+            }
+
+            document.getElementById('exercises-list').innerHTML = rawEx.slice(-10).reverse().map(e => {
+                const score = Math.round(e.scorePercent || e.score || 0);
+                const scoreClass = score>=80?'text-green-600 bg-green-50':score>=60?'text-yellow-600 bg-yellow-50':'text-red-600 bg-red-50';
                 return `
-                <div class="bg-white rounded-2xl shadow-sm p-5">
+                <div class="bg-white rounded-2xl shadow-sm p-5 border border-gray-50">
                     <div class="flex items-start justify-between mb-3">
                         <div>
-                            <h4 class="font-bold text-gray-900">${e.title}</h4>
-                            <p class="text-xs text-gray-500 mt-0.5">${e.subject} · ${e.date}</p>
+                            <h4 class="font-bold text-gray-900">${e.lessonTitle || 'Exercício'}</h4>
+                            <p class="text-xs text-gray-500 mt-0.5">${e.subject || '—'} · ${e.date ? VClass.formatRelativeTime(e.date) : ''}</p>
                         </div>
-                        <span class="text-2xl font-bold ${e.score>=80?'text-green-600':e.score>=60?'text-yellow-600':'text-red-600'}">${e.score}%</span>
+                        <span class="text-2xl font-bold ${score>=80?'text-green-600':score>=60?'text-yellow-600':'text-red-600'}">${score}%</span>
                     </div>
                     <div class="h-2 bg-gray-100 rounded-full mb-3">
-                        <div class="h-2 rounded-full ${e.score>=80?'bg-green-500':e.score>=60?'bg-yellow-500':'bg-red-500'} progress-fill" style="width:${e.score}%"></div>
+                        <div class="h-2 rounded-full ${score>=80?'bg-green-500':score>=60?'bg-yellow-500':'bg-red-500'} progress-fill" style="width:${score}%"></div>
                     </div>
                     <div class="flex items-center justify-between text-xs text-gray-500">
-                        <span>${e.correct}/${e.questions} respostas corretas</span>
-                        <span class="score-pill ${scoreClass}">${e.score>=80?'😊 Ótimo':e.score>=60?'🆗 Regular':'😕 Estudar mais'}</span>
+                        <span>${e.correctAnswers||0}/${e.totalExercises||0} respostas corretas</span>
+                        <span class="score-pill ${scoreClass}">${score>=80?'😊 Ótimo':score>=60?'🆗 Regular':'😕 Estudar mais'}</span>
                     </div>
                 </div>`;
             }).join('');
@@ -498,17 +577,44 @@
             try {
                 const result = await VClass.api.progress.getDashboard();
                 if (result.success) {
-                    const { summary, subjectProgress } = result.data;
-                    renderStats(summary || {});
+                    const data = result.data || {};
+                    const summary = data.summary || {};
+                    const subjectProgress = data.subjectProgress || [];
+                    const recentActivity  = data.recentActivity  || [];
+
+                    // Guardar actividade recente da API para o tab de actividade
+                    window._recentActivity = recentActivity;
+
+                    // Calcular streak real e injectar no summary
+                    const streak = calcStreak();
+                    summary._streak = streak;
+
+                    renderStats(summary);
                     renderSubjects(subjectProgress);
+
+                    // Actualizar streak no card
+                    const sEl = document.getElementById('s-streak');
+                    if (sEl) sEl.textContent = streak;
+
+                    // Reconstruir gráfico com dados de actividade do localStorage enriquecidos
+                    CHART_DATA = buildChartDataFromHistory();
+                    if (mainChartInstance) {
+                        mainChartInstance.destroy();
+                        mainChartInstance = null;
+                    }
+                    createChart();
                 } else {
                     renderStats({});
                     renderSubjects([]);
+                    const sEl = document.getElementById('s-streak');
+                    if (sEl) sEl.textContent = calcStreak();
                 }
             } catch(e) {
-                console.error(e);
+                console.error('loadProgress error:', e);
                 renderStats({});
                 renderSubjects([]);
+                const sEl = document.getElementById('s-streak');
+                if (sEl) sEl.textContent = calcStreak();
             }
         }
 

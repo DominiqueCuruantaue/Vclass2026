@@ -13,6 +13,8 @@ import creatorRoutes from './routes/creator'
 import curriculumRoutes from './routes/curriculum'
 import searchRoutes from './routes/search'
 import adminRoutes from './routes/admin'
+import chatRoutes from './routes/chat'
+import notificationsRoutes from './routes/notifications'
 import pagesRoutes from './routes/pages'
 
 const app = new Hono()
@@ -48,6 +50,8 @@ app.route('/api/creator', creatorRoutes)
 app.route('/api/curriculum', curriculumRoutes)
 app.route('/api/search', searchRoutes)
 app.route('/api/admin', adminRoutes)
+app.route('/api/chat', chatRoutes)
+app.route('/api/notifications', notificationsRoutes)
 
 // Health check
 app.get('/api/health', (c) => {

@@ -91,18 +91,41 @@
         VClass.initNavbar('');
 
         let currentFilter = 'all';
+        let NOTIFS = [];
+        let _loaded = false;
 
-        // Default notifications
-        const DEFAULT_NOTIFS = [
-            { id:'1', type:'achievement', title:'🏆 Nova Conquista!', msg:'Você completou 10 lições de Matemática. Continue assim!', read:false, time: new Date(Date.now()-3600000).toISOString() },
-            { id:'2', type:'lesson', title:'📹 Nova Lição Disponível', msg:'A lição "Trigonometria Avançada" está disponível agora.', read:false, time: new Date(Date.now()-7200000).toISOString() },
-            { id:'3', type:'exercise', title:'✅ Exercício Corrigido', msg:'Seu exercício de Física foi corrigido. Pontuação: 85%', read:false, time: new Date(Date.now()-10800000).toISOString() },
-            { id:'4', type:'achievement', title:'🔥 Sequência de Estudos!', msg:'Você estudou por 5 dias consecutivos. Parabéns!', read:true, time: new Date(Date.now()-86400000).toISOString() },
-            { id:'5', type:'lesson', title:'⏰ Lembrete', msg:'Você tem 3 lições pendentes em Química', read:true, time: new Date(Date.now()-172800000).toISOString() },
-            { id:'6', type:'exercise', title:'⚠️ Prazo Aproximando', msg:'O exercício de Português vence em 2 dias', read:true, time: new Date(Date.now()-259200000).toISOString() },
-        ];
+        // ── Carregar da API ─────────────────────────────────────────────────────
+        async function loadNotifications() {
+            try {
+                const token = VClass.storage.get('accessToken') || VClass.storage.get('token') || '';
+                const res = await fetch('/api/notifications', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const json = await res.json();
+                if (json.success && Array.isArray(json.data)) {
+                    // Merge: prioridade para API, mas preserva estado read do localStorage
+                    const localState = VClass.storage.get('notifications_read_state') || {};
+                    NOTIFS = json.data.map(n => ({
+                        id: n.id,
+                        type: n.type,
+                        title: n.title,
+                        msg: n.message,
+                        read: localState[n.id] !== undefined ? localState[n.id] : n.read,
+                        time: n.created_at,
+                        action_url: n.action_url
+                    }));
+                } else {
+                    throw new Error('API returned no data');
+                }
+            } catch(e) {
+                // Fallback para localStorage
+                NOTIFS = VClass.storage.get('notifications_v2') || [];
+            }
+            _loaded = true;
+            render();
+        }
 
-        let NOTIFS = VClass.storage.get('notifications_v2') || DEFAULT_NOTIFS;
+        loadNotifications();
 
         const TYPE_STYLE = {
             achievement: { icon: 'fa-trophy', color: '#f59e0b', bg: '#fffbeb' },
@@ -172,37 +195,52 @@
             const n = NOTIFS.find(x => x.id === id);
             if (n && !n.read) {
                 n.read = true;
-                save();
+                saveReadState();
                 render();
+                // Notificar API (fire-and-forget)
+                const token = VClass.storage.get('accessToken') || VClass.storage.get('token') || '';
+                fetch(`/api/notifications/${id}/read`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).catch(() => {});
+            }
+            // Navegar se tiver action_url
+            if (n?.action_url) {
+                setTimeout(() => { window.location.href = n.action_url; }, 300);
             }
         }
 
         function markAllRead() {
             NOTIFS.forEach(n => n.read = true);
-            save();
+            saveReadState();
             render();
             VClass.showNotification('Todas marcadas como lidas', 'success');
+            const token = VClass.storage.get('accessToken') || VClass.storage.get('token') || '';
+            fetch('/api/notifications/mark-all-read', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            }).catch(() => {});
         }
 
         function deleteNotif(e, id) {
             e.stopPropagation();
             NOTIFS = NOTIFS.filter(n => n.id !== id);
-            save();
+            saveReadState();
             render();
         }
 
         function clearAll() {
             if (!confirm('Remover todas as notificações?')) return;
             NOTIFS = [];
-            save();
+            VClass.storage.remove('notifications_read_state');
             render();
         }
 
-        function save() {
-            VClass.storage.set('notifications_v2', NOTIFS);
+        function saveReadState() {
+            const state = {};
+            NOTIFS.forEach(n => { state[n.id] = n.read; });
+            VClass.storage.set('notifications_read_state', state);
         }
-
-        render();
     </script>
 </body>
 </html>

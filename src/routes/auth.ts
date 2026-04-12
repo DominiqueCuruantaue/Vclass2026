@@ -424,4 +424,122 @@ auth.get('/me', async (c) => {
   }
 })
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// PATCH /api/auth/profile — actualizar nome, telefone, país
+// ═══════════════════════════════════════════════════════════════════════════════
+auth.patch('/profile', async (c) => {
+  try {
+    const authHeader = c.req.header('Authorization')
+    const token = authHeader?.replace('Bearer ', '') || ''
+    const decoded = verifyToken(token)
+
+    if (!decoded) return c.json<ApiResponse>({ success: false, error: 'Not authenticated' }, 401)
+
+    const body = await c.req.json() as { full_name?: string; phone?: string; country_id?: string }
+    const { full_name, phone, country_id } = body
+
+    if (!full_name || full_name.trim().length < 2) {
+      return c.json<ApiResponse>({ success: false, error: 'Nome deve ter pelo menos 2 caracteres' }, 400)
+    }
+
+    if (!isDatabaseConfigured(c.env)) {
+      // Demo mode: devolver dados actualizados sem persistir
+      return c.json<ApiResponse>({
+        success: true,
+        data: {
+          id: decoded.sub,
+          full_name: full_name.trim(),
+          phone: phone || '',
+          country_id: country_id || '',
+          name: full_name.trim()
+        },
+        message: 'Demo: perfil actualizado localmente'
+      })
+    }
+
+    const supabase = getSupabase(c.env)
+    if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+
+    const updates: any = { full_name: full_name.trim(), updated_at: new Date().toISOString() }
+    if (phone !== undefined)      updates.phone      = phone
+    if (country_id !== undefined) updates.country_id = country_id
+
+    const { data, error } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', decoded.sub)
+      .select('id, email, full_name, role, country_id, phone, avatar_url, is_verified, created_at')
+      .single()
+
+    if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+
+    return c.json<ApiResponse>({ success: true, data: { ...data, name: data.full_name } })
+  } catch (e: any) {
+    console.error('Update profile error:', e)
+    return c.json<ApiResponse>({ success: false, error: 'Internal server error' }, 500)
+  }
+})
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// POST /api/auth/change-password
+// ═══════════════════════════════════════════════════════════════════════════════
+auth.post('/change-password', async (c) => {
+  try {
+    const authHeader = c.req.header('Authorization')
+    const token = authHeader?.replace('Bearer ', '') || ''
+    const decoded = verifyToken(token)
+
+    if (!decoded) return c.json<ApiResponse>({ success: false, error: 'Not authenticated' }, 401)
+
+    const body = await c.req.json() as { current_password: string; new_password: string }
+    const { current_password, new_password } = body
+
+    if (!current_password || !new_password) {
+      return c.json<ApiResponse>({ success: false, error: 'Senha actual e nova senha são obrigatórias' }, 400)
+    }
+    if (new_password.length < 6) {
+      return c.json<ApiResponse>({ success: false, error: 'Nova senha deve ter pelo menos 6 caracteres' }, 400)
+    }
+
+    if (!isDatabaseConfigured(c.env)) {
+      // Demo mode: verificar senha demo
+      if (current_password !== 'password123') {
+        return c.json<ApiResponse>({ success: false, error: 'Senha actual incorrecta' }, 400)
+      }
+      return c.json<ApiResponse>({ success: true, message: 'Demo: senha alterada (simulado)' })
+    }
+
+    const supabase = getSupabase(c.env)
+    if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+
+    // Buscar hash actual
+    const { data: user, error: fetchErr } = await supabase
+      .from('users')
+      .select('password_hash')
+      .eq('id', decoded.sub)
+      .single()
+
+    if (fetchErr || !user) return c.json<ApiResponse>({ success: false, error: 'Utilizador não encontrado' }, 404)
+
+    // Verificar senha actual
+    const valid = await verifyPassword(current_password, user.password_hash)
+    if (!valid) return c.json<ApiResponse>({ success: false, error: 'Senha actual incorrecta' }, 400)
+
+    // Actualizar hash
+    const new_hash = await hashPassword(new_password)
+
+    const { error: updateErr } = await supabase
+      .from('users')
+      .update({ password_hash: new_hash, updated_at: new Date().toISOString() })
+      .eq('id', decoded.sub)
+
+    if (updateErr) return c.json<ApiResponse>({ success: false, error: updateErr.message }, 500)
+
+    return c.json<ApiResponse>({ success: true, message: 'Senha alterada com sucesso' })
+  } catch (e: any) {
+    console.error('Change password error:', e)
+    return c.json<ApiResponse>({ success: false, error: 'Internal server error' }, 500)
+  }
+})
+
 export default auth

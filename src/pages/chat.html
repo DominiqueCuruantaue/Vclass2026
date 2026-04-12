@@ -70,7 +70,7 @@
                             <h2 class="font-bold">Assistente VClass IA</h2>
                             <p class="text-xs text-purple-200 flex items-center">
                                 <span class="w-2 h-2 bg-green-400 rounded-full mr-1.5 animate-pulse"></span>
-                                Online · Especializado em Matemática, Física, Química e mais
+                                <span class="online-badge">● Online</span> · Especializado em Matemática, Física, Química e mais
                             </p>
                         </div>
                         <div class="text-right">
@@ -225,7 +225,10 @@
             el.style.height = Math.min(el.scrollHeight, 120) + 'px';
         }
 
-        function sendMsg() {
+        // ── Histórico de contexto para a API (últimas 6 trocas) ──────────────────
+        let conversationContext = [];
+
+        async function sendMsg() {
             const input = document.getElementById('msg-input');
             const text = input.value.trim();
             if (!text) return;
@@ -233,14 +236,49 @@
             addMsg(text, 'user');
             input.value = '';
             input.style.height = 'auto';
+            document.getElementById('send-btn')?.setAttribute('disabled','');
 
             showTyping();
-            setTimeout(() => {
+            try {
+                const token = VClass.storage.get('accessToken') || VClass.storage.get('token') || '';
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        message: text,
+                        subject: currentSubject || undefined,
+                        history: conversationContext.slice(-6)
+                    })
+                });
+                const json = await res.json();
                 hideTyping();
+
+                const reply = json.data?.response || getBotResponse(text);
+                addMsg(reply, 'bot');
+                saveToHistory(text);
+
+                // Actualizar contexto de conversa
+                conversationContext.push({ role: 'user', content: text });
+                conversationContext.push({ role: 'assistant', content: reply.substring(0, 400) });
+                if (conversationContext.length > 12) conversationContext = conversationContext.slice(-12);
+
+                // Indicador de fonte (AI vs local)
+                if (json.data?.source === 'ai') {
+                    const badge = document.querySelector('.online-badge');
+                    if (badge) { badge.textContent = '● IA Online'; badge.style.color = '#22c55e'; }
+                }
+            } catch(e) {
+                hideTyping();
+                // Fallback local silencioso
                 const response = getBotResponse(text);
                 addMsg(response, 'bot');
                 saveToHistory(text);
-            }, 800 + Math.random() * 700);
+            } finally {
+                document.getElementById('send-btn')?.removeAttribute('disabled');
+            }
         }
 
         function addMsg(text, sender) {
