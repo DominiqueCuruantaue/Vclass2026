@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Suporte - VClass</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root { --cyan: #0891b2; --cyan-light: #e0f2fe; --cyan-dark: #0e7490; }
+        body { background: #f0f9ff; font-family: 'Inter', sans-serif; }
+
+        /* Sidebar */
+        .sidebar { width: 240px; min-height: 100vh; background: #0c1a2e; position: fixed; top: 0; left: 0; z-index: 50; transition: transform 0.3s; }
+        .sidebar-logo { padding: 20px 16px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 10px; margin: 2px 8px; color: rgba(255,255,255,0.65); font-size: 0.875rem; cursor: pointer; transition: all 0.15s; text-decoration: none; }
+        .nav-item:hover { background: rgba(255,255,255,0.08); color: white; }
+        .nav-item.active { background: linear-gradient(135deg, #0891b2, #0e7490); color: white; font-weight: 600; }
+        .nav-item i { width: 18px; text-align: center; }
+        .nav-section { padding: 16px 16px 4px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(255,255,255,0.3); font-weight: 600; }
+
+        /* Main */
+        .main { margin-left: 240px; min-height: 100vh; }
+        .topbar { background: white; border-bottom: 1px solid #e2e8f0; padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 40; }
+
+        /* Cards */
+        .stat-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); transition: transform 0.15s, box-shadow 0.15s; }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+
+        /* Ticket badges */
+        .badge-open      { background: #fef9c3; color: #854d0e; }
+        .badge-progress  { background: #dbeafe; color: #1e40af; }
+        .badge-resolved  { background: #dcfce7; color: #166534; }
+        .badge-high      { background: #fee2e2; color: #991b1b; }
+        .badge-medium    { background: #fef3c7; color: #92400e; }
+        .badge-low       { background: #f0fdf4; color: #14532d; }
+        .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; font-size: 0.7rem; font-weight: 600; }
+
+        /* Ticket row */
+        .ticket-row { border-bottom: 1px solid #f1f5f9; padding: 14px 16px; cursor: pointer; transition: background 0.1s; }
+        .ticket-row:hover { background: #f8fafc; }
+        .ticket-row.urgent { border-left: 3px solid #ef4444; }
+        .ticket-row.sla-warning { border-left: 3px solid #f59e0b; }
+
+        /* Avatar */
+        .avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: white; flex-shrink: 0; }
+
+        /* Modal */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; display: none; align-items: center; justify-content: center; padding: 16px; }
+        .modal-overlay.open { display: flex; }
+        .modal-box { background: white; border-radius: 20px; width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 60px rgba(0,0,0,0.2); }
+
+        /* Tab system */
+        .tab-btn { padding: 8px 16px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.15s; color: #64748b; }
+        .tab-btn.active { background: #0891b2; color: white; }
+
+        /* SLA bar */
+        .sla-bar { height: 4px; border-radius: 2px; background: #e2e8f0; overflow: hidden; }
+        .sla-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+
+        /* Pulse */
+        @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }
+        .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; animation: pulse-dot 2s infinite; display: inline-block; }
+
+        /* Mobile sidebar */
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main { margin-left: 0; }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+        /* Thread */
+        .msg-support { background: #e0f2fe; border-radius: 12px 12px 2px 12px; }
+        .msg-user    { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px 12px 12px 2px; }
+        .msg-resolved { background: #dcfce7; border: 1px solid #86efac; border-radius: 12px; }
+    </style>
+</head>
+<body>
+
+<!-- ── SIDEBAR ─────────────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:linear-gradient(135deg,#0891b2,#0e7490)">
+            <i class="fas fa-headset text-white text-sm"></i>
+        </div>
+        <div>
+            <p class="text-white font-bold text-sm leading-none">VClass</p>
+            <p class="text-xs mt-0.5" style="color:rgba(255,255,255,0.4)">Suporte</p>
+        </div>
+    </div>
+
+    <nav class="mt-4">
+        <div class="nav-section">Principal</div>
+        <a href="#" class="nav-item active" onclick="showView('overview')"><i class="fas fa-tachometer-alt"></i> Visão Geral</a>
+        <a href="#" class="nav-item" onclick="showView('tickets')"><i class="fas fa-ticket-alt"></i> Tickets <span id="badge-open" class="ml-auto text-xs bg-red-500 text-white rounded-full px-2 py-0.5 hidden">0</span></a>
+        <a href="#" class="nav-item" onclick="showView('users')"><i class="fas fa-users"></i> Utilizadores</a>
+        <a href="#" class="nav-item" onclick="showView('announcements')"><i class="fas fa-bullhorn"></i> Avisos</a>
+
+        <div class="nav-section mt-4">Acesso Rápido</div>
+        <a href="/dashboard.html" class="nav-item"><i class="fas fa-graduation-cap"></i> Plataforma</a>
+        <a href="/help.html" class="nav-item"><i class="fas fa-question-circle"></i> Base de Conhec.</a>
+        <a href="/admin-dashboard.html" class="nav-item"><i class="fas fa-shield-alt"></i> Admin Panel</a>
+    </nav>
+
+    <div class="mt-auto p-4" style="position:absolute;bottom:0;left:0;right:0;border-top:1px solid rgba(255,255,255,0.08)">
+        <div class="flex items-center gap-3">
+            <div class="avatar text-xs" id="sb-avatar" style="background:#0891b2">ES</div>
+            <div class="min-w-0">
+                <p class="text-white text-xs font-semibold truncate" id="sb-name">Suporte</p>
+                <p class="text-xs truncate" style="color:rgba(255,255,255,0.4)" id="sb-email">suporte@vclass.mz</p>
+            </div>
+            <button onclick="logout()" title="Sair" class="ml-auto text-gray-400 hover:text-white transition">
+                <i class="fas fa-sign-out-alt text-sm"></i>
+            </button>
+        </div>
+    </div>
+</aside>
+
+<!-- ── TOPBAR ──────────────────────────────────────────────────── -->
+<div class="main">
+<header class="topbar">
+    <div class="flex items-center gap-3">
+        <button class="md:hidden p-2 rounded-lg hover:bg-gray-100" onclick="document.getElementById('sidebar').classList.toggle('open')">
+            <i class="fas fa-bars text-gray-600"></i>
+        </button>
+        <div>
+            <h1 class="font-bold text-gray-800 text-sm" id="view-title">Visão Geral</h1>
+            <p class="text-xs text-gray-400" id="view-subtitle">Centro de Suporte VClass</p>
+        </div>
+    </div>
+    <div class="flex items-center gap-3">
+        <span class="live-dot"></span>
+        <span class="text-xs text-gray-500">Online</span>
+        <button class="relative p-2 rounded-xl hover:bg-gray-100">
+            <i class="fas fa-bell text-gray-600"></i>
+            <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+        </button>
+        <button onclick="logout()" class="flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-xl transition text-sm text-gray-700">
+            <i class="fas fa-sign-out-alt text-xs"></i> Sair
+        </button>
+    </div>
+</header>
+
+<!-- ── CONTENT ─────────────────────────────────────────────────── -->
+<main class="p-6" id="main-content">
+
+    <!-- ═══════════════ VIEW: VISÃO GERAL ═══════════════ -->
+    <div id="view-overview">
+
+        <!-- Stats row -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="stat-card">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#fef9c3">
+                        <i class="fas fa-ticket-alt text-yellow-600"></i>
+                    </div>
+                    <span class="badge badge-open" id="stat-open-badge">—</span>
+                </div>
+                <p class="text-2xl font-bold text-gray-800" id="stat-open">—</p>
+                <p class="text-xs text-gray-500 mt-0.5">Tickets Abertos</p>
+            </div>
+            <div class="stat-card">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#dbeafe">
+                        <i class="fas fa-spinner text-blue-600"></i>
+                    </div>
+                    <span class="badge badge-progress" id="stat-progress-badge">—</span>
+                </div>
+                <p class="text-2xl font-bold text-gray-800" id="stat-progress">—</p>
+                <p class="text-xs text-gray-500 mt-0.5">Em Progresso</p>
+            </div>
+            <div class="stat-card">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#fee2e2">
+                        <i class="fas fa-exclamation-triangle text-red-600"></i>
+                    </div>
+                    <span class="badge badge-high" id="stat-urgent-badge">—</span>
+                </div>
+                <p class="text-2xl font-bold text-gray-800" id="stat-urgent">—</p>
+                <p class="text-xs text-gray-500 mt-0.5">Urgentes</p>
+            </div>
+            <div class="stat-card">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#dcfce7">
+                        <i class="fas fa-check-circle text-green-600"></i>
+                    </div>
+                    <span class="badge badge-resolved" id="stat-resolved-badge">—</span>
+                </div>
+                <p class="text-2xl font-bold text-gray-800" id="stat-resolved">—</p>
+                <p class="text-xs text-gray-500 mt-0.5">Resolvidos</p>
+            </div>
+        </div>
+
+        <!-- KPI Row -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="stat-card flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style="background:#e0f2fe">
+                    <i class="fas fa-clock text-cyan-600 text-lg"></i>
+                </div>
+                <div>
+                    <p class="text-2xl font-bold text-gray-800"><span id="stat-avg-response">—</span> min</p>
+                    <p class="text-xs text-gray-500">Tempo médio de resposta</p>
+                </div>
+            </div>
+            <div class="stat-card flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style="background:#f0fdf4">
+                    <i class="fas fa-star text-green-600 text-lg"></i>
+                </div>
+                <div>
+                    <p class="text-2xl font-bold text-gray-800"><span id="stat-satisfaction">—</span>%</p>
+                    <p class="text-xs text-gray-500">Satisfação dos utilizadores</p>
+                </div>
+            </div>
+            <div class="stat-card flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style="background:#fef9c3">
+                    <i class="fas fa-user-slash text-yellow-600 text-lg"></i>
+                </div>
+                <div>
+                    <p class="text-2xl font-bold text-gray-800"><span id="stat-sla">—</span></p>
+                    <p class="text-xs text-gray-500">SLA em risco (≤ 1h)</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2-column layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+            <!-- Tickets urgentes -->
+            <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div class="flex items-center justify-between p-4 border-b border-gray-100">
+                    <h3 class="font-bold text-gray-800 text-sm flex items-center gap-2">
+                        <i class="fas fa-fire text-red-500"></i> Tickets Prioritários
+                    </h3>
+                    <button onclick="showView('tickets')" class="text-xs text-cyan-600 hover:underline font-medium">Ver todos →</button>
+                </div>
+                <div id="urgent-tickets-list">
+                    <div class="p-8 text-center text-gray-400 text-sm">A carregar...</div>
+                </div>
+            </div>
+
+            <!-- Sidebar stats -->
+            <div class="flex flex-col gap-4">
+                <!-- Top categorias -->
+                <div class="bg-white rounded-2xl shadow-sm p-4">
+                    <h3 class="font-bold text-gray-800 text-sm mb-3 flex items-center gap-2">
+                        <i class="fas fa-chart-pie text-cyan-600"></i> Por Categoria
+                    </h3>
+                    <div id="categories-list" class="space-y-2">
+                        <div class="text-xs text-gray-400">A carregar...</div>
+                    </div>
+                </div>
+
+                <!-- Utilizadores -->
+                <div class="bg-white rounded-2xl shadow-sm p-4">
+                    <h3 class="font-bold text-gray-800 text-sm mb-3 flex items-center gap-2">
+                        <i class="fas fa-users text-cyan-600"></i> Utilizadores
+                    </h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="bg-gray-50 rounded-xl p-3 text-center">
+                            <p class="text-lg font-bold text-gray-800" id="stat-total-users">—</p>
+                            <p class="text-xs text-gray-500">Total</p>
+                        </div>
+                        <div class="bg-green-50 rounded-xl p-3 text-center">
+                            <p class="text-lg font-bold text-green-700" id="stat-active-today">—</p>
+                            <p class="text-xs text-gray-500">Activos hoje</p>
+                        </div>
+                        <div class="bg-blue-50 rounded-xl p-3 text-center col-span-2">
+                            <p class="text-lg font-bold text-blue-700" id="stat-new-week">—</p>
+                            <p class="text-xs text-gray-500">Novos esta semana</p>
+                        </div>
+                    </div>
+                    <button onclick="showView('users')" class="mt-3 w-full py-2 text-xs font-semibold text-cyan-600 bg-cyan-50 hover:bg-cyan-100 rounded-xl transition">
+                        Gerir utilizadores →
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ VIEW: TICKETS ═══════════════ -->
+    <div id="view-tickets" class="hidden">
+        <!-- Filtros -->
+        <div class="bg-white rounded-2xl shadow-sm p-4 mb-4 flex flex-wrap gap-3 items-center">
+            <div class="flex-1 min-w-[200px] relative">
+                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                <input id="ticket-search" type="text" placeholder="Pesquisar tickets…"
+                    class="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
+                    oninput="filterTickets()">
+            </div>
+            <select id="filter-status" onchange="filterTickets()" class="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-cyan-400 bg-white">
+                <option value="all">Todos os estados</option>
+                <option value="open">Aberto</option>
+                <option value="in_progress">Em progresso</option>
+                <option value="resolved">Resolvido</option>
+            </select>
+            <select id="filter-priority" onchange="filterTickets()" class="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-cyan-400 bg-white">
+                <option value="all">Todas as prioridades</option>
+                <option value="high">Alta</option>
+                <option value="medium">Média</option>
+                <option value="low">Baixa</option>
+            </select>
+            <select id="filter-category" onchange="filterTickets()" class="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-cyan-400 bg-white">
+                <option value="all">Todas as categorias</option>
+                <option value="player">Player</option>
+                <option value="account">Conta</option>
+                <option value="exercises">Exercícios</option>
+                <option value="library">Biblioteca</option>
+                <option value="technical">Técnico</option>
+                <option value="general">Geral</option>
+            </select>
+        </div>
+
+        <!-- Tab counts -->
+        <div class="flex gap-2 mb-4">
+            <button class="tab-btn active" onclick="setStatusFilter('all', this)">Todos <span id="count-all" class="ml-1 opacity-70"></span></button>
+            <button class="tab-btn" onclick="setStatusFilter('open', this)">Abertos <span id="count-open" class="ml-1 opacity-70"></span></button>
+            <button class="tab-btn" onclick="setStatusFilter('in_progress', this)">Em Progresso <span id="count-progress" class="ml-1 opacity-70"></span></button>
+            <button class="tab-btn" onclick="setStatusFilter('resolved', this)">Resolvidos <span id="count-resolved" class="ml-1 opacity-70"></span></button>
+        </div>
+
+        <!-- Tickets table -->
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div id="tickets-list">
+                <div class="p-8 text-center text-gray-400 text-sm">A carregar tickets…</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ VIEW: UTILIZADORES ═══════════════ -->
+    <div id="view-users" class="hidden">
+        <div class="bg-white rounded-2xl shadow-sm p-4 mb-4 flex flex-wrap gap-3 items-center">
+            <div class="flex-1 min-w-[200px] relative">
+                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                <input id="user-search" type="text" placeholder="Pesquisar utilizadores…"
+                    class="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
+                    oninput="loadUsers()">
+            </div>
+            <select id="filter-user-status" onchange="loadUsers()" class="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-cyan-400 bg-white">
+                <option value="all">Todos os estados</option>
+                <option value="active">Activo</option>
+                <option value="inactive">Inactivo</option>
+                <option value="blocked">Bloqueado</option>
+            </select>
+        </div>
+
+        <!-- User stats -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+            <div class="bg-white rounded-2xl p-4 shadow-sm text-center">
+                <p class="text-2xl font-bold text-gray-800" id="u-stat-total">—</p>
+                <p class="text-xs text-gray-500">Total</p>
+            </div>
+            <div class="bg-green-50 rounded-2xl p-4 shadow-sm text-center">
+                <p class="text-2xl font-bold text-green-700" id="u-stat-active">—</p>
+                <p class="text-xs text-gray-500">Activos</p>
+            </div>
+            <div class="bg-yellow-50 rounded-2xl p-4 shadow-sm text-center">
+                <p class="text-2xl font-bold text-yellow-700" id="u-stat-inactive">—</p>
+                <p class="text-xs text-gray-500">Inactivos</p>
+            </div>
+            <div class="bg-red-50 rounded-2xl p-4 shadow-sm text-center">
+                <p class="text-2xl font-bold text-red-700" id="u-stat-blocked">—</p>
+                <p class="text-xs text-gray-500">Bloqueados</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div id="users-list">
+                <div class="p-8 text-center text-gray-400 text-sm">A carregar…</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ VIEW: AVISOS ═══════════════ -->
+    <div id="view-announcements" class="hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Novo aviso -->
+            <div class="bg-white rounded-2xl shadow-sm p-5">
+                <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="fas fa-edit text-cyan-600"></i> Novo Aviso
+                </h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600 mb-1 block">Título</label>
+                        <input id="ann-title" type="text" placeholder="Ex: Manutenção programada"
+                            class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600 mb-1 block">Mensagem</label>
+                        <textarea id="ann-message" rows="4" placeholder="Mensagem para os utilizadores…"
+                            class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100 resize-none"></textarea>
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-600 mb-1 block">Destinatários</label>
+                        <select id="ann-audience" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-cyan-400 bg-white">
+                            <option value="all">Todos os utilizadores</option>
+                            <option value="students">Apenas estudantes</option>
+                            <option value="teachers">Apenas professores</option>
+                            <option value="mz">Moçambique</option>
+                            <option value="ao">Angola</option>
+                        </select>
+                    </div>
+                    <button onclick="sendAnnouncement()"
+                        class="w-full py-2.5 rounded-xl text-white font-semibold text-sm transition"
+                        style="background:linear-gradient(135deg,#0891b2,#0e7490)">
+                        <i class="fas fa-paper-plane mr-2"></i>Enviar Aviso
+                    </button>
+                </div>
+            </div>
+
+            <!-- Histórico de avisos -->
+            <div class="bg-white rounded-2xl shadow-sm p-5">
+                <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="fas fa-history text-cyan-600"></i> Avisos Anteriores
+                </h3>
+                <div id="announcements-list" class="space-y-3">
+                    <div class="text-xs text-gray-400 text-center py-4">A carregar…</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</main>
+</div>
+
+<!-- ── MODAL: TICKET DETALHE ────────────────────────────────────── -->
+<div class="modal-overlay" id="ticket-modal">
+    <div class="modal-box">
+        <div class="p-5 border-b border-gray-100 flex items-start justify-between gap-3">
+            <div class="min-w-0">
+                <div class="flex items-center gap-2 mb-1 flex-wrap">
+                    <span class="text-xs font-mono text-gray-400" id="modal-id">TKT-000</span>
+                    <span class="badge" id="modal-status-badge"></span>
+                    <span class="badge" id="modal-priority-badge"></span>
+                </div>
+                <h2 class="font-bold text-gray-800 text-base" id="modal-subject">—</h2>
+                <p class="text-xs text-gray-500 mt-1"><i class="fas fa-user mr-1"></i><span id="modal-user">—</span> · <span id="modal-time">—</span></p>
+            </div>
+            <button onclick="closeModal()" class="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 flex-shrink-0">
+                <i class="fas fa-times text-gray-500"></i>
+            </button>
+        </div>
+
+        <!-- Thread -->
+        <div class="p-5 space-y-3 max-h-64 overflow-y-auto" id="modal-thread"></div>
+
+        <!-- Acções -->
+        <div class="p-5 border-t border-gray-100 space-y-3">
+            <!-- Status rápido -->
+            <div class="flex gap-2 flex-wrap">
+                <button onclick="updateTicketStatus('in_progress')" class="px-3 py-1.5 text-xs font-semibold bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition">
+                    <i class="fas fa-spinner mr-1"></i>Em Progresso
+                </button>
+                <button onclick="updateTicketStatus('resolved')" class="px-3 py-1.5 text-xs font-semibold bg-green-100 text-green-700 rounded-xl hover:bg-green-200 transition">
+                    <i class="fas fa-check mr-1"></i>Resolver
+                </button>
+                <button onclick="updateTicketStatus('open')" class="px-3 py-1.5 text-xs font-semibold bg-yellow-100 text-yellow-700 rounded-xl hover:bg-yellow-200 transition">
+                    <i class="fas fa-redo mr-1"></i>Reabrir
+                </button>
+            </div>
+            <!-- Resposta -->
+            <div class="flex gap-2">
+                <textarea id="reply-text" rows="2" placeholder="Escrever resposta…"
+                    class="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100 resize-none"></textarea>
+                <button onclick="sendReply()" class="px-4 py-2 rounded-xl text-white text-sm font-semibold transition flex-shrink-0" style="background:#0891b2">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── MODAL: UTILIZADOR ACÇÕES ─────────────────────────────────── -->
+<div class="modal-overlay" id="user-modal">
+    <div class="modal-box max-w-md">
+        <div class="p-5 border-b border-gray-100 flex items-center justify-between">
+            <h2 class="font-bold text-gray-800">Acções do Utilizador</h2>
+            <button onclick="document.getElementById('user-modal').classList.remove('open')" class="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100">
+                <i class="fas fa-times text-gray-500"></i>
+            </button>
+        </div>
+        <div class="p-5 space-y-3" id="user-modal-body"></div>
+    </div>
+</div>
+
+<!-- ── TOAST ──────────────────────────────────────────────────────── -->
+<div id="toast" class="fixed bottom-6 right-6 z-[200] hidden">
+    <div class="bg-gray-900 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-sm font-medium">
+        <i id="toast-icon" class="fas fa-check-circle text-green-400"></i>
+        <span id="toast-msg">Acção realizada</span>
+    </div>
+</div>
+
+<script src="/static/app.js"></script>
+<script>
+// ── Auth guard ───────────────────────────────────────────────────
+if (!VClass.isAuthenticated()) { window.location.href = '/login.html'; }
+const _user = VClass.getCurrentUser();
+if (_user && _user.role !== 'support' && _user.role !== 'admin') {
+    window.location.href = '/dashboard.html';
+}
+
+// ── Populate sidebar user info ───────────────────────────────────
+if (_user) {
+    const initials = (_user.full_name || _user.name || 'ES').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    document.getElementById('sb-avatar').textContent = initials;
+    document.getElementById('sb-name').textContent  = _user.full_name || _user.name || 'Suporte';
+    document.getElementById('sb-email').textContent = _user.email || 'suporte@vclass.mz';
+}
+
+// ── State ─────────────────────────────────────────────────────────
+let _tickets = [];
+let _activeTicketId = null;
+let _activeUserId   = null;
+
+// ── View switcher ─────────────────────────────────────────────────
+const VIEWS = {
+    overview:      { el: 'view-overview',      title: 'Visão Geral',   sub: 'Resumo do Centro de Suporte' },
+    tickets:       { el: 'view-tickets',       title: 'Tickets',       sub: 'Gestão de pedidos de suporte' },
+    users:         { el: 'view-users',         title: 'Utilizadores',  sub: 'Gestão de utilizadores da plataforma' },
+    announcements: { el: 'view-announcements', title: 'Avisos',        sub: 'Comunicados para utilizadores' },
+}
+
+function showView(name) {
+    Object.keys(VIEWS).forEach(k => {
+        document.getElementById(VIEWS[k].el).classList.toggle('hidden', k !== name)
+    })
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'))
+    event?.currentTarget?.classList.add('active')
+    document.getElementById('view-title').textContent  = VIEWS[name]?.title || name
+    document.getElementById('view-subtitle').textContent = VIEWS[name]?.sub || ''
+
+    if (name === 'tickets')       loadTickets()
+    if (name === 'users')         loadUsers()
+    if (name === 'announcements') loadAnnouncements()
+    if (window.innerWidth < 768)  document.getElementById('sidebar').classList.remove('open')
+}
+
+// ── Toast ─────────────────────────────────────────────────────────
+function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast')
+    document.getElementById('toast-msg').textContent = msg
+    document.getElementById('toast-icon').className = type === 'error'
+        ? 'fas fa-times-circle text-red-400'
+        : 'fas fa-check-circle text-green-400'
+    t.classList.remove('hidden')
+    setTimeout(() => t.classList.add('hidden'), 3000)
+}
+
+// ── Logout ────────────────────────────────────────────────────────
+function logout() {
+    localStorage.removeItem('vclass_token'); localStorage.removeItem('vclass_user')
+    window.location.href = '/login.html'
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+function timeAgo(iso) {
+    const diff = Math.floor((Date.now() - new Date(iso)) / 1000)
+    if (diff < 60)   return `${diff}s atrás`
+    if (diff < 3600) return `${Math.floor(diff/60)}min atrás`
+    if (diff < 86400)return `${Math.floor(diff/3600)}h atrás`
+    return `${Math.floor(diff/86400)}d atrás`
+}
+
+const CATEGORY_LABELS = { player:'Player', account:'Conta', exercises:'Exercícios', library:'Biblioteca', technical:'Técnico', general:'Geral' }
+const CATEGORY_COLORS = { player:'bg-blue-100 text-blue-700', account:'bg-purple-100 text-purple-700', exercises:'bg-green-100 text-green-700', library:'bg-orange-100 text-orange-700', technical:'bg-gray-100 text-gray-700', general:'bg-pink-100 text-pink-700' }
+const PRIORITY_COLORS = { high:'badge-high', medium:'badge-medium', low:'badge-low' }
+const STATUS_COLORS   = { open:'badge-open', in_progress:'badge-progress', resolved:'badge-resolved' }
+const PRIORITY_LABELS = { high:'Alta', medium:'Média', low:'Baixa' }
+const STATUS_LABELS   = { open:'Aberto', in_progress:'Em Progresso', resolved:'Resolvido' }
+
+function avatarColor(name = '') {
+    const cols = ['#7c3aed','#2563eb','#059669','#d97706','#dc2626','#0891b2','#7c3aed']
+    let h = 0; for (let c of name) h = (h * 31 + c.charCodeAt(0)) % cols.length
+    return cols[h]
+}
+
+// ── API helper ───────────────────────────────────────────────────
+async function api(path, opts = {}) {
+    const token = localStorage.getItem('vclass_token')
+    const res = await fetch(path, {
+        ...opts,
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...(opts.headers || {}) }
+    })
+    return res.json()
+}
+
+// ── LOAD OVERVIEW ─────────────────────────────────────────────────
+async function loadOverview() {
+    const r = await api('/api/support/stats')
+    if (!r.success) return
+
+    const d = r.data
+    document.getElementById('stat-open').textContent         = d.tickets.open
+    document.getElementById('stat-open-badge').textContent   = d.tickets.open
+    document.getElementById('stat-progress').textContent     = d.tickets.in_progress
+    document.getElementById('stat-progress-badge').textContent = d.tickets.in_progress
+    document.getElementById('stat-urgent').textContent       = d.urgent
+    document.getElementById('stat-urgent-badge').textContent  = d.urgent
+    document.getElementById('stat-resolved').textContent     = d.tickets.resolved
+    document.getElementById('stat-resolved-badge').textContent = d.tickets.resolved
+    document.getElementById('stat-avg-response').textContent = d.avg_response_minutes
+    document.getElementById('stat-satisfaction').textContent = d.satisfaction_score
+    document.getElementById('stat-sla').textContent          = d.sla_breached
+    document.getElementById('stat-total-users').textContent  = d.total_users.toLocaleString('pt')
+    document.getElementById('stat-active-today').textContent = d.active_today.toLocaleString('pt')
+    document.getElementById('stat-new-week').textContent     = d.new_this_week
+
+    // Badge no sidebar
+    const badgeEl = document.getElementById('badge-open')
+    badgeEl.textContent = d.tickets.open
+    badgeEl.classList.toggle('hidden', d.tickets.open === 0)
+
+    // Categorias
+    const catColors = ['bg-blue-500','bg-purple-500','bg-green-500','bg-orange-500']
+    document.getElementById('categories-list').innerHTML = d.top_categories.map((c,i) => `
+        <div class="flex items-center gap-2">
+            <div class="sla-bar flex-1"><div class="sla-fill ${catColors[i%catColors.length] || 'bg-cyan-500'}" style="width:${Math.round(c.count/d.tickets.total*100)}%"></div></div>
+            <span class="text-xs text-gray-600 w-20 truncate">${CATEGORY_LABELS[c.category]||c.category}</span>
+            <span class="text-xs font-bold text-gray-800 w-4">${c.count}</span>
+        </div>`).join('')
+
+    // Urgent tickets
+    const ticketsR = await api('/api/support/tickets?status=open')
+    if (ticketsR.success) {
+        const urgent = ticketsR.data.tickets.filter(t => t.priority === 'high').slice(0, 4)
+        document.getElementById('urgent-tickets-list').innerHTML = urgent.length === 0
+            ? '<div class="p-6 text-center text-gray-400 text-sm">Nenhum ticket urgente 🎉</div>'
+            : urgent.map(t => ticketRowHTML(t)).join('')
+        _tickets = ticketsR.data.tickets
+    }
+}
+
+// ── TICKET ROW HTML ───────────────────────────────────────────────
+function ticketRowHTML(t) {
+    const slaClass = (t.sla_remaining_minutes !== null && t.sla_remaining_minutes < 60) ? 'urgent' : ''
+    return `
+    <div class="ticket-row ${slaClass}" onclick="openTicket('${t.id}')">
+        <div class="flex items-center gap-3">
+            <div class="avatar text-xs" style="background:${avatarColor(t.user_name)}">${t.user_avatar}</div>
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap mb-0.5">
+                    <span class="text-xs font-mono text-gray-400">${t.id}</span>
+                    <span class="badge ${STATUS_COLORS[t.status]}">${STATUS_LABELS[t.status]}</span>
+                    <span class="badge ${PRIORITY_COLORS[t.priority]}">${PRIORITY_LABELS[t.priority]}</span>
+                    <span class="badge ${CATEGORY_COLORS[t.category]||'bg-gray-100 text-gray-700'}">${CATEGORY_LABELS[t.category]||t.category}</span>
+                </div>
+                <p class="text-sm font-semibold text-gray-800 truncate">${t.subject}</p>
+                <p class="text-xs text-gray-500 flex items-center gap-2 mt-0.5">
+                    <span><i class="fas fa-user mr-1"></i>${t.user_name}</span>
+                    <span>·</span>
+                    <span>${timeAgo(t.created_at)}</span>
+                    ${t.sla_remaining_minutes !== null && t.sla_remaining_minutes < 60
+                        ? `<span class="text-red-600 font-semibold"><i class="fas fa-clock mr-1"></i>${t.sla_remaining_minutes}min para expirar SLA</span>`
+                        : ''}
+                </p>
+            </div>
+            <div class="text-right text-xs text-gray-400 flex-shrink-0">
+                <div>${t.responses} resp.</div>
+            </div>
+        </div>
+    </div>`
+}
+
+// ── LOAD TICKETS ─────────────────────────────────────────────────
+async function loadTickets(params = {}) {
+    const status   = document.getElementById('filter-status')?.value   || 'all'
+    const priority = document.getElementById('filter-priority')?.value || 'all'
+    const category = document.getElementById('filter-category')?.value || 'all'
+    const search   = document.getElementById('ticket-search')?.value   || ''
+
+    const q = new URLSearchParams({ status, priority, category, search })
+    const r = await api(`/api/support/tickets?${q}`)
+    if (!r.success) return
+
+    _tickets = r.data.tickets
+    const el = document.getElementById('tickets-list')
+    el.innerHTML = _tickets.length === 0
+        ? '<div class="p-8 text-center text-gray-400 text-sm">Nenhum ticket encontrado</div>'
+        : _tickets.map(t => ticketRowHTML(t)).join('')
+
+    // Update tab counts
+    document.getElementById('count-all').textContent      = `(${r.data.total})`
+    document.getElementById('count-open').textContent     = `(${r.data.stats.open})`
+    document.getElementById('count-progress').textContent = `(${r.data.stats.in_progress})`
+    document.getElementById('count-resolved').textContent = `(${r.data.stats.resolved})`
+}
+
+function filterTickets() { clearTimeout(window._ftt); window._ftt = setTimeout(loadTickets, 200) }
+function setStatusFilter(val, btn) {
+    document.getElementById('filter-status').value = val
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'))
+    btn.classList.add('active')
+    loadTickets()
+}
+
+// ── OPEN TICKET MODAL ─────────────────────────────────────────────
+async function openTicket(id) {
+    _activeTicketId = id
+    const r = await api(`/api/support/tickets/${id}`)
+    if (!r.success) return
+
+    const t = r.data
+    document.getElementById('modal-id').textContent = t.id
+    document.getElementById('modal-subject').textContent = t.subject
+    document.getElementById('modal-user').textContent = `${t.user_name} · ${t.user_email}`
+    document.getElementById('modal-time').textContent = timeAgo(t.created_at)
+    document.getElementById('modal-status-badge').className = `badge ${STATUS_COLORS[t.status]}`
+    document.getElementById('modal-status-badge').textContent = STATUS_LABELS[t.status]
+    document.getElementById('modal-priority-badge').className = `badge ${PRIORITY_COLORS[t.priority]}`
+    document.getElementById('modal-priority-badge').textContent = PRIORITY_LABELS[t.priority]
+
+    // Thread
+    document.getElementById('modal-thread').innerHTML = (t.thread || []).map(msg => {
+        const isSupport  = msg.author_role === 'support'
+        const isResolved = msg.is_resolution
+        const cls = isResolved ? 'msg-resolved' : isSupport ? 'msg-support' : 'msg-user'
+        return `
+        <div class="${isSupport ? 'pl-6' : ''}">
+            <div class="${cls} px-4 py-3">
+                <div class="flex items-center gap-2 mb-1">
+                    <div class="avatar" style="width:28px;height:28px;font-size:0.65rem;background:${isSupport?'#0891b2':avatarColor(msg.author)}">${msg.avatar}</div>
+                    <span class="text-xs font-semibold text-gray-700">${msg.author}</span>
+                    <span class="text-xs text-gray-400">${timeAgo(msg.created_at)}</span>
+                    ${isResolved ? '<span class="text-xs text-green-700 font-semibold">✅ Resolução</span>' : ''}
+                </div>
+                <p class="text-sm text-gray-700">${msg.message}</p>
+            </div>
+        </div>`
+    }).join('')
+
+    document.getElementById('reply-text').value = ''
+    document.getElementById('ticket-modal').classList.add('open')
+}
+
+function closeModal() { document.getElementById('ticket-modal').classList.remove('open') }
+
+async function updateTicketStatus(status) {
+    if (!_activeTicketId) return
+    const r = await api(`/api/support/tickets/${_activeTicketId}`, { method: 'PATCH', body: JSON.stringify({ status }) })
+    if (r.success) { showToast(`Ticket marcado como: ${STATUS_LABELS[status]}`); closeModal(); loadTickets(); loadOverview() }
+    else showToast('Erro ao actualizar ticket', 'error')
+}
+
+async function sendReply() {
+    const reply = document.getElementById('reply-text').value.trim()
+    if (!reply || !_activeTicketId) return
+    const r = await api(`/api/support/tickets/${_activeTicketId}`, { method: 'PATCH', body: JSON.stringify({ response: reply }) })
+    if (r.success) { showToast('Resposta enviada!'); document.getElementById('reply-text').value = ''; openTicket(_activeTicketId) }
+    else showToast('Erro ao enviar resposta', 'error')
+}
+
+// ── LOAD USERS ────────────────────────────────────────────────────
+async function loadUsers() {
+    const search = document.getElementById('user-search')?.value   || ''
+    const status = document.getElementById('filter-user-status')?.value || 'all'
+
+    const q = new URLSearchParams({ search, status })
+    const r = await api(`/api/support/users?${q}`)
+    if (!r.success) return
+
+    const { users, stats } = r.data
+    document.getElementById('u-stat-total').textContent    = stats.total.toLocaleString('pt')
+    document.getElementById('u-stat-active').textContent   = stats.active.toLocaleString('pt')
+    document.getElementById('u-stat-inactive').textContent = stats.inactive
+    document.getElementById('u-stat-blocked').textContent  = stats.blocked
+
+    const el = document.getElementById('users-list')
+    if (users.length === 0) { el.innerHTML = '<div class="p-8 text-center text-gray-400 text-sm">Nenhum utilizador encontrado</div>'; return }
+
+    const statusBadge = { active:'<span class="badge" style="background:#dcfce7;color:#166534">Activo</span>', inactive:'<span class="badge" style="background:#f3f4f6;color:#374151">Inactivo</span>', blocked:'<span class="badge" style="background:#fee2e2;color:#991b1b">Bloqueado</span>' }
+
+    el.innerHTML = `
+    <table class="w-full text-sm">
+        <thead class="border-b border-gray-100">
+            <tr class="text-xs text-gray-500 uppercase">
+                <th class="text-left px-4 py-3 font-semibold">Utilizador</th>
+                <th class="text-left px-4 py-3 font-semibold hidden md:table-cell">País / Classe</th>
+                <th class="text-left px-4 py-3 font-semibold hidden lg:table-cell">Último acesso</th>
+                <th class="text-left px-4 py-3 font-semibold">Estado</th>
+                <th class="text-right px-4 py-3 font-semibold">Acções</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${users.map(u => `
+            <tr class="border-b border-gray-50 hover:bg-gray-50 transition">
+                <td class="px-4 py-3">
+                    <div class="flex items-center gap-3">
+                        <div class="avatar text-xs" style="background:${avatarColor(u.name)}">${u.name.split(' ').map(w=>w[0]).join('').substring(0,2)}</div>
+                        <div class="min-w-0">
+                            <p class="font-semibold text-gray-800 truncate">${u.name}</p>
+                            <p class="text-xs text-gray-500 truncate">${u.email}</p>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-4 py-3 hidden md:table-cell">
+                    <span class="text-base">${u.flag||''}</span>
+                    <span class="text-xs text-gray-600 ml-1">${u.grade||'—'}</span>
+                </td>
+                <td class="px-4 py-3 text-xs text-gray-500 hidden lg:table-cell">${timeAgo(u.last_seen)}</td>
+                <td class="px-4 py-3">${statusBadge[u.status]||''}</td>
+                <td class="px-4 py-3 text-right">
+                    <button onclick="openUserActions('${u.id}','${u.name}','${u.email}','${u.status}')"
+                        class="px-3 py-1.5 text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition">
+                        <i class="fas fa-ellipsis-h"></i>
+                    </button>
+                </td>
+            </tr>`).join('')}
+        </tbody>
+    </table>`
+}
+
+function openUserActions(id, name, email, status) {
+    _activeUserId = id
+    document.getElementById('user-modal-body').innerHTML = `
+        <div class="flex items-center gap-3 mb-4 p-3 bg-gray-50 rounded-xl">
+            <div class="avatar text-sm" style="background:${avatarColor(name)}">${name.split(' ').map(w=>w[0]).join('').substring(0,2)}</div>
+            <div><p class="font-bold text-gray-800 text-sm">${name}</p><p class="text-xs text-gray-500">${email}</p></div>
+        </div>
+        <div class="space-y-2">
+            <button onclick="userAction('reset-password','${id}')" class="w-full text-left px-4 py-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium transition flex items-center gap-3">
+                <i class="fas fa-key w-5 text-center"></i> Resetar Senha Temporária
+            </button>
+            ${status !== 'blocked'
+                ? `<button onclick="userAction('block','${id}')" class="w-full text-left px-4 py-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 text-sm font-medium transition flex items-center gap-3">
+                    <i class="fas fa-ban w-5 text-center"></i> Bloquear Conta
+                   </button>`
+                : `<button onclick="userAction('unblock','${id}')" class="w-full text-left px-4 py-3 rounded-xl bg-green-50 hover:bg-green-100 text-green-700 text-sm font-medium transition flex items-center gap-3">
+                    <i class="fas fa-unlock w-5 text-center"></i> Desbloquear Conta
+                   </button>`}
+            <button onclick="sendEmail('${email}')" class="w-full text-left px-4 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 text-sm font-medium transition flex items-center gap-3">
+                <i class="fas fa-envelope w-5 text-center"></i> Enviar Email
+            </button>
+        </div>`
+    document.getElementById('user-modal').classList.add('open')
+}
+
+async function userAction(action, id) {
+    const r = await api(`/api/support/users/${id}/${action}`, { method: 'POST' })
+    document.getElementById('user-modal').classList.remove('open')
+    if (r.success) {
+        const msgs = { 'reset-password': `Senha temporária: ${r.data?.temp_password}`, 'block': 'Conta bloqueada', 'unblock': 'Conta desbloqueada' }
+        showToast(msgs[action] || 'Acção realizada')
+        loadUsers()
+    } else showToast('Erro na acção', 'error')
+}
+
+function sendEmail(email) {
+    window.open(`mailto:${email}`, '_blank')
+    document.getElementById('user-modal').classList.remove('open')
+}
+
+// ── LOAD ANNOUNCEMENTS ────────────────────────────────────────────
+async function loadAnnouncements() {
+    const r = await api('/api/support/announcements')
+    if (!r.success) return
+    const el = document.getElementById('announcements-list')
+    const AUDIENCE = { all:'Todos', students:'Estudantes', teachers:'Professores', mz:'Moçambique', ao:'Angola' }
+    el.innerHTML = r.data.announcements.map(a => `
+        <div class="p-3 border border-gray-100 rounded-xl">
+            <div class="flex items-start justify-between gap-2 mb-1">
+                <p class="font-semibold text-gray-800 text-sm">${a.title}</p>
+                <span class="badge bg-cyan-100 text-cyan-700 flex-shrink-0">${AUDIENCE[a.audience]||a.audience}</span>
+            </div>
+            <p class="text-xs text-gray-600 mb-2">${a.message}</p>
+            <p class="text-xs text-gray-400">${timeAgo(a.sent_at)} · por ${a.sent_by}</p>
+        </div>`).join('')
+}
+
+async function sendAnnouncement() {
+    const title   = document.getElementById('ann-title').value.trim()
+    const message = document.getElementById('ann-message').value.trim()
+    const audience= document.getElementById('ann-audience').value
+    if (!title || !message) { showToast('Preencha título e mensagem', 'error'); return }
+
+    const r = await api('/api/support/announcements', { method: 'POST', body: JSON.stringify({ title, message, audience }) })
+    if (r.success) {
+        showToast('Aviso enviado com sucesso!')
+        document.getElementById('ann-title').value = ''
+        document.getElementById('ann-message').value = ''
+        loadAnnouncements()
+    } else showToast('Erro ao enviar aviso', 'error')
+}
+
+// ── Close modals on overlay click ────────────────────────────────
+document.querySelectorAll('.modal-overlay').forEach(el => {
+    el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open') })
+})
+
+// ── Init ──────────────────────────────────────────────────────────
+loadOverview()
+</script>
+</body>
+</html>

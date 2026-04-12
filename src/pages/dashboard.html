@@ -305,6 +305,9 @@
             window.location.href = '/login.html';
         }
         const user = VClass.getCurrentUser();
+        // Redirecionar roles especiais para os seus painéis
+        if (user?.role === 'support') { window.location.href = '/support-dashboard.html'; }
+        if (user?.role === 'admin')   { window.location.href = '/admin-dashboard.html'; }
 
         // Dropdown
         function toggleDropdown() {
