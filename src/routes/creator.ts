@@ -625,4 +625,204 @@ creator.get('/video/:videoId/status', async (c) => {
   }
 })
 
+// ═════════════════════════════════════════════════════════════════════════════
+// GET /api/creator/earnings — Ganhos do professor
+// ═════════════════════════════════════════════════════════════════════════════
+creator.get('/earnings', async (c) => {
+  const user   = c.get('user') as any
+  const period = c.req.query('period') || '30d'   // 7d | 30d | 90d | 12m | all
+
+  // ── Modelo de ganhos ──────────────────────────────────────────────────────
+  // A plataforma usa um modelo de partilha de receita:
+  //   Professor recebe 40 % da receita líquida gerada pelas suas aulas
+  //   Cálculo: (nº alunos pagos × valor médio da subscrição × peso das aulas do prof.)
+  //   O peso é proporcional ao nº de aulas do prof. / total de aulas da plataforma.
+  //   Taxa de plataforma: 60 % (cobre infra, suporte, marketing, pagamentos)
+
+  const COMMISSION_RATE = 0.40   // 40 % para o professor
+  const PLATFORM_FEE    = 0.60   // 60 % para a plataforma
+
+  // Preço médio mensal por aluno pago (mix MZN/AOA/BRL, convertido para MZN)
+  const AVG_SUBSCRIPTION_MZN = 130
+
+  // Alunos pagos que consomem conteúdo deste professor
+  const PAID_STUDENTS_BASE = 312
+
+  // Dados por período
+  const PERIOD_DATA: Record<string, {
+    paid_students: number, avg_watch_min: number, completions: number,
+    total_gross_mzn: number, periods: { label: string, gross: number, commission: number, students: number }[]
+  }> = {
+    '7d': {
+      paid_students: 187, avg_watch_min: 11.4, completions: 608,
+      total_gross_mzn: 2431,
+      periods: [
+        { label: 'Seg', gross: 320, commission: 128, students: 22 },
+        { label: 'Ter', gross: 290, commission: 116, students: 20 },
+        { label: 'Qua', gross: 410, commission: 164, students: 31 },
+        { label: 'Qui', gross: 375, commission: 150, students: 27 },
+        { label: 'Sex', gross: 460, commission: 184, students: 34 },
+        { label: 'Sáb', gross: 318, commission: 127, students: 24 },
+        { label: 'Dom', gross: 258, commission: 103, students: 19 },
+      ]
+    },
+    '30d': {
+      paid_students: 312, avg_watch_min: 10.8, completions: 2340,
+      total_gross_mzn: 9750,
+      periods: Array.from({ length: 4 }, (_, w) => ({
+        label: `Sem ${w + 1}`,
+        gross: [2100, 2450, 2800, 2400][w],
+        commission: [840, 980, 1120, 960][w],
+        students: [71, 83, 94, 81][w]
+      }))
+    },
+    '90d': {
+      paid_students: 489, avg_watch_min: 10.2, completions: 6900,
+      total_gross_mzn: 28600,
+      periods: Array.from({ length: 3 }, (_, m) => ({
+        label: ['Mês 1', 'Mês 2', 'Mês 3'][m],
+        gross: [8900, 9750, 9950][m],
+        commission: [3560, 3900, 3980][m],
+        students: [276, 312, 342][m]
+      }))
+    },
+    '12m': {
+      paid_students: 847, avg_watch_min: 9.8, completions: 16200,
+      total_gross_mzn: 117000,
+      periods: [
+        { label:'Jan', gross:7200,  commission:2880,  students:231 },
+        { label:'Fev', gross:7800,  commission:3120,  students:248 },
+        { label:'Mar', gross:8400,  commission:3360,  students:267 },
+        { label:'Abr', gross:8900,  commission:3560,  students:276 },
+        { label:'Mai', gross:9200,  commission:3680,  students:287 },
+        { label:'Jun', gross:9750,  commission:3900,  students:312 },
+        { label:'Jul', gross:10100, commission:4040,  students:324 },
+        { label:'Ago', gross:10400, commission:4160,  students:338 },
+        { label:'Set', gross:10800, commission:4320,  students:350 },
+        { label:'Out', gross:11200, commission:4480,  students:362 },
+        { label:'Nov', gross:11750, commission:4700,  students:378 },
+        { label:'Dez', gross:11700, commission:4680,  students:375 },
+      ]
+    },
+    'all': {
+      paid_students: 847, avg_watch_min: 9.8, completions: 58000,
+      total_gross_mzn: 185400,
+      periods: [
+        { label:'2025 T1', gross:23400, commission:9360,  students:267 },
+        { label:'2025 T2', gross:27850, commission:11140, students:312 },
+        { label:'2025 T3', gross:30300, commission:12120, students:338 },
+        { label:'2025 T4', gross:33650, commission:13460, students:375 },
+        { label:'2026 T1', gross:35200, commission:14080, students:390 },
+      ]
+    }
+  }
+
+  const d = PERIOD_DATA[period] || PERIOD_DATA['30d']
+
+  const gross_mzn      = d.total_gross_mzn
+  const commission_mzn = Math.round(gross_mzn * COMMISSION_RATE)
+  const platform_mzn   = Math.round(gross_mzn * PLATFORM_FEE)
+
+  // Top lições por ganho
+  const TOP_LESSONS = [
+    { id:'l-01', title:'Leis de Newton — Aplicações Práticas', subject:'Física',    views:1284, completions:820, commission_mzn:1840, trend:'+12%', plan_split: { free:40, basic:35, premium:25 } },
+    { id:'l-02', title:'Cinemática: Movimento Uniforme',       subject:'Física',    views: 960, completions:672, commission_mzn:1520, trend: '+8%', plan_split: { free:45, basic:33, premium:22 } },
+    { id:'l-03', title:'Funções Quadráticas — Exemplos',       subject:'Matemática',views: 840, completions:588, commission_mzn:1210, trend: '+5%', plan_split: { free:50, basic:30, premium:20 } },
+    { id:'l-04', title:'Trigonometria — Seno e Coseno',        subject:'Matemática',views: 612, completions:428, commission_mzn: 880, trend: '+3%', plan_split: { free:48, basic:32, premium:20 } },
+    { id:'l-05', title:'Termodinâmica — 1ª Lei',               subject:'Física',    views: 540, completions:378, commission_mzn: 775, trend: '+2%', plan_split: { free:55, basic:28, premium:17 } },
+  ]
+
+  // Levantamentos / pagamentos realizados
+  const WITHDRAWALS = [
+    { id:'wth-001', date:'2026-03-01', amount_mzn:3900, method:'M-Pesa',     phone:'+258 82 987 6543', status:'pago',      ref:'WD-2026-03-001' },
+    { id:'wth-002', date:'2026-02-01', amount_mzn:3560, method:'M-Pesa',     phone:'+258 82 987 6543', status:'pago',      ref:'WD-2026-02-001' },
+    { id:'wth-003', date:'2026-01-01', amount_mzn:3680, method:'M-Pesa',     phone:'+258 82 987 6543', status:'pago',      ref:'WD-2026-01-001' },
+    { id:'wth-004', date:'2025-12-01', amount_mzn:4040, method:'Transferência',phone:'+258 82 987 6543',status:'pago',     ref:'WD-2025-12-001' },
+    { id:'wth-005', date:'2025-11-01', amount_mzn:4160, method:'M-Pesa',     phone:'+258 82 987 6543', status:'pago',      ref:'WD-2025-11-001' },
+  ]
+
+  // Saldo disponível para levantamento
+  const AVAILABLE_MZN = period === '30d' ? commission_mzn : 4680
+
+  return c.json({
+    success: true,
+    data: {
+      period,
+      teacher: { id: user.id, name: user.full_name, email: user.email },
+
+      // KPIs principais
+      kpi: {
+        commission_mzn,
+        gross_mzn,
+        platform_fee_mzn: platform_mzn,
+        commission_rate_pct: Math.round(COMMISSION_RATE * 100),
+        paid_students: d.paid_students,
+        completions: d.completions,
+        avg_watch_min: d.avg_watch_min,
+        available_mzn: AVAILABLE_MZN,
+        pending_mzn: Math.round(commission_mzn * 0.15),   // em processamento
+      },
+
+      // Série temporal para gráfico
+      chart: d.periods,
+
+      // Breakdown por plano dos alunos
+      plan_breakdown: {
+        free:    { pct: 48, students: Math.round(d.paid_students * 0.48), commission_share: 0 },
+        basic:   { pct: 33, students: Math.round(d.paid_students * 0.33), commission_share: 55 },
+        premium: { pct: 19, students: Math.round(d.paid_students * 0.19), commission_share: 45 },
+      },
+
+      // Lições que mais geraram ganhos
+      top_lessons: TOP_LESSONS,
+
+      // Levantamentos
+      withdrawals: WITHDRAWALS,
+
+      // Regras de comissão
+      commission_rules: {
+        teacher_pct: 40,
+        platform_pct: 60,
+        min_withdrawal_mzn: 500,
+        payment_cycle: 'Mensal (dia 1 de cada mês)',
+        payment_methods: ['M-Pesa', 'e-Mola', 'Transferência Bancária'],
+        tax_note: 'Os valores apresentados são brutos. Podem aplicar-se retenções fiscais conforme a legislação local.',
+      }
+    }
+  })
+})
+
+// ═════════════════════════════════════════════════════════════════════════════
+// POST /api/creator/earnings/withdraw — Solicitar levantamento
+// ═════════════════════════════════════════════════════════════════════════════
+creator.post('/earnings/withdraw', async (c) => {
+  const user = c.get('user') as any
+  const body = await c.req.json().catch(() => ({})) as any
+
+  const { amount_mzn, method, phone } = body
+
+  if (!amount_mzn || amount_mzn < 500) {
+    return c.json({ success: false, message: 'Valor mínimo de levantamento: MT 500' }, 400)
+  }
+  if (!method || !['mpesa', 'emola', 'transferencia'].includes(method)) {
+    return c.json({ success: false, message: 'Método de pagamento inválido.' }, 400)
+  }
+
+  const ref = `WD-${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${Date.now().toString(36).toUpperCase().slice(-4)}`
+
+  return c.json({
+    success: true,
+    message: `Pedido de levantamento de MT ${amount_mzn.toLocaleString()} enviado com sucesso.`,
+    data: {
+      reference: ref,
+      amount_mzn,
+      method,
+      phone: phone || user.phone || '—',
+      status: 'em_processamento',
+      eta: 'Processado até 3 dias úteis',
+      requested_at: new Date().toISOString(),
+    }
+  })
+})
+
 export default creator

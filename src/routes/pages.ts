@@ -34,6 +34,7 @@ import moderatorDashboardHtml from '../pages/moderator-dashboard.html?raw'
 import registerTeacherHtml from '../pages/register-teacher.html?raw'
 import teacherVerificationHtml from '../pages/teacher-verification.html?raw'
 import plansHtml from '../pages/plans.html?raw'
+import creatorEarningsHtml from '../pages/creator-earnings.html?raw'
 
 // Serve HTML pages
 app.get('/', (c) => c.html(homeHtml))
@@ -81,5 +82,8 @@ app.get('/teacher-verification.html',(c) => c.html(teacherVerificationHtml))
 
 // Plans & Pricing
 app.get('/plans.html', (c) => c.html(plansHtml))
+
+// Creator Earnings
+app.get('/creator-earnings.html', (c) => c.html(creatorEarningsHtml))
 
 export default app

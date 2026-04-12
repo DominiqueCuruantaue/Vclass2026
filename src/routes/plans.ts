@@ -8,6 +8,15 @@ const plans = new Hono()
 
 // ── Dados dos planos ──────────────────────────────────────────────────────────
 
+// ── Notas sobre preços ────────────────────────────────────────────────────────
+// Plataforma focada em países em desenvolvimento (Moçambique, Angola, África).
+// Preços calibrados em relação ao PIB per capita e salário mínimo local:
+//   MZN: salário mínimo ~5.400 MT/mês → Básico ≈ 1,7 % do salário mínimo
+//   AOA: salário mínimo ~70.000 Kz/mês → Básico ≈ 1,4 % do salário mínimo
+//   BRL: salário mínimo ~1.412 R$/mês  → Básico ≈ 1,6 % do salário mínimo
+//   EUR: referência europeia mantida acessível para diásporas
+// Desconto anual de 30 % (vs. 25 % anterior) para incentivar compromisso longo.
+
 export const PLANS_DATA = [
   {
     id: 'free',
@@ -21,10 +30,10 @@ export const PLANS_DATA = [
     popular: false,
     active_users: 8320,
     features: [
-      { text: '5 aulas por mês', included: true },
+      { text: '10 aulas por mês', included: true },
       { text: 'Exercícios básicos', included: true },
-      { text: 'Biblioteca limitada (20 recursos)', included: true },
-      { text: 'Chat de suporte', included: true },
+      { text: 'Biblioteca limitada (30 recursos)', included: true },
+      { text: 'Chat de suporte comunitário', included: true },
       { text: 'Descarregar PDFs', included: false },
       { text: 'Chat com IA', included: false },
       { text: 'Aulas ilimitadas', included: false },
@@ -32,7 +41,7 @@ export const PLANS_DATA = [
       { text: 'Certificados de conclusão', included: false },
       { text: 'Suporte prioritário', included: false },
     ],
-    limits: { lessons_per_month: 5, exercises: 'básicos', downloads: false, ai_chat: false, library: 20 },
+    limits: { lessons_per_month: 10, exercises: 'básicos', downloads: false, ai_chat: false, library: 30 },
     cta: 'Começar Grátis',
     cta_style: 'outline',
   },
@@ -40,37 +49,39 @@ export const PLANS_DATA = [
     id: 'basic',
     name: 'Básico',
     tagline: 'Para estudantes dedicados',
-    price_monthly: { mzn: 299, aoa: 2500, brl: 29.9, eur: 4.99 },
-    price_yearly:  { mzn: 2690, aoa: 22500, brl: 269, eur: 44.9 },
-    yearly_saving_pct: 25,
+    // ~1,7 % do salário mínimo moçambicano
+    price_monthly: { mzn: 99, aoa: 800, brl: 9.9, eur: 1.99 },
+    price_yearly:  { mzn: 830, aoa: 6720, brl: 83, eur: 16.7 },
+    yearly_saving_pct: 30,
     color: '#2563eb',
     color_bg: '#eff6ff',
     icon: 'fa-book-open',
     popular: false,
     active_users: 2140,
     features: [
-      { text: '50 aulas por mês', included: true },
+      { text: 'Aulas ilimitadas', included: true },
       { text: 'Todos os exercícios', included: true },
       { text: 'Biblioteca completa', included: true },
-      { text: 'Chat de suporte', included: true },
+      { text: 'Chat de suporte prioritário', included: true },
       { text: 'Descarregar PDFs', included: true },
-      { text: 'Chat com IA (20 msg/dia)', included: true },
-      { text: 'Aulas ilimitadas', included: false },
+      { text: 'Chat com IA (30 msg/dia)', included: true },
+      { text: 'Modo offline (app móvel)', included: false },
       { text: 'Acesso antecipado a novos conteúdos', included: false },
       { text: 'Certificados de conclusão', included: false },
-      { text: 'Suporte prioritário', included: false },
+      { text: 'Sessões ao vivo com professores', included: false },
     ],
-    limits: { lessons_per_month: 50, exercises: 'todos', downloads: true, ai_chat: '20/dia', library: 'completo' },
+    limits: { lessons_per_month: 'ilimitadas', exercises: 'todos', downloads: true, ai_chat: '30/dia', library: 'completo' },
     cta: 'Subscrever Básico',
     cta_style: 'primary',
   },
   {
     id: 'premium',
     name: 'Premium',
-    tagline: 'A melhor experiência educativa',
-    price_monthly: { mzn: 599, aoa: 4900, brl: 59.9, eur: 9.99 },
-    price_yearly:  { mzn: 5390, aoa: 44100, brl: 539, eur: 89.9 },
-    yearly_saving_pct: 25,
+    tagline: 'A experiência completa',
+    // ~3,5 % do salário mínimo moçambicano
+    price_monthly: { mzn: 199, aoa: 1600, brl: 19.9, eur: 3.49 },
+    price_yearly:  { mzn: 1670, aoa: 13440, brl: 167, eur: 29.3 },
+    yearly_saving_pct: 30,
     color: '#7c3aed',
     color_bg: '#f5f3ff',
     icon: 'fa-crown',
@@ -80,15 +91,15 @@ export const PLANS_DATA = [
       { text: 'Aulas ilimitadas', included: true },
       { text: 'Exercícios ilimitados', included: true },
       { text: 'Biblioteca completa + exclusivos', included: true },
-      { text: 'Chat de suporte', included: true },
+      { text: 'Chat de suporte prioritário', included: true },
       { text: 'Descarregar PDFs ilimitados', included: true },
       { text: 'Chat com IA ilimitado', included: true },
-      { text: 'Aulas ilimitadas', included: true },
+      { text: 'Modo offline (app móvel)', included: true },
       { text: 'Acesso antecipado a novos conteúdos', included: true },
       { text: 'Certificados de conclusão', included: true },
-      { text: 'Suporte prioritário', included: true },
+      { text: 'Sessões ao vivo com professores', included: true },
     ],
-    limits: { lessons_per_month: 'ilimitado', exercises: 'ilimitado', downloads: 'ilimitado', ai_chat: 'ilimitado', library: 'completo+exclusivo' },
+    limits: { lessons_per_month: 'ilimitadas', exercises: 'ilimitado', downloads: 'ilimitado', ai_chat: 'ilimitado', library: 'completo+exclusivo' },
     cta: 'Subscrever Premium',
     cta_style: 'premium',
   }

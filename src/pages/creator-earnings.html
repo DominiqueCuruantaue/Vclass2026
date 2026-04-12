@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ganhos — VClass Criador</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family:'Inter',system-ui,sans-serif; background:#f8fafc; }
+    .creator-nav-link { transition:all .15s; border-radius:.5rem; }
+    .creator-nav-link:hover { background:rgba(139,92,246,.08); color:#7c3aed; }
+    .creator-nav-link.active { background:#f5f3ff; color:#7c3aed; font-weight:600; }
+    .stat-card { transition:transform .2s,box-shadow .2s; }
+    .stat-card:hover { transform:translateY(-3px); box-shadow:0 12px 28px rgba(0,0,0,.09); }
+    .fade-in { animation:fadeIn .4s ease both; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+    .period-btn { transition:all .15s; }
+    .period-btn.active { background:#7c3aed; color:#fff; box-shadow:0 4px 12px rgba(124,58,237,.3); }
+    .lesson-row:hover { background:#faf5ff; }
+    .progress-bar { transition:width 1s ease; }
+    .withdrawal-row:hover { background:#f0fdf4; }
+    .donut-center { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; }
+    .tab-btn { transition:all .15s; }
+    .tab-btn.active { background:#7c3aed; color:#fff; }
+    .modal-bg { background:rgba(0,0,0,.5); backdrop-filter:blur(4px); }
+    .info-tooltip { position:relative; }
+    .info-tooltip:hover .tooltip-text { display:block; }
+    .tooltip-text { display:none; position:absolute; bottom:125%; left:50%; transform:translateX(-50%);
+      background:#1f2937; color:#fff; font-size:.7rem; padding:.35rem .6rem; border-radius:.4rem;
+      white-space:nowrap; z-index:99; }
+    .stripe-rule { background:repeating-linear-gradient(45deg,#f3f4f6,#f3f4f6 6px,#fff 6px,#fff 12px); }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════ NAV ═══════ -->
+<nav class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex items-center justify-between h-16 gap-2">
+
+      <div class="flex items-center gap-3 flex-shrink-0">
+        <a href="/creator-dashboard.html" class="flex items-center gap-2">
+          <div class="w-8 h-8 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center shadow">
+            <i class="fas fa-graduation-cap text-white text-sm"></i>
+          </div>
+          <span class="text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent hidden sm:block">VClass</span>
+        </a>
+        <span class="inline-flex items-center gap-1 bg-amber-100 text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full">
+          <i class="fas fa-pen-nib text-xs"></i>
+          <span class="hidden sm:inline">Criador</span>
+        </span>
+      </div>
+
+      <!-- Desktop Nav -->
+      <div class="hidden md:flex items-center gap-0.5 flex-1 justify-center max-w-xl">
+        <a href="/creator-dashboard.html" class="creator-nav-link flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600">
+          <i class="fas fa-th-large text-xs"></i> Visão Geral
+        </a>
+        <a href="/creator-content.html" class="creator-nav-link flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600">
+          <i class="fas fa-layer-group text-xs"></i> Conteúdos
+        </a>
+        <a href="/creator-students.html" class="creator-nav-link flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600">
+          <i class="fas fa-users text-xs"></i> Alunos
+        </a>
+        <a href="/creator-analytics.html" class="creator-nav-link flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600">
+          <i class="fas fa-chart-bar text-xs"></i> Analytics
+        </a>
+        <a href="/creator-earnings.html" class="creator-nav-link active flex items-center gap-1.5 px-3 py-2 text-sm">
+          <i class="fas fa-coins text-xs"></i> Ganhos
+        </a>
+      </div>
+
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <a href="/creator-lesson-editor.html?new=true" class="hidden sm:inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700 transition shadow-sm">
+          <i class="fas fa-plus text-xs"></i> Nova Lição
+        </a>
+        <a href="/dashboard.html" title="Modo Estudante" class="hidden md:flex items-center justify-center w-9 h-9 rounded-xl border border-gray-200 text-gray-500 hover:bg-purple-50 hover:text-purple-600 transition text-sm">
+          <i class="fas fa-user-graduate"></i>
+        </a>
+        <div class="relative" id="nav-user-wrapper">
+          <button onclick="document.getElementById('nav-dropdown').classList.toggle('hidden')" class="flex items-center gap-2 p-1.5 rounded-xl hover:bg-gray-100 transition">
+            <div id="nav-avatar" class="w-8 h-8 rounded-xl flex items-center justify-center text-white text-sm font-bold bg-amber-500">?</div>
+            <span id="nav-user-name" class="hidden md:block text-sm font-medium text-gray-700 max-w-[100px] truncate"></span>
+            <i class="fas fa-chevron-down text-xs text-gray-400 hidden md:block"></i>
+          </button>
+          <div id="nav-dropdown" class="hidden absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50 py-1">
+            <a href="/profile.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"><i class="fas fa-user w-4 text-gray-400"></i>Perfil</a>
+            <a href="/creator-earnings.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-purple-700 font-semibold bg-purple-50"><i class="fas fa-coins w-4 text-purple-500"></i>Ganhos</a>
+            <hr class="my-1 border-gray-100">
+            <button onclick="doLogout()" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50"><i class="fas fa-sign-out-alt w-4"></i>Sair</button>
+          </div>
+        </div>
+        <!-- Mobile hamburger -->
+        <button onclick="document.getElementById('mobile-nav').classList.toggle('hidden')" class="md:hidden p-2 rounded-xl border border-gray-200 text-gray-600">
+          <i class="fas fa-bars text-sm"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="mobile-nav" class="hidden md:hidden bg-white border-t border-gray-100 px-4 py-2 space-y-1">
+    <a href="/creator-dashboard.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50"><i class="fas fa-th-large w-4 text-center text-gray-400"></i> Visão Geral</a>
+    <a href="/creator-content.html"   class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50"><i class="fas fa-layer-group w-4 text-center text-gray-400"></i> Conteúdos</a>
+    <a href="/creator-students.html"  class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50"><i class="fas fa-users w-4 text-center text-gray-400"></i> Alunos</a>
+    <a href="/creator-analytics.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50"><i class="fas fa-chart-bar w-4 text-center text-gray-400"></i> Analytics</a>
+    <a href="/creator-earnings.html"  class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-purple-700 bg-purple-50"><i class="fas fa-coins w-4 text-center text-purple-500"></i> Ganhos</a>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════ MAIN ═════════════════════ -->
+<main class="max-w-7xl mx-auto px-4 py-8">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 fade-in">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+        <i class="fas fa-coins text-yellow-500"></i> Meus Ganhos
+      </h1>
+      <p class="text-gray-500 text-sm mt-1">Acompanhe a sua receita, comissões e pedidos de levantamento.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <!-- Saldo disponível destaque -->
+      <div class="bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl px-5 py-3 text-right shadow-lg">
+        <p class="text-xs text-green-100 font-medium">Disponível para levantamento</p>
+        <p class="text-2xl font-extrabold" id="available-balance">MT —</p>
+      </div>
+      <button onclick="openWithdrawModal()" class="flex items-center gap-2 bg-white border-2 border-green-500 text-green-700 font-bold px-5 py-3 rounded-2xl hover:bg-green-50 transition text-sm shadow-sm">
+        <i class="fas fa-arrow-up"></i> Levantar
+      </button>
+    </div>
+  </div>
+
+  <!-- Period selector -->
+  <div class="flex items-center gap-2 mb-6 overflow-x-auto pb-1 fade-in">
+    <span class="text-xs font-medium text-gray-500 flex-shrink-0">Período:</span>
+    <div class="flex gap-1.5 flex-shrink-0">
+      <button onclick="setPeriod('7d')"  class="period-btn px-4 py-1.5 rounded-full text-xs font-semibold border border-gray-200 text-gray-600" id="p-7d">7 dias</button>
+      <button onclick="setPeriod('30d')" class="period-btn active px-4 py-1.5 rounded-full text-xs font-semibold border border-purple-500" id="p-30d">30 dias</button>
+      <button onclick="setPeriod('90d')" class="period-btn px-4 py-1.5 rounded-full text-xs font-semibold border border-gray-200 text-gray-600" id="p-90d">90 dias</button>
+      <button onclick="setPeriod('12m')" class="period-btn px-4 py-1.5 rounded-full text-xs font-semibold border border-gray-200 text-gray-600" id="p-12m">12 meses</button>
+      <button onclick="setPeriod('all')" class="period-btn px-4 py-1.5 rounded-full text-xs font-semibold border border-gray-200 text-gray-600" id="p-all">Tudo</button>
+    </div>
+  </div>
+
+  <!-- ── KPI Cards ──────────────────────────────────────────────────────────── -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 fade-in">
+
+    <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+      <div class="flex items-start justify-between mb-3">
+        <div class="w-11 h-11 bg-green-100 rounded-xl flex items-center justify-center">
+          <i class="fas fa-money-bill-wave text-green-600 text-lg"></i>
+        </div>
+        <div class="info-tooltip">
+          <i class="fas fa-info-circle text-gray-300 text-xs cursor-pointer"></i>
+          <span class="tooltip-text">40 % da receita gerada pelas suas aulas</span>
+        </div>
+      </div>
+      <p class="text-xs text-gray-500 font-medium mb-1">Comissão (40 %)</p>
+      <p class="text-2xl font-extrabold text-gray-900" id="kpi-commission">MT —</p>
+      <p class="text-xs text-green-600 font-medium mt-1" id="kpi-commission-sub">no período</p>
+    </div>
+
+    <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+      <div class="flex items-start justify-between mb-3">
+        <div class="w-11 h-11 bg-purple-100 rounded-xl flex items-center justify-center">
+          <i class="fas fa-users text-purple-600 text-lg"></i>
+        </div>
+        <div class="info-tooltip">
+          <i class="fas fa-info-circle text-gray-300 text-xs cursor-pointer"></i>
+          <span class="tooltip-text">Alunos com subscrição paga que assistiram às suas aulas</span>
+        </div>
+      </div>
+      <p class="text-xs text-gray-500 font-medium mb-1">Alunos Pagos</p>
+      <p class="text-2xl font-extrabold text-gray-900" id="kpi-students">—</p>
+      <p class="text-xs text-purple-600 font-medium mt-1">activos no período</p>
+    </div>
+
+    <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+      <div class="flex items-start justify-between mb-3">
+        <div class="w-11 h-11 bg-blue-100 rounded-xl flex items-center justify-center">
+          <i class="fas fa-check-circle text-blue-600 text-lg"></i>
+        </div>
+      </div>
+      <p class="text-xs text-gray-500 font-medium mb-1">Conclusões de Aulas</p>
+      <p class="text-2xl font-extrabold text-gray-900" id="kpi-completions">—</p>
+      <p class="text-xs text-blue-600 font-medium mt-1" id="kpi-watch-avg">— min média</p>
+    </div>
+
+    <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+      <div class="flex items-start justify-between mb-3">
+        <div class="w-11 h-11 bg-amber-100 rounded-xl flex items-center justify-center">
+          <i class="fas fa-clock text-amber-600 text-lg"></i>
+        </div>
+        <div class="info-tooltip">
+          <i class="fas fa-info-circle text-gray-300 text-xs cursor-pointer"></i>
+          <span class="tooltip-text">Em processamento — será adicionado ao saldo disponível em até 3 dias úteis</span>
+        </div>
+      </div>
+      <p class="text-xs text-gray-500 font-medium mb-1">Em Processamento</p>
+      <p class="text-2xl font-extrabold text-gray-900" id="kpi-pending">MT —</p>
+      <p class="text-xs text-amber-600 font-medium mt-1">↑ até 3 dias úteis</p>
+    </div>
+  </div>
+
+  <!-- ── Gráfico de receita + Breakdown por plano ────────────────────────── -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+
+    <!-- Gráfico de barras -->
+    <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 fade-in">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <h2 class="text-base font-bold text-gray-900">Evolução dos Ganhos</h2>
+          <p class="text-xs text-gray-400 mt-0.5">Comissão recebida por período</p>
+        </div>
+        <div class="flex gap-1.5 bg-gray-100 rounded-xl p-1">
+          <button onclick="setChartType('bar')" id="ct-bar" class="tab-btn active text-xs px-3 py-1.5 rounded-lg font-medium">Barras</button>
+          <button onclick="setChartType('line')" id="ct-line" class="tab-btn text-xs px-3 py-1.5 rounded-lg font-medium text-gray-600">Linha</button>
+        </div>
+      </div>
+      <div class="relative" style="height:220px">
+        <canvas id="earningsChart"></canvas>
+      </div>
+      <!-- Gross vs commission legend -->
+      <div class="flex items-center gap-6 mt-4 pt-4 border-t border-gray-100">
+        <div class="flex items-center gap-2 text-xs text-gray-600">
+          <span class="w-3 h-3 rounded-sm bg-purple-200 inline-block"></span>Receita bruta gerada
+        </div>
+        <div class="flex items-center gap-2 text-xs text-gray-600">
+          <span class="w-3 h-3 rounded-sm bg-green-500 inline-block"></span>A sua comissão (40 %)
+        </div>
+      </div>
+    </div>
+
+    <!-- Donut: breakdown por plano -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 fade-in">
+      <h2 class="text-base font-bold text-gray-900 mb-1">Alunos por Plano</h2>
+      <p class="text-xs text-gray-400 mb-5">Distribuição dos alunos pagos</p>
+      <div class="relative" style="height:170px">
+        <canvas id="planDonut"></canvas>
+        <div class="donut-center pointer-events-none">
+          <p class="text-xl font-extrabold text-gray-900" id="donut-total">—</p>
+          <p class="text-xs text-gray-400">alunos</p>
+        </div>
+      </div>
+      <div id="plan-breakdown-legend" class="space-y-2 mt-5">
+        <!-- filled by JS -->
+      </div>
+      <!-- Nota sobre alunos gratuitos -->
+      <div class="mt-4 p-3 bg-gray-50 rounded-xl text-xs text-gray-500">
+        <i class="fas fa-info-circle text-blue-400 mr-1"></i>
+        Alunos do plano Gratuito <strong>não geram</strong> comissão directa. Cada conversão para plano pago aumenta os seus ganhos.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modelo de comissão (como funciona) ─────────────────────────────────── -->
+  <div class="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl border border-purple-200 p-6 mb-8 fade-in">
+    <div class="flex items-start gap-4">
+      <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+        <i class="fas fa-calculator text-purple-600 text-xl"></i>
+      </div>
+      <div class="flex-1">
+        <h3 class="font-bold text-gray-900 mb-1">Como são calculados os seus ganhos?</h3>
+        <p class="text-sm text-gray-600 mb-4">A VClass usa um modelo de partilha de receita transparente e justo.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="bg-white rounded-xl p-4 text-center shadow-sm">
+            <div class="text-3xl font-extrabold text-purple-600 mb-1">40 %</div>
+            <p class="text-xs font-semibold text-gray-700">Para o Professor</p>
+            <p class="text-xs text-gray-400 mt-1">Sobre receita líquida das suas aulas</p>
+          </div>
+          <div class="bg-white rounded-xl p-4 text-center shadow-sm stripe-rule">
+            <div class="text-3xl font-extrabold text-gray-400 mb-1">60 %</div>
+            <p class="text-xs font-semibold text-gray-500">Plataforma VClass</p>
+            <p class="text-xs text-gray-400 mt-1">Infra, suporte, marketing, pagamentos</p>
+          </div>
+          <div class="bg-white rounded-xl p-4 shadow-sm border-l-4 border-green-400">
+            <p class="text-xs font-semibold text-gray-700 mb-2">Ciclo de pagamento</p>
+            <p class="text-xs text-gray-600"><i class="fas fa-calendar-check text-green-500 mr-1"></i>Dia 1 de cada mês</p>
+            <p class="text-xs text-gray-600 mt-1"><i class="fas fa-mobile-alt text-green-500 mr-1"></i>M-Pesa · e-Mola · TRF Bancária</p>
+            <p class="text-xs text-gray-600 mt-1"><i class="fas fa-exclamation-circle text-amber-500 mr-1"></i>Mínimo MT 500</p>
+          </div>
+        </div>
+        <p class="text-xs text-gray-400 mt-3 flex items-start gap-1">
+          <i class="fas fa-shield-alt text-gray-400 mt-0.5"></i>
+          Os valores apresentados são brutos. Podem aplicar-se retenções fiscais conforme a legislação moçambicana ou do país de residência.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tabelas: Top Lições + Levantamentos ─────────────────────────────── -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+    <!-- Top lições por comissão -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden fade-in">
+      <div class="p-5 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="font-bold text-gray-900 text-base flex items-center gap-2">
+          <i class="fas fa-trophy text-amber-500"></i> Top Lições por Ganho
+        </h2>
+        <a href="/creator-analytics.html" class="text-xs text-purple-600 hover:underline font-medium">Ver analytics →</a>
+      </div>
+      <div id="top-lessons-list" class="divide-y divide-gray-100">
+        <div class="p-5 text-center text-gray-400 text-sm py-8">
+          <i class="fas fa-spinner fa-spin text-2xl mb-2 block"></i>A carregar…
+        </div>
+      </div>
+    </div>
+
+    <!-- Histórico de levantamentos -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden fade-in">
+      <div class="p-5 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="font-bold text-gray-900 text-base flex items-center gap-2">
+          <i class="fas fa-receipt text-blue-500"></i> Histórico de Levantamentos
+        </h2>
+        <button onclick="openWithdrawModal()" class="text-xs bg-green-500 text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-green-600 transition flex items-center gap-1">
+          <i class="fas fa-plus text-xs"></i> Novo
+        </button>
+      </div>
+      <div id="withdrawals-list" class="divide-y divide-gray-100">
+        <div class="p-5 text-center text-gray-400 text-sm py-8">
+          <i class="fas fa-spinner fa-spin text-2xl mb-2 block"></i>A carregar…
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Dicas para aumentar ganhos ─────────────────────────────────────────── -->
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 fade-in mb-8">
+    <h2 class="font-bold text-gray-900 text-base mb-4 flex items-center gap-2">
+      <i class="fas fa-lightbulb text-yellow-500"></i> Como aumentar os seus ganhos
+    </h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="p-4 bg-purple-50 rounded-xl border border-purple-100">
+        <i class="fas fa-video text-purple-600 text-xl mb-3"></i>
+        <p class="font-semibold text-gray-800 text-sm mb-1">Mais aulas = mais ganhos</p>
+        <p class="text-xs text-gray-500">Professores com 50+ aulas ganham em média <strong>3× mais</strong>. Publique pelo menos 2 aulas por semana.</p>
+      </div>
+      <div class="p-4 bg-blue-50 rounded-xl border border-blue-100">
+        <i class="fas fa-pencil-alt text-blue-600 text-xl mb-3"></i>
+        <p class="font-semibold text-gray-800 text-sm mb-1">Exercícios aumentam conclusões</p>
+        <p class="text-xs text-gray-500">Aulas com exercícios têm <strong>3.2× mais conclusões</strong>, o que aumenta a comissão directa.</p>
+      </div>
+      <div class="p-4 bg-green-50 rounded-xl border border-green-100">
+        <i class="fas fa-star text-green-600 text-xl mb-3"></i>
+        <p class="font-semibold text-gray-800 text-sm mb-1">Qualidade recompensada</p>
+        <p class="text-xs text-gray-500">Lições com avaliação ≥ 4.5★ recebem <strong>destaque extra</strong> na plataforma, atraindo mais alunos.</p>
+      </div>
+      <div class="p-4 bg-amber-50 rounded-xl border border-amber-100">
+        <i class="fas fa-share-alt text-amber-600 text-xl mb-3"></i>
+        <p class="font-semibold text-gray-800 text-sm mb-1">Partilhe o seu perfil</p>
+        <p class="text-xs text-gray-500">Partilhe o link do seu perfil VClass nas redes sociais para atrair alunos directamente.</p>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ═════════════════════════════════════════ MODAL LEVANTAMENTO ════════════ -->
+<div id="withdraw-modal" class="fixed inset-0 z-50 hidden">
+  <div class="modal-bg absolute inset-0" onclick="closeWithdrawModal()"></div>
+  <div class="relative flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md relative z-10 overflow-hidden">
+
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-white">
+        <button onclick="closeWithdrawModal()" class="absolute top-4 right-4 text-white/70 hover:text-white">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+        <i class="fas fa-arrow-circle-up text-3xl mb-2"></i>
+        <h3 class="text-xl font-bold">Solicitar Levantamento</h3>
+        <p class="text-green-100 text-sm mt-1">Saldo disponível: <strong id="modal-available">MT —</strong></p>
+      </div>
+
+      <div class="p-6 space-y-5" id="withdraw-step-form">
+
+        <!-- Valor -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+            Valor a levantar (MT)
+          </label>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-sm">MT</span>
+            <input type="number" id="withdraw-amount" min="500" placeholder="500"
+              class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-green-400 focus:border-transparent transition">
+          </div>
+          <p class="text-xs text-gray-400 mt-1">Mínimo: MT 500</p>
+          <!-- Quick amounts -->
+          <div class="flex gap-2 mt-2">
+            <button onclick="setAmount(500)"  class="flex-1 py-1.5 text-xs border border-gray-200 rounded-lg hover:border-green-400 hover:text-green-600 transition font-medium">MT 500</button>
+            <button onclick="setAmount(1000)" class="flex-1 py-1.5 text-xs border border-gray-200 rounded-lg hover:border-green-400 hover:text-green-600 transition font-medium">MT 1.000</button>
+            <button onclick="setAmount(2000)" class="flex-1 py-1.5 text-xs border border-gray-200 rounded-lg hover:border-green-400 hover:text-green-600 transition font-medium">MT 2.000</button>
+            <button onclick="setWithdrawMax()" class="flex-1 py-1.5 text-xs bg-green-50 border border-green-300 text-green-700 rounded-lg hover:bg-green-100 transition font-bold">Máximo</button>
+          </div>
+        </div>
+
+        <!-- Método -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+            Método de Pagamento
+          </label>
+          <div class="space-y-2">
+            <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:border-green-400 transition has-[:checked]:border-green-500 has-[:checked]:bg-green-50">
+              <input type="radio" name="withdraw_method" value="mpesa" class="accent-green-600" checked>
+              <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style="background:#E31E26">
+                <i class="fas fa-mobile-alt text-white text-xs"></i>
+              </div>
+              <span class="font-medium text-gray-800 text-sm">M-Pesa</span>
+              <span class="ml-auto text-xs text-gray-400">🇲🇿 Instantâneo</span>
+            </label>
+            <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:border-green-400 transition has-[:checked]:border-green-500 has-[:checked]:bg-green-50">
+              <input type="radio" name="withdraw_method" value="emola" class="accent-green-600">
+              <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style="background:#FF6B00">
+                <i class="fas fa-mobile-alt text-white text-xs"></i>
+              </div>
+              <span class="font-medium text-gray-800 text-sm">e-Mola</span>
+              <span class="ml-auto text-xs text-gray-400">🇲🇿 Instantâneo</span>
+            </label>
+            <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:border-green-400 transition has-[:checked]:border-green-500 has-[:checked]:bg-green-50">
+              <input type="radio" name="withdraw_method" value="transferencia" class="accent-green-600">
+              <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-blue-600">
+                <i class="fas fa-university text-white text-xs"></i>
+              </div>
+              <span class="font-medium text-gray-800 text-sm">Transferência Bancária</span>
+              <span class="ml-auto text-xs text-gray-400">1–2 dias úteis</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Nº de telemóvel / conta -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+            Nº Telemóvel / Conta
+          </label>
+          <input type="text" id="withdraw-phone" placeholder="+258 84 000 0000"
+            class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-green-400 focus:border-transparent transition">
+        </div>
+
+        <!-- Resumo -->
+        <div class="bg-gray-50 rounded-xl p-4 text-sm">
+          <div class="flex justify-between text-gray-600 mb-1">
+            <span>Valor solicitado</span><span id="summary-amount" class="font-semibold">—</span>
+          </div>
+          <div class="flex justify-between text-gray-600 mb-1">
+            <span>Taxa de processamento</span><span class="font-semibold text-green-600">Grátis</span>
+          </div>
+          <hr class="my-2 border-gray-200">
+          <div class="flex justify-between font-bold text-gray-900">
+            <span>Receberá</span><span id="summary-receive" class="text-green-600">—</span>
+          </div>
+        </div>
+
+        <button onclick="submitWithdraw()" class="w-full bg-green-500 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-green-600 transition flex items-center justify-center gap-2">
+          <i class="fas fa-paper-plane"></i> Confirmar Pedido
+        </button>
+        <p class="text-xs text-gray-400 text-center">
+          <i class="fas fa-lock mr-1"></i>Processamento seguro. Receberá confirmação por SMS/email.
+        </p>
+      </div>
+
+      <!-- Sucesso -->
+      <div id="withdraw-step-success" class="p-8 text-center hidden">
+        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <i class="fas fa-check-circle text-green-500 text-4xl"></i>
+        </div>
+        <h4 class="text-xl font-bold text-gray-900 mb-2">Pedido enviado!</h4>
+        <p class="text-gray-500 text-sm mb-2">O seu pedido de levantamento foi registado com sucesso.</p>
+        <p class="font-mono text-purple-700 bg-purple-50 rounded-lg px-4 py-2 text-sm font-bold mb-6" id="withdraw-ref">—</p>
+        <div class="bg-blue-50 rounded-xl p-3 text-xs text-blue-700 mb-6">
+          <i class="fas fa-clock mr-1"></i>Processado até <strong>3 dias úteis</strong>. Receberá uma notificação quando o dinheiro for transferido.
+        </div>
+        <button onclick="closeWithdrawModal()" class="w-full border border-gray-300 text-gray-700 py-3 rounded-xl font-semibold text-sm hover:bg-gray-50 transition">
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ───────────────────────────────────────────────────────────────── -->
+<div id="toast" class="fixed bottom-6 right-6 z-50 max-w-sm hidden">
+  <div class="bg-gray-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 text-sm">
+    <i id="toast-icon" class="fas fa-info-circle text-blue-400"></i>
+    <span id="toast-msg"></span>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+<script src="/static/app.js"></script>
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let currentPeriod     = '30d'
+let earningsData      = null
+let earningsChart     = null
+let planDonutChart    = null
+let availableMzn      = 0
+let chartType         = 'bar'
+
+const COLORS = { free:'#9ca3af', basic:'#2563eb', premium:'#7c3aed' }
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  const token = localStorage.getItem('vclass_token')
+  if (!token) { window.location.href = '/login.html'; return }
+
+  // Setup nav user info
+  try {
+    const me = await axios.get('/api/auth/me', { headers:{ Authorization:`Bearer ${token}` } })
+    if (me.data?.data) {
+      const u = me.data.data
+      const name = u.full_name || u.name || 'Criador'
+      document.getElementById('nav-user-name').textContent = name.split(' ')[0]
+      const av = document.getElementById('nav-avatar')
+      av.textContent = name.split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase()
+    }
+  } catch(e) {}
+
+  await loadEarnings()
+})
+
+// ── Load Earnings ─────────────────────────────────────────────────────────────
+async function loadEarnings() {
+  const token = localStorage.getItem('vclass_token')
+  try {
+    const res = await axios.get(`/api/creator/earnings?period=${currentPeriod}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    earningsData = res.data.data
+    renderKPIs()
+    renderChart()
+    renderPlanDonut()
+    renderTopLessons()
+    renderWithdrawals()
+  } catch(e) {
+    showToast('Erro ao carregar dados de ganhos.', 'error')
+    console.error(e)
+  }
+}
+
+// ── KPIs ──────────────────────────────────────────────────────────────────────
+function renderKPIs() {
+  const k = earningsData.kpi
+  availableMzn = k.available_mzn
+
+  animateCount('kpi-commission',  k.commission_mzn, 'MT ', '')
+  animateCount('kpi-students',    k.paid_students,  '', '')
+  animateCount('kpi-completions', k.completions,    '', '')
+  animateCount('available-balance', k.available_mzn, 'MT ', '')
+  animateCount('kpi-pending',     k.pending_mzn,    'MT ', '')
+
+  document.getElementById('kpi-watch-avg').textContent  = `${k.avg_watch_min} min média`
+  document.getElementById('kpi-commission-sub').textContent = `${k.commission_rate_pct}% da receita gerada`
+  document.getElementById('modal-available').textContent = `MT ${k.available_mzn.toLocaleString()}`
+}
+
+function animateCount(id, target, prefix, suffix) {
+  const el = document.getElementById(id)
+  if (!el) return
+  let start = 0
+  const step = target / 40
+  const interval = setInterval(() => {
+    start = Math.min(start + step, target)
+    el.textContent = prefix + Math.round(start).toLocaleString() + suffix
+    if (start >= target) clearInterval(interval)
+  }, 20)
+}
+
+// ── Earnings Chart ────────────────────────────────────────────────────────────
+function renderChart() {
+  const ctx = document.getElementById('earningsChart').getContext('2d')
+  const rows = earningsData.chart
+  const labels  = rows.map(r => r.label)
+  const gross   = rows.map(r => r.gross)
+  const commiss = rows.map(r => r.commission)
+
+  if (earningsChart) earningsChart.destroy()
+
+  const isLine = chartType === 'line'
+  earningsChart = new Chart(ctx, {
+    type: isLine ? 'line' : 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Receita bruta (MT)',
+          data: gross,
+          backgroundColor: isLine ? 'rgba(167,139,250,.15)' : 'rgba(167,139,250,.35)',
+          borderColor: '#a78bfa',
+          borderWidth: isLine ? 2 : 0,
+          borderRadius: isLine ? 0 : 6,
+          fill: isLine,
+          tension: .4,
+          order: 2
+        },
+        {
+          label: 'Comissão professor (MT)',
+          data: commiss,
+          backgroundColor: isLine ? 'rgba(34,197,94,.15)' : 'rgba(34,197,94,.85)',
+          borderColor: '#22c55e',
+          borderWidth: isLine ? 2.5 : 0,
+          borderRadius: isLine ? 0 : 6,
+          fill: isLine,
+          tension: .4,
+          order: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: { display:false },
+        tooltip: {
+          backgroundColor: '#1f2937',
+          padding: 12,
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: MT ${ctx.parsed.y.toLocaleString()}`
+          }
+        }
+      },
+      scales: {
+        x: { grid:{ display:false }, ticks:{ font:{ size:11 }, color:'#9ca3af' } },
+        y: {
+          grid: { color:'#f3f4f6' },
+          ticks: { font:{ size:11 }, color:'#9ca3af', callback: v => `MT ${(v/1000).toFixed(v>=1000?1:0)}${v>=1000?'k':''}` }
+        }
+      }
+    }
+  })
+}
+
+function setChartType(type) {
+  chartType = type
+  document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('active'); b.classList.add('text-gray-600') })
+  const btn = document.getElementById(`ct-${type}`)
+  btn.classList.add('active'); btn.classList.remove('text-gray-600')
+  renderChart()
+}
+
+// ── Plan Donut ────────────────────────────────────────────────────────────────
+function renderPlanDonut() {
+  const pb = earningsData.plan_breakdown
+  const ctx = document.getElementById('planDonut').getContext('2d')
+  const total = (pb.free?.students||0) + (pb.basic?.students||0) + (pb.premium?.students||0)
+  document.getElementById('donut-total').textContent = total.toLocaleString()
+
+  if (planDonutChart) planDonutChart.destroy()
+  planDonutChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Gratuito', 'Básico', 'Premium'],
+      datasets: [{
+        data: [pb.free?.students||0, pb.basic?.students||0, pb.premium?.students||0],
+        backgroundColor: ['#e5e7eb', '#93c5fd', '#a78bfa'],
+        borderColor: ['#d1d5db', '#60a5fa', '#8b5cf6'],
+        borderWidth: 2,
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '68%',
+      plugins: {
+        legend: { display:false },
+        tooltip: {
+          backgroundColor:'#1f2937', padding:10,
+          callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} alunos (${Math.round(ctx.parsed/total*100)}%)` }
+        }
+      }
+    }
+  })
+
+  // Legend
+  const PLAN_COLORS = { free:'#9ca3af', basic:'#3b82f6', premium:'#8b5cf6' }
+  const PLAN_LABELS = { free:'Gratuito', basic:'Básico', premium:'Premium' }
+  const PLAN_SHARE  = { free:'Sem comissão', basic:`${pb.basic?.commission_share||0}% da comissão`, premium:`${pb.premium?.commission_share||0}% da comissão` }
+  document.getElementById('plan-breakdown-legend').innerHTML = ['free','basic','premium'].map(id => `
+    <div class="flex items-center justify-between text-xs">
+      <div class="flex items-center gap-2">
+        <span class="w-3 h-3 rounded-sm inline-block" style="background:${PLAN_COLORS[id]}"></span>
+        <span class="text-gray-700 font-medium">${PLAN_LABELS[id]}</span>
+      </div>
+      <div class="text-right">
+        <span class="font-bold text-gray-900">${(pb[id]?.students||0).toLocaleString()}</span>
+        <span class="text-gray-400 ml-1">(${pb[id]?.pct||0}%)</span>
+        <p class="text-gray-400 mt-0.5">${PLAN_SHARE[id]}</p>
+      </div>
+    </div>
+  `).join('')
+}
+
+// ── Top Lessons ───────────────────────────────────────────────────────────────
+function renderTopLessons() {
+  const lessons = earningsData.top_lessons
+  const maxComm = Math.max(...lessons.map(l => l.commission_mzn))
+  document.getElementById('top-lessons-list').innerHTML = lessons.map((l, i) => `
+    <div class="lesson-row p-4 cursor-default transition">
+      <div class="flex items-start gap-3">
+        <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-extrabold
+          ${i===0?'bg-amber-100 text-amber-700':i===1?'bg-gray-100 text-gray-600':i===2?'bg-orange-50 text-orange-600':'bg-gray-50 text-gray-500'}">
+          ${i+1}
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-gray-900 text-sm truncate">${l.title}</p>
+          <div class="flex items-center gap-3 mt-1 text-xs text-gray-500">
+            <span><i class="fas fa-eye mr-1 text-gray-300"></i>${l.views.toLocaleString()} views</span>
+            <span><i class="fas fa-check-circle mr-1 text-green-400"></i>${l.completions.toLocaleString()} conclusões</span>
+            <span class="text-green-600 font-semibold">${l.trend}</span>
+          </div>
+          <!-- Mini progress bar -->
+          <div class="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div class="h-full bg-gradient-to-r from-purple-400 to-green-500 rounded-full progress-bar"
+              style="width:${Math.round(l.commission_mzn/maxComm*100)}%"></div>
+          </div>
+        </div>
+        <div class="text-right flex-shrink-0">
+          <p class="font-extrabold text-green-600 text-sm">MT ${l.commission_mzn.toLocaleString()}</p>
+          <p class="text-xs text-gray-400 mt-0.5">${l.subject}</p>
+        </div>
+      </div>
+    </div>
+  `).join('')
+}
+
+// ── Withdrawals ───────────────────────────────────────────────────────────────
+function renderWithdrawals() {
+  const wths = earningsData.withdrawals
+  if (!wths || wths.length === 0) {
+    document.getElementById('withdrawals-list').innerHTML = `<div class="p-8 text-center text-gray-400 text-sm"><i class="fas fa-receipt text-4xl mb-3 block opacity-40"></i>Sem levantamentos registados.</div>`
+    return
+  }
+  const STATUS_STYLE = {
+    pago: 'bg-green-100 text-green-700',
+    em_processamento: 'bg-amber-100 text-amber-700',
+    cancelado: 'bg-red-100 text-red-700'
+  }
+  const STATUS_LABEL = { pago:'Pago', em_processamento:'Em processamento', cancelado:'Cancelado' }
+  document.getElementById('withdrawals-list').innerHTML = wths.map(w => `
+    <div class="withdrawal-row flex items-center justify-between p-4 transition cursor-default">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0
+          ${w.method==='M-Pesa'?'bg-red-50':'w.method==="e-Mola"?bg-orange-50:bg-blue-50'}">
+          <i class="fas ${w.method.includes('Pesa')||w.method.includes('Mola')?'fa-mobile-alt':'fa-university'} text-sm
+            ${w.method.includes('Pesa')?'text-red-500':w.method.includes('Mola')?'text-orange-500':'text-blue-500'}"></i>
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-gray-900">${w.method}</p>
+          <p class="text-xs text-gray-400">${w.date} · <span class="font-mono">${w.ref}</span></p>
+        </div>
+      </div>
+      <div class="text-right">
+        <p class="font-extrabold text-gray-900 text-sm">MT ${w.amount_mzn.toLocaleString()}</p>
+        <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLE[w.status]||'bg-gray-100 text-gray-600'}">
+          ${STATUS_LABEL[w.status]||w.status}
+        </span>
+      </div>
+    </div>
+  `).join('')
+}
+
+// ── Period ────────────────────────────────────────────────────────────────────
+function setPeriod(p) {
+  currentPeriod = p
+  document.querySelectorAll('.period-btn').forEach(b => {
+    b.classList.remove('active')
+    b.style.borderColor = ''
+    b.classList.add('text-gray-600')
+    b.classList.remove('text-white')
+  })
+  const btn = document.getElementById(`p-${p}`)
+  btn.classList.add('active')
+  btn.classList.remove('text-gray-600')
+  loadEarnings()
+}
+
+// ── Withdraw Modal ────────────────────────────────────────────────────────────
+function openWithdrawModal() {
+  document.getElementById('withdraw-modal').classList.remove('hidden')
+  document.getElementById('withdraw-step-form').classList.remove('hidden')
+  document.getElementById('withdraw-step-success').classList.add('hidden')
+  document.body.style.overflow = 'hidden'
+  updateSummary()
+}
+function closeWithdrawModal() {
+  document.getElementById('withdraw-modal').classList.add('hidden')
+  document.body.style.overflow = ''
+}
+function setAmount(v) {
+  document.getElementById('withdraw-amount').value = v
+  updateSummary()
+}
+function setWithdrawMax() {
+  document.getElementById('withdraw-amount').value = availableMzn
+  updateSummary()
+}
+document.addEventListener('input', e => { if (e.target.id === 'withdraw-amount') updateSummary() })
+function updateSummary() {
+  const v = parseInt(document.getElementById('withdraw-amount')?.value) || 0
+  document.getElementById('summary-amount').textContent  = v > 0 ? `MT ${v.toLocaleString()}` : '—'
+  document.getElementById('summary-receive').textContent = v > 0 ? `MT ${v.toLocaleString()}` : '—'
+}
+async function submitWithdraw() {
+  const amount = parseInt(document.getElementById('withdraw-amount').value)
+  const method = document.querySelector('input[name="withdraw_method"]:checked')?.value
+  const phone  = document.getElementById('withdraw-phone').value.trim()
+  if (!amount || amount < 500) { showToast('Valor mínimo de MT 500.', 'error'); return }
+  if (amount > availableMzn)   { showToast('Valor superior ao saldo disponível.', 'error'); return }
+  const token = localStorage.getItem('vclass_token')
+  try {
+    const res = await axios.post('/api/creator/earnings/withdraw', { amount_mzn: amount, method, phone }, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    document.getElementById('withdraw-ref').textContent = res.data.data.reference
+    document.getElementById('withdraw-step-form').classList.add('hidden')
+    document.getElementById('withdraw-step-success').classList.remove('hidden')
+    showToast(res.data.message, 'success')
+    loadEarnings()
+  } catch(e) {
+    showToast(e.response?.data?.message || 'Erro ao processar pedido.', 'error')
+  }
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg, type='info') {
+  const t = document.getElementById('toast'), ic = document.getElementById('toast-icon'), m = document.getElementById('toast-msg')
+  ic.className = `fas ${type==='success'?'fa-check-circle text-green-400':type==='error'?'fa-exclamation-circle text-red-400':'fa-info-circle text-blue-400'}`
+  m.textContent = msg
+  t.classList.remove('hidden')
+  setTimeout(() => t.classList.add('hidden'), 3500)
+}
+
+function doLogout() {
+  if (typeof VClass !== 'undefined' && VClass.logout) VClass.logout()
+  else { localStorage.removeItem('vclass_token'); window.location.href = '/login.html' }
+}
+</script>
+</body>
+</html>
