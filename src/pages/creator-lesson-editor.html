@@ -51,6 +51,29 @@
         .upload-zone.drag-over { transform: scale(1.01); box-shadow: 0 8px 24px rgba(139,92,246,.15); }
         @keyframes spin { to { transform: rotate(360deg); } }
         .animate-spin { animation: spin 0.8s linear infinite; }
+
+        /* Video filters preview */
+        #preview-video { transition: filter 0.2s, transform 0.3s; }
+
+        /* Auto-thumbs grid */
+        .auto-thumb-item { position: relative; cursor: pointer; border: 2px solid transparent; border-radius: 12px; overflow: hidden; transition: border-color 0.15s, transform 0.15s; }
+        .auto-thumb-item:hover { border-color: #8b5cf6; transform: scale(1.03); }
+        .auto-thumb-item.selected { border-color: #10b981; }
+        .auto-thumb-item img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }
+        .auto-thumb-item .thumb-time { position: absolute; bottom: 4px; left: 4px; background: rgba(0,0,0,0.65); color: #fff; font-size: 0.65rem; font-family: monospace; padding: 1px 5px; border-radius: 4px; }
+        .auto-thumb-item .thumb-use-btn { position: absolute; bottom: 4px; right: 4px; background: #10b981; color: #fff; font-size: 0.6rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; display: none; }
+        .auto-thumb-item:hover .thumb-use-btn { display: block; }
+
+        /* Marker items */
+        .marker-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; transition: border-color 0.15s; }
+        .marker-item:hover { border-color: #86efac; }
+
+        /* Fullscreen overlay */
+        #fullscreen-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #fullscreen-video { max-width: 90vw; max-height: 85vh; border-radius: 8px; }
+
+        /* Adjust tab active */
+        .adj-tab-active { background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.1); color: #4f46e5; font-weight: 600; }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -329,30 +352,25 @@
                         <!-- ══ UPLOAD DIRECTO ══════════════════════════════════════ -->
                         <div id="source-upload" class="space-y-4">
 
-                            <!-- Estado: aguardar ficheiro -->
+                            <!-- FASE 1: Drop zone -->
                             <div id="upload-idle">
-                                <!-- Zona drag & drop -->
                                 <div id="upload-dropzone"
-                                    class="upload-zone rounded-2xl p-10 text-center cursor-pointer relative"
+                                    class="upload-zone rounded-2xl p-10 text-center cursor-pointer"
                                     onclick="document.getElementById('upload-file-input').click()"
                                     ondragover="onDropzoneOver(event)"
                                     ondragleave="onDropzoneLeave(event)"
                                     ondrop="onDropzoneDrop(event)">
-                                    <div id="dropzone-content">
-                                        <div class="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                            <i class="fas fa-cloud-upload-alt text-3xl text-purple-500"></i>
-                                        </div>
-                                        <p class="text-base font-semibold text-gray-700 mb-1">Arraste o vídeo aqui</p>
-                                        <p class="text-sm text-gray-400 mb-4">ou clique para seleccionar um ficheiro</p>
-                                        <span class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700 transition">
-                                            <i class="fas fa-folder-open"></i> Escolher ficheiro
-                                        </span>
-                                        <p class="text-xs text-gray-400 mt-4">MP4, MOV, AVI, MKV, WebM · Máx. 4 GB</p>
+                                    <div class="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                        <i class="fas fa-cloud-upload-alt text-3xl text-purple-500"></i>
                                     </div>
+                                    <p class="text-base font-semibold text-gray-700 mb-1">Arraste o vídeo aqui</p>
+                                    <p class="text-sm text-gray-400 mb-4">ou clique para seleccionar um ficheiro</p>
+                                    <span class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-xl">
+                                        <i class="fas fa-folder-open"></i> Escolher ficheiro
+                                    </span>
+                                    <p class="text-xs text-gray-400 mt-4">MP4, MOV, AVI, MKV, WebM · Máx. 4 GB</p>
                                 </div>
                                 <input type="file" id="upload-file-input" accept="video/*" class="hidden" onchange="onFileSelected(this)">
-
-                                <!-- Formatos suportados -->
                                 <div class="flex flex-wrap gap-2 mt-3">
                                     <span class="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-lg font-mono">MP4</span>
                                     <span class="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-lg font-mono">MOV</span>
@@ -363,25 +381,462 @@
                                 </div>
                             </div>
 
-                            <!-- Estado: ficheiro seleccionado / a enviar -->
-                            <div id="upload-progress-panel" class="hidden space-y-4">
+                            <!-- FASE 2: Editor de vídeo (após seleccionar ficheiro) -->
+                            <div id="upload-editor" class="hidden space-y-4">
 
-                                <!-- Info do ficheiro -->
-                                <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-200">
-                                    <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                                        <i class="fas fa-film text-purple-600 text-lg"></i>
+                                <!-- Header com info do ficheiro -->
+                                <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                                    <div class="w-9 h-9 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-film text-purple-600 text-sm"></i>
                                     </div>
                                     <div class="flex-1 min-w-0">
                                         <p class="text-sm font-semibold text-gray-900 truncate" id="upload-filename">—</p>
-                                        <p class="text-xs text-gray-400 mt-0.5" id="upload-filesize">—</p>
+                                        <p class="text-xs text-gray-400" id="upload-filesize">—</p>
                                     </div>
-                                    <button onclick="resetUpload()" id="upload-cancel-btn" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition" title="Cancelar">
-                                        <i class="fas fa-times text-sm"></i>
+                                    <button onclick="resetUpload()" class="text-xs text-gray-400 hover:text-red-500 flex items-center gap-1 transition">
+                                        <i class="fas fa-times"></i> Trocar
                                     </button>
                                 </div>
 
-                                <!-- Barra de progresso -->
-                                <div id="upload-progress-section" class="hidden">
+                                <!-- ─── PLAYER DE PRÉ-VISUALIZAÇÃO ─────────────────────── -->
+                                <div class="bg-black rounded-2xl overflow-hidden relative" id="video-player-wrap">
+                                    <video id="preview-video" class="w-full max-h-64 object-contain bg-black"
+                                        preload="metadata"
+                                        ontimeupdate="onVideoTimeUpdate()"
+                                        onloadedmetadata="onVideoMetaLoaded()"
+                                        onclick="togglePlayPause()">
+                                    </video>
+                                    <!-- Overlay de play quando pausado -->
+                                    <div id="play-overlay" class="absolute inset-0 flex items-center justify-center cursor-pointer" onclick="togglePlayPause()">
+                                        <div class="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-white/40 hover:bg-white/30 transition">
+                                            <i class="fas fa-play text-white text-xl ml-1" id="play-overlay-icon"></i>
+                                        </div>
+                                    </div>
+                                    <!-- Badge de tempo atual -->
+                                    <div class="absolute bottom-3 left-3 bg-black/60 text-white text-xs font-mono px-2 py-1 rounded-lg" id="time-badge">0:00 / 0:00</div>
+                                    <!-- Mudo badge -->
+                                    <button onclick="toggleMute()" class="absolute bottom-3 right-14 bg-black/60 text-white text-xs px-2 py-1.5 rounded-lg hover:bg-black/80 transition" id="mute-btn" title="Silenciar">
+                                        <i class="fas fa-volume-up" id="mute-icon"></i>
+                                    </button>
+                                    <!-- Fullscreen -->
+                                    <button onclick="openFullscreen()" class="absolute bottom-3 right-3 bg-black/60 text-white text-xs px-2 py-1.5 rounded-lg hover:bg-black/80 transition" title="Ver em ecrã completo">
+                                        <i class="fas fa-expand"></i>
+                                    </button>
+                                </div>
+
+                                <!-- ─── CONTROLES DE PLAYBACK ────────────────────────── -->
+                                <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm space-y-3">
+
+                                    <!-- Barra de progresso / scrubber principal -->
+                                    <div class="relative">
+                                        <!-- Área de trim (fundo) -->
+                                        <div class="relative h-7 flex items-center">
+                                            <!-- Track base -->
+                                            <div class="absolute inset-x-0 h-2 bg-gray-200 rounded-full" id="seek-track"
+                                                onclick="onSeekClick(event)" style="cursor:pointer;">
+                                                <!-- Região fora do trim (escuro) -->
+                                                <div id="trim-before" class="absolute left-0 h-full bg-gray-400/50 rounded-l-full" style="width:0%"></div>
+                                                <div id="trim-after"  class="absolute right-0 h-full bg-gray-400/50 rounded-r-full" style="width:0%"></div>
+                                                <!-- Região de trim (activa) -->
+                                                <div id="trim-region" class="absolute h-full bg-purple-200" style="left:0%;width:100%"></div>
+                                                <!-- Progresso de playback -->
+                                                <div id="seek-progress" class="absolute left-0 h-full bg-purple-500 rounded-full" style="width:0%"></div>
+                                            </div>
+                                            <!-- Marcador de posição actual -->
+                                            <div id="seek-thumb" class="absolute w-4 h-4 bg-purple-600 rounded-full border-2 border-white shadow-md z-20 -translate-x-1/2 -translate-y-0"
+                                                style="left:0%;top:50%;transform:translate(-50%,-50%);cursor:grab;"
+                                                onmousedown="startSeekDrag(event)"></div>
+                                            <!-- Handle Trim IN -->
+                                            <div id="trim-handle-in" class="absolute z-30 -translate-x-1/2"
+                                                style="left:0%;top:50%;transform:translate(-50%,-50%);cursor:ew-resize;"
+                                                onmousedown="startTrimDrag(event,'in')" title="Arrastar para definir início do corte">
+                                                <div class="w-3 h-7 bg-green-500 rounded-sm flex items-center justify-center">
+                                                    <i class="fas fa-grip-lines-vertical text-white text-xs" style="font-size:6px"></i>
+                                                </div>
+                                            </div>
+                                            <!-- Handle Trim OUT -->
+                                            <div id="trim-handle-out" class="absolute z-30 -translate-x-1/2"
+                                                style="left:100%;top:50%;transform:translate(-50%,-50%);cursor:ew-resize;"
+                                                onmousedown="startTrimDrag(event,'out')" title="Arrastar para definir fim do corte">
+                                                <div class="w-3 h-7 bg-red-500 rounded-sm flex items-center justify-center">
+                                                    <i class="fas fa-grip-lines-vertical text-white text-xs" style="font-size:6px"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Labels Trim -->
+                                        <div class="flex justify-between text-xs mt-1 px-0.5">
+                                            <span class="text-green-600 font-mono font-bold flex items-center gap-1">
+                                                <span class="w-2 h-2 bg-green-500 rounded-sm inline-block"></span>
+                                                IN: <span id="trim-in-label">0:00</span>
+                                            </span>
+                                            <span class="text-gray-400 font-mono" id="current-time-label">0:00</span>
+                                            <span class="text-red-600 font-mono font-bold flex items-center gap-1">
+                                                OUT: <span id="trim-out-label">0:00</span>
+                                                <span class="w-2 h-2 bg-red-500 rounded-sm inline-block"></span>
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Botões de controlo -->
+                                    <div class="flex items-center gap-2">
+                                        <!-- Ir para IN -->
+                                        <button onclick="goToTrimIn()" class="w-8 h-8 flex items-center justify-center rounded-lg bg-green-50 text-green-700 hover:bg-green-100 transition text-xs" title="Ir para ponto de início">
+                                            <i class="fas fa-step-backward"></i>
+                                        </button>
+                                        <!-- -5s -->
+                                        <button onclick="skipBy(-5)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition text-xs" title="-5 segundos">
+                                            <i class="fas fa-undo text-xs"></i>
+                                        </button>
+                                        <!-- Play/Pause -->
+                                        <button onclick="togglePlayPause()" id="play-btn"
+                                            class="w-10 h-10 flex items-center justify-center rounded-xl bg-purple-600 text-white hover:bg-purple-700 transition shadow-sm">
+                                            <i class="fas fa-play text-sm" id="play-btn-icon"></i>
+                                        </button>
+                                        <!-- +5s -->
+                                        <button onclick="skipBy(5)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition text-xs" title="+5 segundos">
+                                            <i class="fas fa-redo text-xs"></i>
+                                        </button>
+                                        <!-- Ir para OUT -->
+                                        <button onclick="goToTrimOut()" class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-700 hover:bg-red-100 transition text-xs" title="Ir para ponto de fim">
+                                            <i class="fas fa-step-forward"></i>
+                                        </button>
+
+                                        <div class="flex-1"></div>
+
+                                        <!-- Velocidade -->
+                                        <div class="flex items-center gap-1">
+                                            <span class="text-xs text-gray-400">Velocidade:</span>
+                                            <select id="speed-select" onchange="setPlaybackSpeed(this.value)"
+                                                class="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-purple-400">
+                                                <option value="0.5">0.5×</option>
+                                                <option value="0.75">0.75×</option>
+                                                <option value="1" selected>1×</option>
+                                                <option value="1.25">1.25×</option>
+                                                <option value="1.5">1.5×</option>
+                                                <option value="2">2×</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ─── FERRAMENTAS DE EDIÇÃO ────────────────────────── -->
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                                    <!-- Corte (Trim) -->
+                                    <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+                                        <h4 class="text-xs font-bold text-gray-700 mb-3 flex items-center gap-2">
+                                            <div class="w-6 h-6 bg-purple-100 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-cut text-purple-600 text-xs"></i>
+                                            </div>
+                                            Corte do Vídeo (Trim)
+                                        </h4>
+                                        <div class="space-y-2.5">
+                                            <div class="flex items-center gap-2">
+                                                <div class="flex-1">
+                                                    <label class="text-xs text-gray-500 block mb-1">Início (IN)</label>
+                                                    <div class="flex gap-1">
+                                                        <input type="text" id="trim-in-input" value="0:00"
+                                                            onchange="onTrimInputChange('in',this.value)"
+                                                            class="flex-1 px-2 py-1.5 text-xs font-mono border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-400">
+                                                        <button onclick="setTrimPointHere('in')"
+                                                            class="px-2 py-1.5 text-xs bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition font-medium whitespace-nowrap border border-green-200"
+                                                            title="Definir aqui">
+                                                            <i class="fas fa-map-marker-alt mr-1"></i>Aqui
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="flex-1">
+                                                    <label class="text-xs text-gray-500 block mb-1">Fim (OUT)</label>
+                                                    <div class="flex gap-1">
+                                                        <input type="text" id="trim-out-input" value="0:00"
+                                                            onchange="onTrimInputChange('out',this.value)"
+                                                            class="flex-1 px-2 py-1.5 text-xs font-mono border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-red-400">
+                                                        <button onclick="setTrimPointHere('out')"
+                                                            class="px-2 py-1.5 text-xs bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition font-medium whitespace-nowrap border border-red-200"
+                                                            title="Definir aqui">
+                                                            <i class="fas fa-map-marker-alt mr-1"></i>Aqui
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <!-- Resumo do corte -->
+                                            <div class="flex items-center justify-between p-2 bg-purple-50 rounded-lg text-xs">
+                                                <span class="text-gray-500">Duração após corte:</span>
+                                                <span class="font-bold text-purple-700" id="trim-duration-label">—</span>
+                                            </div>
+                                            <button onclick="resetTrim()" class="w-full text-xs text-gray-500 hover:text-gray-700 py-1.5 border border-dashed border-gray-200 rounded-lg hover:border-gray-300 transition">
+                                                <i class="fas fa-redo text-xs mr-1"></i> Repor corte completo
+                                            </button>
+                                        </div>
+                                        <p class="text-xs text-gray-400 mt-2">
+                                            <i class="fas fa-info-circle mr-1"></i>O corte é enviado como metadado — o Bunny.net aplica-o no servidor.
+                                        </p>
+                                    </div>
+
+                                    <!-- Captura de Thumbnail -->
+                                    <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+                                        <h4 class="text-xs font-bold text-gray-700 mb-3 flex items-center gap-2">
+                                            <div class="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-camera text-blue-600 text-xs"></i>
+                                            </div>
+                                            Capturar Thumbnail
+                                        </h4>
+                                        <!-- Preview do frame capturado -->
+                                        <div class="relative mb-2.5">
+                                            <canvas id="thumb-canvas" class="hidden"></canvas>
+                                            <div id="thumb-capture-preview" class="w-full h-24 bg-gray-100 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-200 overflow-hidden">
+                                                <div id="thumb-capture-empty" class="text-center">
+                                                    <i class="fas fa-image text-2xl text-gray-300 block mb-1"></i>
+                                                    <p class="text-xs text-gray-400">Frame capturado aqui</p>
+                                                </div>
+                                                <img id="thumb-capture-img" class="hidden w-full h-full object-cover rounded-xl" src="" alt="thumbnail">
+                                            </div>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <button onclick="captureCurrentFrame()"
+                                                class="w-full inline-flex items-center justify-center gap-2 py-2 bg-blue-600 text-white text-xs font-semibold rounded-xl hover:bg-blue-700 transition">
+                                                <i class="fas fa-camera"></i> Capturar frame actual
+                                            </button>
+                                            <button onclick="useAsLessonThumbnail()" id="btn-use-thumb" disabled
+                                                class="w-full inline-flex items-center justify-center gap-2 py-2 border border-blue-300 text-blue-700 text-xs font-semibold rounded-xl hover:bg-blue-50 transition disabled:opacity-40 disabled:cursor-not-allowed">
+                                                <i class="fas fa-check"></i> Usar como capa da lição
+                                            </button>
+                                        </div>
+                                        <p class="text-xs text-gray-400 mt-2">
+                                            <i class="fas fa-info-circle mr-1"></i>Pausa o vídeo no frame desejado e capture.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- ─── METADADOS AUTO-DETECTADOS ───────────────────── -->
+                                <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+                                    <h4 class="text-xs font-bold text-gray-700 mb-3 flex items-center gap-2">
+                                        <div class="w-6 h-6 bg-amber-100 rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-magic text-amber-600 text-xs"></i>
+                                        </div>
+                                        Metadados Detectados Automaticamente
+                                    </h4>
+                                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                        <div class="text-center p-2 bg-gray-50 rounded-xl">
+                                            <i class="fas fa-clock text-purple-400 text-base mb-1 block"></i>
+                                            <p class="text-xs text-gray-400">Duração total</p>
+                                            <p class="text-sm font-bold text-gray-800" id="meta-duration">—</p>
+                                        </div>
+                                        <div class="text-center p-2 bg-gray-50 rounded-xl">
+                                            <i class="fas fa-expand text-blue-400 text-base mb-1 block"></i>
+                                            <p class="text-xs text-gray-400">Resolução</p>
+                                            <p class="text-sm font-bold text-gray-800" id="meta-resolution">—</p>
+                                        </div>
+                                        <div class="text-center p-2 bg-gray-50 rounded-xl">
+                                            <i class="fas fa-weight text-green-400 text-base mb-1 block"></i>
+                                            <p class="text-xs text-gray-400">Tamanho</p>
+                                            <p class="text-sm font-bold text-gray-800" id="meta-size">—</p>
+                                        </div>
+                                        <div class="text-center p-2 bg-gray-50 rounded-xl">
+                                            <i class="fas fa-film text-orange-400 text-base mb-1 block"></i>
+                                            <p class="text-xs text-gray-400">Formato</p>
+                                            <p class="text-sm font-bold text-gray-800" id="meta-format">—</p>
+                                        </div>
+                                    </div>
+                                    <!-- Aviso de preenchimento automático -->
+                                    <div id="meta-autofill-notice" class="hidden mt-3 flex items-center gap-2 text-xs text-green-700 bg-green-50 p-2 rounded-lg">
+                                        <i class="fas fa-check-circle text-green-500"></i>
+                                        <span>Duração e resolução preenchidas automaticamente nos campos da lição.</span>
+                                    </div>
+                                </div>
+
+                                <!-- ─── AJUSTES DE VÍDEO (Áudio + Imagem) ────────────── -->
+                                <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <h4 class="text-xs font-bold text-gray-700 flex items-center gap-2">
+                                            <div class="w-6 h-6 bg-indigo-100 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-sliders-h text-indigo-600 text-xs"></i>
+                                            </div>
+                                            Ajustes de Áudio e Imagem
+                                        </h4>
+                                        <button onclick="resetVideoAdjustments()" class="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 transition">
+                                            <i class="fas fa-undo text-xs"></i> Repor tudo
+                                        </button>
+                                    </div>
+
+                                    <!-- Tabs de ajuste -->
+                                    <div class="flex gap-1 mb-4 p-1 bg-gray-100 rounded-xl w-fit">
+                                        <button onclick="switchAdjustTab('audio')" id="adj-tab-audio"
+                                            class="px-3 py-1 text-xs font-semibold rounded-lg bg-white shadow text-indigo-700 transition">
+                                            <i class="fas fa-volume-up mr-1"></i> Áudio
+                                        </button>
+                                        <button onclick="switchAdjustTab('image')" id="adj-tab-image"
+                                            class="px-3 py-1 text-xs font-medium text-gray-500 hover:text-gray-700 rounded-lg transition">
+                                            <i class="fas fa-sun mr-1"></i> Imagem
+                                        </button>
+                                        <button onclick="switchAdjustTab('rotate')" id="adj-tab-rotate"
+                                            class="px-3 py-1 text-xs font-medium text-gray-500 hover:text-gray-700 rounded-lg transition">
+                                            <i class="fas fa-sync-alt mr-1"></i> Rotação
+                                        </button>
+                                    </div>
+
+                                    <!-- Painel: Áudio -->
+                                    <div id="adj-panel-audio" class="space-y-3">
+                                        <div>
+                                            <div class="flex items-center justify-between mb-1">
+                                                <label class="text-xs font-medium text-gray-600 flex items-center gap-1.5">
+                                                    <i class="fas fa-volume-up text-indigo-400"></i> Volume
+                                                </label>
+                                                <span class="text-xs font-bold text-indigo-600 font-mono" id="adj-volume-val">100%</span>
+                                            </div>
+                                            <input type="range" id="adj-volume" min="0" max="150" value="100"
+                                                oninput="applyAudioAdjust()"
+                                                class="w-full accent-indigo-600 cursor-pointer">
+                                            <div class="flex justify-between text-xs text-gray-400 mt-0.5">
+                                                <span>Mudo</span><span>Normal</span><span>+50%</span>
+                                            </div>
+                                        </div>
+                                        <div class="p-2.5 bg-amber-50 border border-amber-100 rounded-xl flex items-start gap-2">
+                                            <i class="fas fa-info-circle text-amber-500 mt-0.5 flex-shrink-0 text-xs"></i>
+                                            <p class="text-xs text-amber-700">O ajuste de volume é enviado como metadado. O Bunny.net aplica-o durante a transcodificação.</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Painel: Imagem (filtros CSS) -->
+                                    <div id="adj-panel-image" class="hidden space-y-3">
+                                        <div>
+                                            <div class="flex items-center justify-between mb-1">
+                                                <label class="text-xs font-medium text-gray-600 flex items-center gap-1.5">
+                                                    <i class="fas fa-sun text-yellow-400"></i> Brilho
+                                                </label>
+                                                <span class="text-xs font-bold text-gray-700 font-mono" id="adj-brightness-val">100%</span>
+                                            </div>
+                                            <input type="range" id="adj-brightness" min="50" max="150" value="100"
+                                                oninput="applyVideoFilters()"
+                                                class="w-full accent-yellow-500 cursor-pointer">
+                                        </div>
+                                        <div>
+                                            <div class="flex items-center justify-between mb-1">
+                                                <label class="text-xs font-medium text-gray-600 flex items-center gap-1.5">
+                                                    <i class="fas fa-adjust text-blue-400"></i> Contraste
+                                                </label>
+                                                <span class="text-xs font-bold text-gray-700 font-mono" id="adj-contrast-val">100%</span>
+                                            </div>
+                                            <input type="range" id="adj-contrast" min="50" max="150" value="100"
+                                                oninput="applyVideoFilters()"
+                                                class="w-full accent-blue-500 cursor-pointer">
+                                        </div>
+                                        <div>
+                                            <div class="flex items-center justify-between mb-1">
+                                                <label class="text-xs font-medium text-gray-600 flex items-center gap-1.5">
+                                                    <i class="fas fa-palette text-pink-400"></i> Saturação
+                                                </label>
+                                                <span class="text-xs font-bold text-gray-700 font-mono" id="adj-saturation-val">100%</span>
+                                            </div>
+                                            <input type="range" id="adj-saturation" min="0" max="200" value="100"
+                                                oninput="applyVideoFilters()"
+                                                class="w-full accent-pink-500 cursor-pointer">
+                                        </div>
+                                        <div class="p-2.5 bg-blue-50 border border-blue-100 rounded-xl flex items-start gap-2">
+                                            <i class="fas fa-eye text-blue-400 mt-0.5 flex-shrink-0 text-xs"></i>
+                                            <p class="text-xs text-blue-700">Os filtros de imagem são aplicados <strong>apenas na pré-visualização</strong>. Envie como metadado para o Bunny.net os aplicar no vídeo final.</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Painel: Rotação -->
+                                    <div id="adj-panel-rotate" class="hidden space-y-3">
+                                        <p class="text-xs text-gray-500 mb-2">Seleccione a rotação do vídeo (útil para vídeos gravados em modo portrait):</p>
+                                        <div class="grid grid-cols-4 gap-2">
+                                            <button onclick="setVideoRotation(0)" id="rot-0"
+                                                class="flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 border-purple-400 bg-purple-50 text-purple-700 transition">
+                                                <i class="fas fa-mobile-alt text-lg"></i>
+                                                <span class="text-xs font-semibold">0°</span>
+                                            </button>
+                                            <button onclick="setVideoRotation(90)" id="rot-90"
+                                                class="flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 border-gray-200 text-gray-500 hover:border-purple-300 hover:bg-purple-50 transition">
+                                                <i class="fas fa-mobile-alt text-lg" style="transform:rotate(90deg)"></i>
+                                                <span class="text-xs font-semibold">90°</span>
+                                            </button>
+                                            <button onclick="setVideoRotation(180)" id="rot-180"
+                                                class="flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 border-gray-200 text-gray-500 hover:border-purple-300 hover:bg-purple-50 transition">
+                                                <i class="fas fa-mobile-alt text-lg" style="transform:rotate(180deg)"></i>
+                                                <span class="text-xs font-semibold">180°</span>
+                                            </button>
+                                            <button onclick="setVideoRotation(270)" id="rot-270"
+                                                class="flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 border-gray-200 text-gray-500 hover:border-purple-300 hover:bg-purple-50 transition">
+                                                <i class="fas fa-mobile-alt text-lg" style="transform:rotate(270deg)"></i>
+                                                <span class="text-xs font-semibold">270°</span>
+                                            </button>
+                                        </div>
+                                        <div class="p-2.5 bg-amber-50 border border-amber-100 rounded-xl flex items-start gap-2">
+                                            <i class="fas fa-info-circle text-amber-500 mt-0.5 flex-shrink-0 text-xs"></i>
+                                            <p class="text-xs text-amber-700">A rotação aplica-se na pré-visualização e é enviada ao Bunny.net como metadado de rotação.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ─── MARCADORES / CAPÍTULOS ────────────────────────── -->
+                                <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <h4 class="text-xs font-bold text-gray-700 flex items-center gap-2">
+                                            <div class="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-bookmark text-green-600 text-xs"></i>
+                                            </div>
+                                            Marcadores / Capítulos do Vídeo
+                                        </h4>
+                                        <button onclick="addMarkerAtCurrentTime()"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 transition">
+                                            <i class="fas fa-plus"></i> Adicionar aqui
+                                        </button>
+                                    </div>
+                                    <p class="text-xs text-gray-400 mb-3">Defina pontos de capítulo para facilitar a navegação dos alunos no vídeo.</p>
+                                    <!-- Lista de marcadores -->
+                                    <div id="markers-list" class="space-y-2">
+                                        <div id="markers-empty" class="text-center py-6 text-xs text-gray-400">
+                                            <i class="fas fa-bookmark text-gray-200 text-2xl block mb-2"></i>
+                                            Sem marcadores. Reproduza o vídeo, pause no ponto desejado e clique "Adicionar aqui".
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ─── MINIATURAS AUTOMÁTICAS ────────────────────────── -->
+                                <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <h4 class="text-xs font-bold text-gray-700 flex items-center gap-2">
+                                            <div class="w-6 h-6 bg-rose-100 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-th text-rose-600 text-xs"></i>
+                                            </div>
+                                            Miniaturas Automáticas
+                                        </h4>
+                                        <button onclick="generateAutoThumbs()"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 text-white text-xs font-semibold rounded-lg hover:bg-rose-700 transition">
+                                            <i class="fas fa-magic"></i> Gerar agora
+                                        </button>
+                                    </div>
+                                    <p class="text-xs text-gray-400 mb-3">Gera 6 capturas de ecrã em intervalos regulares. Escolha a melhor como thumbnail da lição.</p>
+                                    <div id="auto-thumbs-grid" class="hidden grid grid-cols-3 gap-2">
+                                        <!-- preenchido por JS -->
+                                    </div>
+                                    <div id="auto-thumbs-empty" class="text-center py-4 text-xs text-gray-400">
+                                        <i class="fas fa-th text-gray-200 text-2xl block mb-2"></i>
+                                        Clique "Gerar agora" para criar miniaturas automáticas.
+                                    </div>
+                                    <div id="auto-thumbs-loading" class="hidden text-center py-4">
+                                        <div class="inline-flex items-center gap-2 text-xs text-rose-600">
+                                            <div class="w-3 h-3 border-2 border-rose-500 border-t-transparent rounded-full animate-spin"></div>
+                                            A gerar miniaturas...
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ─── SUMÁRIO DAS EDIÇÕES ────────────────────────────── -->
+                                <div id="edit-summary-panel" class="hidden bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl p-4 border border-purple-100 shadow-sm">
+                                    <h4 class="text-xs font-bold text-purple-800 mb-3 flex items-center gap-2">
+                                        <i class="fas fa-list-check text-purple-600"></i>
+                                        Resumo das Edições a Enviar
+                                    </h4>
+                                    <div id="edit-summary-content" class="space-y-1.5 text-xs text-purple-700">
+                                        <!-- preenchido por JS -->
+                                    </div>
+                                </div>
+
+                                <!-- ─── BARRA DE UPLOAD ──────────────────────────────── -->
+                                <div id="upload-progress-section" class="hidden bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
                                     <div class="flex items-center justify-between mb-2">
                                         <span class="text-sm font-semibold text-gray-700 flex items-center gap-2">
                                             <div class="w-3 h-3 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
@@ -389,29 +844,31 @@
                                         </span>
                                         <span class="text-sm font-bold text-purple-700" id="upload-pct">0%</span>
                                     </div>
-                                    <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                                    <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden mb-1.5">
                                         <div id="upload-bar" class="h-3 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full transition-all duration-300" style="width:0%"></div>
                                     </div>
-                                    <div class="flex justify-between mt-1.5 text-xs text-gray-400">
-                                        <span id="upload-bytes-sent">0 MB enviados</span>
+                                    <div class="flex justify-between text-xs text-gray-400">
+                                        <span id="upload-bytes-sent">—</span>
                                         <span id="upload-speed">—</span>
                                         <span id="upload-eta">—</span>
                                     </div>
                                 </div>
 
-                                <!-- Acções antes de enviar -->
+                                <!-- ─── BOTÃO DE UPLOAD ──────────────────────────────── -->
                                 <div id="upload-action-row" class="flex items-center gap-3">
                                     <button onclick="startUpload()" id="btn-start-upload"
-                                        class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700 transition shadow-sm">
-                                        <i class="fas fa-cloud-upload-alt"></i> Iniciar Upload
+                                        class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700 transition shadow-sm">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <span id="upload-btn-label">Enviar Vídeo</span>
+                                        <span id="upload-trim-info" class="text-purple-300 text-xs font-normal hidden">· com corte aplicado</span>
                                     </button>
-                                    <button onclick="resetUpload()" class="px-4 py-3 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition">
+                                    <button onclick="resetUpload()" class="px-4 py-3.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition">
                                         Cancelar
                                     </button>
                                 </div>
                             </div>
 
-                            <!-- Estado: upload concluído -->
+                            <!-- FASE 3: upload concluído -->
                             <div id="upload-done-panel" class="hidden">
                                 <div class="p-5 bg-green-50 border border-green-200 rounded-2xl">
                                     <div class="flex items-start gap-4">
@@ -433,20 +890,17 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <!-- Aviso de processamento -->
                                     <div class="mt-4 flex items-start gap-2 p-3 bg-amber-50 border border-amber-100 rounded-xl">
                                         <i class="fas fa-info-circle text-amber-500 mt-0.5 flex-shrink-0 text-sm"></i>
-                                        <p class="text-xs text-amber-800">O Bunny.net está a <strong>transcodificar</strong> o vídeo para HLS. Ficará disponível em <strong>2–10 minutos</strong> dependendo da duração. O ID já está guardado nesta lição.</p>
+                                        <p class="text-xs text-amber-800">O Bunny.net está a <strong>transcodificar</strong> o vídeo para HLS. Ficará disponível em <strong>2–10 min</strong>. O ID já está guardado nesta lição.</p>
                                     </div>
-                                    <div class="mt-3 flex gap-2">
-                                        <button onclick="resetUpload()" class="text-xs text-green-700 font-semibold hover:underline flex items-center gap-1">
-                                            <i class="fas fa-redo text-xs"></i> Enviar outro vídeo
-                                        </button>
-                                    </div>
+                                    <button onclick="resetUpload()" class="mt-3 text-xs text-green-700 font-semibold hover:underline flex items-center gap-1">
+                                        <i class="fas fa-redo text-xs"></i> Enviar outro vídeo
+                                    </button>
                                 </div>
                             </div>
 
-                            <!-- Estado: erro -->
+                            <!-- FASE 4: erro -->
                             <div id="upload-error-panel" class="hidden p-4 bg-red-50 border border-red-200 rounded-2xl">
                                 <div class="flex items-start gap-3">
                                     <i class="fas fa-exclamation-circle text-red-500 mt-0.5 text-lg flex-shrink-0"></i>
@@ -460,15 +914,12 @@
                                 </div>
                             </div>
 
-                            <!-- Nota sobre Bunny API Key -->
-                            <div class="p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-start gap-3">
-                                <i class="fas fa-key text-blue-400 mt-0.5 flex-shrink-0 text-sm"></i>
+                            <!-- Nota Bunny API Key -->
+                            <div class="p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-start gap-2">
+                                <i class="fas fa-key text-blue-400 mt-0.5 flex-shrink-0 text-xs"></i>
                                 <div class="text-xs text-blue-800">
-                                    <p class="font-semibold mb-1">Configuração necessária</p>
-                                    <p>O upload directo requer a <strong>API Key do Bunny.net</strong> configurada no servidor. Em modo demo, o upload é simulado localmente.</p>
-                                    <a href="https://bunny.net" target="_blank" class="text-blue-600 font-medium hover:underline mt-1 inline-flex items-center gap-1">
-                                        Obter API Key <i class="fas fa-external-link-alt text-xs"></i>
-                                    </a>
+                                    <span class="font-semibold">Modo demo activo</span> — configure <code class="bg-blue-100 px-1 rounded">BUNNY_API_KEY</code> e <code class="bg-blue-100 px-1 rounded">BUNNY_LIBRARY_ID</code> para uploads reais.
+                                    <a href="https://bunny.net" target="_blank" class="text-blue-600 font-medium ml-1 hover:underline">bunny.net →</a>
                                 </div>
                             </div>
                         </div>
@@ -922,15 +1373,45 @@
                 document.getElementById(`source-${s}`)?.classList.toggle('hidden', s !== src);
                 const btn = document.getElementById(`src-${s}`);
                 if (!btn) return;
-                if (s === src) {
-                    btn.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-white shadow text-purple-700 transition flex items-center gap-1.5';
-                } else {
-                    btn.className = 'px-4 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 rounded-lg transition';
-                }
+                btn.className = s === src
+                    ? 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-white shadow text-purple-700 transition flex items-center gap-1.5'
+                    : 'px-4 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 rounded-lg transition';
             });
         }
 
-        // ── Upload Directo — Drag & Drop ──────────────────────────────────
+        // ════════════════════════════════════════════════════════════════
+        //  UPLOAD DIRECTO — ESTADO GLOBAL
+        // ════════════════════════════════════════════════════════════════
+        const MAX_FILE_SIZE = 4 * 1024 * 1024 * 1024;
+        let uploadFile      = null;
+        let uploadXHR       = null;
+        let uploadStartTime = null;
+        let trimIn          = 0;   // segundos
+        let trimOut         = 0;   // segundos (0 = fim do vídeo)
+        let videoDuration   = 0;
+        let isDraggingSeek  = false;
+        let isDraggingTrim  = null; // 'in' | 'out'
+        let capturedThumbData = null;
+
+        function formatBytes(b) {
+            if (b < 1024) return b + ' B';
+            if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+            if (b < 1073741824) return (b/1048576).toFixed(1) + ' MB';
+            return (b/1073741824).toFixed(2) + ' GB';
+        }
+        function fmtTime(s) {
+            if (!isFinite(s) || s < 0) s = 0;
+            const m = Math.floor(s/60), ss = Math.floor(s%60);
+            return `${m}:${ss.toString().padStart(2,'0')}`;
+        }
+        function parseTime(str) {
+            const p = str.trim().split(':');
+            if (p.length === 2) return parseInt(p[0])*60 + parseFloat(p[1]);
+            if (p.length === 3) return parseInt(p[0])*3600 + parseInt(p[1])*60 + parseFloat(p[2]);
+            return parseFloat(str) || 0;
+        }
+
+        // ── Drag & Drop ──────────────────────────────────────────────────
         function onDropzoneOver(e) {
             e.preventDefault();
             document.getElementById('upload-dropzone').classList.add('drag-over');
@@ -944,99 +1425,323 @@
             const file = e.dataTransfer.files[0];
             if (file) processSelectedFile(file);
         }
-        function onFileSelected(input) {
-            const file = input.files[0];
-            if (file) processSelectedFile(file);
+        function onFileSelected(inp) {
+            if (inp.files[0]) processSelectedFile(inp.files[0]);
         }
 
-        // ── Upload Directo — Validar e mostrar painel ────────────────────
-        const MAX_FILE_SIZE = 4 * 1024 * 1024 * 1024; // 4 GB
-        const ALLOWED_TYPES = ['video/mp4','video/quicktime','video/x-msvideo','video/x-matroska','video/webm','video/mpeg'];
-
-        let uploadFile = null;
-        let uploadXHR  = null;
-        let uploadStartTime = null;
-
-        function formatBytes(bytes) {
-            if (bytes < 1024) return bytes + ' B';
-            if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
-            if (bytes < 1024*1024*1024) return (bytes/1024/1024).toFixed(1) + ' MB';
-            return (bytes/1024/1024/1024).toFixed(2) + ' GB';
-        }
-
+        // ── Validar e carregar ficheiro no editor ────────────────────────
         function processSelectedFile(file) {
-            // Validar tipo
-            const isVideo = file.type.startsWith('video/') || ALLOWED_TYPES.includes(file.type);
-            if (!isVideo) {
+            if (!file.type.startsWith('video/')) {
                 showUploadError('Ficheiro inválido. Seleccione um vídeo (MP4, MOV, AVI, MKV, WebM).');
                 return;
             }
-            // Validar tamanho
             if (file.size > MAX_FILE_SIZE) {
-                showUploadError(`Ficheiro demasiado grande (${formatBytes(file.size)}). Máximo permitido: 4 GB.`);
+                showUploadError(`Ficheiro demasiado grande (${formatBytes(file.size)}). Máx. 4 GB.`);
                 return;
             }
-
             uploadFile = file;
+
+            // Mostrar editor
             document.getElementById('upload-idle').classList.add('hidden');
-            document.getElementById('upload-progress-panel').classList.remove('hidden');
+            document.getElementById('upload-editor').classList.remove('hidden');
             document.getElementById('upload-done-panel').classList.add('hidden');
             document.getElementById('upload-error-panel').classList.add('hidden');
             document.getElementById('upload-progress-section').classList.add('hidden');
             document.getElementById('upload-action-row').classList.remove('hidden');
-            document.getElementById('upload-cancel-btn').classList.remove('hidden');
 
+            // Preencher info
             document.getElementById('upload-filename').textContent = file.name;
-            document.getElementById('upload-filesize').textContent =
-                `${formatBytes(file.size)} · ${file.type || 'video'}`;
+            document.getElementById('upload-filesize').textContent = `${formatBytes(file.size)} · ${file.type || 'video'}`;
+            document.getElementById('meta-size').textContent = formatBytes(file.size);
+            const ext = file.name.split('.').pop().toUpperCase();
+            document.getElementById('meta-format').textContent = ext || '—';
+
+            // Carregar vídeo no player
+            const video = document.getElementById('preview-video');
+            video.src = URL.createObjectURL(file);
+            video.load();
         }
 
-        // ── Upload Directo — Iniciar ─────────────────────────────────────
+        // ── Metadados carregados ─────────────────────────────────────────
+        function onVideoMetaLoaded() {
+            const v = document.getElementById('preview-video');
+            videoDuration = v.duration || 0;
+            trimIn  = 0;
+            trimOut = videoDuration;
+
+            document.getElementById('meta-duration').textContent = fmtTime(videoDuration);
+            document.getElementById('meta-resolution').textContent = v.videoWidth && v.videoHeight
+                ? `${v.videoWidth}×${v.videoHeight}` : '—';
+
+            // Preencher duração na lição automaticamente
+            const durField = document.getElementById('field-duration');
+            if (durField && !durField.value) {
+                const mins = Math.round(videoDuration / 60);
+                durField.value = Math.max(1, mins);
+                document.getElementById('meta-autofill-notice').classList.remove('hidden');
+            }
+
+            // Inicializar trim handles
+            updateTrimUI();
+            document.getElementById('trim-in-input').value  = fmtTime(trimIn);
+            document.getElementById('trim-out-input').value = fmtTime(trimOut);
+            updateTrimDurationLabel();
+
+            // Mostrar overlay de play
+            document.getElementById('play-overlay').classList.remove('hidden');
+            document.getElementById('time-badge').textContent = `0:00 / ${fmtTime(videoDuration)}`;
+        }
+
+        // ── Player: play/pause ───────────────────────────────────────────
+        function togglePlayPause() {
+            const v = document.getElementById('preview-video');
+            if (v.paused) {
+                // Se cursor está antes do IN, ir para IN
+                if (v.currentTime < trimIn) v.currentTime = trimIn;
+                v.play();
+                document.getElementById('play-btn-icon').className   = 'fas fa-pause text-sm';
+                document.getElementById('play-overlay-icon').className = 'fas fa-pause text-white text-xl';
+                document.getElementById('play-overlay').classList.add('hidden');
+            } else {
+                v.pause();
+                document.getElementById('play-btn-icon').className   = 'fas fa-play text-sm';
+                document.getElementById('play-overlay-icon').className = 'fas fa-play text-white text-xl ml-1';
+                document.getElementById('play-overlay').classList.remove('hidden');
+            }
+        }
+
+        // ── Player: mudo ─────────────────────────────────────────────────
+        function toggleMute() {
+            const v = document.getElementById('preview-video');
+            v.muted = !v.muted;
+            document.getElementById('mute-icon').className = v.muted ? 'fas fa-volume-mute' : 'fas fa-volume-up';
+        }
+
+        // ── Player: velocidade ───────────────────────────────────────────
+        function setPlaybackSpeed(val) {
+            document.getElementById('preview-video').playbackRate = parseFloat(val);
+        }
+
+        // ── Player: skip ─────────────────────────────────────────────────
+        function skipBy(sec) {
+            const v = document.getElementById('preview-video');
+            v.currentTime = Math.max(0, Math.min(videoDuration, v.currentTime + sec));
+        }
+
+        // ── Player: actualizar scrubber em tempo real ────────────────────
+        function onVideoTimeUpdate() {
+            const v   = document.getElementById('preview-video');
+            const t   = v.currentTime;
+            const dur = videoDuration || 1;
+
+            // Parar em trimOut durante playback
+            if (!v.paused && trimOut > 0 && t >= trimOut) {
+                v.pause();
+                v.currentTime = trimOut;
+                document.getElementById('play-btn-icon').className   = 'fas fa-play text-sm';
+                document.getElementById('play-overlay-icon').className = 'fas fa-play text-white text-xl ml-1';
+                document.getElementById('play-overlay').classList.remove('hidden');
+            }
+
+            const pct = (t / dur) * 100;
+            document.getElementById('seek-progress').style.width = pct + '%';
+            document.getElementById('seek-thumb').style.left     = pct + '%';
+            document.getElementById('current-time-label').textContent = fmtTime(t);
+            document.getElementById('time-badge').textContent = `${fmtTime(t)} / ${fmtTime(dur)}`;
+        }
+
+        // ── Scrubber: clique na track ────────────────────────────────────
+        function onSeekClick(e) {
+            if (isDraggingTrim) return;
+            const track = document.getElementById('seek-track');
+            const rect  = track.getBoundingClientRect();
+            const pct   = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            document.getElementById('preview-video').currentTime = pct * videoDuration;
+        }
+
+        // ── Scrubber: arrastar posição ───────────────────────────────────
+        function startSeekDrag(e) {
+            e.preventDefault();
+            isDraggingSeek = true;
+            const track = document.getElementById('seek-track');
+
+            const onMove = (ev) => {
+                const rect = track.getBoundingClientRect();
+                const pct  = Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width));
+                document.getElementById('preview-video').currentTime = pct * videoDuration;
+            };
+            const onUp = () => {
+                isDraggingSeek = false;
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+            };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        }
+
+        // ── Trim: arrastar handles ────────────────────────────────────────
+        function startTrimDrag(e, which) {
+            e.preventDefault();
+            isDraggingTrim = which;
+            const track = document.getElementById('seek-track');
+
+            const onMove = (ev) => {
+                const rect = track.getBoundingClientRect();
+                const pct  = Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width));
+                const t    = pct * videoDuration;
+                if (which === 'in') {
+                    trimIn = Math.min(t, trimOut - 1);
+                    document.getElementById('preview-video').currentTime = trimIn;
+                } else {
+                    trimOut = Math.max(t, trimIn + 1);
+                    document.getElementById('preview-video').currentTime = trimOut;
+                }
+                updateTrimUI();
+                updateTrimInputs();
+                updateTrimDurationLabel();
+            };
+            const onUp = () => {
+                isDraggingTrim = null;
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+            };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        }
+
+        // ── Trim: input manual ───────────────────────────────────────────
+        function onTrimInputChange(which, val) {
+            const t = parseTime(val);
+            if (which === 'in') {
+                trimIn = Math.max(0, Math.min(t, trimOut - 1));
+                document.getElementById('preview-video').currentTime = trimIn;
+            } else {
+                trimOut = Math.min(videoDuration, Math.max(t, trimIn + 1));
+                document.getElementById('preview-video').currentTime = trimOut;
+            }
+            updateTrimUI();
+            updateTrimInputs();
+            updateTrimDurationLabel();
+        }
+
+        // ── Trim: definir ponto no tempo actual ──────────────────────────
+        function setTrimPointHere(which) {
+            const t = document.getElementById('preview-video').currentTime;
+            if (which === 'in')  trimIn  = Math.min(t, trimOut - 1);
+            else                 trimOut = Math.max(t, trimIn + 1);
+            updateTrimUI();
+            updateTrimInputs();
+            updateTrimDurationLabel();
+            VClass.showNotification(`Ponto ${which.toUpperCase()} definido em ${fmtTime(which === 'in' ? trimIn : trimOut)}`, 'info');
+        }
+
+        function goToTrimIn()  { document.getElementById('preview-video').currentTime = trimIn;  }
+        function goToTrimOut() { document.getElementById('preview-video').currentTime = trimOut; }
+
+        function resetTrim() {
+            trimIn  = 0;
+            trimOut = videoDuration;
+            updateTrimUI();
+            updateTrimInputs();
+            updateTrimDurationLabel();
+        }
+
+        function updateTrimUI() {
+            const dur = videoDuration || 1;
+            const inPct  = (trimIn  / dur) * 100;
+            const outPct = (trimOut / dur) * 100;
+            document.getElementById('trim-handle-in').style.left  = inPct  + '%';
+            document.getElementById('trim-handle-out').style.left = outPct + '%';
+            document.getElementById('trim-before').style.width    = inPct  + '%';
+            document.getElementById('trim-after').style.width     = (100 - outPct) + '%';
+            document.getElementById('trim-region').style.left     = inPct  + '%';
+            document.getElementById('trim-region').style.width    = (outPct - inPct) + '%';
+            document.getElementById('trim-in-label').textContent  = fmtTime(trimIn);
+            document.getElementById('trim-out-label').textContent = fmtTime(trimOut);
+            // Mostrar indicador de corte no botão de upload
+            const hasTrim = trimIn > 0.5 || trimOut < videoDuration - 0.5;
+            document.getElementById('upload-trim-info').classList.toggle('hidden', !hasTrim);
+        }
+
+        function updateTrimInputs() {
+            document.getElementById('trim-in-input').value  = fmtTime(trimIn);
+            document.getElementById('trim-out-input').value = fmtTime(trimOut);
+        }
+
+        function updateTrimDurationLabel() {
+            const d = (trimOut - trimIn);
+            document.getElementById('trim-duration-label').textContent =
+                fmtTime(d) + (d < videoDuration ? ` (de ${fmtTime(videoDuration)})` : ' (completo)');
+        }
+
+        // ── Captura de thumbnail ─────────────────────────────────────────
+        function captureCurrentFrame() {
+            const v      = document.getElementById('preview-video');
+            const canvas = document.getElementById('thumb-canvas');
+            const w = v.videoWidth  || 1280;
+            const h = v.videoHeight || 720;
+            canvas.width  = w;
+            canvas.height = h;
+            canvas.getContext('2d').drawImage(v, 0, 0, w, h);
+            capturedThumbData = canvas.toDataURL('image/jpeg', 0.92);
+
+            document.getElementById('thumb-capture-img').src = capturedThumbData;
+            document.getElementById('thumb-capture-img').classList.remove('hidden');
+            document.getElementById('thumb-capture-empty').classList.add('hidden');
+            document.getElementById('btn-use-thumb').disabled = false;
+            VClass.showNotification(`Frame capturado em ${fmtTime(v.currentTime)}!`, 'success');
+        }
+
+        function useAsLessonThumbnail() {
+            if (!capturedThumbData) return;
+            // Colocar na pré-visualização da thumbnail da lição
+            const img = document.getElementById('thumb-preview');
+            img.src = capturedThumbData;
+            img.classList.remove('hidden');
+            document.getElementById('thumb-placeholder')?.classList.add('hidden');
+            updateCheckItem('check-thumbnail', true, 'Thumbnail capturada do vídeo');
+            VClass.showNotification('Thumbnail aplicada à lição!', 'success');
+        }
+
+        // ── Iniciar Upload ───────────────────────────────────────────────
         async function startUpload() {
             if (!uploadFile) return;
 
             document.getElementById('upload-action-row').classList.add('hidden');
             document.getElementById('upload-progress-section').classList.remove('hidden');
-            document.getElementById('upload-cancel-btn').classList.remove('hidden');
             document.getElementById('upload-status-text').textContent = 'A preparar upload...';
             setUploadProgress(0);
             uploadStartTime = Date.now();
 
             try {
-                // 1. Pedir URL de upload ao servidor
                 const token = localStorage.getItem('accessToken') || '';
+                const hasTrim = trimIn > 0.5 || trimOut < videoDuration - 0.5;
                 const prepRes = await fetch('/api/creator/video/upload-url', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({
                         filename: uploadFile.name,
-                        title: document.getElementById('field-title')?.value || uploadFile.name
+                        title: document.getElementById('field-title')?.value || uploadFile.name,
+                        trimIn:  hasTrim ? trimIn  : null,
+                        trimOut: hasTrim ? trimOut : null
                     })
                 });
                 const prep = await prepRes.json();
                 if (!prep.success) throw new Error(prep.error || 'Erro ao preparar upload');
-
                 const { videoId, uploadUrl, authHeader, demo } = prep.data;
 
-                // 2a. MODO DEMO — simular upload com progresso fictício
                 if (demo || !uploadUrl) {
                     await simulateDemoUpload(videoId, uploadFile.name);
-                    return;
+                } else {
+                    document.getElementById('upload-status-text').textContent = 'A enviar para Bunny.net...';
+                    await doRealUpload(uploadUrl, authHeader, videoId);
                 }
-
-                // 2b. MODO REAL — PUT directo para o Bunny.net com progresso
-                document.getElementById('upload-status-text').textContent = 'A enviar para Bunny.net...';
-                await doRealUpload(uploadUrl, authHeader, videoId);
-
             } catch (err) {
                 showUploadError(err.message || 'Erro desconhecido durante o upload.');
             }
         }
 
-        // ── Upload real via XHR (progresso nativo) ───────────────────────
+        // ── Upload real via XHR ──────────────────────────────────────────
         function doRealUpload(uploadUrl, authHeader, videoId) {
             return new Promise((resolve, reject) => {
                 uploadXHR = new XMLHttpRequest();
@@ -1046,87 +1751,66 @@
 
                 uploadXHR.upload.onprogress = (e) => {
                     if (!e.lengthComputable) return;
-                    const pct  = Math.round((e.loaded / e.total) * 100);
+                    const pct     = Math.round((e.loaded / e.total) * 100);
                     const elapsed = (Date.now() - uploadStartTime) / 1000;
-                    const speed = e.loaded / elapsed;
-                    const remaining = (e.total - e.loaded) / speed;
-                    setUploadProgress(pct, e.loaded, speed, remaining);
+                    const speed   = e.loaded / elapsed;
+                    setUploadProgress(pct, e.loaded, speed, (e.total - e.loaded) / speed);
                 };
-
-                uploadXHR.onload = () => {
-                    if (uploadXHR.status >= 200 && uploadXHR.status < 300) {
-                        onUploadSuccess(videoId);
-                        resolve();
-                    } else {
-                        reject(new Error(`Bunny.net respondeu com ${uploadXHR.status}`));
-                    }
+                uploadXHR.onload  = () => {
+                    if (uploadXHR.status >= 200 && uploadXHR.status < 300) { onUploadSuccess(videoId); resolve(); }
+                    else reject(new Error(`Bunny.net: HTTP ${uploadXHR.status}`));
                 };
-
-                uploadXHR.onerror  = () => reject(new Error('Erro de rede durante o upload.'));
-                uploadXHR.onabort  = () => reject(new Error('Upload cancelado.'));
+                uploadXHR.onerror = () => reject(new Error('Erro de rede durante o upload.'));
+                uploadXHR.onabort = () => reject(new Error('Upload cancelado.'));
                 uploadXHR.send(uploadFile);
             });
         }
 
-        // ── Upload demo — progresso simulado ────────────────────────────
+        // ── Upload demo ──────────────────────────────────────────────────
         function simulateDemoUpload(videoId, filename) {
             return new Promise((resolve) => {
                 document.getElementById('upload-status-text').textContent = 'A simular upload (modo demo)...';
                 let pct = 0;
                 const total = uploadFile.size;
-                const interval = setInterval(() => {
-                    // Simula velocidade variável (~5-15 MB/s)
-                    const chunk = Math.random() * 15 * 1024 * 1024;
+                const iv = setInterval(() => {
                     pct = Math.min(pct + Math.random() * 8 + 2, 99);
                     const sent  = (pct / 100) * total;
-                    const speed = chunk / 0.2;
-                    const eta   = ((total - sent) / speed);
-                    setUploadProgress(Math.round(pct), sent, speed, eta);
-
+                    const speed = (Math.random() * 10 + 5) * 1048576;
+                    setUploadProgress(Math.round(pct), sent, speed, (total - sent) / speed);
                     if (pct >= 99) {
-                        clearInterval(interval);
+                        clearInterval(iv);
                         setTimeout(() => {
                             setUploadProgress(100, total, 0, 0);
                             onUploadSuccess(videoId, filename, true);
                             resolve();
                         }, 400);
                     }
-                }, 200);
+                }, 180);
             });
         }
 
-        // ── Actualizar barra de progresso ────────────────────────────────
-        function setUploadProgress(pct, bytesSent = 0, speed = 0, eta = 0) {
-            document.getElementById('upload-bar').style.width = pct + '%';
-            document.getElementById('upload-pct').textContent = pct + '%';
-            if (bytesSent > 0) {
-                document.getElementById('upload-bytes-sent').textContent =
-                    formatBytes(bytesSent) + ' enviados';
-            }
-            if (speed > 0) {
-                document.getElementById('upload-speed').textContent =
-                    formatBytes(speed) + '/s';
-            }
-            if (eta > 0 && eta < 3600) {
-                const m = Math.floor(eta / 60), s = Math.round(eta % 60);
-                document.getElementById('upload-eta').textContent =
-                    eta > 60 ? `~${m}m ${s}s restantes` : `~${s}s restantes`;
+        // ── Barra de progresso ───────────────────────────────────────────
+        function setUploadProgress(pct, sent = 0, speed = 0, eta = 0) {
+            document.getElementById('upload-bar').style.width   = pct + '%';
+            document.getElementById('upload-pct').textContent   = pct + '%';
+            if (sent  > 0) document.getElementById('upload-bytes-sent').textContent = formatBytes(sent) + ' enviados';
+            if (speed > 0) document.getElementById('upload-speed').textContent      = formatBytes(speed) + '/s';
+            if (eta   > 0 && eta < 3600) {
+                const m = Math.floor(eta/60), s = Math.round(eta%60);
+                document.getElementById('upload-eta').textContent = eta > 60 ? `~${m}m ${s}s` : `~${s}s`;
             }
         }
 
         // ── Upload concluído ─────────────────────────────────────────────
         function onUploadSuccess(videoId, filename, isDemo = false) {
-            // Guardar videoId no campo da lição
             const videoIdField = document.getElementById('field-video-id');
             if (videoIdField) videoIdField.value = videoId;
             lessonData.videoId = videoId;
-
-            // Actualizar checklist
             updateCheckItem('check-video-id', true, 'Vídeo enviado via upload directo');
             scheduleAutoSave();
+            updatePublishChecklist();
 
-            // Mostrar painel de sucesso
-            document.getElementById('upload-progress-panel').classList.add('hidden');
+            document.getElementById('upload-editor').classList.add('hidden');
             document.getElementById('upload-done-panel').classList.remove('hidden');
             document.getElementById('upload-done-filename').textContent =
                 (filename || uploadFile?.name || 'vídeo') + (isDemo ? ' (demo)' : '');
@@ -1134,32 +1818,25 @@
             document.getElementById('upload-done-status').textContent =
                 isDemo ? '✅ Demo concluído' : 'A processar (2–10 min)';
 
-            updatePublishChecklist();
-
-            // Polling de status (apenas em modo real)
             if (!isDemo) pollVideoStatus(videoId);
         }
 
-        // ── Polling de status após upload real ───────────────────────────
+        // ── Polling de status ────────────────────────────────────────────
         async function pollVideoStatus(videoId) {
             const token = localStorage.getItem('accessToken') || '';
             let attempts = 0;
-            const max = 30; // ~5 min de polling (10s × 30)
-
             const check = async () => {
-                if (attempts++ >= max) return;
+                if (attempts++ >= 30) return;
                 try {
-                    const res  = await fetch(`/api/creator/video/${videoId}/status`, {
+                    const r = await fetch(`/api/creator/video/${videoId}/status`, {
                         headers: { Authorization: `Bearer ${token}` }
                     });
-                    const data = await res.json();
-                    if (data.success) {
-                        const { status, encodeProgress } = data.data;
-                        let label = 'A processar...';
-                        if (status === 'transcoding') label = `A transcodificar... ${encodeProgress}%`;
-                        if (status === 'ready')       label = '✅ Pronto para streaming!';
-                        if (status === 'error')       label = '❌ Erro no processamento';
-                        document.getElementById('upload-done-status').textContent = label;
+                    const d = await r.json();
+                    if (d.success) {
+                        const { status, encodeProgress } = d.data;
+                        const labels = { transcoding: `A transcodificar... ${encodeProgress}%`, ready: '✅ Pronto para streaming!', error: '❌ Erro no processamento' };
+                        const el = document.getElementById('upload-done-status');
+                        if (el) el.textContent = labels[status] || 'A processar...';
                         if (status === 'ready' || status === 'error') return;
                     }
                 } catch (_) {}
@@ -1168,27 +1845,34 @@
             setTimeout(check, 5000);
         }
 
-        // ── Mostrar erro ─────────────────────────────────────────────────
+        // ── Erro ─────────────────────────────────────────────────────────
         function showUploadError(msg) {
-            document.getElementById('upload-idle').classList.add('hidden');
-            document.getElementById('upload-progress-panel').classList.add('hidden');
-            document.getElementById('upload-done-panel').classList.add('hidden');
+            ['upload-idle','upload-editor','upload-done-panel'].forEach(id =>
+                document.getElementById(id)?.classList.add('hidden'));
             document.getElementById('upload-error-panel').classList.remove('hidden');
             document.getElementById('upload-error-msg').textContent = msg;
         }
 
-        // ── Resetar estado do upload ─────────────────────────────────────
+        // ── Reset ─────────────────────────────────────────────────────────
         function resetUpload() {
             if (uploadXHR) { try { uploadXHR.abort(); } catch(_){} uploadXHR = null; }
-            uploadFile = null;
+            const v = document.getElementById('preview-video');
+            if (v.src) { URL.revokeObjectURL(v.src); v.src = ''; }
+            uploadFile = capturedThumbData = null;
             uploadStartTime = null;
+            trimIn = trimOut = videoDuration = 0;
+
+            ['upload-editor','upload-done-panel','upload-error-panel','upload-progress-section'].forEach(id =>
+                document.getElementById(id)?.classList.add('hidden'));
             document.getElementById('upload-idle').classList.remove('hidden');
-            document.getElementById('upload-progress-panel').classList.add('hidden');
-            document.getElementById('upload-done-panel').classList.add('hidden');
-            document.getElementById('upload-error-panel').classList.add('hidden');
+            document.getElementById('upload-action-row')?.classList.remove('hidden');
             document.getElementById('upload-bar').style.width = '0%';
             document.getElementById('upload-pct').textContent = '0%';
             document.getElementById('upload-file-input').value = '';
+            document.getElementById('thumb-capture-img').classList.add('hidden');
+            document.getElementById('thumb-capture-empty').classList.remove('hidden');
+            document.getElementById('btn-use-thumb').disabled = true;
+            document.getElementById('play-btn-icon').className = 'fas fa-play text-sm';
         }
 
         function validateVideoId() {
@@ -1493,6 +2177,331 @@
 
         function previewLesson() {
             VClass.showNotification('Pré-visualização disponível após salvar a lição.', 'info');
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //  AJUSTES DE VÍDEO — ÁUDIO + FILTROS CSS + ROTAÇÃO
+        // ════════════════════════════════════════════════════════════════
+        let videoAdjust = { volume: 100, brightness: 100, contrast: 100, saturation: 100, rotation: 0 };
+
+        function switchAdjustTab(tab) {
+            ['audio','image','rotate'].forEach(t => {
+                const panel = document.getElementById(`adj-panel-${t}`);
+                const btn   = document.getElementById(`adj-tab-${t}`);
+                if (!panel || !btn) return;
+                panel.classList.toggle('hidden', t !== tab);
+                btn.className = t === tab
+                    ? 'px-3 py-1 text-xs font-semibold rounded-lg bg-white shadow text-indigo-700 transition adj-tab-active'
+                    : 'px-3 py-1 text-xs font-medium text-gray-500 hover:text-gray-700 rounded-lg transition';
+            });
+        }
+
+        function applyAudioAdjust() {
+            const v   = document.getElementById('preview-video');
+            const val = parseInt(document.getElementById('adj-volume').value);
+            videoAdjust.volume = val;
+            v.volume = Math.min(1, val / 100);
+            document.getElementById('adj-volume-val').textContent = val + '%';
+            updateEditSummary();
+        }
+
+        function applyVideoFilters() {
+            const v  = document.getElementById('preview-video');
+            const br = parseInt(document.getElementById('adj-brightness').value);
+            const co = parseInt(document.getElementById('adj-contrast').value);
+            const sa = parseInt(document.getElementById('adj-saturation').value);
+            videoAdjust.brightness = br;
+            videoAdjust.contrast   = co;
+            videoAdjust.saturation = sa;
+            document.getElementById('adj-brightness-val').textContent = br + '%';
+            document.getElementById('adj-contrast-val').textContent   = co + '%';
+            document.getElementById('adj-saturation-val').textContent = sa + '%';
+            applyFilterToPlayer(v);
+            updateEditSummary();
+        }
+
+        function applyFilterToPlayer(v) {
+            const br = videoAdjust.brightness;
+            const co = videoAdjust.contrast;
+            const sa = videoAdjust.saturation;
+            v.style.filter = `brightness(${br}%) contrast(${co}%) saturate(${sa}%)`;
+        }
+
+        function setVideoRotation(deg) {
+            videoAdjust.rotation = deg;
+            [0, 90, 180, 270].forEach(d => {
+                const btn = document.getElementById(`rot-${d}`);
+                if (!btn) return;
+                btn.className = d === deg
+                    ? 'flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 border-purple-400 bg-purple-50 text-purple-700 transition'
+                    : 'flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 border-gray-200 text-gray-500 hover:border-purple-300 hover:bg-purple-50 transition';
+            });
+            const v = document.getElementById('preview-video');
+            // Para rotação de 90/270, também ajustamos transform no player
+            const rotMap = { 0: '', 90: 'rotate(90deg)', 180: 'rotate(180deg)', 270: 'rotate(270deg)' };
+            // Aplicar apenas transform de rotação por cima do filter
+            const br = videoAdjust.brightness;
+            const co = videoAdjust.contrast;
+            const sa = videoAdjust.saturation;
+            v.style.filter    = `brightness(${br}%) contrast(${co}%) saturate(${sa}%)`;
+            v.style.transform = rotMap[deg] || '';
+            updateEditSummary();
+            VClass.showNotification(`Rotação definida: ${deg}°`, 'info');
+        }
+
+        function resetVideoAdjustments() {
+            videoAdjust = { volume: 100, brightness: 100, contrast: 100, saturation: 100, rotation: 0 };
+            // Repor sliders
+            ['adj-volume','adj-brightness','adj-contrast','adj-saturation'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = id === 'adj-saturation' ? 100 : 100;
+            });
+            document.getElementById('adj-volume-val').textContent     = '100%';
+            document.getElementById('adj-brightness-val').textContent = '100%';
+            document.getElementById('adj-contrast-val').textContent   = '100%';
+            document.getElementById('adj-saturation-val').textContent = '100%';
+            const v = document.getElementById('preview-video');
+            v.volume    = 1;
+            v.style.filter    = '';
+            v.style.transform = '';
+            setVideoRotation(0);
+            updateEditSummary();
+            VClass.showNotification('Ajustes repostos ao padrão.', 'info');
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //  MARCADORES / CAPÍTULOS
+        // ════════════════════════════════════════════════════════════════
+        let videoMarkers = []; // [{id, time, label}]
+        let markerIdCounter = 1;
+
+        function addMarkerAtCurrentTime() {
+            const v = document.getElementById('preview-video');
+            if (!uploadFile) {
+                VClass.showNotification('Seleccione um vídeo primeiro.', 'warning');
+                return;
+            }
+            const t = v.currentTime || 0;
+            const id = markerIdCounter++;
+            videoMarkers.push({ id, time: t, label: `Capítulo ${videoMarkers.length + 1}` });
+            videoMarkers.sort((a, b) => a.time - b.time);
+            renderMarkers();
+            updateEditSummary();
+            VClass.showNotification(`Marcador adicionado em ${fmtTime(t)}`, 'success');
+        }
+
+        function renderMarkers() {
+            const container = document.getElementById('markers-list');
+            const empty     = document.getElementById('markers-empty');
+            if (videoMarkers.length === 0) {
+                empty.classList.remove('hidden');
+                // Remove items mas mantém empty
+                Array.from(container.querySelectorAll('.marker-item')).forEach(el => el.remove());
+                return;
+            }
+            empty.classList.add('hidden');
+            // Rebuild all
+            Array.from(container.querySelectorAll('.marker-item')).forEach(el => el.remove());
+            videoMarkers.forEach(m => {
+                const div = document.createElement('div');
+                div.className = 'marker-item';
+                div.innerHTML = `
+                    <button onclick="jumpToMarker(${m.id})" title="Ir para este ponto"
+                        class="w-7 h-7 flex items-center justify-center rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition flex-shrink-0 text-xs">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <span class="font-mono text-xs font-bold text-green-700 w-12 flex-shrink-0">${fmtTime(m.time)}</span>
+                    <input type="text" value="${m.label}" placeholder="Nome do capítulo"
+                        onchange="updateMarkerLabel(${m.id}, this.value)"
+                        class="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-green-400">
+                    <button onclick="removeMarker(${m.id})"
+                        class="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-red-500 transition flex-shrink-0">
+                        <i class="fas fa-times text-xs"></i>
+                    </button>
+                `;
+                container.insertBefore(div, empty);
+            });
+        }
+
+        function jumpToMarker(id) {
+            const m = videoMarkers.find(x => x.id === id);
+            if (!m) return;
+            const v = document.getElementById('preview-video');
+            v.currentTime = m.time;
+        }
+
+        function updateMarkerLabel(id, val) {
+            const m = videoMarkers.find(x => x.id === id);
+            if (m) { m.label = val; updateEditSummary(); }
+        }
+
+        function removeMarker(id) {
+            videoMarkers = videoMarkers.filter(x => x.id !== id);
+            renderMarkers();
+            updateEditSummary();
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //  MINIATURAS AUTOMÁTICAS
+        // ════════════════════════════════════════════════════════════════
+        async function generateAutoThumbs() {
+            const v = document.getElementById('preview-video');
+            if (!uploadFile || !v.duration) {
+                VClass.showNotification('Seleccione um vídeo e aguarde os metadados carregarem.', 'warning');
+                return;
+            }
+            const loading = document.getElementById('auto-thumbs-loading');
+            const grid    = document.getElementById('auto-thumbs-grid');
+            const empty   = document.getElementById('auto-thumbs-empty');
+            loading.classList.remove('hidden');
+            empty.classList.add('hidden');
+            grid.classList.add('hidden');
+            grid.innerHTML = '';
+
+            const dur      = v.duration;
+            const count    = 6;
+            const canvas   = document.createElement('canvas');
+            const ctx      = canvas.getContext('2d');
+            const promises = [];
+
+            for (let i = 0; i < count; i++) {
+                const t = (dur / (count + 1)) * (i + 1);
+                promises.push(captureFrameAt(v, canvas, ctx, t));
+            }
+
+            const frames = await Promise.all(promises);
+            loading.classList.add('hidden');
+            grid.classList.remove('hidden');
+
+            frames.forEach(({ dataUrl, time }) => {
+                const item = document.createElement('div');
+                item.className = 'auto-thumb-item';
+                item.innerHTML = `
+                    <img src="${dataUrl}" alt="miniatura ${fmtTime(time)}">
+                    <span class="thumb-time">${fmtTime(time)}</span>
+                    <span class="thumb-use-btn" onclick="useAutoThumb('${dataUrl}', event)">Usar</span>
+                `;
+                grid.appendChild(item);
+            });
+        }
+
+        function captureFrameAt(video, canvas, ctx, time) {
+            return new Promise((resolve) => {
+                const onSeeked = () => {
+                    video.removeEventListener('seeked', onSeeked);
+                    canvas.width  = video.videoWidth  || 1280;
+                    canvas.height = video.videoHeight || 720;
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    resolve({ dataUrl: canvas.toDataURL('image/jpeg', 0.80), time });
+                };
+                video.addEventListener('seeked', onSeeked, { once: true });
+                video.currentTime = time;
+            });
+        }
+
+        function useAutoThumb(dataUrl, e) {
+            e.stopPropagation();
+            // Marcar como seleccionada
+            document.querySelectorAll('.auto-thumb-item').forEach(el => el.classList.remove('selected'));
+            e.target.closest('.auto-thumb-item').classList.add('selected');
+            // Aplicar como thumbnail da lição
+            const img = document.getElementById('thumb-preview');
+            img.src = dataUrl;
+            img.classList.remove('hidden');
+            document.getElementById('thumb-placeholder')?.classList.add('hidden');
+            updateCheckItem('check-thumbnail', true, 'Thumbnail automática seleccionada');
+            VClass.showNotification('Thumbnail aplicada à lição!', 'success');
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //  FULLSCREEN
+        // ════════════════════════════════════════════════════════════════
+        function openFullscreen() {
+            const v = document.getElementById('preview-video');
+            if (!v.src) { VClass.showNotification('Seleccione um vídeo primeiro.', 'warning'); return; }
+            if (v.requestFullscreen) { v.requestFullscreen(); }
+            else if (v.webkitRequestFullscreen) { v.webkitRequestFullscreen(); }
+            else if (v.mozRequestFullScreen) { v.mozRequestFullScreen(); }
+            else { VClass.showNotification('Fullscreen não suportado neste browser.', 'warning'); }
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        //  SUMÁRIO DAS EDIÇÕES
+        // ════════════════════════════════════════════════════════════════
+        function updateEditSummary() {
+            const items = [];
+
+            // Trim
+            if (uploadFile && videoDuration > 0) {
+                const hasTrim = trimIn > 0.5 || trimOut < videoDuration - 0.5;
+                if (hasTrim) {
+                    items.push(`✂️ <strong>Corte:</strong> ${fmtTime(trimIn)} → ${fmtTime(trimOut)} (${fmtTime(trimOut - trimIn)})`);
+                }
+            }
+
+            // Volume
+            if (videoAdjust.volume !== 100) {
+                items.push(`🔊 <strong>Volume:</strong> ${videoAdjust.volume}%`);
+            }
+
+            // Filtros de imagem
+            if (videoAdjust.brightness !== 100 || videoAdjust.contrast !== 100 || videoAdjust.saturation !== 100) {
+                items.push(`🎨 <strong>Filtros:</strong> brilho ${videoAdjust.brightness}%, contraste ${videoAdjust.contrast}%, saturação ${videoAdjust.saturation}%`);
+            }
+
+            // Rotação
+            if (videoAdjust.rotation !== 0) {
+                items.push(`🔄 <strong>Rotação:</strong> ${videoAdjust.rotation}°`);
+            }
+
+            // Marcadores
+            if (videoMarkers.length > 0) {
+                items.push(`🔖 <strong>Marcadores:</strong> ${videoMarkers.length} capítulo(s) definido(s)`);
+            }
+
+            const panel = document.getElementById('edit-summary-panel');
+            const content = document.getElementById('edit-summary-content');
+            if (items.length === 0) {
+                panel.classList.add('hidden');
+            } else {
+                panel.classList.remove('hidden');
+                content.innerHTML = items.map(i => `<div class="flex items-start gap-1.5">${i}</div>`).join('');
+            }
+
+            // Guardar nos metadados da lição
+            lessonData.videoEdits = {
+                trimIn: trimIn > 0.5 ? trimIn : null,
+                trimOut: uploadFile && trimOut < videoDuration - 0.5 ? trimOut : null,
+                volume: videoAdjust.volume,
+                brightness: videoAdjust.brightness,
+                contrast: videoAdjust.contrast,
+                saturation: videoAdjust.saturation,
+                rotation: videoAdjust.rotation,
+                markers: videoMarkers.map(m => ({ time: m.time, label: m.label }))
+            };
+            scheduleAutoSave();
+        }
+
+        // Injectar metadados de edição no payload de upload
+        const _originalStartUpload = startUpload;
+        // (startUpload já lê lessonData.videoEdits que é actualizado em updateEditSummary)
+
+    </script>
+
+    <!-- Modal Fullscreen (fallback manual) -->
+    <div id="fullscreen-overlay" class="hidden" onclick="closeFullscreenOverlay()">
+        <button class="absolute top-4 right-4 text-white text-2xl hover:text-gray-300 transition z-50" onclick="closeFullscreenOverlay()">
+            <i class="fas fa-times"></i>
+        </button>
+        <video id="fullscreen-video" controls class="max-w-full max-h-full rounded-xl shadow-2xl"></video>
+        <p class="text-gray-400 text-xs mt-3">Clique fora do vídeo para fechar</p>
+    </div>
+    <script>
+        // Fallback fullscreen para browsers que não suportam nativo
+        // (o openFullscreen() acima tenta o nativo primeiro)
+        function closeFullscreenOverlay() {
+            document.getElementById('fullscreen-overlay').classList.add('hidden');
+            document.getElementById('fullscreen-video').pause();
         }
     </script>
 </body>
