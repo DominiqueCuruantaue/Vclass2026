@@ -22,6 +22,16 @@ app.use('/api/*', corsConfig)
 app.use('/static/*', serveStatic({ root: './public' }))
 app.use('/designs/*', serveStatic({ root: './public' }))
 
+// Favicon — evita erros 404 nos logs do browser
+app.get('/favicon.ico', (c) => {
+  c.header('Content-Type', 'image/svg+xml')
+  c.header('Cache-Control', 'public, max-age=86400')
+  return c.body(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="8" fill="#7c3aed"/>
+  <text x="16" y="22" font-family="Arial" font-size="18" font-weight="bold" text-anchor="middle" fill="white">V</text>
+</svg>`)
+})
+
 // HTML Pages
 app.route('/', pagesRoutes)
 
