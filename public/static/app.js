@@ -108,11 +108,28 @@ function _doLogout() {
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('user');
   localStorage.removeItem('authTime');
-  window.location.href = '/login.html';
+  // Limpar qualquer outro dado de sessão
+  ['vclass_token','vclass_user','vclass_auth'].forEach(k => localStorage.removeItem(k));
+  window.location.replace('/login.html');
 }
 
 function logout() {
-  api.auth.logout().finally(() => _doLogout());
+  // 1. Limpar dados locais IMEDIATAMENTE (não depender do fetch)
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('user');
+  localStorage.removeItem('authTime');
+  ['vclass_token','vclass_user','vclass_auth'].forEach(k => localStorage.removeItem(k));
+
+  // 2. Notificar o servidor em background (fire-and-forget)
+  const token = null; // já removemos, usar o valor antes de apagar
+  fetch(API_BASE_URL + '/auth/logout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  }).catch(() => {}); // ignorar erros de rede
+
+  // 3. Redirecionar imediatamente
+  window.location.replace('/login.html');
 }
 
 function isAuthenticated() {

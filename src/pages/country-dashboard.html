@@ -422,8 +422,12 @@ document.getElementById('user-search')?.addEventListener('input', function() {
 })
 
 function logout() {
-  VClass.logout ? VClass.logout() : localStorage.clear()
-  window.location.href = '/login.html'
+  if (typeof VClass !== 'undefined' && VClass.logout) {
+    VClass.logout();
+  } else {
+    localStorage.clear();
+    window.location.replace('/login.html');
+  }
 }
 </script>
 </body>

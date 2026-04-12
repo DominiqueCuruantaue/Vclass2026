@@ -465,7 +465,10 @@ function showToast(msg) {
   document.body.appendChild(t)
   setTimeout(() => t.remove(), 3000)
 }
-function logout() { VClass.logout ? VClass.logout() : localStorage.clear(); window.location.href = '/login.html' }
+function logout() {
+  if (typeof VClass !== 'undefined' && VClass.logout) { VClass.logout(); }
+  else { localStorage.clear(); window.location.replace('/login.html'); }
+}
 </script>
 </body>
 </html>

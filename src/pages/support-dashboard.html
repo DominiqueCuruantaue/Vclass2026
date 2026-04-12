@@ -551,8 +551,12 @@ function showToast(msg, type = 'success') {
 
 // ── Logout ────────────────────────────────────────────────────────
 function logout() {
-    localStorage.removeItem('vclass_token'); localStorage.removeItem('vclass_user')
-    window.location.href = '/login.html'
+    if (typeof VClass !== 'undefined' && VClass.logout) {
+        VClass.logout();
+    } else {
+        ['accessToken','refreshToken','user','authTime','vclass_token','vclass_user'].forEach(k => localStorage.removeItem(k));
+        window.location.replace('/login.html');
+    }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────

@@ -1091,10 +1091,12 @@ function toggleSidebar() {
 
 function logout() {
     if (!confirm('Terminar sessão?')) return;
-    VClass.storage.remove('accessToken');
-    VClass.storage.remove('refreshToken');
-    VClass.storage.remove('user');
-    window.location.href = '/login.html';
+    if (typeof VClass !== 'undefined' && VClass.logout) {
+        VClass.logout();
+    } else {
+        ['accessToken','refreshToken','user','authTime'].forEach(k => localStorage.removeItem(k));
+        window.location.replace('/login.html');
+    }
 }
 
 let toastTimer;
