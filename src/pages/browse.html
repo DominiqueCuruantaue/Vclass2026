@@ -153,7 +153,7 @@
                     </div>
                 </div>
             `).join('');
-            setGrid(html);
+            setGrid(html, false);
         }
 
         // ─── Select Country → Load Levels + Grades ───────────────────────────────
@@ -163,7 +163,7 @@
             nav.countryId = countryId;
             nav.countryName = countryName;
 
-            setHeader(`${countryName} — Níveis e Séries`, 'Escolha o ano/classe para ver as disciplinas');
+            setHeader(`${countryName}`, 'Selecione o nível de ensino e a classe');
             updateBreadcrumb([{ label: countryName, icon: 'flag' }]);
             showBackBtn();
             document.getElementById('search-bar').classList.add('hidden');
@@ -171,43 +171,91 @@
             const country = _curriculum?.find(c => c.id === countryId);
             if (!country) { showError('País não encontrado'); return; }
 
-            // Agregar todas as classes de todos os níveis
-            const allGrades = [];
-            country.levels.forEach(level => {
-                level.grades.forEach(g => allGrades.push({ ...g, levelName: level.name, levelShort: level.shortName }));
-            });
-            renderGrades(allGrades, countryName);
+            renderLevels(country.levels, countryName);
         }
 
-        function getLevelStyle(shortName) {
+        // ─── Paleta de estilos por nível ─────────────────────────────────────────
+        function getLevelTheme(shortName, levelName) {
             const s = (shortName || '').toLowerCase();
-            if (s.includes('ep1') || s.includes('ef1') || s.includes('1eb')) return { bg: 'from-blue-400 to-blue-600', badge: 'bg-blue-100 text-blue-700', label: 'Primário I' };
-            if (s.includes('ep2') || s.includes('eb'))  return { bg: 'from-green-400 to-green-600', badge: 'bg-green-100 text-green-700', label: 'Primário II' };
-            if (s.includes('es1') || s.includes('ef2') || s.includes('2eb') || s.includes('3eb')) return { bg: 'from-orange-400 to-orange-600', badge: 'bg-orange-100 text-orange-700', label: '1º Ciclo' };
-            if (s.includes('es2') || s.includes('em') || s.includes('sec') || s.includes('es'))   return { bg: 'from-purple-500 to-purple-700', badge: 'bg-purple-100 text-purple-700', label: 'Secundário' };
-            return { bg: 'from-gray-500 to-gray-700', badge: 'bg-gray-100 text-gray-700', label: shortName || '' };
+            const n = (levelName || '').toLowerCase();
+            // Ensino Primário / Básico I
+            if (s === 'ep1' || s === 'ef1' || s === '1eb' || s === 'eb')
+                return { accent: '#2563eb', light: '#dbeafe', icon: 'fa-seedling',    ring: 'ring-blue-300',   btn: 'bg-blue-600 hover:bg-blue-700 text-white',   badge: 'bg-blue-100 text-blue-700',   sectionBg: 'bg-blue-50',   border: 'border-blue-200' };
+            // Ensino Primário 2º Grau / Básico II
+            if (s === 'ep2' || s === 'ef1b' || s === '2eb')
+                return { accent: '#0891b2', light: '#cffafe', icon: 'fa-book',        ring: 'ring-cyan-300',   btn: 'bg-cyan-600 hover:bg-cyan-700 text-white',   badge: 'bg-cyan-100 text-cyan-700',   sectionBg: 'bg-cyan-50',   border: 'border-cyan-200' };
+            // Básico III / EF2
+            if (s === 'ef2' || s === '3eb')
+                return { accent: '#0d9488', light: '#ccfbf1', icon: 'fa-book-open',   ring: 'ring-teal-300',   btn: 'bg-teal-600 hover:bg-teal-700 text-white',   badge: 'bg-teal-100 text-teal-700',   sectionBg: 'bg-teal-50',   border: 'border-teal-200' };
+            // Secundário I Ciclo / EF2 avançado
+            if (s === 'es1' || s === 'esg1')
+                return { accent: '#16a34a', light: '#dcfce7', icon: 'fa-graduation-cap', ring: 'ring-green-300', btn: 'bg-green-600 hover:bg-green-700 text-white', badge: 'bg-green-100 text-green-700', sectionBg: 'bg-green-50', border: 'border-green-200' };
+            // Ensino Médio / Secundário II / ES
+            if (s === 'es2' || s === 'esg2' || s === 'em' || s === 'es' || s === 'sec')
+                return { accent: '#7c3aed', light: '#ede9fe', icon: 'fa-university',  ring: 'ring-purple-300', btn: 'bg-purple-600 hover:bg-purple-700 text-white', badge: 'bg-purple-100 text-purple-700', sectionBg: 'bg-purple-50', border: 'border-purple-200' };
+            // Técnico-Profissional / EJA / CP
+            if (s === 'etp' || s === 'eja' || s === 'cp')
+                return { accent: '#d97706', light: '#fef3c7', icon: 'fa-tools',       ring: 'ring-amber-300',  btn: 'bg-amber-600 hover:bg-amber-700 text-white',  badge: 'bg-amber-100 text-amber-700',  sectionBg: 'bg-amber-50',  border: 'border-amber-200' };
+            // fallback
+            return     { accent: '#6b7280', light: '#f3f4f6', icon: 'fa-layer-group', ring: 'ring-gray-300',   btn: 'bg-gray-600 hover:bg-gray-700 text-white',   badge: 'bg-gray-100 text-gray-700',   sectionBg: 'bg-gray-50',   border: 'border-gray-200' };
         }
 
-        function renderGrades(grades, countryName) {
-            const html = grades.map((g) => {
-                const s = getLevelStyle(g.levelShort || '');
+        // ─── Render: painéis de nível com classes em linha ───────────────────────
+        function renderLevels(levels, countryName) {
+            const activeLevels = levels.filter(l => l.grades && l.grades.length > 0);
+            if (!activeLevels.length) { showError('Nenhuma classe disponível para este país.'); return; }
+
+            const html = activeLevels.map((level, li) => {
+                const theme = getLevelTheme(level.shortName, level.name);
+                const totalSubjects = level.grades.reduce((acc, g) => acc + (g.subjects?.length || 0), 0);
+
+                const gradeCards = level.grades.map((g, gi) => `
+                    <button
+                        onclick="selectGrade('${g.id}', '${escHtml(g.name)}', '${escHtml(countryName)}')"
+                        class="grade-chip group flex flex-col items-center gap-2 p-4 rounded-2xl border-2 ${theme.border} bg-white hover:shadow-lg transition-all duration-200 hover:-translate-y-1 min-w-[100px] flex-shrink-0"
+                        style="animation-delay: ${(li * 0.08 + gi * 0.04).toFixed(2)}s">
+                        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-white font-black text-lg shadow-sm" style="background:${theme.accent}">
+                            ${g.shortName || (gi + 1)}
+                        </div>
+                        <div class="text-center">
+                            <p class="text-xs font-bold text-gray-800 leading-tight">${g.name}</p>
+                            ${g.subjects?.length ? `<p class="text-[10px] text-gray-400 mt-0.5">${g.subjects.length} disciplinas</p>` : ''}
+                        </div>
+                    </button>
+                `).join('');
+
                 return `
-                <div class="card-item grid-item bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-purple-200 overflow-hidden"
-                     onclick="selectGrade('${g.id}', '${escHtml(g.name)}', '${escHtml(countryName)}')">
-                    <div class="bg-gradient-to-r ${s.bg} p-5 flex items-center justify-between">
-                        <span class="text-3xl font-black text-white opacity-20">${g.shortName || ''}</span>
-                        <div class="text-right">
-                            <div class="text-xl font-bold text-white">${g.name}</div>
-                            <div class="text-xs text-white/70">${g.levelName || ''}</div>
+                <div class="level-panel rounded-2xl border ${theme.border} overflow-hidden mb-5"
+                     style="animation: fadeInUp 0.4s ease both; animation-delay: ${(li * 0.12).toFixed(2)}s">
+                    <!-- Cabeçalho do nível -->
+                    <div class="flex items-center justify-between px-5 py-3.5" style="background:${theme.accent}">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                                <i class="fas ${theme.icon} text-white text-sm"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-white text-sm leading-tight">${level.name}</h3>
+                                <p class="text-white/70 text-[11px]">${level.description || ''}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-white/80 text-xs hidden sm:block">${level.grades.length} classe${level.grades.length !== 1 ? 's' : ''}</span>
+                            ${totalSubjects > 0 ? `<span class="bg-white/20 text-white text-[11px] font-semibold px-2.5 py-1 rounded-full">${totalSubjects} disciplinas</span>` : ''}
                         </div>
                     </div>
-                    <div class="p-4">
-                        <p class="text-xs text-gray-500 mb-3">${g.subjects?.length || 0} disciplinas disponíveis</p>
-                        <span class="pill-badge ${s.badge}">${s.label}</span>
+                    <!-- Classes em linha scrollável -->
+                    <div class="${theme.sectionBg} px-4 py-4">
+                        <div class="flex flex-wrap gap-3">
+                            ${gradeCards}
+                        </div>
                     </div>
                 </div>`;
             }).join('');
-            setGrid(html);
+
+            // Usar container full-width em vez do grid
+            const grid = document.getElementById('content-grid');
+            grid.className = 'w-full';
+            grid.innerHTML = html;
         }
 
         // ─── Select Grade → Load Subjects ────────────────────────────────────────
@@ -235,7 +283,7 @@
 
         function renderSubjects(subjects) {
             if (!subjects.length) {
-                setGrid('');
+                setGrid('', false);
                 document.getElementById('empty-state').classList.remove('hidden');
                 return;
             }
@@ -284,7 +332,7 @@
                     </div>
                 </div>`;
             }).join('');
-            setGrid(html);
+            setGrid(html, false);
         }
 
         function filterItems() {
@@ -346,11 +394,15 @@
 
         function showSkeleton(count) {
             const html = Array(count).fill('<div class="bg-white rounded-2xl h-48 skeleton"></div>').join('');
-            setGrid(html);
+            setGrid(html, false);
         }
 
-        function setGrid(html) {
-            document.getElementById('content-grid').innerHTML = html;
+        function setGrid(html, fullWidth) {
+            const grid = document.getElementById('content-grid');
+            grid.className = fullWidth
+                ? 'w-full'
+                : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5';
+            grid.innerHTML = html;
         }
 
         function showError(msg) {
