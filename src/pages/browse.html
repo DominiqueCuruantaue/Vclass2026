@@ -301,7 +301,8 @@
 
         // ─── Navigate to Chapters ────────────────────────────────────────────────
         function selectSubject(subjectId, subjectName) {
-            window.location.href = `/chapters.html?gs=${subjectId}&subject=${encodeURIComponent(subjectName)}&grade=${encodeURIComponent(nav.gradeName)}&country=${encodeURIComponent(nav.countryName)}`;
+            const url = `/chapters.html?country=${encodeURIComponent(nav.countryId || '')}&gradeId=${encodeURIComponent(nav.gradeId || '')}&subjectId=${encodeURIComponent(subjectId)}&subject=${encodeURIComponent(subjectName)}&gradeName=${encodeURIComponent(nav.gradeName)}&gs=${encodeURIComponent(subjectId)}`;
+            window.location.href = url;
         }
 
         function selectCountryFromBreadcrumb(countryId, countryName) {

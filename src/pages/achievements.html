@@ -146,26 +146,89 @@
 
         let currentCategory = 'all';
 
-        const ACHIEVEMENTS = [
-            { id:'1', cat:'lessons', title:'Primeiro Passo', desc:'Complete sua primeira lição', icon:'play', emoji:'▶️', color:'#6366f1', bg:'#eef2ff', points:10, unlocked:true, progress:1, target:1, unlockedAt: new Date(Date.now()-86400000).toISOString() },
-            { id:'2', cat:'lessons', title:'Estudante Dedicado', desc:'Complete 10 lições', icon:'book-open', emoji:'📖', color:'#7c3aed', bg:'#faf5ff', points:50, unlocked:true, progress:12, target:10, unlockedAt: new Date(Date.now()-3600000).toISOString() },
-            { id:'3', cat:'lessons', title:'Mestre do Conhecimento', desc:'Complete 50 lições', icon:'graduation-cap', emoji:'🎓', color:'#f59e0b', bg:'#fffbeb', points:200, unlocked:false, progress:12, target:50 },
-            { id:'4', cat:'exercises', title:'Solucionador', desc:'Complete seu primeiro exercício', icon:'check-circle', emoji:'✅', color:'#22c55e', bg:'#f0fdf4', points:10, unlocked:true, progress:1, target:1, unlockedAt: new Date(Date.now()-172800000).toISOString() },
-            { id:'5', cat:'exercises', title:'Pontuação Perfeita', desc:'Obtenha 100% em 5 exercícios', icon:'medal', emoji:'🥇', color:'#f59e0b', bg:'#fffbeb', points:100, unlocked:false, progress:2, target:5 },
-            { id:'6', cat:'exercises', title:'Expert Matemático', desc:'Complete 20 exercícios de Matemática', icon:'calculator', emoji:'🔢', color:'#8b5cf6', bg:'#faf5ff', points:150, unlocked:false, progress:8, target:20 },
-            { id:'7', cat:'streak', title:'Consistente', desc:'Estude por 3 dias seguidos', icon:'fire', emoji:'🔥', color:'#f97316', bg:'#fff7ed', points:30, unlocked:true, progress:5, target:3, unlockedAt: new Date(Date.now()-259200000).toISOString() },
-            { id:'8', cat:'streak', title:'Dedicação Total', desc:'Estude por 7 dias seguidos', icon:'fire-alt', emoji:'🔥🔥', color:'#ef4444', bg:'#fef2f2', points:100, unlocked:false, progress:5, target:7 },
-            { id:'9', cat:'streak', title:'Maratonista', desc:'Estude por 30 dias seguidos', icon:'crown', emoji:'👑', color:'#f59e0b', bg:'#fffbeb', points:500, unlocked:false, progress:5, target:30 },
-            { id:'10', cat:'special', title:'Explorador', desc:'Veja aulas de 3 disciplinas', icon:'compass', emoji:'🧭', color:'#14b8a6', bg:'#f0fdfa', points:50, unlocked:true, progress:3, target:3, unlockedAt: new Date(Date.now()-432000000).toISOString() },
-            { id:'11', cat:'special', title:'Madrugador', desc:'Estude antes das 7h', icon:'sun', emoji:'🌅', color:'#eab308', bg:'#fefce8', points:75, unlocked:false, progress:0, target:1 },
-            { id:'12', cat:'special', title:'Coruja Noturna', desc:'Estude depois das 23h', icon:'moon', emoji:'🦉', color:'#6366f1', bg:'#eef2ff', points:75, unlocked:false, progress:0, target:1 },
-        ];
+        // ── Lê dados reais do localStorage ───────────────────────────────
+        function getRealProgress() {
+            const streak = parseInt(localStorage.getItem('vclass_streak') || '1');
+            const actLog  = JSON.parse(localStorage.getItem('vclass_activity_log') || '[]');
+            const lessonsCompleted = actLog.filter(a => a.type === 'lesson_completed').length;
+            const exercisesDone    = actLog.filter(a => a.type === 'exercise_submitted').length;
+            const perfectScores    = actLog.filter(a => a.type === 'exercise_submitted' && a.score >= 100).length;
+            const subjectsStudied  = new Set(actLog.map(a => a.subject).filter(Boolean)).size;
+            const h = new Date().getHours();
+            const studiedEarly = actLog.some(a => new Date(a.ts).getHours() < 7);
+            const studiedLate  = actLog.some(a => new Date(a.ts).getHours() >= 23);
+            return { streak, lessonsCompleted, exercisesDone, perfectScores, subjectsStudied, studiedEarly, studiedLate };
+        }
+
+        function buildAchievements() {
+            const p = getRealProgress();
+            const now = new Date().toISOString();
+            return [
+                { id:'1', cat:'lessons', title:'Primeiro Passo', desc:'Complete sua primeira lição', emoji:'▶️', color:'#6366f1', bg:'#eef2ff', points:10,
+                  unlocked: p.lessonsCompleted >= 1, progress: Math.min(p.lessonsCompleted, 1), target:1, unlockedAt: now },
+                { id:'2', cat:'lessons', title:'Estudante Dedicado', desc:'Complete 10 lições', emoji:'📖', color:'#7c3aed', bg:'#faf5ff', points:50,
+                  unlocked: p.lessonsCompleted >= 10, progress: Math.min(p.lessonsCompleted, 10), target:10, unlockedAt: now },
+                { id:'3', cat:'lessons', title:'Mestre do Conhecimento', desc:'Complete 50 lições', emoji:'🎓', color:'#f59e0b', bg:'#fffbeb', points:200,
+                  unlocked: p.lessonsCompleted >= 50, progress: Math.min(p.lessonsCompleted, 50), target:50 },
+                { id:'4', cat:'exercises', title:'Solucionador', desc:'Complete seu primeiro exercício', emoji:'✅', color:'#22c55e', bg:'#f0fdf4', points:10,
+                  unlocked: p.exercisesDone >= 1, progress: Math.min(p.exercisesDone, 1), target:1, unlockedAt: now },
+                { id:'5', cat:'exercises', title:'Pontuação Perfeita', desc:'Obtenha 100% em 5 exercícios', emoji:'🥇', color:'#f59e0b', bg:'#fffbeb', points:100,
+                  unlocked: p.perfectScores >= 5, progress: Math.min(p.perfectScores, 5), target:5 },
+                { id:'6', cat:'exercises', title:'Expert Matemático', desc:'Complete 20 exercícios', emoji:'🔢', color:'#8b5cf6', bg:'#faf5ff', points:150,
+                  unlocked: p.exercisesDone >= 20, progress: Math.min(p.exercisesDone, 20), target:20 },
+                { id:'7', cat:'streak', title:'Consistente', desc:'Estude por 3 dias seguidos', emoji:'🔥', color:'#f97316', bg:'#fff7ed', points:30,
+                  unlocked: p.streak >= 3, progress: Math.min(p.streak, 3), target:3, unlockedAt: now },
+                { id:'8', cat:'streak', title:'Dedicação Total', desc:'Estude por 7 dias seguidos', emoji:'🔥🔥', color:'#ef4444', bg:'#fef2f2', points:100,
+                  unlocked: p.streak >= 7, progress: Math.min(p.streak, 7), target:7 },
+                { id:'9', cat:'streak', title:'Maratonista', desc:'Estude por 30 dias seguidos', emoji:'👑', color:'#f59e0b', bg:'#fffbeb', points:500,
+                  unlocked: p.streak >= 30, progress: Math.min(p.streak, 30), target:30 },
+                { id:'10', cat:'special', title:'Explorador', desc:'Veja aulas de 3 disciplinas', emoji:'🧭', color:'#14b8a6', bg:'#f0fdfa', points:50,
+                  unlocked: p.subjectsStudied >= 3, progress: Math.min(p.subjectsStudied, 3), target:3, unlockedAt: now },
+                { id:'11', cat:'special', title:'Madrugador', desc:'Estude antes das 7h da manhã', emoji:'🌅', color:'#eab308', bg:'#fefce8', points:75,
+                  unlocked: p.studiedEarly, progress: p.studiedEarly ? 1 : 0, target:1, unlockedAt: p.studiedEarly ? now : null },
+                { id:'12', cat:'special', title:'Coruja Noturna', desc:'Estude depois das 23h', emoji:'🦉', color:'#6366f1', bg:'#eef2ff', points:75,
+                  unlocked: p.studiedLate, progress: p.studiedLate ? 1 : 0, target:1, unlockedAt: p.studiedLate ? now : null },
+            ];
+        }
+
+        let ACHIEVEMENTS = buildAchievements();
+
+        // ── Tenta enriquecer com dados reais do backend ───────────────────
+        async function loadRealData() {
+            try {
+                const r = await VClass.api.progress.getDashboard();
+                if (!r.success) return;
+                const s = r.data?.summary || {};
+                const lessonsCompleted = s.lessons_completed || 0;
+                const exercisesDone    = s.exercises_completed || 0;
+
+                // Re-compute com dados do backend
+                ACHIEVEMENTS = ACHIEVEMENTS.map(a => {
+                    if (a.cat === 'lessons') {
+                        const p = Math.min(lessonsCompleted, a.target);
+                        return { ...a, progress: p, unlocked: lessonsCompleted >= a.target };
+                    }
+                    if (a.cat === 'exercises') {
+                        if (a.id === '6') {
+                            const p = Math.min(exercisesDone, a.target);
+                            return { ...a, progress: p, unlocked: exercisesDone >= a.target };
+                        }
+                    }
+                    return a;
+                });
+                updateStats();
+                renderAchievements();
+                updateCategoryCounts();
+                showNextTip();
+            } catch(e) { /* optional */ }
+        }
 
         function init() {
             updateStats();
             renderAchievements();
             updateCategoryCounts();
             showNextTip();
+            loadRealData(); // enrich async
         }
 
         function updateStats() {

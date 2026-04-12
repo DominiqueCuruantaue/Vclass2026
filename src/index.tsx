@@ -11,6 +11,7 @@ import exercisesRoutes from './routes/exercises'
 import progressRoutes from './routes/progress'
 import creatorRoutes from './routes/creator'
 import curriculumRoutes from './routes/curriculum'
+import searchRoutes from './routes/search'
 import pagesRoutes from './routes/pages'
 
 const app = new Hono()
@@ -44,6 +45,7 @@ app.route('/api/exercises', exercisesRoutes)
 app.route('/api/progress', progressRoutes)
 app.route('/api/creator', creatorRoutes)
 app.route('/api/curriculum', curriculumRoutes)
+app.route('/api/search', searchRoutes)
 
 // Health check
 app.get('/api/health', (c) => {

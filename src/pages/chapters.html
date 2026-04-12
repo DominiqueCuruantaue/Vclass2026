@@ -8,13 +8,11 @@
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <link href="/static/styles.css" rel="stylesheet">
     <style>
-        .trimester-tab {
-            transition: all 0.3s ease;
-        }
+        .trimester-tab { transition: all 0.3s ease; }
         .trimester-tab.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
             color: white;
-            box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 4px 12px rgba(109,40,217,0.25);
         }
         .chapter-card {
             transition: all 0.3s ease;
@@ -22,57 +20,61 @@
         }
         .chapter-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-            border-left-color: #667eea;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.10);
         }
-        .lesson-item {
-            transition: all 0.2s ease;
+        .lesson-item { transition: all 0.2s ease; }
+        .lesson-item:hover { background-color: #faf5ff; }
+        .progress-ring { transform: rotate(-90deg); }
+        .trimester-roman {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 2rem; height: 2rem; border-radius: 50%;
+            font-weight: 800; font-size: 0.8rem;
         }
-        .lesson-item:hover {
-            background-color: #f9fafb;
-            padding-left: 1.5rem;
-        }
-        .progress-ring {
-            transform: rotate(-90deg);
-        }
-        .trimester-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 2.5rem;
-            height: 2.5rem;
-            border-radius: 50%;
-            font-weight: bold;
-            font-size: 0.875rem;
-        }
+        .chapter-header-gradient { background: linear-gradient(135deg, var(--ch-color-start), var(--ch-color-end)); }
+        .expand-btn { transition: transform 0.3s; }
+        .expand-btn.open { transform: rotate(180deg); }
+        .lessons-panel { transition: max-height 0.4s ease, opacity 0.3s; overflow: hidden; }
+        .lessons-panel.collapsed { max-height: 0; opacity: 0; }
+        .lessons-panel.expanded { max-height: 1000px; opacity: 1; }
+        .lesson-free-badge { font-size: 0.65rem; letter-spacing: 0.05em; }
+        .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+                    background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     </style>
 </head>
 <body class="bg-gray-50">
+
     <!-- Navigation -->
-    <nav class="bg-white shadow-sm">
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
         <div class="container mx-auto px-4">
             <div class="flex items-center justify-between h-16">
-                <div class="flex items-center space-x-8">
-                    <div class="flex items-center space-x-2">
+                <div class="flex items-center space-x-6">
+                    <a href="/dashboard.html" class="flex items-center space-x-2">
                         <i class="fas fa-graduation-cap text-2xl text-purple-600"></i>
                         <span class="text-xl font-bold text-gray-900">VClass</span>
-                    </div>
-                    <div class="hidden md:flex space-x-4">
-                        <a href="/dashboard.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
+                    </a>
+                    <div class="hidden md:flex space-x-1">
+                        <a href="/dashboard.html" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition">
                             <i class="fas fa-home mr-1"></i> Dashboard
                         </a>
-                        <a href="/browse.html" class="px-3 py-2 rounded-md text-sm font-medium text-purple-600 bg-purple-50">
+                        <a href="/browse.html" class="px-3 py-2 rounded-lg text-sm font-medium text-purple-600 bg-purple-50">
                             <i class="fas fa-book mr-1"></i> Conteúdo
                         </a>
-                        <a href="/my-progress.html" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
+                        <a href="/progress.html" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition">
                             <i class="fas fa-chart-line mr-1"></i> Progresso
                         </a>
                     </div>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <span id="user-name" class="text-sm text-gray-700"></span>
-                    <button onclick="VClass.logout()" class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md">
-                        <i class="fas fa-sign-out-alt mr-1"></i> Sair
+                <div class="flex items-center space-x-3">
+                    <a href="/notifications.html" class="relative p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition">
+                        <i class="fas fa-bell text-lg"></i>
+                    </a>
+                    <div class="flex items-center space-x-2 px-2 py-1 rounded-lg bg-gray-50">
+                        <div id="nav-avatar" class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white text-xs font-bold">?</div>
+                        <span id="nav-user-name" class="hidden md:block text-sm font-medium text-gray-700"></span>
+                    </div>
+                    <button onclick="VClass.logout()" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition" title="Sair">
+                        <i class="fas fa-sign-out-alt"></i>
                     </button>
                 </div>
             </div>
@@ -80,363 +82,453 @@
     </nav>
 
     <!-- Main Content -->
-    <main class="container mx-auto px-4 py-8">
+    <main class="container mx-auto px-4 py-8 max-w-5xl">
+
         <!-- Breadcrumb -->
         <nav class="flex mb-6" aria-label="Breadcrumb">
-            <ol id="breadcrumb" class="inline-flex items-center space-x-1 md:space-x-3">
-                <!-- Will be populated by JS -->
+            <ol id="breadcrumb" class="inline-flex items-center flex-wrap gap-1 text-sm text-gray-500">
+                <li><a href="/browse.html" class="hover:text-purple-600 transition flex items-center gap-1"><i class="fas fa-compass text-xs"></i> Explorar</a></li>
+                <li class="flex items-center gap-1"><i class="fas fa-chevron-right text-xs text-gray-300"></i><span id="bc-country" class="text-gray-500">País</span></li>
+                <li class="flex items-center gap-1"><i class="fas fa-chevron-right text-xs text-gray-300"></i><span id="bc-grade" class="text-gray-500">Classe</span></li>
+                <li class="flex items-center gap-1"><i class="fas fa-chevron-right text-xs text-gray-300"></i><span id="bc-subject" class="font-semibold text-purple-700">Disciplina</span></li>
             </ol>
         </nav>
 
         <!-- Subject Header -->
-        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-                <div class="flex items-center space-x-4 mb-4 lg:mb-0">
-                    <div id="subject-icon" class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <i class="fas fa-book text-purple-600 text-2xl"></i>
-                    </div>
-                    <div>
-                        <h1 id="subject-name" class="text-3xl font-bold text-gray-900 mb-1">Carregando...</h1>
-                        <p id="subject-info" class="text-gray-600">Carregando informações...</p>
-                    </div>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <!-- Progress Circle -->
-                    <div class="relative w-20 h-20">
-                        <svg class="w-20 h-20">
-                            <circle class="text-gray-200" stroke-width="4" stroke="currentColor" fill="transparent" r="30" cx="40" cy="40"/>
-                            <circle id="progress-circle" class="text-purple-600 progress-ring" stroke-width="4" stroke-linecap="round" stroke="currentColor" fill="transparent" r="30" cx="40" cy="40" style="stroke-dasharray: 188.4; stroke-dashoffset: 188.4"/>
-                        </svg>
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <span id="progress-text" class="text-sm font-bold text-purple-600">0%</span>
-                        </div>
-                    </div>
-                    <div class="text-left">
-                        <div class="text-sm text-gray-600">Seu Progresso</div>
-                        <div id="completed-lessons" class="text-lg font-bold text-gray-900">0/0 Lições</div>
-                    </div>
+        <div id="subject-header" class="bg-white rounded-2xl shadow-sm p-6 mb-6 border border-gray-100">
+            <!-- Loading skeleton -->
+            <div class="flex items-center gap-4">
+                <div class="w-16 h-16 rounded-2xl skeleton"></div>
+                <div class="flex-1 space-y-2">
+                    <div class="h-6 skeleton rounded w-1/3"></div>
+                    <div class="h-4 skeleton rounded w-1/2"></div>
                 </div>
             </div>
         </div>
 
         <!-- Trimester Tabs -->
-        <div class="mb-8">
-            <div class="bg-white rounded-lg shadow-sm p-2">
-                <div class="flex flex-wrap gap-2">
-                    <button onclick="showTrimester('all')" class="trimester-tab active flex-1 min-w-[120px] px-6 py-3 rounded-lg font-medium text-gray-700">
-                        <i class="fas fa-th-large mr-2"></i>Todos
-                    </button>
-                    <button onclick="showTrimester('1')" class="trimester-tab flex-1 min-w-[120px] px-6 py-3 rounded-lg font-medium text-gray-700">
-                        <span class="trimester-badge bg-blue-100 text-blue-700 mr-2">I</span>1º Trimestre
-                    </button>
-                    <button onclick="showTrimester('2')" class="trimester-tab flex-1 min-w-[120px] px-6 py-3 rounded-lg font-medium text-gray-700">
-                        <span class="trimester-badge bg-green-100 text-green-700 mr-2">II</span>2º Trimestre
-                    </button>
-                    <button onclick="showTrimester('3')" class="trimester-tab flex-1 min-w-[120px] px-6 py-3 rounded-lg font-medium text-gray-700">
-                        <span class="trimester-badge bg-orange-100 text-orange-700 mr-2">III</span>3º Trimestre
-                    </button>
-                </div>
+        <div class="bg-white rounded-2xl shadow-sm p-2 mb-6 border border-gray-100">
+            <div class="flex flex-wrap gap-2">
+                <button onclick="showTrimester('all', this)" id="tab-all"
+                    class="trimester-tab active flex-1 min-w-[100px] px-4 py-2.5 rounded-xl font-semibold text-sm">
+                    <i class="fas fa-th-large mr-1.5"></i>Todos
+                </button>
+                <button onclick="showTrimester(1, this)" id="tab-1"
+                    class="trimester-tab flex-1 min-w-[100px] px-4 py-2.5 rounded-xl font-semibold text-sm text-gray-600">
+                    <span class="trimester-roman bg-blue-100 text-blue-700 mr-1.5 text-xs">I</span>1º Trimestre
+                </button>
+                <button onclick="showTrimester(2, this)" id="tab-2"
+                    class="trimester-tab flex-1 min-w-[100px] px-4 py-2.5 rounded-xl font-semibold text-sm text-gray-600">
+                    <span class="trimester-roman bg-emerald-100 text-emerald-700 mr-1.5 text-xs">II</span>2º Trimestre
+                </button>
+                <button onclick="showTrimester(3, this)" id="tab-3"
+                    class="trimester-tab flex-1 min-w-[100px] px-4 py-2.5 rounded-xl font-semibold text-sm text-gray-600">
+                    <span class="trimester-roman bg-orange-100 text-orange-700 mr-1.5 text-xs">III</span>3º Trimestre
+                </button>
             </div>
         </div>
 
-        <!-- Chapters List -->
-        <div id="chapters-container" class="space-y-6">
-            <!-- Loading -->
-            <div class="bg-white rounded-lg shadow-md p-6 animate-pulse">
-                <div class="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
-                <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+        <!-- Stats Bar -->
+        <div id="stats-bar" class="grid grid-cols-3 gap-3 mb-6 hidden">
+            <div class="bg-white rounded-xl p-4 text-center shadow-sm border border-gray-100">
+                <p class="text-2xl font-bold text-purple-700" id="stat-chapters">-</p>
+                <p class="text-xs text-gray-500 mt-0.5">Capítulos</p>
             </div>
-            <div class="bg-white rounded-lg shadow-md p-6 animate-pulse">
-                <div class="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
-                <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+            <div class="bg-white rounded-xl p-4 text-center shadow-sm border border-gray-100">
+                <p class="text-2xl font-bold text-blue-600" id="stat-lessons">-</p>
+                <p class="text-xs text-gray-500 mt-0.5">Lições</p>
+            </div>
+            <div class="bg-white rounded-xl p-4 text-center shadow-sm border border-gray-100">
+                <p class="text-2xl font-bold text-green-600" id="stat-progress">0%</p>
+                <p class="text-xs text-gray-500 mt-0.5">Concluído</p>
+            </div>
+        </div>
+
+        <!-- Chapters Container -->
+        <div id="chapters-container" class="space-y-4">
+            <!-- Skeletons -->
+            <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+                <div class="p-5 space-y-3">
+                    <div class="h-6 skeleton rounded w-1/3"></div>
+                    <div class="h-4 skeleton rounded w-2/3"></div>
+                </div>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+                <div class="p-5 space-y-3">
+                    <div class="h-6 skeleton rounded w-1/2"></div>
+                    <div class="h-4 skeleton rounded w-1/2"></div>
+                </div>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+                <div class="p-5 space-y-3">
+                    <div class="h-6 skeleton rounded w-2/5"></div>
+                    <div class="h-4 skeleton rounded w-3/5"></div>
+                </div>
             </div>
         </div>
 
         <!-- Back Button -->
         <div class="mt-8">
-            <a href="/browse.html" class="inline-flex items-center px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
-                <i class="fas fa-arrow-left mr-2"></i> Voltar para Conteúdo
+            <a href="/browse.html" class="inline-flex items-center px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:border-purple-300 hover:text-purple-700 transition shadow-sm font-medium text-sm gap-2">
+                <i class="fas fa-arrow-left text-xs"></i> Voltar para Explorar
             </a>
         </div>
     </main>
 
     <script src="/static/app.js"></script>
     <script>
-        // Check authentication
-        if (!VClass.isAuthenticated()) {
-            window.location.href = '/login.html';
-        }
-
+        // ── Auth ──────────────────────────────────────────────────────────
+        if (!VClass.isAuthenticated()) window.location.href = '/login.html';
         const user = VClass.getCurrentUser();
         if (user) {
-            document.getElementById('user-name').textContent = user.full_name;
+            const name = user.full_name || user.name || 'Estudante';
+            const initials = name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
+            document.getElementById('nav-avatar').textContent = initials;
+            document.getElementById('nav-user-name').textContent = name.split(' ')[0];
         }
 
-        // Get URL parameters
+        // ── URL params ────────────────────────────────────────────────────
         const params = new URLSearchParams(window.location.search);
-        const gradeSubjectId = params.get('gs');
-        const subjectName = params.get('subject');
-        const gradeName = params.get('grade');
-        const countryName = params.get('country');
+        // Support both old (gs=, subject=, grade=) and new (country=, gradeId=, subjectId=) params
+        const countryCode  = params.get('country') || 'ao';
+        const gradeId      = params.get('gradeId')  || params.get('grade') || '';
+        const subjectId    = params.get('subjectId') || params.get('gs')   || '';
+        const subjectName  = params.get('subject')  || '';
+        const gradeName    = params.get('gradeName') || '';
 
-        // Check if parameters exist
-        if (!gradeSubjectId || !subjectName) {
-            window.location.href = '/browse.html';
+        if (!countryCode) { window.location.href = '/browse.html'; }
+
+        // Update breadcrumb placeholders
+        document.getElementById('bc-country').textContent = countryCode.toUpperCase();
+        document.getElementById('bc-grade').textContent   = gradeName || gradeId;
+        document.getElementById('bc-subject').textContent = subjectName || subjectId;
+
+        // ── State ─────────────────────────────────────────────────────────
+        let allChapters = [];
+        let subjectMeta = {};
+        let currentFilter = 'all';
+
+        // ── Trimester filter ──────────────────────────────────────────────
+        function showTrimester(val, btn) {
+            currentFilter = val;
+            document.querySelectorAll('.trimester-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            const filtered = val === 'all'
+                ? allChapters
+                : allChapters.filter(ch => ch.term === val || ch.trimester === val);
+            renderChapters(filtered);
         }
 
-        // Global state
-        let allChapters = [];
-        let currentTrimester = 'all';
+        // ── Chapter expand/collapse ───────────────────────────────────────
+        function toggleChapter(id) {
+            const panel = document.getElementById(`lessons-${id}`);
+            const btn   = document.getElementById(`expand-${id}`);
+            if (!panel) return;
+            const isOpen = panel.classList.contains('expanded');
+            panel.classList.toggle('expanded', !isOpen);
+            panel.classList.toggle('collapsed', isOpen);
+            btn.classList.toggle('open', !isOpen);
+        }
 
-        // Update UI with subject info
-        document.getElementById('subject-name').textContent = subjectName;
-        document.getElementById('subject-info').textContent = `${gradeName} • ${countryName}`;
+        // ── Render subject header ─────────────────────────────────────────
+        function renderSubjectHeader(meta, chapters) {
+            const totalLessons = chapters.reduce((s, ch) => s + (ch.lesson_count || ch.lessons?.length || 0), 0);
+            document.getElementById('subject-header').innerHTML = `
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div class="flex items-center gap-4">
+                        <div class="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm"
+                             style="background:${meta.color || '#7c3aed'}22">
+                            <i class="fas ${meta.icon || 'fa-book'} text-2xl" style="color:${meta.color || '#7c3aed'}"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-900">${meta.name || subjectName}</h1>
+                            <p class="text-sm text-gray-500 mt-0.5">${gradeName || gradeId} &bull; ${countryCode.toUpperCase()}
+                                &bull; <span class="font-medium text-gray-700">${chapters.length} capítulos</span>
+                                &bull; <span class="font-medium text-gray-700">${totalLessons} lições</span>
+                            </p>
+                        </div>
+                    </div>
+                    <!-- Progress ring -->
+                    <div class="flex items-center gap-3 sm:flex-col sm:items-center sm:gap-1">
+                        <div class="relative w-16 h-16">
+                            <svg class="w-16 h-16">
+                                <circle stroke-width="5" stroke="#e5e7eb" fill="transparent" r="26" cx="32" cy="32"/>
+                                <circle id="progress-ring" stroke-width="5" stroke-linecap="round"
+                                        stroke="${meta.color || '#7c3aed'}" fill="transparent" r="26" cx="32" cy="32"
+                                        class="progress-ring"
+                                        style="stroke-dasharray:163.36; stroke-dashoffset:163.36;"/>
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <span id="progress-pct" class="text-xs font-bold" style="color:${meta.color || '#7c3aed'}">0%</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 text-center">Progresso</p>
+                    </div>
+                </div>`;
+        }
 
-        // Update breadcrumb
-        const breadcrumb = document.getElementById('breadcrumb');
-        breadcrumb.innerHTML = `
-            <li class="inline-flex items-center">
-                <a href="/browse.html" class="text-gray-700 hover:text-purple-600">
-                    <i class="fas fa-home mr-1"></i> Início
-                </a>
-            </li>
-            <li>
-                <div class="flex items-center">
-                    <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
-                    <span class="text-gray-700">${countryName}</span>
-                </div>
-            </li>
-            <li>
-                <div class="flex items-center">
-                    <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
-                    <span class="text-gray-700">${gradeName}</span>
-                </div>
-            </li>
-            <li>
-                <div class="flex items-center">
-                    <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
-                    <span class="text-purple-600 font-semibold">${subjectName}</span>
-                </div>
-            </li>
-        `;
-
-        // Trimester colors
-        const trimesterColors = {
-            '1': { bg: 'bg-blue-500', text: 'text-blue-700', badge: 'bg-blue-100' },
-            '2': { bg: 'bg-green-500', text: 'text-green-700', badge: 'bg-green-100' },
-            '3': { bg: 'bg-orange-500', text: 'text-orange-700', badge: 'bg-orange-100' }
+        // ── Render chapters list ──────────────────────────────────────────
+        const TRIMESTER_STYLE = {
+            1: { badge: 'bg-blue-100 text-blue-700',   border: '#3b82f6', headerFrom: '#2563eb', headerTo: '#3b82f6', roman: 'I'   },
+            2: { badge: 'bg-emerald-100 text-emerald-700', border: '#10b981', headerFrom: '#059669', headerTo: '#10b981', roman: 'II'  },
+            3: { badge: 'bg-orange-100 text-orange-700', border: '#f59e0b', headerFrom: '#d97706', headerTo: '#f59e0b', roman: 'III' },
         };
 
-        // Load chapters and lessons
+        function renderChapters(chapters) {
+            const container = document.getElementById('chapters-container');
+            if (chapters.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-2xl shadow-sm p-12 text-center border border-gray-100">
+                        <i class="fas fa-calendar-times text-5xl text-gray-200 mb-4 block"></i>
+                        <h2 class="text-xl font-bold text-gray-600 mb-2">Nenhum capítulo neste trimestre</h2>
+                        <p class="text-gray-400 text-sm">Selecione outro período para ver os capítulos.</p>
+                    </div>`;
+                return;
+            }
+
+            // Group by term
+            const grouped = {};
+            chapters.forEach(ch => {
+                const t = ch.term || ch.trimester || 1;
+                if (!grouped[t]) grouped[t] = [];
+                grouped[t].push(ch);
+            });
+
+            let html = '';
+            Object.keys(grouped).sort((a,b) => +a - +b).forEach(tKey => {
+                const tNum = +tKey;
+                const st = TRIMESTER_STYLE[tNum] || TRIMESTER_STYLE[1];
+                const tChapters = grouped[tKey];
+                html += `
+                <div class="mb-2">
+                    <div class="flex items-center gap-3 mb-3 mt-1">
+                        <span class="trimester-roman ${st.badge} w-8 h-8">${st.roman}</span>
+                        <h2 class="text-base font-bold text-gray-700">${tNum}º Trimestre</h2>
+                        <div class="flex-1 h-px bg-gray-100"></div>
+                        <span class="text-xs text-gray-400">${tChapters.length} cap.</span>
+                    </div>
+                    <div class="space-y-3">
+                    ${tChapters.map((ch, i) => {
+                        const num   = allChapters.indexOf(ch) + 1;
+                        const color = subjectMeta.color || '#7c3aed';
+                        const lessons = ch.lessons || [];
+                        const lessonCount = ch.lesson_count || lessons.length || 0;
+                        return `
+                        <div class="chapter-card bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100"
+                             style="border-left-color:${color}">
+                            <!-- Chapter Header -->
+                            <button onclick="toggleChapter('${ch.id}')"
+                                class="w-full text-left p-5 flex items-center gap-4 hover:bg-gray-50 transition group">
+                                <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm text-white font-bold text-lg"
+                                     style="background: linear-gradient(135deg, ${color}cc, ${color})">
+                                    ${num}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-bold text-gray-900 text-base leading-tight">${ch.title}</h3>
+                                    <p class="text-sm text-gray-500 truncate mt-0.5">${ch.description || 'Unidade temática'}</p>
+                                </div>
+                                <div class="flex items-center gap-3 flex-shrink-0">
+                                    <span class="text-xs font-semibold px-2 py-1 rounded-lg" style="background:${color}15; color:${color}">
+                                        ${lessonCount} ${lessonCount === 1 ? 'lição' : 'lições'}
+                                    </span>
+                                    <i id="expand-${ch.id}" class="fas fa-chevron-down text-gray-300 text-sm expand-btn"></i>
+                                </div>
+                            </button>
+
+                            <!-- Lessons Panel -->
+                            <div id="lessons-${ch.id}" class="lessons-panel collapsed border-t border-gray-100">
+                                ${lessons.length > 0 ? renderLessonsList(lessons, ch) : renderNoLessons(ch)}
+                            </div>
+                        </div>`;
+                    }).join('')}
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderLessonsList(lessons, ch) {
+            return `<div class="divide-y divide-gray-50">
+                ${lessons.map((l, i) => `
+                <a href="/lesson.html?id=${l.id || ch.id + '-l' + (i+1)}&chapter=${encodeURIComponent(ch.title)}&subject=${encodeURIComponent(subjectMeta.name||subjectName)}&grade=${encodeURIComponent(gradeName)}&country=${encodeURIComponent(countryCode)}"
+                   class="lesson-item flex items-center gap-4 px-5 py-4 group">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-gray-100 group-hover:bg-purple-100 transition">
+                        <i class="fas fa-play text-gray-400 group-hover:text-purple-600 text-xs transition"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center flex-wrap gap-1.5 mb-0.5">
+                            <span class="text-xs font-semibold text-gray-400">Lição ${i+1}</span>
+                            ${l.is_free ? '<span class="lesson-free-badge px-1.5 py-0.5 bg-green-100 text-green-700 rounded font-bold uppercase">Grátis</span>' : ''}
+                            ${l.video_duration ? `<span class="text-xs text-gray-400"><i class="fas fa-clock mr-0.5"></i>${Math.floor(l.video_duration/60)} min</span>` : ''}
+                        </div>
+                        <h4 class="text-sm font-semibold text-gray-800 group-hover:text-purple-700 transition truncate">${l.title || ch.title + ' — Parte ' + (i+1)}</h4>
+                        ${l.description ? `<p class="text-xs text-gray-400 truncate mt-0.5">${l.description}</p>` : ''}
+                    </div>
+                    <i class="fas fa-chevron-right text-gray-200 group-hover:text-purple-400 text-xs flex-shrink-0 transition"></i>
+                </a>`).join('')}
+            </div>`;
+        }
+
+        function renderNoLessons(ch) {
+            // Create synthetic lessons from chapter data for curriculum-only mode
+            const syntheticLessons = [
+                { title: ch.title + ' — Introdução', is_free: true },
+                { title: ch.title + ' — Desenvolvimento' },
+                { title: ch.title + ' — Exercícios Práticos' },
+            ];
+            return `<div class="divide-y divide-gray-50">
+                ${syntheticLessons.map((l, i) => `
+                <a href="/lesson.html?id=${ch.id}-l${i+1}&chapter=${encodeURIComponent(ch.title)}&subject=${encodeURIComponent(subjectMeta.name||subjectName)}&grade=${encodeURIComponent(gradeName)}&country=${encodeURIComponent(countryCode)}"
+                   class="lesson-item flex items-center gap-4 px-5 py-4 group">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-gray-100 group-hover:bg-purple-100 transition">
+                        <i class="fas fa-play text-gray-400 group-hover:text-purple-600 text-xs transition"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-1.5 mb-0.5">
+                            <span class="text-xs font-semibold text-gray-400">Lição ${i+1}</span>
+                            ${l.is_free ? '<span class="lesson-free-badge px-1.5 py-0.5 bg-green-100 text-green-700 rounded font-bold uppercase">Grátis</span>' : ''}
+                        </div>
+                        <h4 class="text-sm font-semibold text-gray-800 group-hover:text-purple-700 transition truncate">${l.title}</h4>
+                    </div>
+                    <i class="fas fa-chevron-right text-gray-200 group-hover:text-purple-400 text-xs flex-shrink-0 transition"></i>
+                </a>`).join('')}
+            </div>`;
+        }
+
+        // ── Load from curriculum API ──────────────────────────────────────
         async function loadChapters() {
             try {
-                const result = await VClass.api.content.getChapters(gradeSubjectId);
+                // Try to load from curriculum API (real data)
+                const r = await fetch(`/api/curriculum/tree/${countryCode}`);
+                const d = await r.json();
+                if (!d.success) throw new Error('API error');
 
-                if (result.success && result.data.length > 0) {
-                    // Load lessons for each chapter
-                    const chaptersWithLessons = await Promise.all(
-                        result.data.map(async chapter => {
-                            const lessonsResult = await VClass.api.content.getLessons(chapter.id);
-                            return {
-                                ...chapter,
-                                lessons: lessonsResult.success ? lessonsResult.data : []
-                            };
-                        })
-                    );
+                const curriculum = d.data?.curriculum || [];
+                let foundChapters = [];
+                let foundSubject  = {};
 
-                    allChapters = chaptersWithLessons;
-                    renderChapters(allChapters);
+                // Traverse the curriculum tree to find matching subject
+                outer: for (const level of curriculum) {
+                    for (const grade of (level.grades || [])) {
+                        // Match by gradeId or grade shortName
+                        const gradeMatch = !gradeId || grade.id === gradeId ||
+                            grade.shortName?.toLowerCase() === gradeId?.toLowerCase() ||
+                            grade.name?.toLowerCase().includes(gradeId?.toLowerCase());
 
-                    // Load progress
-                    loadProgress(gradeSubjectId);
-                } else {
-                    showNoContent();
+                        for (const subject of (grade.subjects || [])) {
+                            const subjectMatch = !subjectId || subject.id === subjectId ||
+                                subject.shortName?.toLowerCase() === subjectId?.toLowerCase() ||
+                                subject.name?.toLowerCase().includes(subjectName?.toLowerCase());
+
+                            if (subjectMatch && gradeMatch) {
+                                foundChapters = subject.chapters || [];
+                                foundSubject  = subject;
+                                // Update breadcrumb
+                                document.getElementById('bc-country').textContent  = d.data.name || countryCode.toUpperCase();
+                                document.getElementById('bc-grade').textContent    = grade.name || gradeName;
+                                document.getElementById('bc-subject').textContent  = subject.name || subjectName;
+                                break outer;
+                            }
+                        }
+                    }
                 }
-            } catch (error) {
-                console.error('Error loading chapters:', error);
+
+                if (foundChapters.length === 0) {
+                    // If no match, try old content API fallback
+                    await loadFromContentAPI();
+                    return;
+                }
+
+                subjectMeta = foundSubject;
+                allChapters = foundChapters;
+
+                // Update stats
+                document.getElementById('stats-bar').classList.remove('hidden');
+                document.getElementById('stat-chapters').textContent = foundChapters.length;
+                const totalLessons = foundChapters.reduce((s, ch) => s + (ch.lessons?.length || 0), 0);
+                document.getElementById('stat-lessons').textContent  = totalLessons || foundChapters.length * 3 + '+';
+
+                renderSubjectHeader(foundSubject, foundChapters);
+                renderChapters(foundChapters);
+
+                // Auto-expand first chapter
+                if (foundChapters[0]) {
+                    toggleChapter(foundChapters[0].id);
+                }
+
+                // Try to load real progress
+                loadProgress();
+
+            } catch(err) {
+                console.warn('Curriculum API error, falling back:', err);
+                await loadFromContentAPI();
+            }
+        }
+
+        async function loadFromContentAPI() {
+            // Fallback to old content API
+            try {
+                const gsId = subjectId || gradeId;
+                const result = await VClass.api.content.getChapters(gsId);
+                if (result.success && result.data.length > 0) {
+                    allChapters = result.data;
+                    subjectMeta = { name: subjectName, color: '#7c3aed', icon: 'fa-book' };
+                    renderSubjectHeader(subjectMeta, allChapters);
+                    renderChapters(allChapters);
+                    document.getElementById('stats-bar').classList.remove('hidden');
+                    document.getElementById('stat-chapters').textContent = allChapters.length;
+                } else {
+                    showEmpty();
+                }
+            } catch(e) {
                 showError();
             }
         }
 
-        // Show trimester
-        function showTrimester(trimester) {
-            currentTrimester = trimester;
-            
-            // Update tab styles
-            document.querySelectorAll('.trimester-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            event.target.closest('.trimester-tab').classList.add('active');
-
-            // Filter chapters
-            const filtered = trimester === 'all' 
-                ? allChapters 
-                : allChapters.filter(ch => ch.trimester === parseInt(trimester));
-
-            renderChapters(filtered);
-        }
-
-        function renderChapters(chapters) {
-            const container = document.getElementById('chapters-container');
-
-            if (chapters.length === 0) {
-                container.innerHTML = `
-                    <div class="bg-white rounded-lg shadow-md p-12 text-center">
-                        <i class="fas fa-calendar-times text-6xl text-gray-300 mb-4"></i>
-                        <h2 class="text-2xl font-bold text-gray-700 mb-2">Nenhum capítulo neste trimestre</h2>
-                        <p class="text-gray-600">Selecione outro trimestre para ver os capítulos disponíveis.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            // Group by trimester for display
-            const grouped = {};
-            chapters.forEach(ch => {
-                const trim = ch.trimester || 1;
-                if (!grouped[trim]) grouped[trim] = [];
-                grouped[trim].push(ch);
-            });
-
-            let html = '';
-            Object.keys(grouped).sort().forEach(trimKey => {
-                const trimChapters = grouped[trimKey];
-                const colors = trimesterColors[trimKey] || trimesterColors['1'];
-                const romanNumerals = { '1': 'I', '2': 'II', '3': 'III' };
-
-                html += `
-                    <div class="mb-8">
-                        <div class="flex items-center mb-4">
-                            <div class="trimester-badge ${colors.badge} ${colors.text}">
-                                ${romanNumerals[trimKey]}
-                            </div>
-                            <h2 class="text-2xl font-bold text-gray-900 ml-3">${trimKey}º Trimestre</h2>
-                            <div class="flex-1 h-0.5 bg-gray-200 ml-4"></div>
-                        </div>
-
-                        <div class="space-y-4">
-                            ${trimChapters.map((chapter, idx) => {
-                                const chapterNumber = chapters.indexOf(chapter) + 1;
-                                return `
-                                    <div class="chapter-card bg-white rounded-lg shadow-md overflow-hidden">
-                                        <!-- Chapter Header -->
-                                        <div class="bg-gradient-to-r from-purple-600 to-purple-700 p-6 text-white">
-                                            <div class="flex items-center justify-between">
-                                                <div class="flex items-center space-x-4">
-                                                    <div class="w-14 h-14 bg-white bg-opacity-20 rounded-full flex items-center justify-center flex-shrink-0">
-                                                        <span class="text-2xl font-bold">${chapterNumber}</span>
-                                                    </div>
-                                                    <div class="flex-1">
-                                                        <h3 class="text-2xl font-bold mb-1">${chapter.title}</h3>
-                                                        <p class="text-purple-100 text-sm">${chapter.description || 'Unidade temática'}</p>
-                                                    </div>
-                                                </div>
-                                                <div class="text-right">
-                                                    <div class="text-sm text-purple-100">Lições</div>
-                                                    <div class="text-3xl font-bold">${chapter.lessons.length}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Lessons List -->
-                                        <div class="divide-y divide-gray-200">
-                                            ${chapter.lessons.length > 0 ? chapter.lessons.map((lesson, lIndex) => `
-                                                <a href="/lesson.html?id=${lesson.id}&chapter=${encodeURIComponent(chapter.title)}&subject=${encodeURIComponent(subjectName)}&grade=${encodeURIComponent(gradeName)}&country=${encodeURIComponent(countryName)}" 
-                                                   class="lesson-item block p-6 hover:bg-purple-50 transition group">
-                                                    <div class="flex items-center space-x-4">
-                                                        <div class="flex-shrink-0">
-                                                            <div class="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden">
-                                                                <img src="${lesson.thumbnail_url || 'https://via.placeholder.com/80'}" 
-                                                                     alt="${lesson.title}"
-                                                                     class="w-full h-full object-cover">
-                                                            </div>
-                                                        </div>
-                                                        <div class="flex-1 min-w-0">
-                                                            <div class="flex items-center space-x-2 mb-1">
-                                                                <span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded">
-                                                                    Lição ${lIndex + 1}
-                                                                </span>
-                                                                ${lesson.is_free ? '<span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded">GRÁTIS</span>' : ''}
-                                                                ${lesson.video_duration ? `<span class="text-xs text-gray-500"><i class="fas fa-clock mr-1"></i>${Math.floor(lesson.video_duration / 60)} min</span>` : ''}
-                                                            </div>
-                                                            <h4 class="text-lg font-semibold text-gray-900 group-hover:text-purple-600 transition mb-1">
-                                                                ${lesson.title}
-                                                            </h4>
-                                                            <p class="text-sm text-gray-600 line-clamp-2">${lesson.description || ''}</p>
-                                                        </div>
-                                                        <div class="flex-shrink-0">
-                                                            <i class="fas fa-play-circle text-4xl text-purple-600 group-hover:text-purple-700 group-hover:scale-110 transition"></i>
-                                                        </div>
-                                                    </div>
-                                                </a>
-                                            `).join('') : `
-                                                <div class="p-6 text-center text-gray-500">
-                                                    <i class="fas fa-inbox text-3xl mb-2"></i>
-                                                    <p>Nenhuma lição disponível ainda</p>
-                                                </div>
-                                            `}
-                                        </div>
-                                    </div>
-                                `;
-                            }).join('')}
-                        </div>
-                    </div>
-                `;
-            });
-
-            container.innerHTML = html;
-        }
-
-        async function loadProgress(gradeSubjectId) {
+        async function loadProgress() {
             try {
-                const result = await VClass.api.progress.getSubjectProgress(gradeSubjectId);
-
-                if (result.success && result.data && result.data.summary) {
-                    const progress = result.data.summary.overallProgress || 0;
-                    const completed = result.data.summary.completedLessons || 0;
-                    const total = result.data.summary.totalLessons || 0;
-                    
-                    // Update progress circle
-                    const circumference = 2 * Math.PI * 30;
-                    const offset = circumference - (progress / 100) * circumference;
-                    document.getElementById('progress-circle').style.strokeDashoffset = offset;
-                    document.getElementById('progress-text').textContent = `${progress}%`;
-                    document.getElementById('completed-lessons').textContent = `${completed}/${total} Lições`;
-                } else {
-                    // Default values if progress not available (user not logged in)
-                    console.log('Progress not available - using defaults');
+                const gsId = subjectId || gradeId;
+                const result = await VClass.api.progress.getSubjectProgress(gsId);
+                if (result.success && result.data?.summary) {
+                    const pct = result.data.summary.overallProgress || 0;
+                    document.getElementById('stat-progress').textContent = pct + '%';
+                    const ring = document.getElementById('progress-ring');
+                    if (ring) {
+                        const offset = 163.36 * (1 - pct / 100);
+                        ring.style.strokeDashoffset = offset;
+                        document.getElementById('progress-pct').textContent = pct + '%';
+                    }
                 }
-            } catch (error) {
-                console.log('Could not load progress:', error.message || error);
-                // Progress API failed - this is OK, just skip it
-            }
+            } catch(e) { /* progress optional */ }
         }
 
-        function showNoContent() {
-            const container = document.getElementById('chapters-container');
-            container.innerHTML = `
-                <div class="bg-white rounded-lg shadow-md p-12 text-center">
-                    <i class="fas fa-folder-open text-6xl text-gray-300 mb-4"></i>
-                    <h2 class="text-2xl font-bold text-gray-700 mb-2">Nenhum conteúdo disponível</h2>
-                    <p class="text-gray-600 mb-6">Esta disciplina ainda não possui capítulos ou lições.</p>
-                    <a href="/browse.html" class="inline-flex items-center px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
-                        <i class="fas fa-arrow-left mr-2"></i> Explorar Outras Disciplinas
+        function showEmpty() {
+            document.getElementById('subject-header').innerHTML = `
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-book text-purple-600 text-2xl"></i>
+                    <h1 class="text-xl font-bold text-gray-800">${subjectName || 'Disciplina'}</h1>
+                </div>`;
+            document.getElementById('chapters-container').innerHTML = `
+                <div class="bg-white rounded-2xl shadow-sm p-12 text-center border border-gray-100">
+                    <i class="fas fa-folder-open text-5xl text-gray-200 mb-4 block"></i>
+                    <h2 class="text-xl font-bold text-gray-600 mb-2">Conteúdo em preparação</h2>
+                    <p class="text-gray-400 text-sm mb-6">Esta disciplina ainda não tem capítulos publicados.</p>
+                    <a href="/browse.html" class="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 transition">
+                        <i class="fas fa-compass"></i> Explorar outras disciplinas
                     </a>
-                </div>
-            `;
+                </div>`;
         }
 
         function showError() {
-            const container = document.getElementById('chapters-container');
-            container.innerHTML = `
-                <div class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-                    <i class="fas fa-exclamation-triangle text-3xl text-red-600 mb-2"></i>
-                    <p class="text-red-800">Erro ao carregar conteúdo. Tente novamente.</p>
-                </div>
-            `;
+            document.getElementById('chapters-container').innerHTML = `
+                <div class="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
+                    <i class="fas fa-exclamation-circle text-3xl text-red-400 mb-2 block"></i>
+                    <p class="text-red-700 font-medium">Erro ao carregar capítulos</p>
+                    <button onclick="loadChapters()" class="mt-3 text-sm text-red-600 underline hover:text-red-700">Tentar novamente</button>
+                </div>`;
         }
 
-        // Load data
+        // ── Init ──────────────────────────────────────────────────────────
         loadChapters();
     </script>
 </body>

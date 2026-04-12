@@ -7,292 +7,504 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <link href="/static/styles.css" rel="stylesheet">
+    <style>
+        @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+        .fade-up { animation: fadeUp 0.35s ease forwards; }
+        .result-card { transition: transform 0.2s, box-shadow 0.2s; }
+        .result-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.10); }
+        .tab-pill { transition: all 0.2s; }
+        .tab-pill.active { background: #7c3aed; color: white; }
+        .tab-pill:not(.active) { background: white; color: #6b7280; border: 1.5px solid #e5e7eb; }
+        .tab-pill:not(.active):hover { border-color: #7c3aed; color: #7c3aed; background: #faf5ff; }
+        .highlight { background: #fef9c3; padding: 0 2px; border-radius: 3px; }
+        .search-bar { box-shadow: 0 4px 20px rgba(124,58,237,0.12); }
+        .subject-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+        #suggest-box { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1.5px solid #e5e7eb; border-top: none; border-radius: 0 0 14px 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); z-index: 100; }
+        .suggest-item { padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 14px; }
+        .suggest-item:hover { background: #faf5ff; color: #7c3aed; }
+        .country-flag { font-size: 1.1em; }
+        .skeleton { animation: pulse 1.5s infinite; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; border-radius: 8px; }
+        @keyframes pulse { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    </style>
 </head>
-<body class="bg-gray-50">
-    <!-- Navigation -->
-    <nav class="bg-white shadow-sm">
-        <div class="container mx-auto px-4">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center space-x-8">
-                    <a href="/" class="flex items-center space-x-2">
-                        <i class="fas fa-graduation-cap text-2xl text-purple-600"></i>
-                        <span class="text-xl font-bold text-gray-900">VClass</span>
-                    </a>
-                </div>
-                <div class="flex-1 max-w-2xl mx-8">
-                    <div class="relative">
-                        <i class="fas fa-search absolute left-4 top-4 text-gray-400"></i>
-                        <input type="text" id="search-input" placeholder="Pesquisar..." 
-                               class="global-search-input w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                    </div>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <a href="/dashboard.html" class="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
-                        <i class="fas fa-home mr-1"></i> Dashboard
-                    </a>
-                </div>
+<body class="bg-gray-50 min-h-screen">
+
+    <!-- Navbar -->
+    <nav class="bg-white border-b border-gray-100 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center gap-4">
+            <a href="/dashboard.html" class="flex items-center gap-2 flex-shrink-0">
+                <i class="fas fa-graduation-cap text-2xl text-purple-600"></i>
+                <span class="text-lg font-bold text-gray-900 hidden sm:block">VClass</span>
+            </a>
+
+            <!-- Search Bar -->
+            <div class="flex-1 relative max-w-2xl" id="search-wrap">
+                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 z-10"></i>
+                <input type="text" id="search-input" placeholder="Pesquisar disciplinas, capítulos, lições..."
+                    autocomplete="off"
+                    class="search-bar w-full pl-11 pr-4 py-3 border-2 border-purple-200 rounded-2xl focus:outline-none focus:border-purple-500 text-sm font-medium">
+                <div id="suggest-box" class="hidden"></div>
             </div>
+
+            <!-- Country filter -->
+            <div class="flex-shrink-0 hidden md:block">
+                <select id="country-filter" onchange="doSearch()"
+                    class="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 focus:outline-none focus:border-purple-400 cursor-pointer">
+                    <option value="">🌍 Todos os países</option>
+                    <option value="mz">🇲🇿 Moçambique</option>
+                    <option value="ao">🇦🇴 Angola</option>
+                    <option value="br">🇧🇷 Brasil</option>
+                    <option value="pt">🇵🇹 Portugal</option>
+                    <option value="cv">🇨🇻 Cabo Verde</option>
+                </select>
+            </div>
+
+            <a href="/dashboard.html" class="flex-shrink-0 text-sm text-gray-500 hover:text-purple-600 px-3 py-2 rounded-lg hover:bg-purple-50 transition">
+                <i class="fas fa-home mr-1"></i><span class="hidden sm:inline">Dashboard</span>
+            </a>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <div class="container mx-auto px-4 py-8">
-        <!-- Search Header -->
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">
-                <i class="fas fa-search text-purple-600 mr-2"></i>Resultados da Busca
+    <main class="max-w-7xl mx-auto px-4 py-8">
+
+        <!-- Header -->
+        <div class="mb-6">
+            <h1 class="text-2xl font-bold text-gray-900">
+                <i class="fas fa-search text-purple-500 mr-2"></i>
+                Resultados da Busca
             </h1>
-            <p id="search-query" class="text-lg text-gray-600"></p>
-            <p id="results-count" class="text-sm text-gray-500 mt-2"></p>
+            <p id="search-subtitle" class="text-gray-500 text-sm mt-1"></p>
         </div>
 
-        <!-- Loading State -->
-        <div id="loading" class="text-center py-12">
-            <i class="fas fa-spinner fa-spin text-4xl text-purple-600 mb-4"></i>
-            <p class="text-gray-600">Buscando...</p>
-        </div>
-
-        <!-- Results Tabs -->
-        <div id="results-tabs" class="mb-6 hidden">
-            <div class="border-b border-gray-200">
-                <nav class="flex space-x-8">
-                    <button onclick="showTab('all')" class="tab-btn active py-4 px-1 border-b-2 border-purple-600 text-purple-600 font-medium text-sm">
-                        Todos (<span id="count-all">0</span>)
-                    </button>
-                    <button onclick="showTab('lessons')" class="tab-btn py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm">
-                        Lições (<span id="count-lessons">0</span>)
-                    </button>
-                    <button onclick="showTab('subjects')" class="tab-btn py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm">
-                        Disciplinas (<span id="count-subjects">0</span>)
-                    </button>
-                    <button onclick="showTab('library')" class="tab-btn py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm">
-                        Biblioteca (<span id="count-library">0</span>)
-                    </button>
-                    <button onclick="showTab('news')" class="tab-btn py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm">
-                        Notícias (<span id="count-news">0</span>)
-                    </button>
-                </nav>
-            </div>
-        </div>
-
-        <!-- Results Container -->
-        <div id="results-container" class="hidden">
-            <!-- Disciplines Section -->
-            <div id="subjects-section" class="mb-12">
-                <h2 class="text-2xl font-bold text-gray-900 mb-4">
-                    <i class="fas fa-book text-blue-600 mr-2"></i>Disciplinas
-                </h2>
-                <div id="subjects-results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-            </div>
-
-            <!-- Lessons Section -->
-            <div id="lessons-section" class="mb-12">
-                <h2 class="text-2xl font-bold text-gray-900 mb-4">
-                    <i class="fas fa-video text-green-600 mr-2"></i>Lições
-                </h2>
-                <div id="lessons-results" class="space-y-4"></div>
-            </div>
-
-            <!-- Library Section -->
-            <div id="library-section" class="mb-12">
-                <h2 class="text-2xl font-bold text-gray-900 mb-4">
-                    <i class="fas fa-book-open text-purple-600 mr-2"></i>Biblioteca
-                </h2>
-                <div id="library-results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"></div>
-            </div>
-
-            <!-- News Section -->
-            <div id="news-section" class="mb-12">
-                <h2 class="text-2xl font-bold text-gray-900 mb-4">
-                    <i class="fas fa-newspaper text-orange-600 mr-2"></i>Notícias
-                </h2>
-                <div id="news-results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-            </div>
-        </div>
-
-        <!-- Empty State -->
-        <div id="empty-state" class="text-center py-16 hidden">
-            <i class="fas fa-search text-7xl text-gray-300 mb-4"></i>
-            <h3 class="text-2xl font-bold text-gray-700 mb-2">Nenhum resultado encontrado</h3>
-            <p class="text-gray-600 mb-6">Tente usar palavras-chave diferentes ou verifique a ortografia</p>
-            <button onclick="document.getElementById('search-input').focus()" class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
-                Tentar Nova Busca
+        <!-- Type tabs -->
+        <div id="type-tabs" class="flex flex-wrap gap-2 mb-6 hidden">
+            <button onclick="setTypeTab('all',this)" class="tab-pill active px-4 py-2 rounded-xl text-sm font-semibold">
+                <i class="fas fa-th mr-1.5"></i> Tudo <span id="cnt-all" class="opacity-70 text-xs"></span>
+            </button>
+            <button onclick="setTypeTab('subjects',this)" class="tab-pill px-4 py-2 rounded-xl text-sm font-semibold">
+                <i class="fas fa-book mr-1.5"></i> Disciplinas <span id="cnt-subjects" class="opacity-70 text-xs"></span>
+            </button>
+            <button onclick="setTypeTab('chapters',this)" class="tab-pill px-4 py-2 rounded-xl text-sm font-semibold">
+                <i class="fas fa-bookmark mr-1.5"></i> Capítulos <span id="cnt-chapters" class="opacity-70 text-xs"></span>
+            </button>
+            <button onclick="setTypeTab('lessons',this)" class="tab-pill px-4 py-2 rounded-xl text-sm font-semibold">
+                <i class="fas fa-play-circle mr-1.5"></i> Lições <span id="cnt-lessons" class="opacity-70 text-xs"></span>
+            </button>
+            <button onclick="setTypeTab('library',this)" class="tab-pill px-4 py-2 rounded-xl text-sm font-semibold">
+                <i class="fas fa-book-open mr-1.5"></i> Biblioteca <span id="cnt-library" class="opacity-70 text-xs"></span>
             </button>
         </div>
 
-        <!-- Search Tips -->
-        <div id="search-tips" class="bg-blue-50 border border-blue-200 rounded-lg p-6 mt-8 hidden">
-            <h3 class="text-lg font-bold text-blue-900 mb-3">
-                <i class="fas fa-lightbulb text-blue-600 mr-2"></i>Dicas de Busca
-            </h3>
-            <ul class="space-y-2 text-sm text-blue-800">
-                <li><i class="fas fa-check text-blue-600 mr-2"></i>Use palavras-chave específicas (ex: "Física", "Matemática")</li>
-                <li><i class="fas fa-check text-blue-600 mr-2"></i>Busque por tópicos (ex: "Cinemática", "Álgebra")</li>
-                <li><i class="fas fa-check text-blue-600 mr-2"></i>Pesquise nomes de livros ou autores</li>
-                <li><i class="fas fa-check text-blue-600 mr-2"></i>Tente termos relacionados se não encontrar resultados</li>
-            </ul>
+        <!-- Skeleton loader -->
+        <div id="skeleton" class="hidden space-y-4">
+            <div class="skeleton h-6 w-48 mb-2"></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="skeleton h-28 rounded-xl"></div>
+                <div class="skeleton h-28 rounded-xl"></div>
+                <div class="skeleton h-28 rounded-xl"></div>
+            </div>
+            <div class="skeleton h-6 w-40 mt-6 mb-2"></div>
+            <div class="space-y-3">
+                <div class="skeleton h-20 rounded-xl"></div>
+                <div class="skeleton h-20 rounded-xl"></div>
+            </div>
         </div>
-    </div>
+
+        <!-- Results -->
+        <div id="results-wrap" class="hidden space-y-10">
+
+            <!-- Subjects section -->
+            <section id="sec-subjects">
+                <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <span class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-book text-blue-600 text-sm"></i>
+                    </span>
+                    Disciplinas
+                </h2>
+                <div id="grid-subjects" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+            </section>
+
+            <!-- Chapters section -->
+            <section id="sec-chapters">
+                <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <span class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-bookmark text-purple-600 text-sm"></i>
+                    </span>
+                    Capítulos do Currículo
+                </h2>
+                <div id="list-chapters" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+            </section>
+
+            <!-- Lessons section -->
+            <section id="sec-lessons">
+                <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <span class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-play-circle text-green-600 text-sm"></i>
+                    </span>
+                    Lições
+                </h2>
+                <div id="list-lessons" class="space-y-3"></div>
+            </section>
+
+            <!-- Library section -->
+            <section id="sec-library">
+                <h2 class="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <span class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-book-open text-orange-600 text-sm"></i>
+                    </span>
+                    Biblioteca
+                </h2>
+                <div id="grid-library" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+            </section>
+        </div>
+
+        <!-- Empty state -->
+        <div id="empty-state" class="hidden text-center py-20">
+            <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-search text-gray-400 text-3xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-700 mb-2">Nenhum resultado</h3>
+            <p class="text-gray-500 mb-6">Tente palavras diferentes ou verifique a ortografia</p>
+            <div class="flex flex-wrap justify-center gap-2 mb-6">
+                <span class="text-xs text-gray-500">Sugestões:</span>
+                <button onclick="quickSearch('Matemática')" class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold hover:bg-purple-200 transition">Matemática</button>
+                <button onclick="quickSearch('Física')" class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold hover:bg-blue-200 transition">Física</button>
+                <button onclick="quickSearch('Química')" class="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold hover:bg-amber-200 transition">Química</button>
+                <button onclick="quickSearch('Biologia')" class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold hover:bg-green-200 transition">Biologia</button>
+                <button onclick="quickSearch('Newton')" class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold hover:bg-indigo-200 transition">Newton</button>
+            </div>
+        </div>
+
+        <!-- Initial tips -->
+        <div id="search-tips" class="hidden">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white rounded-2xl p-5 border border-gray-100 text-center cursor-pointer hover:border-purple-300 transition" onclick="quickSearch('Matemática')">
+                    <div class="text-3xl mb-2">📐</div>
+                    <div class="font-semibold text-gray-800 text-sm">Matemática</div>
+                    <div class="text-xs text-gray-500 mt-1">Álgebra, Cálculo, Geometria</div>
+                </div>
+                <div class="bg-white rounded-2xl p-5 border border-gray-100 text-center cursor-pointer hover:border-purple-300 transition" onclick="quickSearch('Física')">
+                    <div class="text-3xl mb-2">⚡</div>
+                    <div class="font-semibold text-gray-800 text-sm">Física</div>
+                    <div class="text-xs text-gray-500 mt-1">Mecânica, Electromagnetismo</div>
+                </div>
+                <div class="bg-white rounded-2xl p-5 border border-gray-100 text-center cursor-pointer hover:border-purple-300 transition" onclick="quickSearch('Química')">
+                    <div class="text-3xl mb-2">🧪</div>
+                    <div class="font-semibold text-gray-800 text-sm">Química</div>
+                    <div class="text-xs text-gray-500 mt-1">Inorgânica, Orgânica</div>
+                </div>
+                <div class="bg-white rounded-2xl p-5 border border-gray-100 text-center cursor-pointer hover:border-purple-300 transition" onclick="quickSearch('Biologia')">
+                    <div class="text-3xl mb-2">🌿</div>
+                    <div class="font-semibold text-gray-800 text-sm">Biologia</div>
+                    <div class="text-xs text-gray-500 mt-1">Célula, Genética, Evolução</div>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl p-6 border border-purple-100">
+                <h3 class="font-bold text-purple-900 mb-3"><i class="fas fa-lightbulb text-purple-500 mr-2"></i>Dicas de busca</h3>
+                <ul class="space-y-1.5 text-sm text-purple-800">
+                    <li><i class="fas fa-check text-purple-500 mr-2"></i>Pesquise por disciplina: <strong>Física</strong>, <strong>Matemática</strong></li>
+                    <li><i class="fas fa-check text-purple-500 mr-2"></i>Pesquise por tópico: <strong>Cinemática</strong>, <strong>Álgebra linear</strong></li>
+                    <li><i class="fas fa-check text-purple-500 mr-2"></i>Pesquise por conceito: <strong>Newton</strong>, <strong>Derivada</strong></li>
+                    <li><i class="fas fa-check text-purple-500 mr-2"></i>Filtre por país para ver o currículo específico</li>
+                </ul>
+            </div>
+        </div>
+    </main>
 
     <script src="/static/app.js"></script>
-    <script src="/static/library-data.js"></script>
-    <script src="/static/search.js"></script>
     <script>
-        // Get search query from URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const searchQuery = urlParams.get('q');
-        let currentResults = null;
-        let currentTab = 'all';
+    // ── Auth ──────────────────────────────────────────────────────
+    const CURRENT_USER = VClass.isAuthenticated() ? VClass.getCurrentUser() : null;
 
-        if (!searchQuery) {
-            window.location.href = '/';
+    // ── URL State ─────────────────────────────────────────────────
+    const urlP = new URLSearchParams(window.location.search);
+    let currentQuery   = urlP.get('q') || '';
+    let currentCountry = urlP.get('country') || '';
+    let currentType    = 'all';
+    let suggestTimer   = null;
+
+    // ── Init ─────────────────────────────────────────────────────
+    const inp = document.getElementById('search-input');
+    const countryFilter = document.getElementById('country-filter');
+    inp.value = currentQuery;
+    if (currentCountry) countryFilter.value = currentCountry;
+
+    if (currentQuery) {
+        doSearch();
+    } else {
+        document.getElementById('search-tips').classList.remove('hidden');
+        document.getElementById('search-subtitle').textContent = 'Pesquise por qualquer disciplina, capítulo ou lição';
+    }
+
+    // ── Search input events ───────────────────────────────────────
+    inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { hideSuggest(); doSearch(); }
+        if (e.key === 'Escape') hideSuggest();
+    });
+    inp.addEventListener('input', () => {
+        clearTimeout(suggestTimer);
+        if (inp.value.length >= 2) {
+            suggestTimer = setTimeout(loadSuggestions, 280);
+        } else {
+            hideSuggest();
         }
+    });
+    document.addEventListener('click', e => {
+        if (!document.getElementById('search-wrap').contains(e.target)) hideSuggest();
+    });
 
-        // Update search input
-        document.getElementById('search-input').value = searchQuery;
-        document.getElementById('search-query').textContent = `Buscando por: "${searchQuery}"`;
+    // ── Suggest ──────────────────────────────────────────────────
+    async function loadSuggestions() {
+        try {
+            const r = await fetch(`/api/search/suggest?q=${encodeURIComponent(inp.value)}`);
+            const d = await r.json();
+            if (!d.success || !d.data.length) { hideSuggest(); return; }
+            const box = document.getElementById('suggest-box');
+            box.innerHTML = d.data.map(s => `
+                <div class="suggest-item" onclick="quickSearch('${s.replace(/'/g,"\\'")}')">
+                    <i class="fas fa-search text-gray-400 text-xs"></i>
+                    <span>${s}</span>
+                </div>
+            `).join('');
+            box.classList.remove('hidden');
+        } catch {}
+    }
 
-        // Perform search
-        async function performSearch() {
-            document.getElementById('loading').classList.remove('hidden');
-            document.getElementById('results-container').classList.add('hidden');
+    function hideSuggest() {
+        document.getElementById('suggest-box').classList.add('hidden');
+    }
+
+    // ── Main search ───────────────────────────────────────────────
+    async function doSearch() {
+        hideSuggest();
+        const q = inp.value.trim();
+        const country = countryFilter.value;
+        if (!q || q.length < 2) {
+            document.getElementById('search-tips').classList.remove('hidden');
+            document.getElementById('results-wrap').classList.add('hidden');
             document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('type-tabs').classList.add('hidden');
+            document.getElementById('skeleton').classList.add('hidden');
+            return;
+        }
+        currentQuery = q;
+        currentCountry = country;
 
-            try {
-                const results = await VClassSearch.searchAll(searchQuery);
-                currentResults = results;
+        // Update URL
+        const newUrl = `/search.html?q=${encodeURIComponent(q)}${country ? '&country=' + country : ''}`;
+        history.replaceState({}, '', newUrl);
+        document.title = `"${q}" — Busca VClass`;
 
-                document.getElementById('loading').classList.add('hidden');
+        // Show skeleton
+        document.getElementById('search-tips').classList.add('hidden');
+        document.getElementById('results-wrap').classList.add('hidden');
+        document.getElementById('empty-state').classList.add('hidden');
+        document.getElementById('type-tabs').classList.add('hidden');
+        document.getElementById('skeleton').classList.remove('hidden');
+        document.getElementById('search-subtitle').textContent = `Buscando por "${q}"...`;
 
-                if (results.total === 0) {
-                    document.getElementById('empty-state').classList.remove('hidden');
-                    document.getElementById('search-tips').classList.remove('hidden');
-                } else {
-                    document.getElementById('results-container').classList.remove('hidden');
-                    document.getElementById('results-tabs').classList.remove('hidden');
-                    displayResults(results);
-                }
-            } catch (error) {
-                console.error('Search error:', error);
-                document.getElementById('loading').classList.add('hidden');
+        try {
+            const params = new URLSearchParams({ q, type: 'all' });
+            if (country) params.set('country', country);
+            const r = await fetch(`/api/search?${params}`);
+            const d = await r.json();
+
+            document.getElementById('skeleton').classList.add('hidden');
+
+            if (!d.success || d.data.total === 0) {
                 document.getElementById('empty-state').classList.remove('hidden');
+                document.getElementById('search-subtitle').textContent = `Nenhum resultado para "${q}"`;
+                return;
             }
+
+            renderResults(d.data, q);
+            document.getElementById('search-subtitle').textContent = `${d.data.total} resultado(s) para "${q}"`;
+            document.getElementById('type-tabs').classList.remove('hidden');
+            document.getElementById('results-wrap').classList.remove('hidden');
+            updateCounts(d.data);
+
+        } catch (err) {
+            document.getElementById('skeleton').classList.add('hidden');
+            document.getElementById('empty-state').classList.remove('hidden');
+            document.getElementById('search-subtitle').textContent = 'Erro ao buscar. Tente novamente.';
+        }
+    }
+
+    function quickSearch(term) {
+        inp.value = term;
+        doSearch();
+    }
+
+    // ── Render ────────────────────────────────────────────────────
+    function hl(text, q) {
+        if (!q || !text) return text || '';
+        const re = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+        return text.replace(re, '<mark class="highlight">$1</mark>');
+    }
+
+    function termLabel(term, country) {
+        if (!term) return '';
+        if (country === 'br') return `${term}º Bimestre`;
+        return `${term}º Trimestre`;
+    }
+
+    function renderResults(data, q) {
+        // ── Subjects ──
+        const subjGrid = document.getElementById('grid-subjects');
+        const subjSec  = document.getElementById('sec-subjects');
+        if (data.subjects.length === 0) {
+            subjSec.classList.add('hidden');
+        } else {
+            subjSec.classList.remove('hidden');
+            subjGrid.innerHTML = data.subjects.map((s, i) => `
+                <div class="result-card fade-up bg-white rounded-2xl p-5 border border-gray-100 cursor-pointer"
+                    style="animation-delay:${i*0.05}s"
+                    onclick="window.location.href='/browse.html'">
+                    <div class="flex items-start gap-3 mb-3">
+                        <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                            style="background:${s.color}18">
+                            <i class="fas ${s.icon} text-lg" style="color:${s.color}"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="font-bold text-gray-900 text-sm leading-tight">${hl(s.name, q)}</div>
+                            <div class="text-xs text-gray-500 mt-0.5">${hl(s.grade_name, q)}</div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 line-clamp-2 mb-3">${hl(s.description || '', q)}</p>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full" style="background:${s.color}18;color:${s.color}">
+                            ${s.chapter_count} capítulos
+                        </span>
+                        <span class="text-xs text-gray-400">${s.country_flag} ${s.country_name}</span>
+                    </div>
+                </div>
+            `).join('');
         }
 
-        function displayResults(results) {
-            // Update counts
-            document.getElementById('count-all').textContent = results.total;
-            document.getElementById('count-lessons').textContent = results.lessons.length;
-            document.getElementById('count-subjects').textContent = results.subjects.length;
-            document.getElementById('count-library').textContent = results.library.length;
-            document.getElementById('count-news').textContent = results.news.length;
-            document.getElementById('results-count').textContent = `${results.total} resultado(s) encontrado(s)`;
-
-            // Display subjects
-            if (results.subjects.length > 0) {
-                const subjectsHtml = results.subjects.map(subject => `
-                    <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition">
-                        <div class="flex items-center mb-3">
-                            <div class="w-12 h-12 rounded-lg flex items-center justify-center mr-3" style="background-color: ${subject.color}20">
-                                <i class="fas fa-book text-xl" style="color: ${subject.color}"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-lg font-bold text-gray-900">${subject.name}</h3>
-                                <p class="text-sm text-gray-600">${subject.grade_name}</p>
-                            </div>
-                        </div>
-                        <p class="text-sm text-gray-600 mb-3">${subject.description || ''}</p>
-                        <button onclick="window.location.href='/browse.html'" class="text-purple-600 hover:text-purple-700 font-medium text-sm">
-                            Ver Conteúdo <i class="fas fa-arrow-right ml-1"></i>
-                        </button>
+        // ── Chapters ──
+        const chapList = document.getElementById('list-chapters');
+        const chapSec  = document.getElementById('sec-chapters');
+        if (data.chapters.length === 0) {
+            chapSec.classList.add('hidden');
+        } else {
+            chapSec.classList.remove('hidden');
+            chapList.innerHTML = data.chapters.map((ch, i) => `
+                <div class="result-card fade-up bg-white rounded-xl p-4 border border-gray-100 cursor-pointer flex gap-4"
+                    style="animation-delay:${i*0.04}s"
+                    onclick="window.location.href='/browse.html'">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                        style="background:${ch.subject_color}18">
+                        <i class="fas ${ch.subject_icon} text-sm" style="color:${ch.subject_color}"></i>
                     </div>
-                `).join('');
-                document.getElementById('subjects-results').innerHTML = subjectsHtml;
-            } else {
-                document.getElementById('subjects-section').classList.add('hidden');
-            }
-
-            // Display lessons
-            if (results.lessons.length > 0) {
-                const lessonsHtml = results.lessons.map(lesson => `
-                    <div class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition">
-                        <div class="flex items-start space-x-4">
-                            <div class="w-32 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
-                                <img src="${lesson.thumbnail_url || 'https://via.placeholder.com/128x80'}" alt="${lesson.title}" class="w-full h-full object-cover">
-                            </div>
-                            <div class="flex-1">
-                                <h3 class="text-lg font-bold text-gray-900 mb-2">${lesson.title}</h3>
-                                <p class="text-sm text-gray-600 mb-3 line-clamp-2">${lesson.description || ''}</p>
-                                <div class="flex items-center space-x-4 text-xs text-gray-500">
-                                    ${lesson.video_duration ? `<span><i class="fas fa-clock mr-1"></i>${Math.floor(lesson.video_duration / 60)} min</span>` : ''}
-                                    ${lesson.is_free ? '<span class="px-2 py-1 bg-green-100 text-green-800 rounded">GRÁTIS</span>' : ''}
-                                </div>
-                            </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="font-semibold text-gray-900 text-sm leading-snug">${hl(ch.title, q)}</div>
+                            <span class="text-xs text-gray-400 flex-shrink-0">${ch.country_flag}</span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-0.5 line-clamp-1">${hl(ch.description || '', q)}</p>
+                        <div class="flex items-center gap-2 mt-1.5 flex-wrap">
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded-full" style="background:${ch.subject_color}18;color:${ch.subject_color}">
+                                ${ch.subject_name}
+                            </span>
+                            <span class="text-xs text-gray-400">${ch.grade_name}</span>
+                            ${ch.term ? `<span class="text-xs text-gray-400">${termLabel(ch.term, ch.country_id)}</span>` : ''}
                         </div>
                     </div>
-                `).join('');
-                document.getElementById('lessons-results').innerHTML = lessonsHtml;
-            } else {
-                document.getElementById('lessons-section').classList.add('hidden');
-            }
-
-            // Display library
-            if (results.library.length > 0) {
-                const libraryHtml = results.library.map(book => `
-                    <div class="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition">
-                        <div class="h-48 bg-gray-200 rounded-lg mb-3 overflow-hidden">
-                            <img src="${book.cover}" alt="${book.title}" class="w-full h-full object-cover">
-                        </div>
-                        <h3 class="text-sm font-bold text-gray-900 mb-1 line-clamp-1">${book.title}</h3>
-                        <p class="text-xs text-gray-600 mb-2">${book.author}</p>
-                        <div class="flex items-center justify-between text-xs text-gray-500">
-                            <span><i class="fas fa-file-pdf mr-1"></i>${book.pages}p</span>
-                            <span class="px-2 py-1 bg-purple-100 text-purple-700 rounded">${book.subject}</span>
-                        </div>
-                    </div>
-                `).join('');
-                document.getElementById('library-results').innerHTML = libraryHtml;
-            } else {
-                document.getElementById('library-section').classList.add('hidden');
-            }
-
-            // Display news (if available)
-            if (results.news && results.news.length > 0) {
-                // News display code here
-                document.getElementById('news-section').classList.remove('hidden');
-            } else {
-                document.getElementById('news-section').classList.add('hidden');
-            }
+                </div>
+            `).join('');
         }
 
-        function showTab(tab) {
-            currentTab = tab;
-            
-            // Update tab styles
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('border-purple-600', 'text-purple-600');
-                btn.classList.add('border-transparent', 'text-gray-500');
+        // ── Lessons ──
+        const lessList = document.getElementById('list-lessons');
+        const lessSec  = document.getElementById('sec-lessons');
+        if (data.lessons.length === 0) {
+            lessSec.classList.add('hidden');
+        } else {
+            lessSec.classList.remove('hidden');
+            lessList.innerHTML = data.lessons.map((l, i) => `
+                <div class="result-card fade-up bg-white rounded-xl border border-gray-100 overflow-hidden cursor-pointer flex"
+                    style="animation-delay:${i*0.05}s"
+                    onclick="window.location.href='/lesson.html?id=${l.id}'">
+                    <div class="w-28 sm:w-36 flex-shrink-0 bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
+                        <i class="fas fa-play-circle text-white text-3xl opacity-80"></i>
+                    </div>
+                    <div class="p-4 flex-1 min-w-0">
+                        <div class="flex items-start gap-2 mb-1">
+                            <span class="text-xs font-bold px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full flex-shrink-0">${l.subject}</span>
+                            ${l.is_free ? '<span class="text-xs font-bold px-2 py-0.5 bg-green-100 text-green-700 rounded-full">GRÁTIS</span>' : ''}
+                        </div>
+                        <h3 class="font-bold text-gray-900 text-sm leading-snug mb-1">${hl(l.title, q)}</h3>
+                        <p class="text-xs text-gray-500 line-clamp-2">${hl(l.description || '', q)}</p>
+                        ${l.duration_min ? `<div class="mt-2 text-xs text-gray-400"><i class="fas fa-clock mr-1"></i>${l.duration_min} min</div>` : ''}
+                    </div>
+                    <div class="flex items-center pr-4">
+                        <i class="fas fa-chevron-right text-gray-300"></i>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ── Library ──
+        const libGrid = document.getElementById('grid-library');
+        const libSec  = document.getElementById('sec-library');
+        if (data.library.length === 0) {
+            libSec.classList.add('hidden');
+        } else {
+            libSec.classList.remove('hidden');
+            const COLORS = ['from-blue-400 to-blue-600','from-purple-400 to-purple-600','from-green-400 to-green-600','from-orange-400 to-orange-600','from-rose-400 to-rose-600','from-teal-400 to-teal-600'];
+            libGrid.innerHTML = data.library.map((b, i) => `
+                <div class="result-card fade-up bg-white rounded-xl overflow-hidden border border-gray-100 cursor-pointer"
+                    style="animation-delay:${i*0.05}s">
+                    <div class="h-28 bg-gradient-to-br ${COLORS[i % COLORS.length]} flex items-end p-3">
+                        <div class="text-white">
+                            <div class="text-xs font-bold opacity-80">${b.subject}</div>
+                        </div>
+                    </div>
+                    <div class="p-3">
+                        <div class="font-bold text-gray-900 text-xs leading-snug mb-1">${hl(b.title, q)}</div>
+                        <div class="text-xs text-gray-500 mb-2">${hl(b.author, q)}</div>
+                        <div class="flex items-center justify-between text-xs text-gray-400">
+                            <span><i class="fas fa-file-alt mr-1"></i>${b.pages}p</span>
+                            <span>${b.country?.toUpperCase()}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    }
+
+    function updateCounts(data) {
+        document.getElementById('cnt-all').textContent      = `(${data.total})`;
+        document.getElementById('cnt-subjects').textContent = `(${data.subjects.length})`;
+        document.getElementById('cnt-chapters').textContent = `(${data.chapters.length})`;
+        document.getElementById('cnt-lessons').textContent  = `(${data.lessons.length})`;
+        document.getElementById('cnt-library').textContent  = `(${data.library.length})`;
+    }
+
+    // ── Type tabs ─────────────────────────────────────────────────
+    function setTypeTab(type, btn) {
+        currentType = type;
+        document.querySelectorAll('.tab-pill').forEach(b => {
+            b.classList.remove('active');
+        });
+        btn.classList.add('active');
+
+        const secs = { subjects:'sec-subjects', chapters:'sec-chapters', lessons:'sec-lessons', library:'sec-library' };
+        if (type === 'all') {
+            Object.values(secs).forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('hidden');
             });
-            event.target.classList.remove('border-transparent', 'text-gray-500');
-            event.target.classList.add('border-purple-600', 'text-purple-600');
-
-            // Show/hide sections
-            if (tab === 'all') {
-                document.getElementById('subjects-section').classList.remove('hidden');
-                document.getElementById('lessons-section').classList.remove('hidden');
-                document.getElementById('library-section').classList.remove('hidden');
-                document.getElementById('news-section').classList.remove('hidden');
-            } else {
-                document.getElementById('subjects-section').classList.add('hidden');
-                document.getElementById('lessons-section').classList.add('hidden');
-                document.getElementById('library-section').classList.add('hidden');
-                document.getElementById('news-section').classList.add('hidden');
-                document.getElementById(`${tab}-section`).classList.remove('hidden');
-            }
+        } else {
+            Object.entries(secs).forEach(([k, id]) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (k === type) el.classList.remove('hidden');
+                else el.classList.add('hidden');
+            });
         }
-
-        // Perform search on load
-        performSearch();
+    }
     </script>
 </body>
 </html>
