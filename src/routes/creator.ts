@@ -501,4 +501,128 @@ creator.post('/chapter', async (c) => {
   }
 })
 
+// ═════════════════════════════════════════════════════════════════════════════
+// POST /api/creator/video/upload-url
+// Gera URL de upload assinada no Bunny.net e devolve ao frontend.
+// O browser faz o PUT directamente para o Bunny — o vídeo nunca passa pelo servidor.
+// ═════════════════════════════════════════════════════════════════════════════
+creator.post('/video/upload-url', async (c) => {
+  const user = c.get('user') as any
+  const body = await c.req.json().catch(() => ({}))
+  const { filename = 'video.mp4', title = 'Nova Lição' } = body
+
+  // Verificar se a Bunny API Key está configurada
+  const bunnyApiKey    = (c.env as any)?.BUNNY_API_KEY    || process.env.BUNNY_API_KEY    || ''
+  const bunnyLibraryId = (c.env as any)?.BUNNY_LIBRARY_ID || process.env.BUNNY_LIBRARY_ID || ''
+  const isBunnyConfigured = !!(bunnyApiKey && bunnyLibraryId)
+
+  // ── MODO DEMO: simular criação sem Bunny.net ─────────────────────────────
+  if (!isBunnyConfigured) {
+    const fakeVideoId = `demo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    return c.json({
+      success: true,
+      demo: true,
+      data: {
+        videoId:   fakeVideoId,
+        uploadUrl: null,                  // sem URL real em modo demo
+        libraryId: 'demo-library',
+        title,
+        filename,
+        message:   'Modo demo: upload simulado. Configure BUNNY_API_KEY e BUNNY_LIBRARY_ID para uploads reais.'
+      }
+    })
+  }
+
+  // ── MODO PRODUÇÃO: criar vídeo no Bunny e devolver URL de upload ──────────
+  try {
+    // 1. Criar entrada de vídeo na biblioteca Bunny
+    const createRes = await fetch(
+      `https://video.bunnycdn.com/library/${bunnyLibraryId}/videos`,
+      {
+        method: 'POST',
+        headers: {
+          AccessKey: bunnyApiKey,
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: JSON.stringify({ title: title || filename })
+      }
+    )
+
+    if (!createRes.ok) {
+      const err = await createRes.text()
+      return c.json({ success: false, error: `Bunny.net: ${err}` }, 502)
+    }
+
+    const video = await createRes.json() as any
+    const videoId = video.guid
+
+    // 2. Devolver ao browser o videoId + endpoint + header de autorização
+    // O browser fará um PUT para este endpoint com o ficheiro como body
+    return c.json({
+      success: true,
+      demo: false,
+      data: {
+        videoId,
+        uploadUrl: `https://video.bunnycdn.com/library/${bunnyLibraryId}/videos/${videoId}`,
+        authHeader: bunnyApiKey,          // apenas para PUT directo do browser
+        libraryId:  bunnyLibraryId,
+        title,
+        filename
+      }
+    })
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500)
+  }
+})
+
+// ═════════════════════════════════════════════════════════════════════════════
+// GET /api/creator/video/:videoId/status
+// Verifica o estado de processamento do vídeo no Bunny.net
+// ═════════════════════════════════════════════════════════════════════════════
+creator.get('/video/:videoId/status', async (c) => {
+  const videoId        = c.req.param('videoId')
+  const bunnyApiKey    = (c.env as any)?.BUNNY_API_KEY    || process.env.BUNNY_API_KEY    || ''
+  const bunnyLibraryId = (c.env as any)?.BUNNY_LIBRARY_ID || process.env.BUNNY_LIBRARY_ID || ''
+  const isBunnyConfigured = !!(bunnyApiKey && bunnyLibraryId)
+
+  if (!isBunnyConfigured || videoId.startsWith('demo-')) {
+    return c.json({
+      success: true,
+      demo: true,
+      data: { videoId, status: 'ready', encodeProgress: 100, availableResolutions: '1080p,720p,480p' }
+    })
+  }
+
+  try {
+    const res = await fetch(
+      `https://video.bunnycdn.com/library/${bunnyLibraryId}/videos/${videoId}`,
+      { headers: { AccessKey: bunnyApiKey, Accept: 'application/json' } }
+    )
+    if (!res.ok) return c.json({ success: false, error: 'Vídeo não encontrado no Bunny.net' }, 404)
+
+    const v = await res.json() as any
+    // status: 0=criado, 1=upload, 2=processando, 3=transcoding, 4=finalizando, 5=erro, 6=pronto
+    const statusMap: Record<number, string> = {
+      0: 'created', 1: 'uploading', 2: 'processing',
+      3: 'transcoding', 4: 'finishing', 5: 'error', 6: 'ready'
+    }
+    return c.json({
+      success: true,
+      data: {
+        videoId,
+        status:               statusMap[v.status] || 'unknown',
+        statusCode:           v.status,
+        encodeProgress:       v.encodeProgress ?? 0,
+        availableResolutions: v.availableResolutions || '',
+        length:               v.length,
+        title:                v.title,
+        thumbnailUrl:         v.thumbnailUrl
+      }
+    })
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500)
+  }
+})
+
 export default creator

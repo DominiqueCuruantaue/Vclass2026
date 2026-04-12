@@ -41,6 +41,16 @@
         .toggle-dot { transition: transform 0.2s; }
         /* Modal */
         .modal-overlay { background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+
+        /* Upload Directo */
+        .upload-zone { border: 2px dashed #d1d5db; transition: all 0.2s; }
+        .upload-zone:hover, .upload-zone.drag-over {
+            border-color: #8b5cf6;
+            background: #faf5ff;
+        }
+        .upload-zone.drag-over { transform: scale(1.01); box-shadow: 0 8px 24px rgba(139,92,246,.15); }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .animate-spin { animation: spin 0.8s linear infinite; }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -299,10 +309,14 @@
                         <h2 class="text-base font-semibold text-gray-900 mb-1"><i class="fas fa-video text-purple-500 mr-2"></i>Fonte do Vídeo</h2>
                         <p class="text-xs text-gray-500 mb-5">O VClass usa Bunny.net CDN para streaming HLS seguro. Forneça o ID do vídeo ou uma URL direta.</p>
 
-                        <!-- Source Tabs -->
-                        <div class="flex items-center gap-2 mb-5 p-1 bg-gray-100 rounded-xl w-fit">
-                            <button onclick="setVideoSource('bunny')" id="src-bunny" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-white shadow text-purple-700 transition">
-                                <i class="fas fa-cloud mr-1"></i> Bunny.net
+                                        <!-- Source Tabs -->
+                        <div class="flex items-center gap-1 mb-5 p-1 bg-gray-100 rounded-xl w-fit flex-wrap">
+                            <button onclick="setVideoSource('upload')" id="src-upload" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-white shadow text-purple-700 transition flex items-center gap-1.5">
+                                <i class="fas fa-cloud-upload-alt"></i> Upload Directo
+                                <span class="bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold leading-none">Novo</span>
+                            </button>
+                            <button onclick="setVideoSource('bunny')" id="src-bunny" class="px-4 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 rounded-lg transition">
+                                <i class="fas fa-cloud mr-1"></i> Bunny.net ID
                             </button>
                             <button onclick="setVideoSource('url')" id="src-url" class="px-4 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 rounded-lg transition">
                                 <i class="fas fa-link mr-1"></i> URL Direta
@@ -312,8 +326,156 @@
                             </button>
                         </div>
 
-                        <!-- Bunny.net -->
-                        <div id="source-bunny" class="space-y-3">
+                        <!-- ══ UPLOAD DIRECTO ══════════════════════════════════════ -->
+                        <div id="source-upload" class="space-y-4">
+
+                            <!-- Estado: aguardar ficheiro -->
+                            <div id="upload-idle">
+                                <!-- Zona drag & drop -->
+                                <div id="upload-dropzone"
+                                    class="upload-zone rounded-2xl p-10 text-center cursor-pointer relative"
+                                    onclick="document.getElementById('upload-file-input').click()"
+                                    ondragover="onDropzoneOver(event)"
+                                    ondragleave="onDropzoneLeave(event)"
+                                    ondrop="onDropzoneDrop(event)">
+                                    <div id="dropzone-content">
+                                        <div class="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                            <i class="fas fa-cloud-upload-alt text-3xl text-purple-500"></i>
+                                        </div>
+                                        <p class="text-base font-semibold text-gray-700 mb-1">Arraste o vídeo aqui</p>
+                                        <p class="text-sm text-gray-400 mb-4">ou clique para seleccionar um ficheiro</p>
+                                        <span class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700 transition">
+                                            <i class="fas fa-folder-open"></i> Escolher ficheiro
+                                        </span>
+                                        <p class="text-xs text-gray-400 mt-4">MP4, MOV, AVI, MKV, WebM · Máx. 4 GB</p>
+                                    </div>
+                                </div>
+                                <input type="file" id="upload-file-input" accept="video/*" class="hidden" onchange="onFileSelected(this)">
+
+                                <!-- Formatos suportados -->
+                                <div class="flex flex-wrap gap-2 mt-3">
+                                    <span class="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-lg font-mono">MP4</span>
+                                    <span class="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-lg font-mono">MOV</span>
+                                    <span class="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-lg font-mono">AVI</span>
+                                    <span class="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-lg font-mono">MKV</span>
+                                    <span class="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-lg font-mono">WebM</span>
+                                    <span class="text-xs text-gray-400 self-center">→ convertido automaticamente para HLS</span>
+                                </div>
+                            </div>
+
+                            <!-- Estado: ficheiro seleccionado / a enviar -->
+                            <div id="upload-progress-panel" class="hidden space-y-4">
+
+                                <!-- Info do ficheiro -->
+                                <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-200">
+                                    <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-film text-purple-600 text-lg"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-semibold text-gray-900 truncate" id="upload-filename">—</p>
+                                        <p class="text-xs text-gray-400 mt-0.5" id="upload-filesize">—</p>
+                                    </div>
+                                    <button onclick="resetUpload()" id="upload-cancel-btn" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition" title="Cancelar">
+                                        <i class="fas fa-times text-sm"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Barra de progresso -->
+                                <div id="upload-progress-section" class="hidden">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                            <div class="w-3 h-3 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                                            <span id="upload-status-text">A enviar...</span>
+                                        </span>
+                                        <span class="text-sm font-bold text-purple-700" id="upload-pct">0%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                                        <div id="upload-bar" class="h-3 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full transition-all duration-300" style="width:0%"></div>
+                                    </div>
+                                    <div class="flex justify-between mt-1.5 text-xs text-gray-400">
+                                        <span id="upload-bytes-sent">0 MB enviados</span>
+                                        <span id="upload-speed">—</span>
+                                        <span id="upload-eta">—</span>
+                                    </div>
+                                </div>
+
+                                <!-- Acções antes de enviar -->
+                                <div id="upload-action-row" class="flex items-center gap-3">
+                                    <button onclick="startUpload()" id="btn-start-upload"
+                                        class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700 transition shadow-sm">
+                                        <i class="fas fa-cloud-upload-alt"></i> Iniciar Upload
+                                    </button>
+                                    <button onclick="resetUpload()" class="px-4 py-3 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition">
+                                        Cancelar
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Estado: upload concluído -->
+                            <div id="upload-done-panel" class="hidden">
+                                <div class="p-5 bg-green-50 border border-green-200 rounded-2xl">
+                                    <div class="flex items-start gap-4">
+                                        <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                                            <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-bold text-green-800">Vídeo enviado com sucesso! 🎉</p>
+                                            <p class="text-xs text-green-600 mt-1" id="upload-done-filename">—</p>
+                                            <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+                                                <div class="bg-white rounded-lg p-2 border border-green-100">
+                                                    <span class="text-gray-400 block">Video ID</span>
+                                                    <span class="font-mono font-bold text-gray-800 text-xs break-all" id="upload-done-id">—</span>
+                                                </div>
+                                                <div class="bg-white rounded-lg p-2 border border-green-100">
+                                                    <span class="text-gray-400 block">Estado</span>
+                                                    <span class="font-semibold text-amber-600" id="upload-done-status">A processar...</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- Aviso de processamento -->
+                                    <div class="mt-4 flex items-start gap-2 p-3 bg-amber-50 border border-amber-100 rounded-xl">
+                                        <i class="fas fa-info-circle text-amber-500 mt-0.5 flex-shrink-0 text-sm"></i>
+                                        <p class="text-xs text-amber-800">O Bunny.net está a <strong>transcodificar</strong> o vídeo para HLS. Ficará disponível em <strong>2–10 minutos</strong> dependendo da duração. O ID já está guardado nesta lição.</p>
+                                    </div>
+                                    <div class="mt-3 flex gap-2">
+                                        <button onclick="resetUpload()" class="text-xs text-green-700 font-semibold hover:underline flex items-center gap-1">
+                                            <i class="fas fa-redo text-xs"></i> Enviar outro vídeo
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Estado: erro -->
+                            <div id="upload-error-panel" class="hidden p-4 bg-red-50 border border-red-200 rounded-2xl">
+                                <div class="flex items-start gap-3">
+                                    <i class="fas fa-exclamation-circle text-red-500 mt-0.5 text-lg flex-shrink-0"></i>
+                                    <div>
+                                        <p class="text-sm font-bold text-red-800">Erro no upload</p>
+                                        <p class="text-xs text-red-600 mt-1" id="upload-error-msg">—</p>
+                                        <button onclick="resetUpload()" class="mt-3 text-xs text-red-700 font-semibold hover:underline flex items-center gap-1">
+                                            <i class="fas fa-redo text-xs"></i> Tentar novamente
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Nota sobre Bunny API Key -->
+                            <div class="p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-start gap-3">
+                                <i class="fas fa-key text-blue-400 mt-0.5 flex-shrink-0 text-sm"></i>
+                                <div class="text-xs text-blue-800">
+                                    <p class="font-semibold mb-1">Configuração necessária</p>
+                                    <p>O upload directo requer a <strong>API Key do Bunny.net</strong> configurada no servidor. Em modo demo, o upload é simulado localmente.</p>
+                                    <a href="https://bunny.net" target="_blank" class="text-blue-600 font-medium hover:underline mt-1 inline-flex items-center gap-1">
+                                        Obter API Key <i class="fas fa-external-link-alt text-xs"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- ══ FIM UPLOAD DIRECTO ═══════════════════════════════════ -->
+
+                        <!-- Bunny.net ID -->
+                        <div id="source-bunny" class="hidden space-y-3">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">ID do Vídeo no Bunny.net <span class="text-red-500">*</span></label>
                                 <div class="flex gap-2">
@@ -649,7 +811,7 @@
         let lessonData = {
             title: LESSON_TITLE_INIT, desc: '', notes: '', subject: '', chapter: '',
             order: 1, duration: 12, difficulty: 'medium', isFree: true, requireSequence: false,
-            videoId: '', videoSource: 'bunny', objectives: [],
+            videoId: '', videoSource: 'upload', objectives: [],
             exercises: [], resources: [],
             status: 'draft'
         };
@@ -672,6 +834,8 @@
                 updateCharCount('field-title','title-count');
                 lessonData.title = LESSON_TITLE_INIT;
             }
+            // Iniciar na aba de Upload Directo por defeito
+            setVideoSource('upload');
             renderExercises();
             renderResources();
             updatePublishChecklist();
@@ -754,13 +918,277 @@
         // ── Video Source ─────────────────────────────────────────────────
         function setVideoSource(src) {
             lessonData.videoSource = src;
-            ['bunny','url','youtube'].forEach(s => {
-                document.getElementById(`source-${s}`).classList.toggle('hidden', s !== src);
+            ['upload','bunny','url','youtube'].forEach(s => {
+                document.getElementById(`source-${s}`)?.classList.toggle('hidden', s !== src);
                 const btn = document.getElementById(`src-${s}`);
-                btn.className = s === src
-                    ? 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-white shadow text-purple-700 transition'
-                    : 'px-4 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 rounded-lg transition';
+                if (!btn) return;
+                if (s === src) {
+                    btn.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-white shadow text-purple-700 transition flex items-center gap-1.5';
+                } else {
+                    btn.className = 'px-4 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 rounded-lg transition';
+                }
             });
+        }
+
+        // ── Upload Directo — Drag & Drop ──────────────────────────────────
+        function onDropzoneOver(e) {
+            e.preventDefault();
+            document.getElementById('upload-dropzone').classList.add('drag-over');
+        }
+        function onDropzoneLeave(e) {
+            document.getElementById('upload-dropzone').classList.remove('drag-over');
+        }
+        function onDropzoneDrop(e) {
+            e.preventDefault();
+            document.getElementById('upload-dropzone').classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file) processSelectedFile(file);
+        }
+        function onFileSelected(input) {
+            const file = input.files[0];
+            if (file) processSelectedFile(file);
+        }
+
+        // ── Upload Directo — Validar e mostrar painel ────────────────────
+        const MAX_FILE_SIZE = 4 * 1024 * 1024 * 1024; // 4 GB
+        const ALLOWED_TYPES = ['video/mp4','video/quicktime','video/x-msvideo','video/x-matroska','video/webm','video/mpeg'];
+
+        let uploadFile = null;
+        let uploadXHR  = null;
+        let uploadStartTime = null;
+
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+            if (bytes < 1024*1024*1024) return (bytes/1024/1024).toFixed(1) + ' MB';
+            return (bytes/1024/1024/1024).toFixed(2) + ' GB';
+        }
+
+        function processSelectedFile(file) {
+            // Validar tipo
+            const isVideo = file.type.startsWith('video/') || ALLOWED_TYPES.includes(file.type);
+            if (!isVideo) {
+                showUploadError('Ficheiro inválido. Seleccione um vídeo (MP4, MOV, AVI, MKV, WebM).');
+                return;
+            }
+            // Validar tamanho
+            if (file.size > MAX_FILE_SIZE) {
+                showUploadError(`Ficheiro demasiado grande (${formatBytes(file.size)}). Máximo permitido: 4 GB.`);
+                return;
+            }
+
+            uploadFile = file;
+            document.getElementById('upload-idle').classList.add('hidden');
+            document.getElementById('upload-progress-panel').classList.remove('hidden');
+            document.getElementById('upload-done-panel').classList.add('hidden');
+            document.getElementById('upload-error-panel').classList.add('hidden');
+            document.getElementById('upload-progress-section').classList.add('hidden');
+            document.getElementById('upload-action-row').classList.remove('hidden');
+            document.getElementById('upload-cancel-btn').classList.remove('hidden');
+
+            document.getElementById('upload-filename').textContent = file.name;
+            document.getElementById('upload-filesize').textContent =
+                `${formatBytes(file.size)} · ${file.type || 'video'}`;
+        }
+
+        // ── Upload Directo — Iniciar ─────────────────────────────────────
+        async function startUpload() {
+            if (!uploadFile) return;
+
+            document.getElementById('upload-action-row').classList.add('hidden');
+            document.getElementById('upload-progress-section').classList.remove('hidden');
+            document.getElementById('upload-cancel-btn').classList.remove('hidden');
+            document.getElementById('upload-status-text').textContent = 'A preparar upload...';
+            setUploadProgress(0);
+            uploadStartTime = Date.now();
+
+            try {
+                // 1. Pedir URL de upload ao servidor
+                const token = localStorage.getItem('accessToken') || '';
+                const prepRes = await fetch('/api/creator/video/upload-url', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        filename: uploadFile.name,
+                        title: document.getElementById('field-title')?.value || uploadFile.name
+                    })
+                });
+                const prep = await prepRes.json();
+                if (!prep.success) throw new Error(prep.error || 'Erro ao preparar upload');
+
+                const { videoId, uploadUrl, authHeader, demo } = prep.data;
+
+                // 2a. MODO DEMO — simular upload com progresso fictício
+                if (demo || !uploadUrl) {
+                    await simulateDemoUpload(videoId, uploadFile.name);
+                    return;
+                }
+
+                // 2b. MODO REAL — PUT directo para o Bunny.net com progresso
+                document.getElementById('upload-status-text').textContent = 'A enviar para Bunny.net...';
+                await doRealUpload(uploadUrl, authHeader, videoId);
+
+            } catch (err) {
+                showUploadError(err.message || 'Erro desconhecido durante o upload.');
+            }
+        }
+
+        // ── Upload real via XHR (progresso nativo) ───────────────────────
+        function doRealUpload(uploadUrl, authHeader, videoId) {
+            return new Promise((resolve, reject) => {
+                uploadXHR = new XMLHttpRequest();
+                uploadXHR.open('PUT', uploadUrl, true);
+                uploadXHR.setRequestHeader('AccessKey', authHeader);
+                uploadXHR.setRequestHeader('Content-Type', 'application/octet-stream');
+
+                uploadXHR.upload.onprogress = (e) => {
+                    if (!e.lengthComputable) return;
+                    const pct  = Math.round((e.loaded / e.total) * 100);
+                    const elapsed = (Date.now() - uploadStartTime) / 1000;
+                    const speed = e.loaded / elapsed;
+                    const remaining = (e.total - e.loaded) / speed;
+                    setUploadProgress(pct, e.loaded, speed, remaining);
+                };
+
+                uploadXHR.onload = () => {
+                    if (uploadXHR.status >= 200 && uploadXHR.status < 300) {
+                        onUploadSuccess(videoId);
+                        resolve();
+                    } else {
+                        reject(new Error(`Bunny.net respondeu com ${uploadXHR.status}`));
+                    }
+                };
+
+                uploadXHR.onerror  = () => reject(new Error('Erro de rede durante o upload.'));
+                uploadXHR.onabort  = () => reject(new Error('Upload cancelado.'));
+                uploadXHR.send(uploadFile);
+            });
+        }
+
+        // ── Upload demo — progresso simulado ────────────────────────────
+        function simulateDemoUpload(videoId, filename) {
+            return new Promise((resolve) => {
+                document.getElementById('upload-status-text').textContent = 'A simular upload (modo demo)...';
+                let pct = 0;
+                const total = uploadFile.size;
+                const interval = setInterval(() => {
+                    // Simula velocidade variável (~5-15 MB/s)
+                    const chunk = Math.random() * 15 * 1024 * 1024;
+                    pct = Math.min(pct + Math.random() * 8 + 2, 99);
+                    const sent  = (pct / 100) * total;
+                    const speed = chunk / 0.2;
+                    const eta   = ((total - sent) / speed);
+                    setUploadProgress(Math.round(pct), sent, speed, eta);
+
+                    if (pct >= 99) {
+                        clearInterval(interval);
+                        setTimeout(() => {
+                            setUploadProgress(100, total, 0, 0);
+                            onUploadSuccess(videoId, filename, true);
+                            resolve();
+                        }, 400);
+                    }
+                }, 200);
+            });
+        }
+
+        // ── Actualizar barra de progresso ────────────────────────────────
+        function setUploadProgress(pct, bytesSent = 0, speed = 0, eta = 0) {
+            document.getElementById('upload-bar').style.width = pct + '%';
+            document.getElementById('upload-pct').textContent = pct + '%';
+            if (bytesSent > 0) {
+                document.getElementById('upload-bytes-sent').textContent =
+                    formatBytes(bytesSent) + ' enviados';
+            }
+            if (speed > 0) {
+                document.getElementById('upload-speed').textContent =
+                    formatBytes(speed) + '/s';
+            }
+            if (eta > 0 && eta < 3600) {
+                const m = Math.floor(eta / 60), s = Math.round(eta % 60);
+                document.getElementById('upload-eta').textContent =
+                    eta > 60 ? `~${m}m ${s}s restantes` : `~${s}s restantes`;
+            }
+        }
+
+        // ── Upload concluído ─────────────────────────────────────────────
+        function onUploadSuccess(videoId, filename, isDemo = false) {
+            // Guardar videoId no campo da lição
+            const videoIdField = document.getElementById('field-video-id');
+            if (videoIdField) videoIdField.value = videoId;
+            lessonData.videoId = videoId;
+
+            // Actualizar checklist
+            updateCheckItem('check-video-id', true, 'Vídeo enviado via upload directo');
+            scheduleAutoSave();
+
+            // Mostrar painel de sucesso
+            document.getElementById('upload-progress-panel').classList.add('hidden');
+            document.getElementById('upload-done-panel').classList.remove('hidden');
+            document.getElementById('upload-done-filename').textContent =
+                (filename || uploadFile?.name || 'vídeo') + (isDemo ? ' (demo)' : '');
+            document.getElementById('upload-done-id').textContent = videoId;
+            document.getElementById('upload-done-status').textContent =
+                isDemo ? '✅ Demo concluído' : 'A processar (2–10 min)';
+
+            updatePublishChecklist();
+
+            // Polling de status (apenas em modo real)
+            if (!isDemo) pollVideoStatus(videoId);
+        }
+
+        // ── Polling de status após upload real ───────────────────────────
+        async function pollVideoStatus(videoId) {
+            const token = localStorage.getItem('accessToken') || '';
+            let attempts = 0;
+            const max = 30; // ~5 min de polling (10s × 30)
+
+            const check = async () => {
+                if (attempts++ >= max) return;
+                try {
+                    const res  = await fetch(`/api/creator/video/${videoId}/status`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        const { status, encodeProgress } = data.data;
+                        let label = 'A processar...';
+                        if (status === 'transcoding') label = `A transcodificar... ${encodeProgress}%`;
+                        if (status === 'ready')       label = '✅ Pronto para streaming!';
+                        if (status === 'error')       label = '❌ Erro no processamento';
+                        document.getElementById('upload-done-status').textContent = label;
+                        if (status === 'ready' || status === 'error') return;
+                    }
+                } catch (_) {}
+                setTimeout(check, 10000);
+            };
+            setTimeout(check, 5000);
+        }
+
+        // ── Mostrar erro ─────────────────────────────────────────────────
+        function showUploadError(msg) {
+            document.getElementById('upload-idle').classList.add('hidden');
+            document.getElementById('upload-progress-panel').classList.add('hidden');
+            document.getElementById('upload-done-panel').classList.add('hidden');
+            document.getElementById('upload-error-panel').classList.remove('hidden');
+            document.getElementById('upload-error-msg').textContent = msg;
+        }
+
+        // ── Resetar estado do upload ─────────────────────────────────────
+        function resetUpload() {
+            if (uploadXHR) { try { uploadXHR.abort(); } catch(_){} uploadXHR = null; }
+            uploadFile = null;
+            uploadStartTime = null;
+            document.getElementById('upload-idle').classList.remove('hidden');
+            document.getElementById('upload-progress-panel').classList.add('hidden');
+            document.getElementById('upload-done-panel').classList.add('hidden');
+            document.getElementById('upload-error-panel').classList.add('hidden');
+            document.getElementById('upload-bar').style.width = '0%';
+            document.getElementById('upload-pct').textContent = '0%';
+            document.getElementById('upload-file-input').value = '';
         }
 
         function validateVideoId() {
@@ -956,7 +1384,11 @@
         function updatePublishChecklist() {
             const hasTitle   = lessonData.title.length >= 5;
             const hasSubject = !!document.getElementById('field-subject')?.value;
-            const hasVideo   = !!document.getElementById('field-video-id')?.value || !!document.getElementById('field-video-url')?.value;
+            // Vídeo válido: upload concluído, ID Bunny preenchido, URL directa ou YouTube
+            const hasVideo   = !!lessonData.videoId
+                            || !!document.getElementById('field-video-id')?.value
+                            || !!document.getElementById('field-video-url')?.value
+                            || !!document.getElementById('field-youtube-url')?.value;
             const hasEx      = lessonData.exercises.length >= 3;
 
             setCheckRow('pcheck-title',   hasTitle,  'Título: "' + (lessonData.title||'—') + '"', 'Preencha o título da lição na aba "Informações"');
@@ -1027,7 +1459,10 @@
             updatePublishChecklist();
             const hasTitle   = lessonData.title.length >= 5;
             const hasSubject = !!document.getElementById('field-subject')?.value;
-            const hasVideo   = !!document.getElementById('field-video-id')?.value;
+            const hasVideo   = !!lessonData.videoId
+                            || !!document.getElementById('field-video-id')?.value
+                            || !!document.getElementById('field-video-url')?.value
+                            || !!document.getElementById('field-youtube-url')?.value;
             if (!hasTitle || !hasSubject || !hasVideo) {
                 VClass.showNotification('Preencha todos os campos obrigatórios antes de publicar.', 'warning');
                 switchTab('publish');
