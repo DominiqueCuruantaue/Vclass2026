@@ -10,6 +10,7 @@ declare module 'hono' {
       id: string
       email: string
       role: UserRole
+      full_name?: string
     }
   }
 }
@@ -35,7 +36,8 @@ export async function authMiddleware(c: Context, next: Next) {
   c.set('user', {
     id: decoded.sub,
     email: decoded.email,
-    role: decoded.role
+    role: decoded.role,
+    full_name: (decoded as any).name || decoded.email?.split('@')[0] || 'Utilizador'
   })
   
   await next()

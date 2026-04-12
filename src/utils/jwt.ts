@@ -9,6 +9,7 @@ export interface JWTPayload {
   sub: string // user_id
   email: string
   role: 'student' | 'teacher' | 'admin'
+  name?: string  // display name for watermark
   iat?: number
   exp?: number
 }

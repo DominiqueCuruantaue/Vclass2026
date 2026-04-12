@@ -141,7 +141,13 @@
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">País</label>
-                            <input type="text" id="edit-country" class="edit-input w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent transition" disabled>
+                            <select id="edit-country" class="edit-input w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent transition" disabled>
+                                <option value="mz">🇲🇿 Moçambique</option>
+                                <option value="ao">🇦🇴 Angola</option>
+                                <option value="br">🇧🇷 Brasil</option>
+                                <option value="pt">🇵🇹 Portugal</option>
+                                <option value="cv">🇨🇻 Cabo Verde</option>
+                            </select>
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Membro desde</label>
@@ -375,16 +381,16 @@
             // Header
             document.getElementById('profile-name').textContent = name;
             document.getElementById('profile-email').textContent = user.email || '';
-            document.getElementById('profile-country').textContent = user.country || 'Moçambique';
+            document.getElementById('profile-country').textContent = getCountryLabel(user.country) || 'Moçambique';
             document.getElementById('profile-since').textContent = user.created_at ? new Date(user.created_at).getFullYear() : '2024';
             document.getElementById('profile-role-badge').innerHTML = `<i class="fas fa-user-graduate mr-1"></i>${translateRole(user.role)}`;
 
             // Edit fields
             document.getElementById('edit-name').value = name;
             document.getElementById('edit-email').value = user.email || '';
-            document.getElementById('edit-country').value = user.country || 'Moçambique';
+            document.getElementById('edit-country').value = user.country || 'mz';
             document.getElementById('edit-registered').value = user.created_at ? VClass.formatDate(user.created_at) : '-';
-            originalData = { name, country: user.country || 'Moçambique' };
+            originalData = { name, country: user.country || 'mz' };
 
             loadStats();
             loadSettings();
@@ -407,6 +413,17 @@
 
         function translateRole(r) {
             return {student:'Estudante',teacher:'Professor',admin:'Administrador'}[r] || r || 'Estudante';
+        }
+
+        function getCountryLabel(code) {
+            const COUNTRIES = {
+                mz: '🇲🇿 Moçambique',
+                ao: '🇦🇴 Angola',
+                br: '🇧🇷 Brasil',
+                pt: '🇵🇹 Portugal',
+                cv: '🇨🇻 Cabo Verde',
+            };
+            return COUNTRIES[code] || code || 'Moçambique';
         }
 
         // Tabs
@@ -453,7 +470,7 @@
                 document.getElementById('profile-name').textContent = name;
                 const initials = name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
                 document.getElementById('profile-avatar').textContent = initials;
-                document.getElementById('profile-country').textContent = country;
+                document.getElementById('profile-country').textContent = getCountryLabel(country);
                 originalData = { name, country };
                 cancelEdit();
                 VClass.showNotification('Perfil atualizado com sucesso! ✅', 'success');

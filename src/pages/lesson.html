@@ -6,7 +6,8 @@
     <title>Lição - VClass</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet">
+    <!-- HLS.js para streaming protegido (sem VideoJS) -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
     <style>
         .gradient-primary {
             background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
@@ -294,17 +295,89 @@
             }
         }
         
-        /* Video Player */
-        .video-js {
+        /* ── Player Protegido VClass ──────────────────────────── */
+        #vclass-player-wrap {
+            position: relative;
+            width: 100%;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        #vclass-video {
             width: 100%;
             height: 500px;
+            display: block;
+            background: #000;
+            /* Desactivar pointer default para bloquear drag */
+            pointer-events: auto;
         }
-        
         @media (max-width: 768px) {
-            .video-js {
-                height: 300px;
-            }
+            #vclass-video { height: 220px; }
         }
+        /* Overlay anti-screenshot / watermark */
+        #vclass-watermark {
+            position: absolute;
+            pointer-events: none;
+            z-index: 10;
+            font-size: 13px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.13);
+            letter-spacing: 1px;
+            white-space: nowrap;
+            transition: top 8s, left 8s;
+            user-select: none;
+        }
+        /* Bloquear overlay de captura de ecrã */
+        #vclass-protect-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 5;
+            pointer-events: none;
+            /* padrão semi-transparente que arruína screenshots */
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 40px,
+                rgba(255,255,255,0.015) 40px,
+                rgba(255,255,255,0.015) 41px
+            );
+        }
+        /* Barra de controlos custom */
+        #vclass-controls {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.85));
+            padding: 24px 16px 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 20;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        #vclass-player-wrap:hover #vclass-controls,
+        #vclass-player-wrap.show-controls #vclass-controls { opacity: 1; }
+        .vc-btn {
+            background: none; border: none; color: #fff;
+            cursor: pointer; padding: 4px 8px; border-radius: 6px;
+            font-size: 15px; transition: background 0.2s;
+        }
+        .vc-btn:hover { background: rgba(255,255,255,0.15); }
+        #vc-progress-wrap {
+            flex: 1; height: 4px; background: rgba(255,255,255,0.3);
+            border-radius: 2px; cursor: pointer; position: relative;
+        }
+        #vc-progress-fill {
+            height: 100%; background: #6366f1; border-radius: 2px;
+            width: 0%; pointer-events: none;
+        }
+        #vc-time { color: #ddd; font-size: 12px; white-space: nowrap; }
+        #vc-quality { color: #ddd; font-size: 11px; }
+        /* Bloquear menu de contexto visual */
+        #vclass-video::-webkit-media-controls { display: none !important; }
+        #vclass-video::-webkit-media-controls-enclosure { display: none !important; }
         
         /* Sidebar Cards */
         .sidebar-card {
@@ -545,9 +618,54 @@
                 <!-- ── Video Player ── -->
                 <div class="bg-black rounded-2xl overflow-hidden shadow-lg mb-4">
                     <div id="video-container">
-                        <video id="lesson-video" class="video-js vjs-default-skin w-full" controls preload="auto">
-                            <p class="vjs-no-js">Active o JavaScript para ver este vídeo.</p>
-                        </video>
+                        <!-- ── Player Protegido VClass ── -->
+                        <div id="vclass-player-wrap">
+                            <!-- Vídeo sem controlos nativos -->
+                            <video id="vclass-video"
+                                preload="none"
+                                playsinline
+                                webkit-playsinline
+                                x-webkit-airplay="deny"
+                                controlsList="nodownload nofullscreen noremoteplayback"
+                                disablePictureInPicture
+                                oncontextmenu="return false">
+                            </video>
+                            <!-- Overlay padrão anti-screenshot -->
+                            <div id="vclass-protect-overlay"></div>
+                            <!-- Watermark flutuante dinâmico -->
+                            <div id="vclass-watermark"></div>
+                            <!-- Controlos custom -->
+                            <div id="vclass-controls">
+                                <button class="vc-btn" id="vc-play" onclick="vcPlay()" title="Play/Pause">
+                                    <i class="fas fa-play" id="vc-play-icon"></i>
+                                </button>
+                                <div id="vc-progress-wrap" onclick="vcSeek(event)" title="Linha de tempo">
+                                    <div id="vc-progress-fill"></div>
+                                </div>
+                                <span id="vc-time">0:00 / 0:00</span>
+                                <button class="vc-btn" id="vc-mute" onclick="vcMute()" title="Mudo">
+                                    <i class="fas fa-volume-up" id="vc-mute-icon"></i>
+                                </button>
+                                <select id="vc-speed" onchange="vcSpeed(this.value)"
+                                    style="background:#222;color:#fff;border:none;border-radius:4px;padding:2px 4px;font-size:11px;cursor:pointer">
+                                    <option value="0.75">0.75×</option>
+                                    <option value="1" selected>1×</option>
+                                    <option value="1.25">1.25×</option>
+                                    <option value="1.5">1.5×</option>
+                                    <option value="2">2×</option>
+                                </select>
+                                <button class="vc-btn" id="vc-fs" onclick="vcFullscreen()" title="Ecrã completo">
+                                    <i class="fas fa-expand"></i>
+                                </button>
+                            </div>
+                            <!-- Écran de carregamento -->
+                            <div id="vc-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#000;z-index:30">
+                                <div style="text-align:center;color:#fff">
+                                    <i class="fas fa-shield-alt text-4xl text-indigo-400 mb-3" style="display:block"></i>
+                                    <p class="text-sm text-gray-400">A verificar acesso...</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div id="video-error" class="p-10 text-center hidden bg-gray-900">
                         <i class="fas fa-exclamation-circle text-4xl text-red-400 mb-4"></i>
@@ -1016,7 +1134,6 @@
         </div>
     </main>
 
-    <script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
     <script src="/static/app.js"></script>
     <script>
         // DEMO MODE: Set fake authentication for testing
@@ -1204,94 +1321,283 @@
             `;
         }
 
+        // ══════════════════════════════════════════════════════════════
+        //  VClass HLS Player — Protegido contra download e partilha
+        //  Usa HLS.js nativo (sem VideoJS) + token de acesso + watermark
+        // ══════════════════════════════════════════════════════════════
+
+        let hlsInstance = null;   // instância HLS.js
+        let vcDuration  = 0;      // duração total em segundos
+        let vcProgressSaveTimer = null;
+
+        // ─── Funções de controlo do player ──────────────────────────────────
+
+        function vcPlay() {
+            const v = document.getElementById('vclass-video');
+            if (!v) return;
+            if (v.paused) {
+                v.play();
+                document.getElementById('vc-play-icon').className = 'fas fa-pause';
+            } else {
+                v.pause();
+                document.getElementById('vc-play-icon').className = 'fas fa-play';
+            }
+        }
+
+        function vcMute() {
+            const v = document.getElementById('vclass-video');
+            if (!v) return;
+            v.muted = !v.muted;
+            document.getElementById('vc-mute-icon').className =
+                v.muted ? 'fas fa-volume-mute' : 'fas fa-volume-up';
+        }
+
+        function vcSeek(e) {
+            const v = document.getElementById('vclass-video');
+            const wrap = document.getElementById('vc-progress-wrap');
+            if (!v || !wrap || vcDuration === 0) return;
+            const rect = wrap.getBoundingClientRect();
+            const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            v.currentTime = ratio * vcDuration;
+        }
+
+        function vcSpeed(val) {
+            const v = document.getElementById('vclass-video');
+            if (v) v.playbackRate = parseFloat(val);
+        }
+
+        function vcFullscreen() {
+            const wrap = document.getElementById('vclass-player-wrap');
+            if (!wrap) return;
+            if (!document.fullscreenElement) {
+                wrap.requestFullscreen && wrap.requestFullscreen();
+            } else {
+                document.exitFullscreen && document.exitFullscreen();
+            }
+        }
+
+        function vcFmtTime(s) {
+            s = Math.floor(s || 0);
+            const m = Math.floor(s / 60);
+            const ss = String(s % 60).padStart(2, '0');
+            return `${m}:${ss}`;
+        }
+
+        function vcUpdateUI() {
+            const v = document.getElementById('vclass-video');
+            if (!v) return;
+            const cur = v.currentTime;
+            const dur = vcDuration || v.duration || 0;
+            const pct = dur > 0 ? Math.floor((cur / dur) * 100) : 0;
+
+            // Barra de progresso no player
+            document.getElementById('vc-progress-fill').style.width = pct + '%';
+            document.getElementById('vc-time').textContent =
+                vcFmtTime(cur) + ' / ' + vcFmtTime(dur);
+
+            // Anel de progresso e barra sticky
+            updateProgressRing(pct);
+            updateStickyProgress(pct);
+
+            // Minutos assistidos na sidebar
+            const watchedBar = document.getElementById('watched-progress-bar');
+            if (watchedBar) watchedBar.style.width = pct + '%';
+            const timeEl = document.getElementById('time-spent');
+            if (timeEl) timeEl.textContent = Math.floor(cur / 60);
+        }
+
+        // Guardar progresso no backend a cada 30 s
+        function vcScheduleSave() {
+            clearInterval(vcProgressSaveTimer);
+            vcProgressSaveTimer = setInterval(async () => {
+                const v = document.getElementById('vclass-video');
+                if (!v || v.paused) return;
+                const dur = vcDuration || v.duration || 0;
+                const pct = dur > 0 ? Math.round((v.currentTime / dur) * 100) : 0;
+                try {
+                    await fetch(`/api/video/${lessonId}/progress`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${VClass.getToken()}`
+                        },
+                        body: JSON.stringify({
+                            position: Math.round(v.currentTime),
+                            duration: Math.round(dur),
+                            percent:  pct
+                        })
+                    });
+                } catch(e) { /* silent fail */ }
+            }, 30000);
+        }
+
+        // ─── Watermark flutuante ─────────────────────────────────────────────
+        let _wmTimer = null;
+        function startWatermark(label) {
+            const el = document.getElementById('vclass-watermark');
+            if (!el || !label) return;
+            el.textContent = label;
+            function move() {
+                const wrap = document.getElementById('vclass-player-wrap');
+                if (!wrap) return;
+                const maxX = Math.max(0, wrap.offsetWidth  - el.offsetWidth  - 20);
+                const maxY = Math.max(0, wrap.offsetHeight - el.offsetHeight - 20);
+                el.style.left = Math.random() * maxX + 'px';
+                el.style.top  = Math.random() * maxY + 'px';
+            }
+            move();
+            clearInterval(_wmTimer);
+            _wmTimer = setInterval(move, 8000);
+        }
+
+        // ─── Carregamento principal do vídeo ────────────────────────────────
         async function loadVideo() {
-            if (!lessonData.video_url) {
-                document.getElementById('video-container').classList.add('hidden');
-                document.getElementById('video-error').classList.remove('hidden');
+            const vcont  = document.getElementById('video-container');
+            const verr   = document.getElementById('video-error');
+            const vload  = document.getElementById('vc-loading');
+            const vclass_video = document.getElementById('vclass-video');
+
+            if (!lessonData || !lessonData.video_url) {
+                vcont.classList.add('hidden');
+                verr.classList.remove('hidden');
                 return;
             }
 
             try {
-                // DEMO MODE: Use video_url directly from lesson data
-                // In production, fetch token from API: await VClass.api.video.getToken(lessonId)
-                const videoUrl = lessonData.video_url;
-                
-                if (videoUrl) {
-                    const videoElement = document.getElementById('lesson-video');
-                    player = videojs(videoElement, {
-                        controls: true,
-                        autoplay: false,
-                        preload: 'auto',
-                        fluid: true,
-                        playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2]
-                    });
+                // ── Passo 1: Obter token de acesso seguro ────────────────────
+                let videoUrl = lessonData.video_url;
+                let watermarkLabel = 'VClass';
 
-                    player.src({
-                        src: videoUrl,
-                        type: 'application/x-mpegURL'
+                try {
+                    const tokenRes = await fetch('/api/video/token', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${VClass.getToken()}`
+                        },
+                        body: JSON.stringify({
+                            lessonId:  lessonId,
+                            videoId:   lessonData.video_id || lessonData.id || lessonId
+                        })
                     });
-
-                    // Track progress
-                    player.on('timeupdate', updateVideoProgress);
-                    player.on('ended', onVideoEnded);
-                    
-                    console.log('Video loaded successfully:', videoUrl);
-                } else {
-                    document.getElementById('video-container').classList.add('hidden');
-                    document.getElementById('video-error').classList.remove('hidden');
+                    if (tokenRes.ok) {
+                        const tokenData = await tokenRes.json();
+                        if (tokenData.success && tokenData.data) {
+                            const wm = tokenData.data.watermark;
+                            watermarkLabel = wm
+                                ? `${wm.name} • VClass`
+                                : 'VClass';
+                            // Em produção com Bunny.net o videoUrl viria do stream endpoint:
+                            // videoUrl = await fetchStreamUrl(lessonId, tokenData.data.token);
+                        }
+                    }
+                } catch(e) {
+                    // Continua em modo demo se o token falhar
+                    console.warn('Token fetch failed, using demo mode:', e);
                 }
+
+                // ── Passo 2: Inicializar HLS.js ──────────────────────────────
+                if (hlsInstance) {
+                    hlsInstance.destroy();
+                    hlsInstance = null;
+                }
+
+                const isHLS = videoUrl.includes('.m3u8') || videoUrl.includes('m3u8');
+
+                if (isHLS && Hls.isSupported()) {
+                    hlsInstance = new Hls({
+                        enableWorker: true,
+                        lowLatencyMode: false,
+                        // Desactivar salvar fragmentos (anti-download)
+                        xhrSetup: function(xhr) {
+                            xhr.withCredentials = false;
+                        }
+                    });
+                    hlsInstance.loadSource(videoUrl);
+                    hlsInstance.attachMedia(vclass_video);
+                    hlsInstance.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
+                        vload && vload.classList.add('hidden');
+                        vcDuration = vclass_video.duration || 0;
+                        vcScheduleSave();
+                        startWatermark(watermarkLabel);
+                    });
+                    hlsInstance.on(Hls.Events.LEVEL_LOADED, function(event, data) {
+                        vcDuration = data.details.totalduration || vclass_video.duration || 0;
+                    });
+                    hlsInstance.on(Hls.Events.ERROR, function(event, data) {
+                        if (data.fatal) {
+                            console.error('HLS fatal error:', data);
+                            vcont.classList.add('hidden');
+                            verr.classList.remove('hidden');
+                        }
+                    });
+                } else if (vclass_video.canPlayType('application/vnd.apple.mpegurl')) {
+                    // Safari nativo HLS
+                    vclass_video.src = videoUrl;
+                    vclass_video.addEventListener('loadedmetadata', () => {
+                        vload && vload.classList.add('hidden');
+                        vcDuration = vclass_video.duration;
+                        vcScheduleSave();
+                        startWatermark(watermarkLabel);
+                    }, { once: true });
+                } else {
+                    // Fallback MP4
+                    vclass_video.src = videoUrl;
+                    vclass_video.addEventListener('loadedmetadata', () => {
+                        vload && vload.classList.add('hidden');
+                        vcDuration = vclass_video.duration;
+                        vcScheduleSave();
+                        startWatermark(watermarkLabel);
+                    }, { once: true });
+                }
+
+                // ── Passo 3: Eventos de progresso ───────────────────────────
+                vclass_video.addEventListener('timeupdate', vcUpdateUI);
+                vclass_video.addEventListener('play', () => {
+                    document.getElementById('vc-play-icon').className = 'fas fa-pause';
+                });
+                vclass_video.addEventListener('pause', () => {
+                    document.getElementById('vc-play-icon').className = 'fas fa-play';
+                });
+                vclass_video.addEventListener('ended', onVideoEnded);
+                vclass_video.addEventListener('durationchange', () => {
+                    vcDuration = vclass_video.duration;
+                });
+
+                // Click no player faz play/pause
+                vclass_video.addEventListener('click', vcPlay);
+
+                // Mostrar container
+                vcont.classList.remove('hidden');
+                verr.classList.add('hidden');
+
             } catch (error) {
                 console.error('Error loading video:', error);
-                document.getElementById('video-container').classList.add('hidden');
-                document.getElementById('video-error').classList.remove('hidden');
+                vcont.classList.add('hidden');
+                verr.classList.remove('hidden');
             }
         }
 
-        async function updateVideoProgress() {
-            if (!player) return;
-
-            const currentTime = player.currentTime();
-            const duration = player.duration();
-            
-            if (duration > 0) {
-                const progressPercent = Math.floor((currentTime / duration) * 100);
-                updateProgressRing(progressPercent);
-                
-                // Update time display
-                const watchedMinutes = Math.floor(currentTime / 60);
-                const totalMinutes = Math.floor(duration / 60);
-                document.getElementById('time-spent').textContent = `${watchedMinutes}`;
-                document.getElementById('total-duration').textContent = `${totalMinutes}`;
-                
-                // Update watched progress bar
-                const watchedBar = document.getElementById('watched-progress-bar');
-                if (watchedBar) {
-                    watchedBar.style.width = `${progressPercent}%`;
-                }
-                // Update sticky bar
-                updateStickyProgress(progressPercent);
-                
-                // Save progress every 30 seconds
-                if (Math.floor(currentTime) % 30 === 0) {
-                    await VClass.api.video.updateProgress(lessonId, currentTime);
-                }
-            }
-        }
-
-        function updateProgressRing(percent) {
-            const circle = document.getElementById('progress-ring-circle');
-            const text = document.getElementById('progress-text');
-            // r=36 → circumference = 2π*36 ≈ 226.19
-            const circumference = 2 * Math.PI * 36;
-            const offset = circumference - (percent / 100) * circumference;
-            circle.style.strokeDashoffset = offset;
-            text.textContent = `${percent}%`;
-        }
+        // Compatibilidade: changeSpeed aponta para vcSpeed
+        function updateVideoProgress() { vcUpdateUI(); }
 
         async function onVideoEnded() {
             VClass.showNotification('Lição concluída! 🎉', 'success');
             updateProgressRing(100);
-            document.getElementById('lesson-status').textContent = 'Concluída';
+            const statusEl = document.getElementById('lesson-status');
+            if (statusEl) statusEl.textContent = 'Concluída';
+            clearInterval(vcProgressSaveTimer);
+            // Guardar 100% no backend
+            try {
+                await fetch(`/api/video/${lessonId}/progress`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${VClass.getToken()}`
+                    },
+                    body: JSON.stringify({ position: Math.round(vcDuration), duration: Math.round(vcDuration), percent: 100 })
+                });
+            } catch(e) {}
         }
 
         async function loadExercises() {
@@ -1587,10 +1893,8 @@
         //  VIDEO SPEED
         // ─────────────────────────────────────────
         function changeSpeed(val) {
-            if (player) {
-                player.playbackRate(parseFloat(val));
-                VClass.showNotification(`Velocidade: ${val}×`, 'info');
-            }
+            vcSpeed(val);
+            VClass.showNotification(`Velocidade: ${val}×`, 'info');
         }
 
         // ─────────────────────────────────────────
@@ -1931,6 +2235,65 @@
         });
 
         // Initialize
+
+        // ══════════════════════════════════════════════════════════════
+        //  Protecções anti-download globais
+        // ══════════════════════════════════════════════════════════════
+        (function installAntiDownload() {
+            // Bloquear menu de contexto
+            document.addEventListener('contextmenu', function(e) {
+                if (e.target.closest('#vclass-player-wrap, #video-container')) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+
+            // Bloquear atalhos de teclado perigosos
+            document.addEventListener('keydown', function(e) {
+                const blocked = (
+                    // Ctrl+S (guardar), Ctrl+U (ver fonte), Ctrl+Shift+J/I/C (devtools)
+                    (e.ctrlKey && ['s','u','p'].includes(e.key.toLowerCase())) ||
+                    (e.ctrlKey && e.shiftKey && ['j','i','c'].includes(e.key.toLowerCase())) ||
+                    // F12
+                    e.key === 'F12'
+                );
+                if (blocked) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+                // Espaço = play/pause no player
+                if (e.key === ' ' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                    const wrap = document.getElementById('vclass-player-wrap');
+                    if (wrap && wrap.offsetParent !== null) {
+                        e.preventDefault();
+                        vcPlay();
+                    }
+                }
+            });
+
+            // Bloquear drag & drop no vídeo
+            document.addEventListener('dragstart', function(e) {
+                if (e.target.tagName === 'VIDEO' || e.target.id === 'vclass-video') {
+                    e.preventDefault();
+                }
+            });
+
+            // Detectar DevTools (técnica de largura)
+            let _dtOpen = false;
+            setInterval(function() {
+                const threshold = 160;
+                const open = window.outerWidth - window.innerWidth > threshold
+                          || window.outerHeight - window.innerHeight > threshold;
+                if (open && !_dtOpen) {
+                    _dtOpen = true;
+                    const v = document.getElementById('vclass-video');
+                    if (v) v.pause();
+                }
+                if (!open) _dtOpen = false;
+            }, 1000);
+        })();
+
         loadLesson();
     </script>
 </body>

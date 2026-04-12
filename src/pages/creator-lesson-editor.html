@@ -217,24 +217,53 @@
                 <div class="space-y-5">
                     <!-- Organização -->
                     <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 section-card">
-                        <h3 class="text-sm font-semibold text-gray-900 mb-4"><i class="fas fa-sitemap text-purple-500 mr-2"></i>Organização</h3>
+                        <h3 class="text-sm font-semibold text-gray-900 mb-4"><i class="fas fa-sitemap text-purple-500 mr-2"></i>Organização Curricular</h3>
                         <div class="space-y-3">
+
+                            <!-- País -->
                             <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">🌍 País</label>
+                                <select id="field-country" onchange="onCountryChange()" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                                    <option value="">Selecionar país...</option>
+                                </select>
+                            </div>
+
+                            <!-- Nível de ensino -->
+                            <div id="wrap-level" class="hidden">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">🎓 Nível de Ensino</label>
+                                <select id="field-level" onchange="onLevelChange()" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                                    <option value="">Selecionar nível...</option>
+                                </select>
+                            </div>
+
+                            <!-- Classe / Ano -->
+                            <div id="wrap-grade" class="hidden">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">📚 Classe / Ano</label>
+                                <select id="field-grade" onchange="onGradeChange()" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                                    <option value="">Selecionar classe...</option>
+                                </select>
+                            </div>
+
+                            <!-- Disciplina -->
+                            <div id="wrap-subject" class="hidden">
                                 <label class="block text-xs font-medium text-gray-600 mb-1">Disciplina <span class="text-red-400">*</span></label>
-                                <select id="field-subject" onchange="loadChapters()" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
-                                    <option value="">Selecionar...</option>
-                                    <option value="fisica">Física</option>
-                                    <option value="matematica">Matemática</option>
-                                    <option value="quimica">Química</option>
-                                    <option value="portugues">Português</option>
+                                <select id="field-subject" onchange="onSubjectChange()" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                                    <option value="">Selecionar disciplina...</option>
                                 </select>
                             </div>
-                            <div>
+
+                            <!-- Capítulo -->
+                            <div id="wrap-chapter" class="hidden">
                                 <label class="block text-xs font-medium text-gray-600 mb-1">Capítulo <span class="text-red-400">*</span></label>
-                                <select id="field-chapter" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
-                                    <option value="">Selecione a disciplina</option>
+                                <select id="field-chapter" onchange="onChapterChange()" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                                    <option value="">Selecionar capítulo...</option>
                                 </select>
+                                <!-- Badge do trimestre -->
+                                <div id="chapter-term-badge" class="hidden mt-1">
+                                    <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-semibold" id="chapter-term-text"></span>
+                                </div>
                             </div>
+
                             <div>
                                 <label class="block text-xs font-medium text-gray-600 mb-1">Ordem no capítulo</label>
                                 <input type="number" id="field-order" value="1" min="1" max="99" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
@@ -1271,27 +1300,174 @@
         let exerciseIdCounter = 1;
         let resourceIdCounter = 1;
 
-        const CHAPTERS = {
-            fisica:     ['Cinemática','Dinâmica','Óptica','Termodinâmica','Eletricidade'],
-            matematica: ['Funções','Álgebra Linear','Geometria Analítica','Trigonometria'],
-            quimica:    ['Átomos e Moléculas','Soluções','Reações Orgânicas'],
-            portugues:  ['Gramática','Literatura','Interpretação de Texto','Redação'],
-        };
+        // Dados curriculares carregados via API
+        let CURRICULUM_DATA = null;
+
+        // Cache para selects
+        let _currCountry = '', _currLevel = '', _currGrade = '', _currSubjectId = '';
 
         // ── Init ─────────────────────────────────────────────────────────
-        window.onload = function() {
+        window.onload = async function() {
             if (LESSON_TITLE_INIT) {
                 document.getElementById('field-title').value = LESSON_TITLE_INIT;
                 document.getElementById('header-title').textContent = LESSON_TITLE_INIT;
                 updateCharCount('field-title','title-count');
                 lessonData.title = LESSON_TITLE_INIT;
             }
+            // Carregar currículo da API
+            await loadCurriculumData();
             // Iniciar na aba de Upload Directo por defeito
             setVideoSource('upload');
             renderExercises();
             renderResources();
             updatePublishChecklist();
         };
+
+        // ── Currículo: carregar dados ────────────────────────────────────
+        async function loadCurriculumData() {
+            try {
+                const res = await fetch('/api/curriculum/full');
+                const json = await res.json();
+                if (json.success) {
+                    CURRICULUM_DATA = json.data;
+                    populateCountries();
+                }
+            } catch(e) {
+                console.warn('Currículo não disponível via API', e);
+            }
+        }
+
+        function populateCountries() {
+            const sel = document.getElementById('field-country');
+            if (!CURRICULUM_DATA || !sel) return;
+            sel.innerHTML = '<option value="">Selecionar país...</option>' +
+                CURRICULUM_DATA.map(c => `<option value="${c.id}">${c.flag} ${c.name}</option>`).join('');
+        }
+
+        function onCountryChange() {
+            const countryId = document.getElementById('field-country').value;
+            _currCountry = countryId;
+            _currLevel = _currGrade = _currSubjectId = '';
+            lessonData.country = countryId;
+            ['wrap-level','wrap-grade','wrap-subject','wrap-chapter'].forEach(id =>
+                document.getElementById(id).classList.add('hidden'));
+
+            if (!countryId || !CURRICULUM_DATA) return;
+            const country = CURRICULUM_DATA.find(c => c.id === countryId);
+            if (!country || !country.levels.length) return;
+
+            const sel = document.getElementById('field-level');
+            sel.innerHTML = '<option value="">Selecionar nível...</option>' +
+                country.levels.map(l => `<option value="${l.id}">${l.shortName} — ${l.name}</option>`).join('');
+            document.getElementById('wrap-level').classList.remove('hidden');
+
+            // Limpar selects dependentes
+            ['field-grade','field-subject','field-chapter'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = `<option value="">Selecionar...</option>`;
+            });
+            scheduleAutoSave();
+        }
+
+        function onLevelChange() {
+            const levelId = document.getElementById('field-level').value;
+            _currLevel = levelId;
+            _currGrade = _currSubjectId = '';
+            ['wrap-grade','wrap-subject','wrap-chapter'].forEach(id =>
+                document.getElementById(id).classList.add('hidden'));
+
+            if (!levelId || !CURRICULUM_DATA) return;
+            const country = CURRICULUM_DATA.find(c => c.id === _currCountry);
+            const level = country?.levels.find(l => l.id === levelId);
+            if (!level || !level.grades.length) return;
+
+            const sel = document.getElementById('field-grade');
+            sel.innerHTML = '<option value="">Selecionar classe/ano...</option>' +
+                level.grades.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+            document.getElementById('wrap-grade').classList.remove('hidden');
+        }
+
+        function onGradeChange() {
+            const gradeId = document.getElementById('field-grade').value;
+            _currGrade = gradeId;
+            _currSubjectId = '';
+            ['wrap-subject','wrap-chapter'].forEach(id =>
+                document.getElementById(id).classList.add('hidden'));
+
+            if (!gradeId || !CURRICULUM_DATA) return;
+            const country = CURRICULUM_DATA.find(c => c.id === _currCountry);
+            const level   = country?.levels.find(l => l.id === _currLevel);
+            const grade   = level?.grades.find(g => g.id === gradeId);
+            if (!grade || !grade.subjects.length) return;
+
+            const sel = document.getElementById('field-subject');
+            sel.innerHTML = '<option value="">Selecionar disciplina...</option>' +
+                grade.subjects.map(s =>
+                    `<option value="${s.id}" data-name="${s.name}">
+                        <i class="fas ${s.icon}"></i> ${s.name}
+                    </option>`
+                ).join('');
+            document.getElementById('wrap-subject').classList.remove('hidden');
+        }
+
+        function onSubjectChange() {
+            const subjectId = document.getElementById('field-subject').value;
+            _currSubjectId = subjectId;
+            document.getElementById('wrap-chapter').classList.add('hidden');
+            document.getElementById('chapter-term-badge').classList.add('hidden');
+
+            if (!subjectId || !CURRICULUM_DATA) return;
+            const country = CURRICULUM_DATA.find(c => c.id === _currCountry);
+            const level   = country?.levels.find(l => l.id === _currLevel);
+            const grade   = level?.grades.find(g => g.id === _currGrade);
+            const subject = grade?.subjects.find(s => s.id === subjectId);
+            if (!subject || !subject.chapters.length) return;
+
+            // Agrupar por trimestre
+            const terms = [...new Set(subject.chapters.map(c => c.term))].sort();
+            const country_obj = CURRICULUM_DATA.find(c => c.id === _currCountry);
+            const termLabel = country_obj?.educationTerms === 'bimestres' ? 'Bimestre'
+                            : country_obj?.educationTerms === 'semestres'  ? 'Semestre'
+                            : 'Trimestre';
+
+            let options = `<option value="">Selecionar capítulo...</option>`;
+            terms.forEach(t => {
+                const termChaps = subject.chapters.filter(c => c.term === t);
+                options += `<optgroup label="── ${termLabel} ${t} ──">`;
+                options += termChaps.map(c =>
+                    `<option value="${c.id}" data-term="${c.term}" data-title="${c.title}">${c.title}</option>`
+                ).join('');
+                options += '</optgroup>';
+            });
+
+            document.getElementById('field-chapter').innerHTML = options;
+            document.getElementById('wrap-chapter').classList.remove('hidden');
+
+            // Actualizar lessonData
+            const opt = document.getElementById('field-subject').options[document.getElementById('field-subject').selectedIndex];
+            lessonData.subject = opt?.dataset?.name || subjectId;
+            scheduleAutoSave();
+        }
+
+        function onChapterChange() {
+            const sel = document.getElementById('field-chapter');
+            const opt = sel.options[sel.selectedIndex];
+            if (!opt || !opt.value) return;
+            const term = opt.dataset?.term;
+            const title = opt.dataset?.title || opt.text;
+            lessonData.chapter = title;
+
+            const country_obj = CURRICULUM_DATA?.find(c => c.id === _currCountry);
+            const termLabel = country_obj?.educationTerms === 'bimestres' ? 'Bimestre'
+                            : country_obj?.educationTerms === 'semestres'  ? 'Semestre'
+                            : 'Trimestre';
+
+            if (term) {
+                document.getElementById('chapter-term-text').textContent = `${termLabel} ${term}`;
+                document.getElementById('chapter-term-badge').classList.remove('hidden');
+            }
+            scheduleAutoSave();
+        }
 
         // ── Tabs ─────────────────────────────────────────────────────────
         const TABS = ['info','video','exercises','resources','publish'];

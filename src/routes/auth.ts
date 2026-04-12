@@ -178,13 +178,15 @@ auth.post('/login', async (c) => {
       const accessToken = generateAccessToken({
         sub: demoUser.id,
         email: demoUser.email,
-        role: demoUser.role as 'student' | 'teacher' | 'admin'
+        role: demoUser.role as 'student' | 'teacher' | 'admin',
+        name: demoUser.full_name
       })
       
       const refreshToken = generateRefreshToken({
         sub: demoUser.id,
         email: demoUser.email,
-        role: demoUser.role as 'student' | 'teacher' | 'admin'
+        role: demoUser.role as 'student' | 'teacher' | 'admin',
+        name: demoUser.full_name
       })
       
       return c.json<ApiResponse<AuthResponse>>({

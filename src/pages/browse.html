@@ -114,6 +114,7 @@
 
         // Navigation state
         const nav = { history: [], current: 'countries', countryId: null, countryName: '', gradeId: null, gradeName: '' };
+        let _curriculum = null; // [{id, code, flag, name, educationTerms, levels:[...]}]
 
         // Init
         loadCountries();
@@ -128,84 +129,85 @@
             document.getElementById('back-btn').classList.remove('flex');
             document.getElementById('search-bar').classList.add('hidden');
             showSkeleton(3);
-
-            const res = await VClass.api.content.getCountries();
-            if (res.success) {
-                renderCountries(res.data);
-            } else {
-                showError('Erro ao carregar países');
-            }
+            try {
+                if (!_curriculum) {
+                    const res  = await fetch('/api/curriculum/full');
+                    const json = await res.json();
+                    if (!json.success) throw new Error('API error');
+                    _curriculum = json.data;
+                }
+                renderCountries(_curriculum);
+            } catch(e) { showError('Erro ao carregar países: ' + e.message); }
         }
 
         function renderCountries(countries) {
-            const html = countries.map((c, i) => `
+            const html = countries.map((c) => `
                 <div class="card-item grid-item bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:border-purple-200"
                      onclick="selectCountry('${c.id}', '${escHtml(c.name)}')">
                     <div class="flex items-center justify-between mb-4">
-                        <span class="text-5xl">${c.flag_url || '🌍'}</span>
+                        <span class="text-5xl">${c.flag || '🌍'}</span>
                         <div class="w-9 h-9 bg-purple-50 rounded-xl flex items-center justify-center">
                             <i class="fas fa-arrow-right text-purple-400 text-sm"></i>
                         </div>
                     </div>
                     <h3 class="text-xl font-bold text-gray-900 mb-1">${c.name}</h3>
                     <p class="text-xs text-gray-400 uppercase tracking-widest font-semibold">${c.code || ''}</p>
-                    <div class="mt-4 flex items-center gap-2">
-                        <span class="pill-badge bg-purple-50 text-purple-700"><i class="fas fa-book-open"></i> Séries disponíveis</span>
+                    <div class="mt-4 flex items-center gap-2 flex-wrap">
+                        <span class="pill-badge bg-purple-50 text-purple-700"><i class="fas fa-layer-group"></i> ${c.levels?.length || 0} níveis</span>
+                        <span class="pill-badge bg-blue-50 text-blue-700"><i class="fas fa-calendar"></i> ${c.educationTerms || 'trimestres'}</span>
                     </div>
                 </div>
             `).join('');
             setGrid(html);
         }
 
-        // ─── Select Country → Load Grades ────────────────────────────────────────
-        async function selectCountry(countryId, countryName) {
+        // ─── Select Country → Load Levels + Grades ───────────────────────────────
+        function selectCountry(countryId, countryName) {
             nav.history.push({ type: 'countries' });
             nav.current = 'grades';
             nav.countryId = countryId;
             nav.countryName = countryName;
 
-            setHeader(`${countryName} — Séries`, 'Escolha a série para ver as disciplinas');
+            setHeader(`${countryName} — Níveis e Séries`, 'Escolha o ano/classe para ver as disciplinas');
             updateBreadcrumb([{ label: countryName, icon: 'flag' }]);
             showBackBtn();
             document.getElementById('search-bar').classList.add('hidden');
-            showSkeleton(4);
 
-            // Get education systems then grades
-            const sysRes = await VClass.api.content.getEducationSystems(countryId);
-            if (!sysRes.success || !sysRes.data?.length) { showError('Nenhum sistema educacional encontrado'); return; }
+            const country = _curriculum?.find(c => c.id === countryId);
+            if (!country) { showError('País não encontrado'); return; }
 
-            const firstSystem = sysRes.data[0];
-            const gradeRes = await VClass.api.content.getGrades(firstSystem.id);
-            if (gradeRes.success) {
-                renderGrades(gradeRes.data, countryName);
-            } else {
-                showError('Erro ao carregar séries');
-            }
+            // Agregar todas as classes de todos os níveis
+            const allGrades = [];
+            country.levels.forEach(level => {
+                level.grades.forEach(g => allGrades.push({ ...g, levelName: level.name, levelShort: level.shortName }));
+            });
+            renderGrades(allGrades, countryName);
+        }
+
+        function getLevelStyle(shortName) {
+            const s = (shortName || '').toLowerCase();
+            if (s.includes('ep1') || s.includes('ef1') || s.includes('1eb')) return { bg: 'from-blue-400 to-blue-600', badge: 'bg-blue-100 text-blue-700', label: 'Primário I' };
+            if (s.includes('ep2') || s.includes('eb'))  return { bg: 'from-green-400 to-green-600', badge: 'bg-green-100 text-green-700', label: 'Primário II' };
+            if (s.includes('es1') || s.includes('ef2') || s.includes('2eb') || s.includes('3eb')) return { bg: 'from-orange-400 to-orange-600', badge: 'bg-orange-100 text-orange-700', label: '1º Ciclo' };
+            if (s.includes('es2') || s.includes('em') || s.includes('sec') || s.includes('es'))   return { bg: 'from-purple-500 to-purple-700', badge: 'bg-purple-100 text-purple-700', label: 'Secundário' };
+            return { bg: 'from-gray-500 to-gray-700', badge: 'bg-gray-100 text-gray-700', label: shortName || '' };
         }
 
         function renderGrades(grades, countryName) {
-            const getLevelStyle = (level) => {
-                if (level <= 4) return { bg: 'from-blue-400 to-blue-600', badge: 'bg-blue-100 text-blue-700', label: 'Ensino Primário' };
-                if (level <= 7) return { bg: 'from-green-400 to-green-600', badge: 'bg-green-100 text-green-700', label: 'Ensino Básico' };
-                if (level <= 10) return { bg: 'from-orange-400 to-orange-600', badge: 'bg-orange-100 text-orange-700', label: 'Ensino Médio' };
-                return { bg: 'from-purple-500 to-purple-700', badge: 'bg-purple-100 text-purple-700', label: 'Pré-Universitário' };
-            };
-
-            const html = grades.map((g, i) => {
-                const s = getLevelStyle(g.level);
+            const html = grades.map((g) => {
+                const s = getLevelStyle(g.levelShort || '');
                 return `
                 <div class="card-item grid-item bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-purple-200 overflow-hidden"
                      onclick="selectGrade('${g.id}', '${escHtml(g.name)}', '${escHtml(countryName)}')">
                     <div class="bg-gradient-to-r ${s.bg} p-5 flex items-center justify-between">
-                        <span class="text-4xl font-black text-white opacity-20">${g.level}</span>
+                        <span class="text-3xl font-black text-white opacity-20">${g.shortName || ''}</span>
                         <div class="text-right">
-                            <div class="text-2xl font-bold text-white">${g.level}ª</div>
-                            <div class="text-xs text-white/70">Classe</div>
+                            <div class="text-xl font-bold text-white">${g.name}</div>
+                            <div class="text-xs text-white/70">${g.levelName || ''}</div>
                         </div>
                     </div>
-                    <div class="p-5">
-                        <h3 class="font-bold text-gray-900 mb-1">${g.name}</h3>
-                        <p class="text-xs text-gray-500 mb-3">${g.description || 'Clique para ver disciplinas'}</p>
+                    <div class="p-4">
+                        <p class="text-xs text-gray-500 mb-3">${g.subjects?.length || 0} disciplinas disponíveis</p>
                         <span class="pill-badge ${s.badge}">${s.label}</span>
                     </div>
                 </div>`;
@@ -214,7 +216,7 @@
         }
 
         // ─── Select Grade → Load Subjects ────────────────────────────────────────
-        async function selectGrade(gradeId, gradeName, countryName) {
+        function selectGrade(gradeId, gradeName, countryName) {
             nav.history.push({ type: 'grades', countryId: nav.countryId, countryName });
             nav.current = 'subjects';
             nav.gradeId = gradeId;
@@ -227,15 +229,13 @@
             ]);
             showBackBtn();
             document.getElementById('search-bar').classList.remove('hidden');
-            showSkeleton(6);
 
-            const res = await VClass.api.content.getSubjects(gradeId);
-            if (res.success) {
-                window._allSubjects = res.data;
-                renderSubjects(res.data);
-            } else {
-                showError('Erro ao carregar disciplinas');
-            }
+            const country = _curriculum?.find(c => c.id === nav.countryId);
+            let grade = null;
+            country?.levels?.forEach(l => { const g = l.grades.find(g => g.id === gradeId); if (g) grade = g; });
+            if (!grade) { showError('Classe não encontrada'); return; }
+            window._allSubjects = grade.subjects || [];
+            renderSubjects(window._allSubjects);
         }
 
         function renderSubjects(subjects) {
@@ -257,7 +257,14 @@
                 'Inglês': { icon: 'language', color: '#f97316' },
                 'Francês': { icon: 'language', color: '#3b82f6' },
                 'Filosofia': { icon: 'brain', color: '#8b5cf6' },
-                'Informática': { icon: 'laptop-code', color: '#06b6d4' },
+                'Informática':       { icon: 'laptop-code',    color: '#06b6d4' },
+                'Física e Química':  { icon: 'atom',          color: '#0d9488' },
+                'Biologia e Geologia': { icon: 'leaf',        color: '#16a34a' },
+                'Empreendedorismo':  { icon: 'lightbulb',     color: '#f59e0b' },
+                'Educação Física':   { icon: 'running',       color: '#10b981' },
+                'Educação Visual':   { icon: 'palette',       color: '#a855f7' },
+                'TIC':               { icon: 'laptop-code',   color: '#3b82f6' },
+                'Educação Moral':    { icon: 'heart',         color: '#f43f5e' },
             };
 
             const html = subjects.map((s) => {
@@ -265,7 +272,7 @@
                 const colorHex = s.color || meta.color;
                 return `
                 <div class="card-item grid-item bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-purple-200 p-5"
-                     onclick="selectSubject('${s.grade_subject_id}', '${escHtml(s.name)}')">
+                     onclick="selectSubject('${s.id}', '${escHtml(s.name)}')">
                     <div class="flex items-start justify-between mb-4">
                         <div class="w-14 h-14 rounded-2xl flex items-center justify-center subject-card-icon flex-shrink-0"
                              style="background: ${colorHex}18">
@@ -293,8 +300,8 @@
         }
 
         // ─── Navigate to Chapters ────────────────────────────────────────────────
-        function selectSubject(gradeSubjectId, subjectName) {
-            window.location.href = `/chapters.html?gs=${gradeSubjectId}&subject=${encodeURIComponent(subjectName)}&grade=${encodeURIComponent(nav.gradeName)}&country=${encodeURIComponent(nav.countryName)}`;
+        function selectSubject(subjectId, subjectName) {
+            window.location.href = `/chapters.html?gs=${subjectId}&subject=${encodeURIComponent(subjectName)}&grade=${encodeURIComponent(nav.gradeName)}&country=${encodeURIComponent(nav.countryName)}`;
         }
 
         function selectCountryFromBreadcrumb(countryId, countryName) {
