@@ -1,8 +1,10 @@
 // ============================================================
 //  VClass — Rota /api/curriculum
 //  Fornece dados curriculares por país, nível, classe e disciplina
+//  POLÍTICA: todos os endpoints exigem autenticação
 // ============================================================
 import { Hono } from 'hono'
+import { authMiddleware } from '../middleware/auth'
 import {
   getCountries,
   getLevelsByCountry,
@@ -18,6 +20,9 @@ import {
 } from '../data/curriculum'
 
 const curriculum = new Hono()
+
+// ── Todos os endpoints do currículo exigem sessão autenticada ────────────────
+curriculum.use('/*', authMiddleware)
 
 // GET /api/curriculum/countries
 curriculum.get('/countries', (c) => {

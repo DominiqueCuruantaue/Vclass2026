@@ -2,8 +2,10 @@
 //  VClass — Rota de Busca Global
 //  GET /api/search?q=termo&country=mz&type=all
 //  Busca em: capítulos do currículo, lições (mock), biblioteca
+//  POLÍTICA: exige autenticação — sem acesso anónimo ao conteúdo
 // ============================================================
 import { Hono } from 'hono'
+import { authMiddleware } from '../middleware/auth'
 import {
   COUNTRIES,
   EDUCATION_LEVELS,
@@ -14,6 +16,9 @@ import {
 import { mockLessons } from '../middleware/database'
 
 const search = new Hono()
+
+// ── Busca exige sessão autenticada ───────────────────────────────────────────
+search.use('/*', authMiddleware)
 
 // Normaliza string para comparação (remove acentos, lowercase)
 function normalize(str: string): string {
@@ -172,7 +177,6 @@ search.get('/', async (c) => {
           description: l.description,
           subject: l.subject,
           duration_min: l.video_duration ? Math.floor(l.video_duration / 60) : null,
-          is_free: l.is_free ?? true,
           status: l.status,
           score: Math.max(relevance(l.title, q), relevance(l.description ?? '', q))
         }))

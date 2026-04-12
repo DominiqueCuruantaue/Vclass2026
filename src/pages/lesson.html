@@ -583,15 +583,9 @@
 
                 <!-- ── Lesson Header ── -->
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-4">
-                    <!-- Subject chip + free badge -->
+                    <!-- Subject chip -->
                     <div class="flex items-center gap-2 mb-3">
                         <span id="lesson-subject-chip" class="text-xs font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-700">Matemática</span>
-                        <span id="lesson-free-badge" class="text-xs font-bold px-3 py-1 rounded-full bg-green-100 text-green-700 hidden">
-                            <i class="fas fa-unlock-alt mr-1"></i>Gratuita
-                        </span>
-                        <span id="lesson-premium-badge" class="text-xs font-bold px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 hidden">
-                            <i class="fas fa-crown mr-1"></i>Premium
-                        </span>
                     </div>
                     <h1 id="lesson-title" class="text-2xl font-bold text-gray-900 mb-2 leading-tight">Carregando...</h1>
                     <p id="lesson-description" class="text-gray-500 text-sm mb-4 leading-relaxed">Carregando descrição...</p>
@@ -1287,12 +1281,7 @@
             document.getElementById('lesson-views').textContent = lessonData.views || '0';
             document.getElementById('lesson-date').textContent = VClass.formatDate(lessonData.created_at);
 
-            // Free/premium badge
-            if (lessonData.is_free) {
-                document.getElementById('lesson-free-badge').classList.remove('hidden');
-            } else {
-                document.getElementById('lesson-premium-badge').classList.remove('hidden');
-            }
+            // Acesso controlado por autenticação — sem distinção pública de plano
 
             // Subject chip from URL param
             const subjectParam = urlParams.get('subject');

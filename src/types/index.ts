@@ -84,7 +84,8 @@ export interface Lesson {
   video_duration?: number
   thumbnail_url?: string
   display_order: number
-  is_free: boolean
+  /** @internal — campo de BD; nunca expor ao estudante */
+  is_free?: boolean
   created_by?: string
   status: LessonStatus
   views_count: number

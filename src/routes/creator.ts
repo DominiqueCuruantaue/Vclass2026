@@ -171,7 +171,7 @@ creator.get('/lesson/:id', async (c) => {
       data: {
         id, title: 'Lição Demo', desc: 'Descrição da lição demo.',
         notes: '', subject: 'fisica', chapter: 'Dinâmica',
-        order: 1, duration: 12, difficulty: 'medium', is_free: true,
+        order: 1, duration: 12, difficulty: 'medium',
         video_id: '', status: 'draft', objectives: [], exercises: [], resources: []
       }
     })
@@ -201,7 +201,7 @@ creator.post('/lesson', async (c) => {
   const user = c.get('user') as any
   const body = await c.req.json()
 
-  const { title, desc, notes, chapter_id, duration, difficulty, is_free, video_id, order } = body
+  const { title, desc, notes, chapter_id, duration, difficulty, video_id, order } = body
 
   if (!title || title.length < 3) {
     return c.json({ success: false, error: 'Título obrigatório (mín. 3 caracteres)' }, 400)
@@ -213,7 +213,7 @@ creator.post('/lesson', async (c) => {
   if (!isDatabaseConfigured(c.env)) {
     return c.json({
       success: true,
-      data: { id: Date.now(), title, desc, notes, chapter_id, duration, difficulty, is_free, video_id, order, status: 'draft', created_by: user.id },
+      data: { id: Date.now(), title, desc, notes, chapter_id, duration, difficulty, video_id, order, status: 'draft', created_by: user.id },
       message: 'Lição criada (modo demo)'
     }, 201)
   }
@@ -223,7 +223,7 @@ creator.post('/lesson', async (c) => {
   try {
     const { data, error } = await supabase
       .from('lessons')
-      .insert({ title, description: desc, notes, chapter_id, duration_seconds: (duration || 12) * 60, difficulty: difficulty || 'medium', is_free: is_free !== false, video_id, order: order || 1, status: 'draft', created_by: user.id })
+      .insert({ title, description: desc, notes, chapter_id, duration_seconds: (duration || 12) * 60, difficulty: difficulty || 'medium', video_id, order: order || 1, status: 'draft', created_by: user.id })
       .select()
       .single()
 
@@ -253,7 +253,7 @@ creator.put('/lesson/:id', async (c) => {
     const { data: existing } = await supabase.from('lessons').select('id').eq('id', id).eq('created_by', user.id).single()
     if (!existing) return c.json({ success: false, error: 'Lição não encontrada ou sem permissão' }, 404)
 
-    const { title, desc, notes, duration, difficulty, is_free, video_id, order, status } = body
+    const { title, desc, notes, duration, difficulty, video_id, order, status } = body
 
     // Validações de publicação
     if (status === 'published') {
@@ -263,7 +263,7 @@ creator.put('/lesson/:id', async (c) => {
 
     const { data, error } = await supabase
       .from('lessons')
-      .update({ title, description: desc, notes, duration_seconds: (duration || 12) * 60, difficulty, is_free, video_id, order, status, updated_at: new Date().toISOString() })
+      .update({ title, description: desc, notes, duration_seconds: (duration || 12) * 60, difficulty, video_id, order, status, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single()

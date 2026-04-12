@@ -14,6 +14,10 @@ import type { ApiResponse, PaginatedResponse } from '../types'
 
 const content = new Hono()
 
+// ── Todos os endpoints de conteúdo exigem autenticação ──────────────────────
+// Política da plataforma: nenhum conteúdo curricular é acessível sem login.
+content.use('/*', authMiddleware)
+
 // Check if database is configured
 function isDatabaseConfigured(env?: any): boolean {
   const hasUrl = !!(env?.SUPABASE_URL || process.env.SUPABASE_URL)
@@ -317,7 +321,7 @@ content.get('/chapters/:grade_subject_id', async (c) => {
  * GET /api/content/lessons/:chapter_id
  * Get lessons for a chapter (requires auth to check access)
  */
-content.get('/lessons/:chapter_id', authMiddleware, async (c) => {
+content.get('/lessons/:chapter_id', async (c) => {
   try {
     const chapter_id = c.req.param('chapter_id')
     const user = c.get('user')
@@ -345,7 +349,7 @@ content.get('/lessons/:chapter_id', authMiddleware, async (c) => {
     // Build query based on user role
     let query = supabase
       .from('lessons')
-      .select('id, title, description, thumbnail_url, display_order, is_free, video_duration, views_count, status, created_at')
+      .select('id, title, description, thumbnail_url, display_order, video_duration, views_count, status, created_at')
       .eq('chapter_id', chapter_id)
       .order('display_order')
     
@@ -379,94 +383,62 @@ content.get('/lessons/:chapter_id', authMiddleware, async (c) => {
 
 /**
  * GET /api/content/lesson/:lesson_id
- * Get single lesson details (requires auth)
+ * Get single lesson details — requer autenticação (authMiddleware aplicado globalmente)
  */
 content.get('/lesson/:lesson_id', async (c) => {
   try {
     const lesson_id = c.req.param('lesson_id')
-    
-    // Check if database is configured
+    const user = c.get('user') // garantido pelo authMiddleware global
+
+    // DEMO MODE: sem BD configurada
     if (!isDatabaseConfigured(c.env)) {
-      // DEMO MODE: Return mock lesson
       const lesson = mockLessons.find(l => l.id === lesson_id)
-      
       if (!lesson) {
-        return c.json<ApiResponse>({
-          success: false,
-          error: 'Lesson not found'
-        }, 404)
+        return c.json<ApiResponse>({ success: false, error: 'Lição não encontrada' }, 404)
       }
-      
       return c.json<ApiResponse>({
         success: true,
         data: {
           ...lesson,
           attachments: [],
           views_count: 0,
-          content: `<h2>${lesson.title}</h2><p>${lesson.description}</p><p>Este é o conteúdo completo da lição. Em modo demo, o conteúdo é simulado.</p>`,
+          content: `<h2>${lesson.title}</h2><p>${lesson.description}</p>`,
           summary: lesson.description
         },
-        message: 'Demo data (database not configured)'
+        message: 'Demo mode'
       })
     }
-    
-    // PRODUCTION MODE: Require authentication
-    const authHeader = c.req.header('Authorization')
-    if (!authHeader) {
-      return c.json<ApiResponse>({
-        success: false,
-        error: 'No token provided'
-      }, 401)
-    }
-    
+
+    // PRODUCTION MODE
     const supabase = getSupabase(c.env)
-    
     if (!supabase) {
-      return c.json<ApiResponse>({
-        success: false,
-        error: 'Database configuration error'
-      }, 500)
+      return c.json<ApiResponse>({ success: false, error: 'Database configuration error' }, 500)
     }
-    
-    const { data: lesson, error } = await supabase
-      .from('lessons')
-      .select('*')
-      .eq('id', lesson_id)
-      .single()
-    
+
+    // Apenas lições publicadas para estudantes
+    let query = supabase.from('lessons').select('*').eq('id', lesson_id)
+    if (user.role === 'student') {
+      query = query.eq('status', 'published') as any
+    }
+    const { data: lesson, error } = await (query as any).single()
+
     if (error || !lesson) {
-      return c.json<ApiResponse>({
-        success: false,
-        error: 'Lesson not found'
-      }, 404)
+      return c.json<ApiResponse>({ success: false, error: 'Lição não encontrada' }, 404)
     }
-    
-    // Increment view count
-    await supabase
-      .from('lessons')
-      .update({ views_count: lesson.views_count + 1 })
-      .eq('id', lesson_id)
-    
-    // Get lesson attachments
-    const { data: attachments } = await supabase
-      .from('lesson_attachments')
-      .select('*')
-      .eq('lesson_id', lesson_id)
-    
+
+    // Incrementar contagem de visualizações
+    await supabase.from('lessons').update({ views_count: (lesson.views_count || 0) + 1 }).eq('id', lesson_id)
+
+    const { data: attachments } = await supabase.from('lesson_attachments').select('*').eq('lesson_id', lesson_id)
+
     return c.json<ApiResponse>({
       success: true,
-      data: {
-        ...lesson,
-        attachments: attachments || []
-      }
+      data: { ...lesson, attachments: attachments || [] }
     })
-    
+
   } catch (error) {
     console.error('Get lesson error:', error)
-    return c.json<ApiResponse>({
-      success: false,
-      error: 'Internal server error'
-    }, 500)
+    return c.json<ApiResponse>({ success: false, error: 'Internal server error' }, 500)
   }
 })
 

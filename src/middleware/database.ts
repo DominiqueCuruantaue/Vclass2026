@@ -562,7 +562,6 @@ export const mockLessons = [
     video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     duration_seconds: 1200,
     display_order: 1,
-    is_free: true
   },
   {
     id: 'lesson-2',
@@ -573,7 +572,6 @@ export const mockLessons = [
     video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     duration_seconds: 900,
     display_order: 2,
-    is_free: false
   },
   // Equações (Matemática)
   {
@@ -585,7 +583,6 @@ export const mockLessons = [
     video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     duration_seconds: 1000,
     display_order: 1,
-    is_free: true
   },
   {
     id: 'lesson-4',
@@ -596,7 +593,6 @@ export const mockLessons = [
     video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     duration_seconds: 1500,
     display_order: 2,
-    is_free: false
   },
   // Cinemática (Física)
   {
@@ -608,7 +604,6 @@ export const mockLessons = [
     video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     duration_seconds: 1100,
     display_order: 1,
-    is_free: true
   },
   {
     id: 'lesson-6',
@@ -619,7 +614,6 @@ export const mockLessons = [
     video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     duration_seconds: 1300,
     display_order: 2,
-    is_free: true
   },
   {
     id: 'lesson-7',
@@ -630,7 +624,6 @@ export const mockLessons = [
     video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     duration_seconds: 950,
     display_order: 3,
-    is_free: false
   },
   // Dinâmica (Física)
   {
@@ -642,7 +635,6 @@ export const mockLessons = [
     video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     duration_seconds: 1000,
     display_order: 1,
-    is_free: true
   },
   {
     id: 'lesson-9',
@@ -653,7 +645,6 @@ export const mockLessons = [
     video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     duration_seconds: 1200,
     display_order: 2,
-    is_free: true
   },
   {
     id: 'lesson-10',
@@ -664,7 +655,6 @@ export const mockLessons = [
     video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     duration_seconds: 1100,
     display_order: 3,
-    is_free: false
   },
   // Trabalho e Energia (Física)
   {
@@ -676,7 +666,6 @@ export const mockLessons = [
     video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     duration_seconds: 1050,
     display_order: 1,
-    is_free: true
   },
   {
     id: 'lesson-12',
@@ -687,7 +676,6 @@ export const mockLessons = [
     video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     duration_seconds: 980,
     display_order: 2,
-    is_free: true
   },
   {
     id: 'lesson-13',
@@ -698,7 +686,6 @@ export const mockLessons = [
     video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     duration_seconds: 1150,
     display_order: 3,
-    is_free: false
   },
   // Termodinâmica (Física)
   {
@@ -710,7 +697,6 @@ export const mockLessons = [
     video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     duration_seconds: 1100,
     display_order: 1,
-    is_free: true
   },
   {
     id: 'lesson-15',
@@ -721,7 +707,6 @@ export const mockLessons = [
     video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     duration_seconds: 1050,
     display_order: 2,
-    is_free: true
   },
   {
     id: 'lesson-16',
@@ -732,7 +717,6 @@ export const mockLessons = [
     video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     duration_seconds: 1250,
     display_order: 3,
-    is_free: false
   }
 ]
 

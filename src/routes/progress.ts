@@ -192,8 +192,7 @@ progress.get('/subject/:grade_subject_id', requireStudent, async (c) => {
         lessons (
           id,
           title,
-          display_order,
-          is_free
+          display_order
         )
       `)
       .eq('grade_subject_id', grade_subject_id)
