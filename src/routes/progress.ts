@@ -2,7 +2,7 @@
 import { Hono } from 'hono'
 import { getSupabase } from '../config/supabase'
 import { authMiddleware, requireStudent } from '../middleware/auth'
-import { mockDashboardData } from '../middleware/database'
+import { getMockDashboard } from '../middleware/database'
 import type { ApiResponse } from '../types'
 
 const progress = new Hono()
@@ -27,11 +27,11 @@ progress.get('/dashboard', requireStudent, async (c) => {
     
     // Check if database is configured
     if (!isDatabaseConfigured(c.env)) {
-      // DEMO MODE: Return mock data
+      // DEMO MODE: dados personalizados por utilizador
       return c.json<ApiResponse>({
         success: true,
-        data: mockDashboardData,
-        message: 'Demo data (database not configured)'
+        data: getMockDashboard(user?.id),
+        message: 'Demo data'
       })
     }
     

@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { getSupabase } from '../config/supabase'
 import { hashPassword, verifyPassword, validatePassword } from '../utils/password'
 import { generateAccessToken, generateRefreshToken, verifyToken } from '../utils/jwt'
-import { mockUsers } from '../middleware/database'
+import { mockUsers, DEMO_PASSWORD } from '../middleware/database'
 import { rateLimitMiddleware } from '../middleware/auth'
 import type { ApiResponse, AuthResponse } from '../types'
 
@@ -173,10 +173,10 @@ auth.post('/login', async (c) => {
       // DEMO MODE: Use mock users
       const demoUser = mockUsers.find(u => u.email === email)
       
-      if (!demoUser || password !== 'password123') {
+      if (!demoUser || password !== DEMO_PASSWORD) {
         return c.json<ApiResponse>({
           success: false,
-          error: 'Invalid credentials (Demo mode: use password123)'
+          error: 'Credenciais inválidas. Em modo demo, use a senha padrão das contas de demonstração.'
         }, 401)
       }
       
@@ -205,7 +205,7 @@ auth.post('/login', async (c) => {
           accessToken,
           refreshToken
         },
-        message: 'Login successful (Demo mode - database not configured)'
+        message: 'Login realizado com sucesso (Modo Demo)'
       })
     }
     
@@ -377,7 +377,7 @@ auth.get('/me', async (c) => {
       if (!demoUser) {
         return c.json<ApiResponse>({
           success: false,
-          error: 'User not found (Demo mode)'
+          error: 'Utilizador não encontrado'
         }, 404)
       }
       
@@ -509,7 +509,7 @@ auth.post('/change-password', async (c) => {
 
     if (!isDatabaseConfigured(c.env)) {
       // Demo mode: verificar senha demo
-      if (current_password !== 'password123') {
+      if (current_password !== DEMO_PASSWORD) {
         return c.json<ApiResponse>({ success: false, error: 'Senha actual incorrecta' }, 400)
       }
       return c.json<ApiResponse>({ success: true, message: 'Demo: senha alterada (simulado)' })

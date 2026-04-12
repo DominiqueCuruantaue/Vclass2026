@@ -31,101 +31,176 @@ export const checkDatabase = async (c: Context, next: Next) => {
   await next()
 }
 
-// Mock data for demo mode (when database is not configured)
+// ══════════════════════════════════════════════════════════════════════════════
+//  Contas de demonstração (modo sem base de dados / Supabase não configurado)
+//  Senha universal: vclass2024
+// ══════════════════════════════════════════════════════════════════════════════
+export const DEMO_PASSWORD = 'vclass2024'
+
 export const mockUsers = [
+  // ── Estudante — Moçambique ─────────────────────────────────────────────────
   {
     id: '11111111-1111-1111-1111-111111111111',
-    email: 'estudante@vclass.mz',
-    full_name: 'Estudante Demo',
+    email: 'ana.silva@vclass.mz',
+    full_name: 'Ana Silva',
     role: 'student',
-    country_id: '22222222-2222-2222-2222-222222222222',
-    created_at: new Date().toISOString()
+    country_id: 'mz',
+    country_name: 'Moçambique',
+    country_flag: '🇲🇿',
+    grade: '12ª Classe',
+    school: 'Escola Secundária Eduardo Mondlane',
+    phone: '+258 84 123 4567',
+    avatar_color: '#7c3aed',
+    is_verified: true,
+    is_active: true,
+    xp: 340,
+    streak: 12,
+    created_at: new Date('2025-09-01').toISOString()
   },
+  // ── Estudante — Angola ────────────────────────────────────────────────────
+  {
+    id: '22222222-2222-2222-2222-222222222222',
+    email: 'mario.costa@vclass.ao',
+    full_name: 'Mário Costa',
+    role: 'student',
+    country_id: 'ao',
+    country_name: 'Angola',
+    country_flag: '🇦🇴',
+    grade: '10ª Classe',
+    school: 'Escola do Ensino Secundário Agostinho Neto',
+    phone: '+244 923 456 789',
+    avatar_color: '#2563eb',
+    is_verified: true,
+    is_active: true,
+    xp: 175,
+    streak: 5,
+    created_at: new Date('2025-10-15').toISOString()
+  },
+  // ── Professor ─────────────────────────────────────────────────────────────
   {
     id: '33333333-3333-3333-3333-333333333333',
-    email: 'professor@vclass.mz',
-    full_name: 'Professor Demo',
+    email: 'prof.carlos@vclass.mz',
+    full_name: 'Prof. Carlos Machava',
     role: 'teacher',
-    country_id: '22222222-2222-2222-2222-222222222222',
-    created_at: new Date().toISOString()
+    country_id: 'mz',
+    country_name: 'Moçambique',
+    country_flag: '🇲🇿',
+    subject: 'Matemática & Física',
+    school: 'Escola Secundária Samora Machel',
+    phone: '+258 82 987 6543',
+    avatar_color: '#059669',
+    is_verified: true,
+    is_active: true,
+    lessons_created: 48,
+    students_count: 312,
+    created_at: new Date('2025-06-10').toISOString()
   },
+  // ── Criador de Conteúdo ───────────────────────────────────────────────────
+  {
+    id: '55555555-5555-5555-5555-555555555555',
+    email: 'criador@vclass.mz',
+    full_name: 'Beatriz Nhamposse',
+    role: 'teacher',
+    country_id: 'mz',
+    country_name: 'Moçambique',
+    country_flag: '🇲🇿',
+    subject: 'Química & Biologia',
+    school: 'VClass Academy',
+    phone: '+258 84 555 0000',
+    avatar_color: '#d97706',
+    is_verified: true,
+    is_active: true,
+    lessons_created: 127,
+    students_count: 1840,
+    created_at: new Date('2025-04-20').toISOString()
+  },
+  // ── Administrador ─────────────────────────────────────────────────────────
   {
     id: '44444444-4444-4444-4444-444444444444',
     email: 'admin@vclass.mz',
-    full_name: 'Admin Demo',
+    full_name: 'Administrador VClass',
     role: 'admin',
-    country_id: '22222222-2222-2222-2222-222222222222',
-    created_at: new Date().toISOString()
+    country_id: 'mz',
+    country_name: 'Moçambique',
+    country_flag: '🇲🇿',
+    phone: '+258 21 000 0000',
+    avatar_color: '#dc2626',
+    is_verified: true,
+    is_active: true,
+    created_at: new Date('2025-01-01').toISOString()
   }
 ]
 
-export const mockDashboardData = {
+// ── Dados de dashboard por utilizador ────────────────────────────────────────
+const _dashboardByUser: Record<string, any> = {
+  // Ana Silva — estudante activa, bom progresso
+  '11111111-1111-1111-1111-111111111111': {
+    summary: {
+      lessons_completed: 38,
+      exercises_completed: 74,
+      avg_score: 83.2,
+      total_time_spent_seconds: 43200 // 12 horas
+    },
+    subjectProgress: [
+      { subject_name: 'Matemática',  subject_color: '#9333ea', total_lessons: 18, completed_lessons: 14, progress_percent: 78 },
+      { subject_name: 'Física',      subject_color: '#2563eb', total_lessons: 15, completed_lessons: 12, progress_percent: 80 },
+      { subject_name: 'Química',     subject_color: '#10b981', total_lessons: 14, completed_lessons: 8,  progress_percent: 57 },
+      { subject_name: 'Biologia',    subject_color: '#22c55e', total_lessons: 12, completed_lessons: 4,  progress_percent: 33 },
+      { subject_name: 'Português',   subject_color: '#3b82f6', total_lessons: 10, completed_lessons: 0,  progress_percent: 0  },
+    ],
+    recentActivity: [
+      { progress_percent: 100, updated_at: new Date(Date.now() - 1800000).toISOString(),  lesson: { id: 'l1', title: 'Geometria Analítica — Retas' } },
+      { progress_percent: 100, updated_at: new Date(Date.now() - 7200000).toISOString(),  lesson: { id: 'l2', title: 'Leis de Newton — Dinâmica' } },
+      { progress_percent: 75,  updated_at: new Date(Date.now() - 86400000).toISOString(), lesson: { id: 'l3', title: 'Termodinâmica — 1ª Lei' } },
+    ]
+  },
+  // Mário Costa — estudante iniciante, Angola
+  '22222222-2222-2222-2222-222222222222': {
+    summary: {
+      lessons_completed: 12,
+      exercises_completed: 21,
+      avg_score: 68.5,
+      total_time_spent_seconds: 14400 // 4 horas
+    },
+    subjectProgress: [
+      { subject_name: 'Matemática',        subject_color: '#9333ea', total_lessons: 14, completed_lessons: 5, progress_percent: 36 },
+      { subject_name: 'Língua Portuguesa', subject_color: '#3b82f6', total_lessons: 12, completed_lessons: 4, progress_percent: 33 },
+      { subject_name: 'Ciências Físicas',  subject_color: '#10b981', total_lessons: 10, completed_lessons: 3, progress_percent: 30 },
+    ],
+    recentActivity: [
+      { progress_percent: 100, updated_at: new Date(Date.now() - 3600000).toISOString(),  lesson: { id: 'l4', title: 'Funções do 1º Grau' } },
+      { progress_percent: 60,  updated_at: new Date(Date.now() - 10800000).toISOString(), lesson: { id: 'l5', title: 'Equações e Sistemas' } },
+    ]
+  }
+}
+
+// Dashboard padrão (professor / admin / fallback)
+const _defaultDashboard = {
   summary: {
     lessons_completed: 12,
     exercises_completed: 28,
     avg_score: 75.5,
-    total_time_spent_seconds: 14400 // 4 hours in seconds
+    total_time_spent_seconds: 14400
   },
   subjectProgress: [
-    {
-      subject_name: 'Matemática',
-      subject_color: '#9333ea',
-      total_lessons: 15,
-      completed_lessons: 5,
-      progress_percent: 33
-    },
-    {
-      subject_name: 'Português',
-      subject_color: '#3b82f6',
-      total_lessons: 12,
-      completed_lessons: 4,
-      progress_percent: 33
-    },
-    {
-      subject_name: 'Física',
-      subject_color: '#10b981',
-      total_lessons: 18,
-      completed_lessons: 3,
-      progress_percent: 17
-    },
-    {
-      subject_name: 'Química',
-      subject_color: '#f59e0b',
-      total_lessons: 10,
-      completed_lessons: 0,
-      progress_percent: 0
-    }
+    { subject_name: 'Matemática', subject_color: '#9333ea', total_lessons: 15, completed_lessons: 5, progress_percent: 33 },
+    { subject_name: 'Português',  subject_color: '#3b82f6', total_lessons: 12, completed_lessons: 4, progress_percent: 33 },
+    { subject_name: 'Física',     subject_color: '#10b981', total_lessons: 18, completed_lessons: 3, progress_percent: 17 },
+    { subject_name: 'Química',    subject_color: '#f59e0b', total_lessons: 10, completed_lessons: 0, progress_percent: 0  },
   ],
   recentActivity: [
-    {
-      progress_percent: 100,
-      updated_at: new Date(Date.now() - 3600000).toISOString(),
-      lesson: {
-        id: '1',
-        title: 'Equações do 2º Grau',
-        thumbnail_url: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=400'
-      }
-    },
-    {
-      progress_percent: 85,
-      updated_at: new Date(Date.now() - 7200000).toISOString(),
-      lesson: {
-        id: '2',
-        title: 'Funções Quadráticas',
-        thumbnail_url: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400'
-      }
-    },
-    {
-      progress_percent: 60,
-      updated_at: new Date(Date.now() - 86400000).toISOString(),
-      lesson: {
-        id: '3',
-        title: 'Introdução à Cinemática',
-        thumbnail_url: 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?w=400'
-      }
-    }
+    { progress_percent: 100, updated_at: new Date(Date.now() - 3600000).toISOString(),  lesson: { id: 'l1', title: 'Equações do 2º Grau' } },
+    { progress_percent: 85,  updated_at: new Date(Date.now() - 7200000).toISOString(),  lesson: { id: 'l2', title: 'Funções Quadráticas' } },
+    { progress_percent: 60,  updated_at: new Date(Date.now() - 86400000).toISOString(), lesson: { id: 'l3', title: 'Introdução à Cinemática' } },
   ]
 }
+
+export function getMockDashboard(userId?: string) {
+  return (userId && _dashboardByUser[userId]) || _defaultDashboard
+}
+
+// Manter export antigo por compatibilidade
+export const mockDashboardData = _defaultDashboard
 
 // Re-export curriculum data for backwards compat
 export const mockCountries = COUNTRIES.map(c => ({
