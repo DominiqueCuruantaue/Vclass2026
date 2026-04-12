@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Candidatura de Professor - VClass</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/styles.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #f8f7ff 0%, #eef2ff 100%); min-height: 100vh; }
+        .step-card { background: white; border-radius: 1.25rem; box-shadow: 0 20px 60px rgba(109,40,217,0.1), 0 4px 20px rgba(0,0,0,0.05); }
+        .input-field {
+            width: 100%; padding: 0.625rem 0.875rem 0.625rem 2.5rem;
+            border: 1.5px solid #e5e7eb; border-radius: 0.625rem;
+            font-size: 0.875rem; outline: none; transition: all 0.2s; background: white;
+        }
+        .input-field:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
+        .input-field.error { border-color: #ef4444; background: #fef2f2; }
+        .input-field.success { border-color: #10b981; }
+        .input-plain {
+            width: 100%; padding: 0.625rem 0.875rem;
+            border: 1.5px solid #e5e7eb; border-radius: 0.625rem;
+            font-size: 0.875rem; outline: none; transition: all 0.2s; background: white;
+        }
+        .input-plain:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
+        .input-plain.error { border-color: #ef4444; }
+        textarea.input-plain { resize: vertical; min-height: 120px; }
+        select.input-plain { cursor: pointer; }
+        .btn-primary {
+            background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white;
+            border: none; padding: 0.75rem 1.5rem; border-radius: 0.625rem;
+            font-weight: 600; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+        }
+        .btn-primary:hover:not(:disabled) { background: linear-gradient(135deg, #6d28d9, #5b21b6); transform: translateY(-1px); box-shadow: 0 4px 15px rgba(109,40,217,0.4); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-secondary { background: white; color: #7c3aed; border: 1.5px solid #7c3aed; padding: 0.75rem 1.5rem; border-radius: 0.625rem; font-weight: 600; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; }
+        .btn-secondary:hover { background: #faf5ff; }
+        .error-msg { color: #ef4444; font-size: 0.75rem; margin-top: 0.25rem; display: none; }
+        .error-msg.show { display: block; }
+
+        /* Step progress bar */
+        .step-progress { display: flex; align-items: center; gap: 0; }
+        .step-item { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; flex: 1; }
+        .step-circle {
+            width: 2rem; height: 2rem; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.75rem; font-weight: 700; transition: all 0.3s;
+            background: #e5e7eb; color: #9ca3af; border: 2px solid #e5e7eb;
+        }
+        .step-circle.active { background: #7c3aed; color: white; border-color: #7c3aed; }
+        .step-circle.done   { background: #10b981; color: white; border-color: #10b981; }
+        .step-line { flex: 1; height: 2px; background: #e5e7eb; transition: background 0.3s; }
+        .step-line.done { background: #10b981; }
+        .step-label { font-size: 0.65rem; font-weight: 500; color: #9ca3af; text-align: center; white-space: nowrap; }
+        .step-label.active { color: #7c3aed; }
+        .step-label.done   { color: #10b981; }
+
+        /* Subject chips */
+        .subject-chip {
+            display: inline-flex; align-items: center; gap: 0.375rem;
+            padding: 0.375rem 0.75rem; border-radius: 2rem; border: 1.5px solid #e5e7eb;
+            cursor: pointer; font-size: 0.8rem; transition: all 0.2s; user-select: none;
+            color: #6b7280; background: white;
+        }
+        .subject-chip.selected { background: #ede9fe; border-color: #7c3aed; color: #7c3aed; font-weight: 600; }
+        .subject-chip:hover:not(.selected) { border-color: #7c3aed; color: #7c3aed; }
+
+        /* Level chips */
+        .level-chip {
+            display: flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1rem;
+            border: 1.5px solid #e5e7eb; border-radius: 0.625rem; cursor: pointer;
+            transition: all 0.2s; font-size: 0.85rem; color: #374151;
+        }
+        .level-chip.selected { border-color: #7c3aed; background: #faf5ff; color: #7c3aed; font-weight: 600; }
+
+        /* Score preview */
+        .score-ring { position: relative; width: 80px; height: 80px; }
+        .score-ring svg { transform: rotate(-90deg); }
+        .score-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; font-weight: 800; }
+
+        /* Requirement badge */
+        .req-badge { display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.625rem; border-radius: 0.5rem; background: #f9fafb; }
+        .req-ok  { background: #f0fdf4; }
+        .req-warn { background: #fffbeb; }
+        .req-bad  { background: #fef2f2; }
+
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        .step-panel { animation: fadeInUp 0.35s ease; }
+        .strength-bar { height: 4px; border-radius: 2px; transition: all 0.3s; }
+    </style>
+</head>
+<body class="py-8 px-4">
+
+<div class="max-w-3xl mx-auto">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+        <a href="/home.html" class="inline-flex items-center gap-3 mb-6 group">
+            <div class="w-12 h-12 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                <i class="fas fa-graduation-cap text-white text-lg"></i>
+            </div>
+            <span class="text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">VClass</span>
+        </a>
+        <h1 class="text-2xl font-bold text-gray-900 mb-2">Candidatura para Professor</h1>
+        <p class="text-gray-500 text-sm max-w-lg mx-auto">
+            O processo de verificação garante qualidade e segurança para todos os estudantes. Preencha todos os campos com rigor — a candidatura será analisada pela nossa equipa em até <strong>5 dias úteis</strong>.
+        </p>
+    </div>
+
+    <!-- Alert container -->
+    <div id="alert-container" class="mb-4"></div>
+
+    <!-- Step progress -->
+    <div class="step-card p-6 mb-6">
+        <div class="flex items-center gap-0">
+            <div class="step-item">
+                <div class="step-circle active" id="circle-1"><i class="fas fa-user text-xs"></i></div>
+                <span class="step-label active" id="label-1">Pessoal</span>
+            </div>
+            <div class="step-line" id="line-1"></div>
+            <div class="step-item">
+                <div class="step-circle" id="circle-2"><i class="fas fa-graduation-cap text-xs"></i></div>
+                <span class="step-label" id="label-2">Qualificações</span>
+            </div>
+            <div class="step-line" id="line-2"></div>
+            <div class="step-item">
+                <div class="step-circle" id="circle-3"><i class="fas fa-chalkboard-teacher text-xs"></i></div>
+                <span class="step-label" id="label-3">Experiência</span>
+            </div>
+            <div class="step-line" id="line-3"></div>
+            <div class="step-item">
+                <div class="step-circle" id="circle-4"><i class="fas fa-laptop text-xs"></i></div>
+                <span class="step-label" id="label-4">Digital</span>
+            </div>
+            <div class="step-line" id="line-4"></div>
+            <div class="step-item">
+                <div class="step-circle" id="circle-5"><i class="fas fa-lock text-xs"></i></div>
+                <span class="step-label" id="label-5">Acesso</span>
+            </div>
+            <div class="step-line" id="line-5"></div>
+            <div class="step-item">
+                <div class="step-circle" id="circle-6"><i class="fas fa-check text-xs"></i></div>
+                <span class="step-label" id="label-6">Revisão</span>
+            </div>
+        </div>
+        <div class="mt-3 text-center text-xs text-gray-400">
+            Passo <span id="current-step-num">1</span> de 6 — <span id="current-step-name">Dados Pessoais</span>
+        </div>
+    </div>
+
+    <!-- STEP 1: Dados Pessoais -->
+    <div class="step-card p-8 step-panel" id="step-1">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                <i class="fas fa-user text-purple-600"></i>
+            </div>
+            <div>
+                <h2 class="text-lg font-bold text-gray-900">Dados Pessoais</h2>
+                <p class="text-xs text-gray-500">Informações de identificação</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <!-- Nome Completo -->
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Nome Completo <span class="text-red-500">*</span></label>
+                <div class="relative">
+                    <i class="fas fa-user absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" id="full_name" class="input-field" placeholder="Ex: Carlos Alberto Machava" autocomplete="name">
+                </div>
+                <p class="error-msg" id="full_name-error">Nome completo deve ter pelo menos 5 caracteres</p>
+            </div>
+
+            <!-- Email -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Email Profissional <span class="text-red-500">*</span></label>
+                <div class="relative">
+                    <i class="fas fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="email" id="email" class="input-field" placeholder="professor@email.com" autocomplete="email">
+                </div>
+                <p class="error-msg" id="email-error">Insira um email válido</p>
+            </div>
+
+            <!-- Telefone -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Telefone / WhatsApp <span class="text-red-500">*</span></label>
+                <div class="relative">
+                    <i class="fas fa-phone absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="tel" id="phone" class="input-field" placeholder="+258 84 123 4567">
+                </div>
+                <p class="error-msg" id="phone-error">Telefone deve ter pelo menos 9 dígitos</p>
+            </div>
+
+            <!-- Data de nascimento -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Data de Nascimento <span class="text-red-500">*</span> <span class="text-xs text-gray-400">(mín. 21 anos)</span></label>
+                <div class="relative">
+                    <i class="fas fa-calendar absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="date" id="birth_date" class="input-field" max="">
+                </div>
+                <p class="error-msg" id="birth_date-error">É necessário ter pelo menos 21 anos</p>
+            </div>
+
+            <!-- Número do BI -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Nº do BI / Cédula <span class="text-red-500">*</span></label>
+                <div class="relative">
+                    <i class="fas fa-id-card absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" id="national_id" class="input-field" placeholder="Ex: 0234567890MZ">
+                </div>
+                <p class="error-msg" id="national_id-error">Número do BI é obrigatório</p>
+            </div>
+
+            <!-- País -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">País <span class="text-red-500">*</span></label>
+                <select id="country_id" class="input-plain">
+                    <option value="">Selecionar país...</option>
+                    <option value="mz">🇲🇿 Moçambique</option>
+                    <option value="ao">🇦🇴 Angola</option>
+                    <option value="br">🇧🇷 Brasil</option>
+                    <option value="pt">🇵🇹 Portugal</option>
+                    <option value="cv">🇨🇻 Cabo Verde</option>
+                </select>
+                <p class="error-msg" id="country_id-error">Selecione o seu país</p>
+            </div>
+
+            <!-- Província -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Província / Estado <span class="text-red-500">*</span></label>
+                <div class="relative">
+                    <i class="fas fa-map-marker-alt absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" id="province" class="input-field" placeholder="Ex: Maputo, Luanda, São Paulo...">
+                </div>
+                <p class="error-msg" id="province-error">Província é obrigatória</p>
+            </div>
+
+            <!-- Cidade -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Cidade <span class="text-red-500">*</span></label>
+                <div class="relative">
+                    <i class="fas fa-city absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" id="city" class="input-field" placeholder="Ex: Maputo">
+                </div>
+                <p class="error-msg" id="city-error">Cidade é obrigatória</p>
+            </div>
+
+            <!-- Endereço -->
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Endereço <span class="text-red-500">*</span></label>
+                <div class="relative">
+                    <i class="fas fa-home absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" id="address" class="input-field" placeholder="Rua, bairro, número...">
+                </div>
+                <p class="error-msg" id="address-error">Endereço é obrigatório</p>
+            </div>
+        </div>
+
+        <div class="flex justify-end mt-8">
+            <button class="btn-primary px-8" onclick="goToStep(2)">
+                Próximo <i class="fas fa-arrow-right ml-1"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- STEP 2: Qualificações Académicas -->
+    <div class="step-card p-8 step-panel hidden" id="step-2">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
+                <i class="fas fa-graduation-cap text-indigo-600"></i>
+            </div>
+            <div>
+                <h2 class="text-lg font-bold text-gray-900">Qualificações Académicas</h2>
+                <p class="text-xs text-gray-500">Formação académica e certificações</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <!-- Grau -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Grau Académico <span class="text-red-500">*</span></label>
+                <select id="degree" class="input-plain" onchange="updateDegreeScore()">
+                    <option value="">Selecionar grau...</option>
+                    <option value="bacharel">Bacharelato</option>
+                    <option value="licenciatura">Licenciatura ⭐</option>
+                    <option value="mestrado">Mestrado ⭐⭐</option>
+                    <option value="doutoramento">Doutoramento ⭐⭐⭐</option>
+                    <option value="outro">Outro</option>
+                </select>
+                <p class="error-msg" id="degree-error">Selecione o seu grau académico</p>
+            </div>
+
+            <!-- Área de formação -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Área de Formação <span class="text-red-500">*</span></label>
+                <div class="relative">
+                    <i class="fas fa-book absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" id="degree_field" class="input-field" placeholder="Ex: Matemática e Física">
+                </div>
+                <p class="error-msg" id="degree_field-error">Área de formação é obrigatória</p>
+            </div>
+
+            <!-- Instituição -->
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Instituição de Formação <span class="text-red-500">*</span></label>
+                <div class="relative">
+                    <i class="fas fa-university absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" id="institution" class="input-field" placeholder="Ex: Universidade Eduardo Mondlane">
+                </div>
+                <p class="error-msg" id="institution-error">Instituição é obrigatória</p>
+            </div>
+
+            <!-- Ano de formatura -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Ano de Conclusão <span class="text-red-500">*</span></label>
+                <div class="relative">
+                    <i class="fas fa-calendar-check absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="number" id="graduation_year" class="input-field" placeholder="Ex: 2015" min="1960" max="2026">
+                </div>
+                <p class="error-msg" id="graduation_year-error">Ano de conclusão inválido</p>
+            </div>
+
+            <!-- Certificado de docência -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Possui Certificado de Docência? <span class="text-red-500">*</span></label>
+                <div class="flex gap-3">
+                    <label class="level-chip flex-1 cursor-pointer" id="cert-yes">
+                        <input type="radio" name="has_teaching_cert" value="true" class="sr-only" onchange="toggleCertField(true)">
+                        <i class="fas fa-check-circle text-green-500"></i>
+                        <span>Sim, tenho</span>
+                    </label>
+                    <label class="level-chip flex-1 cursor-pointer" id="cert-no">
+                        <input type="radio" name="has_teaching_cert" value="false" class="sr-only" onchange="toggleCertField(false)">
+                        <i class="fas fa-times-circle text-red-400"></i>
+                        <span>Não tenho</span>
+                    </label>
+                </div>
+                <p class="error-msg" id="has_teaching_cert-error">Selecione uma opção</p>
+            </div>
+
+            <!-- Tipo de certificado (condicional) -->
+            <div class="md:col-span-2" id="cert-type-field" style="display:none">
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Tipo/Nome do Certificado</label>
+                <div class="relative">
+                    <i class="fas fa-certificate absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" id="teaching_cert_type" class="input-field" placeholder="Ex: CFPEF, INIDE, Certificação UNESCO...">
+                </div>
+            </div>
+        </div>
+
+        <!-- Info box sobre documentos -->
+        <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700">
+            <i class="fas fa-info-circle mr-2"></i>
+            <strong>Documentos necessários:</strong> Será solicitado o envio de cópias digitalizadas do seu diploma, BI/Cédula e certificado de docência (se aplicável) após a aprovação da candidatura.
+        </div>
+
+        <div class="flex justify-between mt-8">
+            <button class="btn-secondary" onclick="goToStep(1)">
+                <i class="fas fa-arrow-left mr-1"></i> Anterior
+            </button>
+            <button class="btn-primary px-8" onclick="goToStep(3)">
+                Próximo <i class="fas fa-arrow-right ml-1"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- STEP 3: Experiência Profissional -->
+    <div class="step-card p-8 step-panel hidden" id="step-3">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+                <i class="fas fa-chalkboard-teacher text-green-600"></i>
+            </div>
+            <div>
+                <h2 class="text-lg font-bold text-gray-900">Experiência Profissional</h2>
+                <p class="text-xs text-gray-500">Historial de docência e disciplinas</p>
+            </div>
+        </div>
+
+        <div class="space-y-5">
+            <!-- Anos de experiência -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Anos de Experiência em Docência <span class="text-red-500">*</span></label>
+                    <div class="relative">
+                        <i class="fas fa-history absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                        <input type="number" id="years_experience" class="input-field" placeholder="0" min="0" max="50" oninput="updateExpScore()">
+                    </div>
+                    <p class="error-msg" id="years_experience-error">Informe os anos de experiência (0 se for recém-formado)</p>
+                </div>
+
+                <!-- Escola actual -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Escola / Instituição Actual</label>
+                    <div class="relative">
+                        <i class="fas fa-school absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                        <input type="text" id="current_school" class="input-field" placeholder="Nome da escola (se aplicável)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Níveis de ensino -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Nível(is) de Ensino <span class="text-red-500">*</span> <span class="text-xs text-gray-400">(pode seleccionar mais de um)</span></label>
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="level-chip" id="level-primary" onclick="toggleLevel('primary')">
+                        <i class="fas fa-child text-yellow-500"></i>
+                        <div>
+                            <div class="font-medium text-sm">Primário</div>
+                            <div class="text-xs text-gray-400">1ª – 7ª Classe</div>
+                        </div>
+                    </div>
+                    <div class="level-chip" id="level-secondary" onclick="toggleLevel('secondary')">
+                        <i class="fas fa-user-graduate text-blue-500"></i>
+                        <div>
+                            <div class="font-medium text-sm">Secundário</div>
+                            <div class="text-xs text-gray-400">8ª – 12ª Classe</div>
+                        </div>
+                    </div>
+                    <div class="level-chip" id="level-tertiary" onclick="toggleLevel('tertiary')">
+                        <i class="fas fa-university text-purple-500"></i>
+                        <div>
+                            <div class="font-medium text-sm">Superior</div>
+                            <div class="text-xs text-gray-400">Licenciatura+</div>
+                        </div>
+                    </div>
+                </div>
+                <p class="error-msg show" id="teaching_levels-error" style="display:none">Selecione pelo menos um nível de ensino</p>
+            </div>
+
+            <!-- Disciplinas -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Disciplinas que Lecciona <span class="text-red-500">*</span> <span class="text-xs text-gray-400">(máx. 5)</span></label>
+                <div class="flex flex-wrap gap-2" id="subjects-container">
+                    <!-- Ciências Exactas -->
+                    <span class="subject-chip" onclick="toggleSubject('Matemática', this)"><i class="fas fa-square-root-alt text-xs"></i> Matemática</span>
+                    <span class="subject-chip" onclick="toggleSubject('Física', this)"><i class="fas fa-atom text-xs"></i> Física</span>
+                    <span class="subject-chip" onclick="toggleSubject('Química', this)"><i class="fas fa-flask text-xs"></i> Química</span>
+                    <span class="subject-chip" onclick="toggleSubject('Biologia', this)"><i class="fas fa-dna text-xs"></i> Biologia</span>
+                    <span class="subject-chip" onclick="toggleSubject('Ciências Naturais', this)"><i class="fas fa-leaf text-xs"></i> Ciências Naturais</span>
+                    <!-- Humanidades -->
+                    <span class="subject-chip" onclick="toggleSubject('Português', this)"><i class="fas fa-pen text-xs"></i> Português</span>
+                    <span class="subject-chip" onclick="toggleSubject('Literatura', this)"><i class="fas fa-book text-xs"></i> Literatura</span>
+                    <span class="subject-chip" onclick="toggleSubject('História', this)"><i class="fas fa-landmark text-xs"></i> História</span>
+                    <span class="subject-chip" onclick="toggleSubject('Geografia', this)"><i class="fas fa-globe-africa text-xs"></i> Geografia</span>
+                    <span class="subject-chip" onclick="toggleSubject('Filosofia', this)"><i class="fas fa-brain text-xs"></i> Filosofia</span>
+                    <!-- Línguas -->
+                    <span class="subject-chip" onclick="toggleSubject('Inglês', this)"><i class="fas fa-language text-xs"></i> Inglês</span>
+                    <span class="subject-chip" onclick="toggleSubject('Francês', this)"><i class="fas fa-language text-xs"></i> Francês</span>
+                    <!-- Técnicas -->
+                    <span class="subject-chip" onclick="toggleSubject('Informática', this)"><i class="fas fa-laptop text-xs"></i> Informática</span>
+                    <span class="subject-chip" onclick="toggleSubject('Empreendedorismo', this)"><i class="fas fa-lightbulb text-xs"></i> Empreendedorismo</span>
+                    <span class="subject-chip" onclick="toggleSubject('Educação Física', this)"><i class="fas fa-running text-xs"></i> Ed. Física</span>
+                    <span class="subject-chip" onclick="toggleSubject('Artes Visuais', this)"><i class="fas fa-palette text-xs"></i> Artes</span>
+                    <!-- Economia -->
+                    <span class="subject-chip" onclick="toggleSubject('Economia', this)"><i class="fas fa-chart-line text-xs"></i> Economia</span>
+                    <span class="subject-chip" onclick="toggleSubject('Contabilidade', this)"><i class="fas fa-calculator text-xs"></i> Contabilidade</span>
+                </div>
+                <div class="mt-3">
+                    <input type="text" id="subjects_other" class="input-plain text-sm" placeholder="Outra disciplina não listada...">
+                </div>
+                <div class="mt-1 flex items-center justify-between">
+                    <p class="error-msg" id="subjects-error" style="display:none">Selecione pelo menos uma disciplina</p>
+                    <span class="text-xs text-gray-400 ml-auto"><span id="subjects-count">0</span>/5 disciplinas seleccionadas</span>
+                </div>
+            </div>
+
+            <!-- Carta de Motivação -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                    Carta de Motivação <span class="text-red-500">*</span>
+                    <span class="text-xs text-gray-400 ml-2">(<span id="letter-count">0</span>/2000 caracteres — mín. 200)</span>
+                </label>
+                <textarea id="motivation_letter" class="input-plain" rows="6" maxlength="2000"
+                    placeholder="Descreva a sua motivação para ser professor na VClass, a sua experiência pedagógica, como pretende contribuir para a educação digital em África, e o que o distingue como educador..."
+                    oninput="updateLetterCount()"></textarea>
+                <p class="error-msg" id="motivation_letter-error">Carta de motivação deve ter pelo menos 200 caracteres</p>
+            </div>
+
+            <!-- Referências -->
+            <div class="border border-gray-200 rounded-xl p-5">
+                <h3 class="font-semibold text-gray-800 mb-4"><i class="fas fa-users mr-2 text-purple-500"></i>Referências Profissionais</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="md:col-span-1">
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Nome <span class="text-red-500">*</span></label>
+                        <input type="text" id="reference_1_name" class="input-plain text-sm" placeholder="Prof. Manuel Silva">
+                        <p class="error-msg" id="reference_1_name-error">Nome da referência é obrigatório</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Telefone <span class="text-red-500">*</span></label>
+                        <input type="tel" id="reference_1_phone" class="input-plain text-sm" placeholder="+258 84 000 0000">
+                        <p class="error-msg" id="reference_1_phone-error">Telefone é obrigatório</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Cargo / Relação <span class="text-red-500">*</span></label>
+                        <input type="text" id="reference_1_role" class="input-plain text-sm" placeholder="Director Pedagógico">
+                        <p class="error-msg" id="reference_1_role-error">Cargo é obrigatório</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 pt-3 border-t border-dashed border-gray-200">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">2ª Referência — Nome <span class="text-xs text-gray-400">(opcional mas valorizado)</span></label>
+                        <input type="text" id="reference_2_name" class="input-plain text-sm" placeholder="Dra. Beatriz Nhamposse">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">2ª Referência — Telefone</label>
+                        <input type="tel" id="reference_2_phone" class="input-plain text-sm" placeholder="+258 82 000 0000">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-between mt-8">
+            <button class="btn-secondary" onclick="goToStep(2)">
+                <i class="fas fa-arrow-left mr-1"></i> Anterior
+            </button>
+            <button class="btn-primary px-8" onclick="goToStep(4)">
+                Próximo <i class="fas fa-arrow-right ml-1"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- STEP 4: Competências Digitais -->
+    <div class="step-card p-8 step-panel hidden" id="step-4">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                <i class="fas fa-laptop text-blue-600"></i>
+            </div>
+            <div>
+                <h2 class="text-lg font-bold text-gray-900">Competências Digitais & Disponibilidade</h2>
+                <p class="text-xs text-gray-500">Infra-estrutura tecnológica necessária para criação de conteúdo</p>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            <!-- Literacia digital -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Nível de Literacia Digital <span class="text-red-500">*</span></label>
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="level-chip cursor-pointer" id="dig-basico" onclick="selectDigital('basico')">
+                        <i class="fas fa-seedling text-yellow-500 text-lg"></i>
+                        <div>
+                            <div class="font-medium text-sm">Básico</div>
+                            <div class="text-xs text-gray-400">Email, Word, internet</div>
+                        </div>
+                    </div>
+                    <div class="level-chip cursor-pointer" id="dig-intermedio" onclick="selectDigital('intermedio')">
+                        <i class="fas fa-star text-blue-500 text-lg"></i>
+                        <div>
+                            <div class="font-medium text-sm">Intermédio</div>
+                            <div class="text-xs text-gray-400">Slides, vídeo básico</div>
+                        </div>
+                    </div>
+                    <div class="level-chip cursor-pointer" id="dig-avancado" onclick="selectDigital('avancado')">
+                        <i class="fas fa-rocket text-purple-500 text-lg"></i>
+                        <div>
+                            <div class="font-medium text-sm">Avançado</div>
+                            <div class="text-xs text-gray-400">Edição de vídeo, streaming</div>
+                        </div>
+                    </div>
+                </div>
+                <p class="error-msg" id="digital_literacy-error">Selecione o seu nível digital</p>
+            </div>
+
+            <!-- Equipamento -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Equipamento Disponível <span class="text-red-500">*</span></label>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="req-badge p-4 rounded-xl border border-gray-200 cursor-pointer transition" id="computer-badge" onclick="toggleEquipment('computer')">
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-laptop text-2xl text-gray-400" id="computer-icon"></i>
+                            <div>
+                                <div class="font-semibold text-sm text-gray-800">Computador / Portátil</div>
+                                <div class="text-xs text-gray-500">Necessário para gravação</div>
+                            </div>
+                            <div class="ml-auto w-5 h-5 rounded-full border-2 border-gray-300 flex items-center justify-center" id="computer-check">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="req-badge p-4 rounded-xl border border-gray-200 cursor-pointer transition" id="internet-badge" onclick="toggleEquipment('internet')">
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-wifi text-2xl text-gray-400" id="internet-icon"></i>
+                            <div>
+                                <div class="font-semibold text-sm text-gray-800">Internet Estável</div>
+                                <div class="text-xs text-gray-500">Para upload de conteúdo</div>
+                            </div>
+                            <div class="ml-auto w-5 h-5 rounded-full border-2 border-gray-300 flex items-center justify-center" id="internet-check">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <p class="error-msg" id="equipment-error">Informe o equipamento disponível</p>
+            </div>
+
+            <!-- Disponibilidade -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Horas Disponíveis por Semana <span class="text-red-500">*</span></label>
+                    <div class="relative">
+                        <i class="fas fa-clock absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                        <input type="number" id="available_hours" class="input-field" placeholder="Ex: 10" min="1" max="40">
+                    </div>
+                    <p class="error-msg" id="available_hours-error">Informe as horas disponíveis (1–40)</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Horário Preferido <span class="text-red-500">*</span></label>
+                    <select id="preferred_schedule" class="input-plain">
+                        <option value="">Selecionar horário...</option>
+                        <option value="manha">🌅 Manhã (6h–12h)</option>
+                        <option value="tarde">☀️ Tarde (12h–18h)</option>
+                        <option value="noite">🌙 Noite (18h–24h)</option>
+                        <option value="flexivel">⏰ Flexível</option>
+                    </select>
+                    <p class="error-msg" id="preferred_schedule-error">Selecione o horário preferido</p>
+                </div>
+            </div>
+
+            <!-- Aviso equipamento -->
+            <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800" id="equipment-warning" style="display:none">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                <strong>Atenção:</strong> Não ter computador ou internet estável pode dificultar o processo de criação de conteúdo. A sua candidatura ainda será analisada, mas a equipa entrará em contacto para discutir soluções alternativas.
+            </div>
+        </div>
+
+        <div class="flex justify-between mt-8">
+            <button class="btn-secondary" onclick="goToStep(3)">
+                <i class="fas fa-arrow-left mr-1"></i> Anterior
+            </button>
+            <button class="btn-primary px-8" onclick="goToStep(5)">
+                Próximo <i class="fas fa-arrow-right ml-1"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- STEP 5: Credenciais -->
+    <div class="step-card p-8 step-panel hidden" id="step-5">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
+                <i class="fas fa-lock text-red-600"></i>
+            </div>
+            <div>
+                <h2 class="text-lg font-bold text-gray-900">Credenciais de Acesso</h2>
+                <p class="text-xs text-gray-500">Crie uma senha segura para a sua conta</p>
+            </div>
+        </div>
+
+        <!-- Requisitos visuais -->
+        <div class="grid grid-cols-2 gap-2 mb-6">
+            <div class="req-badge" id="req-length"><i class="fas fa-times-circle text-red-400 text-sm" id="icon-length"></i> <span class="text-xs">Mínimo 8 caracteres</span></div>
+            <div class="req-badge" id="req-upper"><i class="fas fa-times-circle text-red-400 text-sm" id="icon-upper"></i> <span class="text-xs">Uma letra maiúscula</span></div>
+            <div class="req-badge" id="req-lower"><i class="fas fa-times-circle text-red-400 text-sm" id="icon-lower"></i> <span class="text-xs">Uma letra minúscula</span></div>
+            <div class="req-badge" id="req-number"><i class="fas fa-times-circle text-red-400 text-sm" id="icon-number"></i> <span class="text-xs">Um número</span></div>
+            <div class="req-badge md:col-span-2" id="req-special"><i class="fas fa-times-circle text-red-400 text-sm" id="icon-special"></i> <span class="text-xs">Um carácter especial (!@#$%...)</span></div>
+        </div>
+
+        <div class="space-y-5">
+            <!-- Senha -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Senha <span class="text-red-500">*</span></label>
+                <div class="relative">
+                    <i class="fas fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="password" id="password" class="input-field pr-10" placeholder="Senha segura" oninput="checkPwd()">
+                    <button type="button" onclick="togglePwd('password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-eye text-sm"></i>
+                    </button>
+                </div>
+                <!-- Força -->
+                <div class="mt-2">
+                    <div class="flex gap-1 mb-1">
+                        <div class="strength-bar flex-1 bg-gray-200" id="s1"></div>
+                        <div class="strength-bar flex-1 bg-gray-200" id="s2"></div>
+                        <div class="strength-bar flex-1 bg-gray-200" id="s3"></div>
+                        <div class="strength-bar flex-1 bg-gray-200" id="s4"></div>
+                        <div class="strength-bar flex-1 bg-gray-200" id="s5"></div>
+                    </div>
+                    <p class="text-xs text-gray-400" id="strength-label">Força da senha</p>
+                </div>
+                <p class="error-msg" id="password-error">Senha não cumpre os requisitos</p>
+            </div>
+
+            <!-- Confirmar -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Confirmar Senha <span class="text-red-500">*</span></label>
+                <div class="relative">
+                    <i class="fas fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="password" id="confirm_password" class="input-field pr-10" placeholder="Repita a senha">
+                    <button type="button" onclick="togglePwd('confirm_password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-eye text-sm"></i>
+                    </button>
+                </div>
+                <p class="error-msg" id="confirm_password-error">As senhas não coincidem</p>
+            </div>
+
+            <!-- Termos -->
+            <div class="border border-gray-200 rounded-xl p-4 space-y-3">
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" id="terms" class="mt-0.5 w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500">
+                    <span class="text-sm text-gray-600">Aceito os <a href="#" class="text-purple-600 hover:underline font-medium">Termos de Uso</a> e a <a href="#" class="text-purple-600 hover:underline font-medium">Política de Privacidade</a> da VClass</span>
+                </label>
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" id="accuracy" class="mt-0.5 w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500">
+                    <span class="text-sm text-gray-600">Declaro que todas as informações fornecidas são verídicas e assumo responsabilidade pela sua veracidade</span>
+                </label>
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" id="verification_consent" class="mt-0.5 w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500">
+                    <span class="text-sm text-gray-600">Autorizo a VClass a contactar as referências profissionais indicadas para efeitos de verificação</span>
+                </label>
+            </div>
+            <p class="error-msg" id="terms-error">Deve aceitar todos os termos para continuar</p>
+        </div>
+
+        <div class="flex justify-between mt-8">
+            <button class="btn-secondary" onclick="goToStep(4)">
+                <i class="fas fa-arrow-left mr-1"></i> Anterior
+            </button>
+            <button class="btn-primary px-8" onclick="goToStep(6)">
+                Rever Candidatura <i class="fas fa-arrow-right ml-1"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- STEP 6: Revisão & Envio -->
+    <div class="step-card p-8 step-panel hidden" id="step-6">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+                <i class="fas fa-clipboard-check text-emerald-600"></i>
+            </div>
+            <div>
+                <h2 class="text-lg font-bold text-gray-900">Revisão da Candidatura</h2>
+                <p class="text-xs text-gray-500">Verifique os dados antes de submeter</p>
+            </div>
+        </div>
+
+        <!-- Score preview -->
+        <div class="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-5 mb-6">
+            <div class="flex items-center gap-5">
+                <div class="score-ring flex-shrink-0">
+                    <svg width="80" height="80" viewBox="0 0 80 80">
+                        <circle cx="40" cy="40" r="34" fill="none" stroke="#e5e7eb" stroke-width="8"/>
+                        <circle cx="40" cy="40" r="34" fill="none" stroke="#7c3aed" stroke-width="8"
+                            stroke-dasharray="213.6" stroke-dashoffset="213.6" id="score-circle" stroke-linecap="round"/>
+                    </svg>
+                    <div class="score-text text-purple-700" id="score-display">—</div>
+                </div>
+                <div>
+                    <div class="font-bold text-gray-900 mb-1">Pontuação Estimada do Perfil</div>
+                    <div class="text-sm text-gray-500 mb-2" id="score-label-text">Preencha todos os campos para ver a pontuação</div>
+                    <div class="text-xs text-purple-600 font-medium">Pontuação final determinada após revisão humana</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resumo dos dados -->
+        <div id="summary-content" class="space-y-4 mb-6">
+            <!-- Preenchido por JS -->
+        </div>
+
+        <!-- Botão submeter -->
+        <div class="flex justify-between mt-8">
+            <button class="btn-secondary" onclick="goToStep(5)">
+                <i class="fas fa-arrow-left mr-1"></i> Editar
+            </button>
+            <button class="btn-primary px-10 text-base" id="submit-btn" onclick="submitApplication()">
+                <i class="fas fa-paper-plane mr-2"></i> Submeter Candidatura
+            </button>
+        </div>
+    </div>
+
+    <!-- STEP SUCCESS -->
+    <div class="step-card p-10 text-center step-panel hidden" id="step-success">
+        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <i class="fas fa-check-circle text-green-500 text-4xl"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900 mb-3">Candidatura Submetida!</h2>
+        <p class="text-gray-500 mb-6 max-w-md mx-auto" id="success-message">
+            A sua candidatura foi recebida e será analisada em até 5 dias úteis.
+        </p>
+        <div class="bg-purple-50 border border-purple-200 rounded-xl p-5 text-left mb-8 max-w-md mx-auto">
+            <div class="flex items-center gap-2 mb-3">
+                <i class="fas fa-info-circle text-purple-500"></i>
+                <span class="font-semibold text-purple-800 text-sm">Próximos Passos</span>
+            </div>
+            <ul class="space-y-2 text-sm text-gray-600">
+                <li class="flex items-start gap-2"><i class="fas fa-envelope text-purple-400 mt-0.5 text-xs"></i> Receberá um email de confirmação em breve</li>
+                <li class="flex items-start gap-2"><i class="fas fa-search text-purple-400 mt-0.5 text-xs"></i> A equipa analisará as suas qualificações e referências</li>
+                <li class="flex items-start gap-2"><i class="fas fa-phone text-purple-400 mt-0.5 text-xs"></i> Poderá ser contactado para uma entrevista de validação</li>
+                <li class="flex items-start gap-2"><i class="fas fa-bell text-purple-400 mt-0.5 text-xs"></i> Receberá uma decisão em até 5 dias úteis</li>
+            </ul>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-3 justify-center">
+            <a href="/teacher-verification.html" class="btn-primary">
+                <i class="fas fa-search mr-2"></i> Acompanhar Candidatura
+            </a>
+            <a href="/home.html" class="btn-secondary">
+                <i class="fas fa-home mr-2"></i> Voltar ao Início
+            </a>
+        </div>
+    </div>
+
+    <!-- Footer note -->
+    <p class="text-center text-xs text-gray-400 mt-6">
+        Já tem conta? <a href="/login.html" class="text-purple-600 hover:underline">Entrar</a> · 
+        Dúvidas? <a href="/help.html" class="text-purple-600 hover:underline">Centro de Ajuda</a>
+    </p>
+</div>
+
+<script src="/static/app.js"></script>
+<script>
+    // ── Estado do formulário ──────────────────────────────────────────────────
+    let currentStep = 1;
+    const totalSteps = 6;
+    const selectedSubjects = new Set();
+    const selectedLevels   = new Set();
+    let hasComputer  = null;
+    let hasInternet  = null;
+    let digitalLiteracy = null;
+
+    const stepNames = ['Dados Pessoais','Qualificações','Experiência','Digital','Acesso','Revisão'];
+
+    // ── Setup inicial ─────────────────────────────────────────────────────────
+    window.addEventListener('load', () => {
+        // Redirigir se já logado
+        if (typeof VClass !== 'undefined' && VClass.isAuthenticated()) {
+            window.location.href = '/dashboard.html';
+            return;
+        }
+        // Max birth date = 21 anos atrás
+        const maxDate = new Date();
+        maxDate.setFullYear(maxDate.getFullYear() - 21);
+        document.getElementById('birth_date').max = maxDate.toISOString().split('T')[0];
+    });
+
+    // ── Navegação entre passos ────────────────────────────────────────────────
+    function goToStep(n) {
+        if (n > currentStep && !validateStep(currentStep)) return;
+        document.getElementById(`step-${currentStep}`)?.classList.add('hidden');
+        document.getElementById(`step-${n}`)?.classList.remove('hidden');
+        if (n === 6) buildSummary();
+        updateProgress(n);
+        currentStep = n;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function updateProgress(n) {
+        for (let i = 1; i <= totalSteps; i++) {
+            const circle = document.getElementById(`circle-${i}`);
+            const label  = document.getElementById(`label-${i}`);
+            const line   = document.getElementById(`line-${i}`);
+            circle.className = 'step-circle' + (i < n ? ' done' : i === n ? ' active' : '');
+            circle.innerHTML = i < n
+                ? '<i class="fas fa-check text-xs"></i>'
+                : ['<i class="fas fa-user text-xs"></i>','<i class="fas fa-graduation-cap text-xs"></i>','<i class="fas fa-chalkboard-teacher text-xs"></i>','<i class="fas fa-laptop text-xs"></i>','<i class="fas fa-lock text-xs"></i>','<i class="fas fa-check text-xs"></i>'][i-1];
+            label.className = 'step-label' + (i < n ? ' done' : i === n ? ' active' : '');
+            if (line) line.className = 'step-line' + (i < n ? ' done' : '');
+        }
+        document.getElementById('current-step-num').textContent = n;
+        document.getElementById('current-step-name').textContent = stepNames[n-1];
+    }
+
+    // ── Validação por passo ───────────────────────────────────────────────────
+    function validateStep(n) {
+        let ok = true;
+        if (n === 1) {
+            ok = checkRequired('full_name', v => v.length >= 5, 'Nome deve ter pelo menos 5 caracteres') && ok;
+            ok = checkRequired('email', v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), 'Email inválido') && ok;
+            ok = checkRequired('phone', v => v.replace(/\D/g,'').length >= 9, 'Telefone deve ter pelo menos 9 dígitos') && ok;
+            ok = checkRequired('birth_date', v => {
+                const age = (Date.now() - new Date(v).getTime()) / (365.25*24*3600*1000);
+                return age >= 21;
+            }, 'É necessário ter pelo menos 21 anos') && ok;
+            ok = checkRequired('national_id', v => v.length >= 6, 'Número do BI é obrigatório') && ok;
+            ok = checkRequired('country_id', v => v.length >= 2, 'Selecione o seu país', true) && ok;
+            ok = checkRequired('province', v => v.length >= 2, 'Província é obrigatória') && ok;
+            ok = checkRequired('city', v => v.length >= 2, 'Cidade é obrigatória') && ok;
+            ok = checkRequired('address', v => v.length >= 5, 'Endereço é obrigatório') && ok;
+        } else if (n === 2) {
+            ok = checkRequired('degree', v => v.length > 0, 'Selecione o grau académico', true) && ok;
+            ok = checkRequired('degree_field', v => v.length >= 3, 'Área de formação é obrigatória') && ok;
+            ok = checkRequired('institution', v => v.length >= 3, 'Instituição é obrigatória') && ok;
+            ok = checkRequired('graduation_year', v => {
+                const y = parseInt(v); return y >= 1960 && y <= new Date().getFullYear();
+            }, 'Ano de conclusão inválido') && ok;
+            const certVal = document.querySelector('input[name="has_teaching_cert"]:checked');
+            if (!certVal) { showErr('has_teaching_cert-error', 'Selecione uma opção'); ok = false; }
+            else hideErr('has_teaching_cert-error');
+        } else if (n === 3) {
+            const yearsEl = document.getElementById('years_experience');
+            if (yearsEl.value === '' || parseInt(yearsEl.value) < 0) {
+                showErr('years_experience-error', 'Informe os anos de experiência'); ok = false;
+            } else { hideErr('years_experience-error'); }
+            if (selectedLevels.size === 0) { document.getElementById('teaching_levels-error').style.display='block'; ok = false; }
+            else { document.getElementById('teaching_levels-error').style.display='none'; }
+            if (selectedSubjects.size === 0) { document.getElementById('subjects-error').style.display='block'; ok = false; }
+            else { document.getElementById('subjects-error').style.display='none'; }
+            ok = checkRequired('motivation_letter', v => v.length >= 200, 'Carta de motivação deve ter pelo menos 200 caracteres', false, true) && ok;
+            ok = checkRequired('reference_1_name', v => v.length >= 3, 'Nome da referência é obrigatório') && ok;
+            ok = checkRequired('reference_1_phone', v => v.replace(/\D/g,'').length >= 9, 'Telefone é obrigatório') && ok;
+            ok = checkRequired('reference_1_role', v => v.length >= 2, 'Cargo é obrigatório') && ok;
+        } else if (n === 4) {
+            if (!digitalLiteracy) { showErr('digital_literacy-error', 'Selecione o seu nível digital'); ok = false; }
+            else hideErr('digital_literacy-error');
+            if (hasComputer === null || hasInternet === null) { showErr('equipment-error','Informe o equipamento disponível'); ok = false; }
+            else { hideErr('equipment-error'); }
+            ok = checkRequired('available_hours', v => {
+                const h = parseInt(v); return h >= 1 && h <= 40;
+            }, 'Informe as horas disponíveis (1–40)') && ok;
+            ok = checkRequired('preferred_schedule', v => v.length > 0, 'Selecione o horário preferido', true) && ok;
+        } else if (n === 5) {
+            const pwd = document.getElementById('password').value;
+            const conf = document.getElementById('confirm_password').value;
+            const pwdOk = checkPwdRequirements(pwd);
+            if (!pwdOk) { showErr('password-error', 'Senha não cumpre todos os requisitos'); ok = false; }
+            else hideErr('password-error');
+            if (pwd !== conf) { showErr('confirm_password-error', 'As senhas não coincidem'); ok = false; }
+            else hideErr('confirm_password-error');
+            if (!document.getElementById('terms').checked || !document.getElementById('accuracy').checked || !document.getElementById('verification_consent').checked) {
+                showErr('terms-error', 'Deve aceitar todos os termos para continuar'); ok = false;
+            } else hideErr('terms-error');
+        }
+        return ok;
+    }
+
+    function checkRequired(id, validator, errMsg, isSelect=false, isTextarea=false) {
+        const el = document.getElementById(id);
+        const val = el ? el.value.trim() : '';
+        if (!validator(val)) {
+            el?.classList.add('error');
+            showErr(id + '-error', errMsg);
+            return false;
+        }
+        el?.classList.remove('error');
+        el?.classList.add('success');
+        hideErr(id + '-error');
+        return true;
+    }
+
+    function showErr(id, msg) {
+        const el = document.getElementById(id);
+        if (el) { el.textContent = msg; el.style.display='block'; }
+    }
+    function hideErr(id) {
+        const el = document.getElementById(id);
+        if (el) el.style.display='none';
+    }
+
+    // ── Interacções de UI ─────────────────────────────────────────────────────
+    function selectRole(role, el) {}
+
+    function toggleCertField(has) {
+        document.getElementById('cert-type-field').style.display = has ? 'block' : 'none';
+        document.querySelectorAll('[name="has_teaching_cert"]').forEach(r => {
+            const parent = r.closest('.level-chip');
+            parent?.classList.toggle('selected', r.value === String(has) && r.checked);
+        });
+    }
+    document.querySelectorAll('[name="has_teaching_cert"]').forEach(r => {
+        r.addEventListener('change', () => toggleCertField(r.value === 'true'));
+    });
+
+    function toggleLevel(level) {
+        if (selectedLevels.has(level)) selectedLevels.delete(level);
+        else selectedLevels.add(level);
+        document.getElementById(`level-${level}`).classList.toggle('selected', selectedLevels.has(level));
+    }
+
+    function toggleSubject(name, el) {
+        if (selectedSubjects.has(name)) {
+            selectedSubjects.delete(name);
+            el.classList.remove('selected');
+        } else {
+            if (selectedSubjects.size >= 5) {
+                if (typeof VClass !== 'undefined') VClass.showNotification('Máximo 5 disciplinas', 'warning');
+                return;
+            }
+            selectedSubjects.add(name);
+            el.classList.add('selected');
+        }
+        document.getElementById('subjects-count').textContent = selectedSubjects.size;
+    }
+
+    function selectDigital(level) {
+        digitalLiteracy = level;
+        ['basico','intermedio','avancado'].forEach(l => {
+            document.getElementById(`dig-${l}`).classList.toggle('selected', l === level);
+        });
+        hideErr('digital_literacy-error');
+    }
+
+    function toggleEquipment(type) {
+        if (type === 'computer') {
+            hasComputer = !hasComputer;
+            const badge = document.getElementById('computer-badge');
+            const icon  = document.getElementById('computer-icon');
+            const check = document.getElementById('computer-check');
+            badge.className = hasComputer ? 'req-ok p-4 rounded-xl border border-green-300 cursor-pointer transition' : 'req-badge p-4 rounded-xl border border-gray-200 cursor-pointer transition';
+            icon.className  = `fas fa-laptop text-2xl ${hasComputer ? 'text-green-500' : 'text-gray-400'}`;
+            check.innerHTML = hasComputer ? '<i class="fas fa-check text-green-500 text-xs"></i>' : '';
+            check.className = `ml-auto w-5 h-5 rounded-full border-2 flex items-center justify-center ${hasComputer ? 'border-green-500 bg-green-50' : 'border-gray-300'}`;
+        } else {
+            hasInternet = !hasInternet;
+            const badge = document.getElementById('internet-badge');
+            const icon  = document.getElementById('internet-icon');
+            const check = document.getElementById('internet-check');
+            badge.className = hasInternet ? 'req-ok p-4 rounded-xl border border-green-300 cursor-pointer transition' : 'req-badge p-4 rounded-xl border border-gray-200 cursor-pointer transition';
+            icon.className  = `fas fa-wifi text-2xl ${hasInternet ? 'text-green-500' : 'text-gray-400'}`;
+            check.innerHTML = hasInternet ? '<i class="fas fa-check text-green-500 text-xs"></i>' : '';
+            check.className = `ml-auto w-5 h-5 rounded-full border-2 flex items-center justify-center ${hasInternet ? 'border-green-500 bg-green-50' : 'border-gray-300'}`;
+        }
+        const warn = !hasComputer || !hasInternet;
+        document.getElementById('equipment-warning').style.display = warn ? 'block' : 'none';
+        hideErr('equipment-error');
+    }
+
+    function updateLetterCount() {
+        const val = document.getElementById('motivation_letter').value;
+        document.getElementById('letter-count').textContent = val.length;
+    }
+
+    function checkPwd() {
+        const pwd = document.getElementById('password').value;
+        const reqs = [
+            { id: 'req-length', icon: 'icon-length', ok: pwd.length >= 8 },
+            { id: 'req-upper',  icon: 'icon-upper',  ok: /[A-Z]/.test(pwd) },
+            { id: 'req-lower',  icon: 'icon-lower',  ok: /[a-z]/.test(pwd) },
+            { id: 'req-number', icon: 'icon-number',  ok: /[0-9]/.test(pwd) },
+            { id: 'req-special',icon: 'icon-special', ok: /[^A-Za-z0-9]/.test(pwd) }
+        ];
+        reqs.forEach(r => {
+            const req = document.getElementById(r.id);
+            const icon = document.getElementById(r.icon);
+            req.className = 'req-badge' + (r.ok ? ' req-ok' : '');
+            icon.className = `fas ${r.ok ? 'fa-check-circle text-green-500' : 'fa-times-circle text-red-400'} text-sm`;
+        });
+        const score = reqs.filter(r => r.ok).length;
+        const bars = ['s1','s2','s3','s4','s5'].map(id => document.getElementById(id));
+        const colors = ['#ef4444','#f97316','#eab308','#22c55e','#10b981'];
+        const labels = ['Muito fraca','Fraca','Razoável','Forte','Muito forte'];
+        bars.forEach((b,i) => {
+            b.style.background = i < score && score > 0 ? colors[score-1] : '#e5e7eb';
+        });
+        const lbl = document.getElementById('strength-label');
+        lbl.textContent = score > 0 ? labels[score-1] : 'Força da senha';
+        lbl.style.color = score > 0 ? colors[score-1] : '#9ca3af';
+    }
+
+    function checkPwdRequirements(pwd) {
+        return pwd.length >= 8 && /[A-Z]/.test(pwd) && /[a-z]/.test(pwd) && /[0-9]/.test(pwd) && /[^A-Za-z0-9]/.test(pwd);
+    }
+
+    function togglePwd(id, btn) {
+        const input = document.getElementById(id);
+        const icon  = btn.querySelector('i');
+        if (input.type === 'password') { input.type = 'text'; icon.className = 'fas fa-eye-slash text-sm'; }
+        else                           { input.type = 'password'; icon.className = 'fas fa-eye text-sm'; }
+    }
+
+    // ── Score estimado ────────────────────────────────────────────────────────
+    function calcEstimatedScore() {
+        let s = 0;
+        const degree = document.getElementById('degree').value;
+        s += {doutoramento:30,mestrado:25,licenciatura:20,bacharel:12,outro:5}[degree] || 0;
+        s += Math.min((parseInt(document.getElementById('years_experience').value) || 0) * 2, 20);
+        const cert = document.querySelector('input[name="has_teaching_cert"]:checked');
+        if (cert?.value === 'true') s += 15;
+        s += {avancado:10,intermedio:6,basico:2}[digitalLiteracy] || 0;
+        if (hasComputer)  s += 5;
+        if (hasInternet)  s += 5;
+        const letter = document.getElementById('motivation_letter').value.length;
+        s += letter >= 800 ? 10 : letter >= 500 ? 7 : letter >= 200 ? 4 : 0;
+        const hours = parseInt(document.getElementById('available_hours').value) || 0;
+        s += hours >= 10 ? 5 : hours >= 5 ? 3 : 0;
+        return Math.min(s, 100);
+    }
+
+    function buildSummary() {
+        const score = calcEstimatedScore();
+        // Animate circle
+        const circumference = 213.6;
+        const offset = circumference - (score / 100) * circumference;
+        const circle = document.getElementById('score-circle');
+        circle.style.strokeDashoffset = offset;
+        circle.style.stroke = score >= 70 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444';
+        document.getElementById('score-display').textContent = score;
+        document.getElementById('score-display').style.color = score >= 70 ? '#059669' : score >= 50 ? '#d97706' : '#dc2626';
+        const labels = score >= 80 ? '🌟 Perfil excelente' : score >= 65 ? '✅ Perfil promissor' : score >= 50 ? '⚠️ Perfil a desenvolver' : '❗ Recomenda-se reforçar a candidatura';
+        document.getElementById('score-label-text').textContent = labels;
+
+        // Build summary
+        const g = (id) => document.getElementById(id)?.value || '—';
+        const cert = document.querySelector('input[name="has_teaching_cert"]:checked');
+        const certText = cert ? (cert.value === 'true' ? '✅ Sim' : '❌ Não') : '—';
+        const levelsMap = { primary: 'Primário', secondary: 'Secundário', tertiary: 'Superior' };
+
+        document.getElementById('summary-content').innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-gray-50 rounded-xl p-4">
+                    <div class="text-xs font-semibold text-purple-600 uppercase mb-3">👤 Dados Pessoais</div>
+                    <div class="space-y-1.5 text-sm">
+                        <div><span class="text-gray-500">Nome:</span> <span class="font-medium">${g('full_name')}</span></div>
+                        <div><span class="text-gray-500">Email:</span> <span class="font-medium">${g('email')}</span></div>
+                        <div><span class="text-gray-500">Telefone:</span> <span class="font-medium">${g('phone')}</span></div>
+                        <div><span class="text-gray-500">País:</span> <span class="font-medium">${g('country_id').toUpperCase()}</span></div>
+                        <div><span class="text-gray-500">Localização:</span> <span class="font-medium">${g('city')}, ${g('province')}</span></div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4">
+                    <div class="text-xs font-semibold text-indigo-600 uppercase mb-3">🎓 Qualificações</div>
+                    <div class="space-y-1.5 text-sm">
+                        <div><span class="text-gray-500">Grau:</span> <span class="font-medium capitalize">${g('degree')}</span></div>
+                        <div><span class="text-gray-500">Área:</span> <span class="font-medium">${g('degree_field')}</span></div>
+                        <div><span class="text-gray-500">Instituição:</span> <span class="font-medium">${g('institution')}</span></div>
+                        <div><span class="text-gray-500">Ano:</span> <span class="font-medium">${g('graduation_year')}</span></div>
+                        <div><span class="text-gray-500">Cert. Docência:</span> <span class="font-medium">${certText}</span></div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4">
+                    <div class="text-xs font-semibold text-green-600 uppercase mb-3">🏫 Experiência</div>
+                    <div class="space-y-1.5 text-sm">
+                        <div><span class="text-gray-500">Experiência:</span> <span class="font-medium">${g('years_experience')} anos</span></div>
+                        <div><span class="text-gray-500">Níveis:</span> <span class="font-medium">${[...selectedLevels].map(l=>levelsMap[l]||l).join(', ') || '—'}</span></div>
+                        <div><span class="text-gray-500">Disciplinas:</span> <span class="font-medium">${[...selectedSubjects].join(', ') || '—'}</span></div>
+                        <div><span class="text-gray-500">Referência:</span> <span class="font-medium">${g('reference_1_name')}</span></div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4">
+                    <div class="text-xs font-semibold text-blue-600 uppercase mb-3">💻 Digital & Disponibilidade</div>
+                    <div class="space-y-1.5 text-sm">
+                        <div><span class="text-gray-500">Literacia:</span> <span class="font-medium capitalize">${digitalLiteracy || '—'}</span></div>
+                        <div><span class="text-gray-500">Computador:</span> <span class="font-medium">${hasComputer ? '✅ Sim' : '❌ Não'}</span></div>
+                        <div><span class="text-gray-500">Internet:</span> <span class="font-medium">${hasInternet ? '✅ Sim' : '❌ Não'}</span></div>
+                        <div><span class="text-gray-500">Disponibilidade:</span> <span class="font-medium">${g('available_hours')}h/semana</span></div>
+                        <div><span class="text-gray-500">Horário:</span> <span class="font-medium capitalize">${g('preferred_schedule') || '—'}</span></div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // ── Submissão ─────────────────────────────────────────────────────────────
+    async function submitApplication() {
+        const btn = document.getElementById('submit-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i> Enviando...';
+
+        const cert = document.querySelector('input[name="has_teaching_cert"]:checked');
+        const payload = {
+            full_name:          document.getElementById('full_name').value.trim(),
+            email:              document.getElementById('email').value.trim(),
+            phone:              document.getElementById('phone').value.trim(),
+            birth_date:         document.getElementById('birth_date').value,
+            national_id:        document.getElementById('national_id').value.trim(),
+            country_id:         document.getElementById('country_id').value,
+            province:           document.getElementById('province').value.trim(),
+            city:               document.getElementById('city').value.trim(),
+            address:            document.getElementById('address').value.trim(),
+            degree:             document.getElementById('degree').value,
+            degree_field:       document.getElementById('degree_field').value.trim(),
+            institution:        document.getElementById('institution').value.trim(),
+            graduation_year:    parseInt(document.getElementById('graduation_year').value),
+            has_teaching_cert:  cert?.value === 'true',
+            teaching_cert_type: document.getElementById('teaching_cert_type').value.trim(),
+            years_experience:   parseInt(document.getElementById('years_experience').value) || 0,
+            current_school:     document.getElementById('current_school').value.trim(),
+            teaching_levels:    [...selectedLevels],
+            subjects:           [...selectedSubjects],
+            subjects_other:     document.getElementById('subjects_other').value.trim(),
+            motivation_letter:  document.getElementById('motivation_letter').value.trim(),
+            reference_1_name:   document.getElementById('reference_1_name').value.trim(),
+            reference_1_phone:  document.getElementById('reference_1_phone').value.trim(),
+            reference_1_role:   document.getElementById('reference_1_role').value.trim(),
+            reference_2_name:   document.getElementById('reference_2_name').value.trim(),
+            reference_2_phone:  document.getElementById('reference_2_phone').value.trim(),
+            digital_literacy:   digitalLiteracy,
+            has_computer:       hasComputer === true,
+            has_internet:       hasInternet === true,
+            available_hours:    parseInt(document.getElementById('available_hours').value),
+            preferred_schedule: document.getElementById('preferred_schedule').value,
+            password:           document.getElementById('password').value,
+            confirm_password:   document.getElementById('confirm_password').value
+        };
+
+        try {
+            const res = await fetch('/api/teacher-verification/apply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                document.getElementById('step-6').classList.add('hidden');
+                document.getElementById('step-success').classList.remove('hidden');
+                if (data.message) {
+                    document.getElementById('success-message').textContent = data.message;
+                }
+                // Guardar email para verificação posterior
+                localStorage.setItem('pending_teacher_email', payload.email);
+            } else {
+                document.getElementById('alert-container').innerHTML = `
+                    <div class="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 mb-4">
+                        <i class="fas fa-exclamation-circle text-red-500 flex-shrink-0"></i>
+                        <div><strong>Erro:</strong> ${data.error || 'Erro ao submeter candidatura'}</div>
+                    </div>`;
+                document.getElementById('alert-container').scrollIntoView({ behavior: 'smooth' });
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Submeter Candidatura';
+            }
+        } catch (err) {
+            document.getElementById('alert-container').innerHTML = `
+                <div class="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 mb-4">
+                    <i class="fas fa-wifi text-red-500 flex-shrink-0"></i>
+                    Erro de ligação. Verifique a sua internet e tente novamente.
+                </div>`;
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Submeter Candidatura';
+        }
+    }
+</script>
+</body>
+</html>

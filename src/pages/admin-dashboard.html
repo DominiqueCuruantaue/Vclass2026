@@ -166,6 +166,10 @@
                 <i class="fas fa-bell"></i> Alertas
                 <span id="badge-alerts" class="ml-auto bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full hidden"></span>
             </div>
+            <div class="nav-item" onclick="showTab('teachers')" id="nav-teachers">
+                <i class="fas fa-user-check"></i> Professores
+                <span id="badge-teachers" class="ml-auto bg-amber-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full hidden"></span>
+            </div>
 
             <div class="nav-section">Sistema</div>
             <div class="nav-item" onclick="window.location.href='/creator-dashboard.html'">
@@ -481,6 +485,107 @@
                     <div class="section-card p-5">
                         <div class="section-title mb-4"><i class="fas fa-globe text-green-500 mr-2"></i>Utilizadores por País</div>
                         <div style="height:200px"><canvas id="countryChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ TEACHER VERIFICATION TAB ═══════════════════════ -->
+            <div id="tab-teachers" class="hidden">
+                <!-- Stats de candidaturas -->
+                <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6" id="tv-stats-grid">
+                    <div class="section-card p-4 text-center">
+                        <div class="text-2xl font-bold text-gray-800" id="tv-total">—</div>
+                        <div class="text-xs text-gray-500 mt-1">Total</div>
+                    </div>
+                    <div class="section-card p-4 text-center">
+                        <div class="text-2xl font-bold text-amber-600" id="tv-pending">—</div>
+                        <div class="text-xs text-gray-500 mt-1">Pendentes</div>
+                    </div>
+                    <div class="section-card p-4 text-center">
+                        <div class="text-2xl font-bold text-blue-600" id="tv-review">—</div>
+                        <div class="text-xs text-gray-500 mt-1">Em Análise</div>
+                    </div>
+                    <div class="section-card p-4 text-center">
+                        <div class="text-2xl font-bold text-green-600" id="tv-approved">—</div>
+                        <div class="text-xs text-gray-500 mt-1">Aprovados</div>
+                    </div>
+                    <div class="section-card p-4 text-center">
+                        <div class="text-2xl font-bold text-red-600" id="tv-rejected">—</div>
+                        <div class="text-xs text-gray-500 mt-1">Rejeitados</div>
+                    </div>
+                    <div class="section-card p-4 text-center">
+                        <div class="text-2xl font-bold text-orange-600" id="tv-flagged">—</div>
+                        <div class="text-xs text-gray-500 mt-1">Sinalizados</div>
+                    </div>
+                </div>
+
+                <!-- Filtros -->
+                <div class="section-card mb-4">
+                    <div class="p-4 flex flex-wrap gap-3 items-center">
+                        <div class="relative flex-1 min-w-48">
+                            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                            <input type="text" id="tv-search" placeholder="Pesquisar por nome, email ou disciplina..."
+                                class="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400"
+                                oninput="filterTeacherApps()">
+                        </div>
+                        <select id="tv-filter-status" class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400" onchange="filterTeacherApps()">
+                            <option value="all">Todos os estados</option>
+                            <option value="pending">Pendentes</option>
+                            <option value="under_review">Em Análise</option>
+                            <option value="info_requested">Info Solicitada</option>
+                            <option value="approved">Aprovados</option>
+                            <option value="rejected">Rejeitados</option>
+                        </select>
+                        <select id="tv-filter-country" class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400" onchange="filterTeacherApps()">
+                            <option value="all">Todos os países</option>
+                            <option value="mz">🇲🇿 Moçambique</option>
+                            <option value="ao">🇦🇴 Angola</option>
+                        </select>
+                        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                            <input type="checkbox" id="tv-filter-flagged" onchange="filterTeacherApps()" class="rounded"> Só sinalizadas
+                        </label>
+                        <button onclick="loadTeacherApplications()" class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition">
+                            <i class="fas fa-sync mr-1"></i> Atualizar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabela de candidaturas -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <div class="section-title"><i class="fas fa-user-check text-purple-500"></i> Candidaturas de Professores</div>
+                        <a href="/register-teacher.html" target="_blank" class="text-xs text-purple-600 hover:underline">Ver formulário →</a>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="data-table" id="tv-table">
+                            <thead>
+                                <tr>
+                                    <th>Candidato</th>
+                                    <th>Qualificação</th>
+                                    <th>Disciplinas</th>
+                                    <th>Score</th>
+                                    <th>Estado</th>
+                                    <th>Data</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tv-table-body">
+                                <tr><td colspan="7" class="text-center text-gray-400 py-8">A carregar candidaturas...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Modal de detalhes -->
+                <div id="tv-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 hidden">
+                    <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        <div class="flex items-center justify-between p-6 border-b border-gray-100">
+                            <h2 class="text-lg font-bold text-gray-900">Detalhes da Candidatura</h2>
+                            <button onclick="closeTvModal()" class="text-gray-400 hover:text-gray-600 transition">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                        <div id="tv-modal-content" class="p-6"><!-- preenchido por JS --></div>
                     </div>
                 </div>
             </div>
@@ -1058,8 +1163,8 @@ function renderTopLessonsAnalytics(lessons) {
 // ═══════════════════════════════════════════════════════════════════
 // TAB NAVIGATION
 // ═══════════════════════════════════════════════════════════════════
-const TABS = ['overview','users','content','countries','analytics','alerts'];
-const BREADCRUMBS = { overview:'Visão Geral', users:'Utilizadores', content:'Conteúdo', countries:'Países', analytics:'Analytics', alerts:'Alertas' };
+const TABS = ['overview','users','content','countries','analytics','alerts','teachers'];
+const BREADCRUMBS = { overview:'Visão Geral', users:'Utilizadores', content:'Conteúdo', countries:'Países', analytics:'Analytics', alerts:'Alertas', teachers:'Verificação de Professores' };
 
 function showTab(tab) {
     TABS.forEach(t => {
@@ -1070,6 +1175,7 @@ function showTab(tab) {
 
     // Render analytics charts when tab becomes visible
     if (tab === 'analytics' && DATA) renderAnalytics();
+    if (tab === 'teachers') loadTeacherApplications();
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1109,6 +1215,301 @@ function showToast(msg, type='info') {
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => toast.classList.add('hidden'), 3000);
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// TEACHER VERIFICATION PANEL
+// ═══════════════════════════════════════════════════════════════════
+let tvApps = [];
+
+async function loadTeacherApplications() {
+    const token = localStorage.getItem('accessToken');
+    try {
+        const [statsRes, appsRes] = await Promise.all([
+            fetch('/api/teacher-verification/stats', { headers: { Authorization: `Bearer ${token}` } }),
+            fetch('/api/teacher-verification/applications?limit=50', { headers: { Authorization: `Bearer ${token}` } })
+        ]);
+        const statsData = await statsRes.json();
+        const appsData  = await appsRes.json();
+
+        if (statsData.success) {
+            const s = statsData.data;
+            document.getElementById('tv-total').textContent    = s.total;
+            document.getElementById('tv-pending').textContent  = s.pending;
+            document.getElementById('tv-review').textContent   = s.under_review;
+            document.getElementById('tv-approved').textContent = s.approved;
+            document.getElementById('tv-rejected').textContent = s.rejected;
+            document.getElementById('tv-flagged').textContent  = s.flagged;
+            const badge = document.getElementById('badge-teachers');
+            if (s.pending > 0) { badge.textContent = s.pending; badge.classList.remove('hidden'); }
+        }
+
+        if (appsData.success) {
+            tvApps = appsData.data.applications || [];
+            renderTeacherTable(tvApps);
+        }
+    } catch(e) { console.error('TV load error:', e); }
+}
+
+function filterTeacherApps() {
+    const search  = document.getElementById('tv-search').value.toLowerCase();
+    const status  = document.getElementById('tv-filter-status').value;
+    const country = document.getElementById('tv-filter-country').value;
+    const flagged = document.getElementById('tv-filter-flagged').checked;
+
+    let filtered = tvApps;
+    if (status  !== 'all') filtered = filtered.filter(a => a.status === status);
+    if (country !== 'all') filtered = filtered.filter(a => a.country_id === country);
+    if (flagged) filtered = filtered.filter(a => a.flagged);
+    if (search)  filtered = filtered.filter(a =>
+        a.full_name?.toLowerCase().includes(search) ||
+        a.email?.toLowerCase().includes(search) ||
+        a.subjects?.some(s => s.toLowerCase().includes(search))
+    );
+    renderTeacherTable(filtered);
+}
+
+function renderTeacherTable(apps) {
+    const tbody = document.getElementById('tv-table-body');
+    if (!apps.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-400 py-8">Nenhuma candidatura encontrada</td></tr>';
+        return;
+    }
+
+    const statusMap = {
+        pending:        { cls:'pill-pending',   lbl:'Pendente' },
+        under_review:   { cls:'pill-review',    lbl:'Em Análise' },
+        info_requested: { cls:'pill-info',      lbl:'Info Pedida' },
+        approved:       { cls:'pill-approved',  lbl:'Aprovado' },
+        rejected:       { cls:'pill-rejected',  lbl:'Rejeitado' }
+    };
+    const degreeShort = { licenciatura:'Lic.', mestrado:'Mestre', doutoramento:'PhD', bacharel:'Bach.', outro:'Outro' };
+
+    tbody.innerHTML = apps.map(a => {
+        const s = statusMap[a.status] || { cls:'', lbl: a.status };
+        const score = a.score != null ? `<span class="font-bold ${a.score>=70?'text-green-600':a.score>=50?'text-yellow-600':'text-red-600'}">${a.score}</span>` : '<span class="text-gray-300">—</span>';
+        const flag  = a.flagged ? '<i class="fas fa-flag text-red-400 text-xs ml-1" title="Sinalizado"></i>' : '';
+        const certBadge = a.has_teaching_cert ? '<i class="fas fa-certificate text-amber-400 text-xs ml-1" title="Tem certificado de docência"></i>' : '';
+        const subjects = (a.subjects||[]).slice(0,2).join(', ') + ((a.subjects||[]).length > 2 ? '...' : '');
+        const date = new Date(a.submitted_at).toLocaleDateString('pt-PT',{day:'2-digit',month:'short'});
+        return `<tr>
+            <td>
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                         style="background:${avatarColor(a.full_name)}">${(a.full_name||'?')[0].toUpperCase()}</div>
+                    <div>
+                        <div class="font-semibold text-sm">${a.full_name}${flag}</div>
+                        <div class="text-xs text-gray-400">${a.email}</div>
+                    </div>
+                </div>
+            </td>
+            <td><span class="text-sm">${degreeShort[a.degree]||'—'}${certBadge}</span><div class="text-xs text-gray-400">${a.degree_field?.substring(0,20)||'—'}</div></td>
+            <td class="text-sm">${subjects || '—'}</td>
+            <td class="text-center">${score}/100</td>
+            <td><span class="pill ${s.cls}">${s.lbl}</span></td>
+            <td class="text-xs text-gray-500">${date}</td>
+            <td>
+                <div class="flex gap-1">
+                    <button onclick='openTvModal(${JSON.stringify(a)})' class="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs hover:bg-purple-200 transition font-medium">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    ${a.status==='pending'||a.status==='under_review'||a.status==='info_requested' ? `
+                    <button onclick="quickApprove('${a.id}')" class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200 transition font-medium">✓</button>
+                    <button onclick="quickReject('${a.id}')" class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200 transition font-medium">✕</button>
+                    ` : ''}
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function openTvModal(app) {
+    const stepLabels = { initial_screening:'Triagem Inicial', document_review:'Revisão de Docs', reference_check:'Verificação de Refs', interview:'Entrevista', final_review:'Revisão Final', completed:'Concluído' };
+    const certText = app.has_teaching_cert ? '✅ Sim' + (app.teaching_cert_type ? ` (${app.teaching_cert_type})` : '') : '❌ Não';
+    const flagHtml = app.flagged ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium"><i class="fas fa-flag"></i> Sinalizado</span>' : '';
+    const scoreColor = app.score>=70?'text-green-600':app.score>=50?'text-yellow-600':'text-red-600';
+
+    document.getElementById('tv-modal-content').innerHTML = `
+        <div class="space-y-5">
+            <!-- Header -->
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900">${app.full_name} ${flagHtml}</h3>
+                    <p class="text-sm text-gray-500">${app.email} · ${app.phone}</p>
+                    <p class="text-xs text-gray-400">ID: ${app.id} · Submetida: ${new Date(app.submitted_at).toLocaleDateString('pt-PT')}</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-3xl font-black ${scoreColor}">${app.score ?? '—'}<span class="text-sm font-normal text-gray-400">/100</span></div>
+                    <div class="text-xs text-gray-400">Score automático</div>
+                </div>
+            </div>
+
+            <!-- Grid de info -->
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div class="bg-gray-50 rounded-xl p-4">
+                    <div class="font-semibold text-gray-700 mb-2 text-xs uppercase">📋 Qualificações</div>
+                    <div class="space-y-1 text-gray-600">
+                        <div><strong>Grau:</strong> ${app.degree}</div>
+                        <div><strong>Área:</strong> ${app.degree_field}</div>
+                        <div><strong>Instituição:</strong> ${app.institution}</div>
+                        <div><strong>Certificado:</strong> ${certText}</div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4">
+                    <div class="font-semibold text-gray-700 mb-2 text-xs uppercase">👨‍🏫 Experiência</div>
+                    <div class="space-y-1 text-gray-600">
+                        <div><strong>Experiência:</strong> ${app.years_experience} anos</div>
+                        <div><strong>Escola:</strong> ${app.current_school || '—'}</div>
+                        <div><strong>Disciplinas:</strong> ${(app.subjects||[]).join(', ')}</div>
+                        <div><strong>Literacia:</strong> ${app.digital_literacy}</div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4">
+                    <div class="font-semibold text-gray-700 mb-2 text-xs uppercase">💻 Infra-estrutura</div>
+                    <div class="space-y-1 text-gray-600">
+                        <div><strong>Computador:</strong> ${app.has_computer?'✅':'❌'}</div>
+                        <div><strong>Internet:</strong> ${app.has_internet?'✅':'❌'}</div>
+                        <div><strong>Disponibilidade:</strong> ${app.available_hours}h/semana</div>
+                        <div><strong>Horário:</strong> ${app.preferred_schedule}</div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-xl p-4">
+                    <div class="font-semibold text-gray-700 mb-2 text-xs uppercase">📞 Referência</div>
+                    <div class="space-y-1 text-gray-600">
+                        <div><strong>Nome:</strong> ${app.reference_1_name||'—'}</div>
+                        <div><strong>Tel:</strong> ${app.reference_1_phone||'—'}</div>
+                        <div><strong>Cargo:</strong> ${app.reference_1_role||'—'}</div>
+                        ${app.reference_2_name ? `<div><strong>2ª Ref:</strong> ${app.reference_2_name}</div>` : ''}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Carta de motivação -->
+            <div>
+                <div class="font-semibold text-gray-700 mb-2 text-xs uppercase">✉️ Carta de Motivação</div>
+                <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-gray-700 leading-relaxed max-h-36 overflow-y-auto">${app.motivation_letter || '—'}</div>
+            </div>
+
+            <!-- Notas admin -->
+            <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1 uppercase">📝 Notas Internas</label>
+                <textarea id="tv-admin-notes" rows="3" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:border-purple-400"
+                    placeholder="Adicionar notas de avaliação...">${app.admin_notes||''}</textarea>
+            </div>
+
+            <!-- Acções -->
+            <div class="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                <button onclick="reviewAction('${app.id}','under_review')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition">
+                    <i class="fas fa-search mr-1"></i> Colocar em Análise
+                </button>
+                <button onclick="reviewAction('${app.id}','approved')" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition">
+                    <i class="fas fa-check mr-1"></i> Aprovar
+                </button>
+                <button onclick="rejectWithReason('${app.id}')" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition">
+                    <i class="fas fa-times mr-1"></i> Rejeitar
+                </button>
+                <button onclick="requestMoreInfo('${app.id}')" class="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-200 transition">
+                    <i class="fas fa-question mr-1"></i> Pedir Info
+                </button>
+                <button onclick="toggleFlag('${app.id}', ${!app.flagged})" class="px-4 py-2 ${app.flagged?'bg-gray-100 text-gray-600':'bg-red-100 text-red-700'} rounded-lg text-sm font-medium hover:opacity-80 transition">
+                    <i class="fas fa-flag mr-1"></i> ${app.flagged ? 'Remover Flag' : 'Sinalizar'}
+                </button>
+            </div>
+        </div>`;
+    document.getElementById('tv-modal').classList.remove('hidden');
+}
+
+function closeTvModal() { document.getElementById('tv-modal').classList.add('hidden'); }
+
+async function reviewAction(id, newStatus) {
+    const notes = document.getElementById('tv-admin-notes')?.value || '';
+    const token = localStorage.getItem('accessToken');
+    const body = { status: newStatus, admin_notes: notes };
+    if (newStatus === 'approved') {
+        if (!confirm(`Confirmar aprovação desta candidatura?`)) return;
+        const res = await fetch(`/api/teacher-verification/applications/${id}/approve`, {
+            method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`},
+            body: JSON.stringify({ notes })
+        });
+        const data = await res.json();
+        if (data.success) { showToast('Candidatura aprovada! Email de boas-vindas enviado.','success'); closeTvModal(); loadTeacherApplications(); }
+        else showToast(data.error||'Erro','error');
+        return;
+    }
+    const res = await fetch(`/api/teacher-verification/applications/${id}/review`, {
+        method:'PATCH', headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`},
+        body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.success) { showToast('Candidatura actualizada','success'); closeTvModal(); loadTeacherApplications(); }
+    else showToast(data.error||'Erro','error');
+}
+
+async function rejectWithReason(id) {
+    const reason = prompt('Motivo de rejeição (será comunicado ao candidato):');
+    if (!reason) return;
+    const token = localStorage.getItem('accessToken');
+    const res = await fetch(`/api/teacher-verification/applications/${id}/reject`, {
+        method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`},
+        body: JSON.stringify({ reason, allow_reapply: true, reapply_after_months: 6 })
+    });
+    const data = await res.json();
+    if (data.success) { showToast('Candidatura rejeitada','info'); closeTvModal(); loadTeacherApplications(); }
+    else showToast(data.error||'Erro','error');
+}
+
+async function requestMoreInfo(id) {
+    const message = prompt('Que informações adicionais são necessárias?');
+    if (!message) return;
+    const token = localStorage.getItem('accessToken');
+    const res = await fetch(`/api/teacher-verification/applications/${id}/request-info`, {
+        method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`},
+        body: JSON.stringify({ message })
+    });
+    const data = await res.json();
+    if (data.success) { showToast('Pedido de informação enviado','success'); closeTvModal(); loadTeacherApplications(); }
+    else showToast(data.error||'Erro','error');
+}
+
+async function toggleFlag(id, flag) {
+    const token = localStorage.getItem('accessToken');
+    const res = await fetch(`/api/teacher-verification/applications/${id}/review`, {
+        method:'PATCH', headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`},
+        body: JSON.stringify({ flagged: flag })
+    });
+    const data = await res.json();
+    if (data.success) { showToast(flag ? 'Candidatura sinalizada' : 'Flag removida', 'info'); closeTvModal(); loadTeacherApplications(); }
+}
+
+async function quickApprove(id) {
+    if (!confirm('Aprovar esta candidatura?')) return;
+    const token = localStorage.getItem('accessToken');
+    const res = await fetch(`/api/teacher-verification/applications/${id}/approve`, {
+        method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`},
+        body: JSON.stringify({ notes: 'Aprovação rápida pelo painel admin' })
+    });
+    const data = await res.json();
+    if (data.success) { showToast('Candidatura aprovada!','success'); loadTeacherApplications(); }
+    else showToast(data.error||'Erro','error');
+}
+
+async function quickReject(id) {
+    const reason = prompt('Motivo de rejeição:');
+    if (!reason) return;
+    await rejectWithReason(id);
+}
+
+// CSS extra para pills de estado de candidatura
+(function() {
+    const style = document.createElement('style');
+    style.textContent = `
+        .pill-pending   { background:#fffbeb; color:#92400e; border:1px solid #fcd34d; }
+        .pill-review    { background:#eff6ff; color:#1e40af; border:1px solid #93c5fd; }
+        .pill-info      { background:#fdf4ff; color:#7c3aed; border:1px solid #d8b4fe; }
+        .pill-approved  { background:#f0fdf4; color:#065f46; border:1px solid #6ee7b7; }
+        .pill-rejected  { background:#fef2f2; color:#991b1b; border:1px solid #fca5a5; }
+    `;
+    document.head.appendChild(style);
+})();
 </script>
 </body>
 </html>

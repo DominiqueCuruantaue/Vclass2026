@@ -31,6 +31,8 @@ import editorDashboardHtml from '../pages/editor-dashboard.html?raw'
 import countryDashboardHtml from '../pages/country-dashboard.html?raw'
 import financeDashboardHtml from '../pages/finance-dashboard.html?raw'
 import moderatorDashboardHtml from '../pages/moderator-dashboard.html?raw'
+import registerTeacherHtml from '../pages/register-teacher.html?raw'
+import teacherVerificationHtml from '../pages/teacher-verification.html?raw'
 
 // Serve HTML pages
 app.get('/', (c) => c.html(homeHtml))
@@ -71,5 +73,9 @@ app.get('/editor-dashboard.html',    (c) => c.html(editorDashboardHtml))
 app.get('/country-dashboard.html',   (c) => c.html(countryDashboardHtml))
 app.get('/finance-dashboard.html',   (c) => c.html(financeDashboardHtml))
 app.get('/moderator-dashboard.html', (c) => c.html(moderatorDashboardHtml))
+
+// Teacher Verification Flow
+app.get('/register-teacher.html',    (c) => c.html(registerTeacherHtml))
+app.get('/teacher-verification.html',(c) => c.html(teacherVerificationHtml))
 
 export default app

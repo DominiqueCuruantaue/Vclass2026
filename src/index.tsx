@@ -22,6 +22,7 @@ import editorRoutes from './routes/editor'
 import countryRoutes from './routes/country'
 import financeRoutes from './routes/finance'
 import moderatorRoutes from './routes/moderator'
+import teacherVerificationRoutes from './routes/teacher-verification'
 import pagesRoutes from './routes/pages'
 
 const app = new Hono()
@@ -66,13 +67,14 @@ app.route('/api/editor', editorRoutes)
 app.route('/api/country', countryRoutes)
 app.route('/api/finance', financeRoutes)
 app.route('/api/moderator', moderatorRoutes)
+app.route('/api/teacher-verification', teacherVerificationRoutes)
 
 // Health check
 app.get('/api/health', (c) => {
   return c.json({
     success: true,
     message: 'VClass API is running',
-    version: '1.3.0',
+    version: '1.4.0',
     timestamp: new Date().toISOString()
   })
 })

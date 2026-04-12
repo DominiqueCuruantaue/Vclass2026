@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estado da Candidatura - VClass</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/styles.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #f8f7ff 0%, #eef2ff 100%); min-height: 100vh; }
+        .card { background: white; border-radius: 1.25rem; box-shadow: 0 20px 60px rgba(109,40,217,0.1), 0 4px 20px rgba(0,0,0,0.05); }
+        .input-field {
+            width: 100%; padding: 0.625rem 0.875rem 0.625rem 2.5rem;
+            border: 1.5px solid #e5e7eb; border-radius: 0.625rem;
+            font-size: 0.9rem; outline: none; transition: all 0.2s;
+        }
+        .input-field:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
+        .btn-primary {
+            background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white;
+            border: none; padding: 0.75rem 1.5rem; border-radius: 0.625rem;
+            font-weight: 600; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+        }
+        .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(109,40,217,0.4); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* Timeline */
+        .timeline-item { display: flex; gap: 1rem; }
+        .timeline-dot {
+            flex-shrink: 0; width: 2rem; height: 2rem; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.7rem; font-weight: 700;
+        }
+        .timeline-line { width: 2px; background: #e5e7eb; margin: 0.25rem 0 0 0.9375rem; min-height: 1.5rem; }
+        .tl-done { background: #10b981; color: white; }
+        .tl-active { background: #7c3aed; color: white; animation: pulse 2s infinite; }
+        .tl-pending { background: #e5e7eb; color: #9ca3af; }
+
+        @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,0.4)} 50%{box-shadow:0 0 0 8px rgba(124,58,237,0)} }
+
+        /* Status badges */
+        .badge { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.375rem 0.875rem; border-radius: 2rem; font-size: 0.8rem; font-weight: 600; }
+        .badge-pending       { background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; }
+        .badge-under_review  { background: #eff6ff; color: #1e40af; border: 1px solid #93c5fd; }
+        .badge-info_requested{ background: #fdf4ff; color: #7c3aed; border: 1px solid #d8b4fe; }
+        .badge-approved      { background: #f0fdf4; color: #065f46; border: 1px solid #6ee7b7; }
+        .badge-rejected      { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
+
+        @keyframes fadeInUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+        .fade-in { animation: fadeInUp 0.4s ease; }
+    </style>
+</head>
+<body class="py-10 px-4">
+
+<div class="max-w-2xl mx-auto">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+        <a href="/home.html" class="inline-flex items-center gap-3 mb-6">
+            <div class="w-11 h-11 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                <i class="fas fa-graduation-cap text-white"></i>
+            </div>
+            <span class="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">VClass</span>
+        </a>
+        <h1 class="text-2xl font-bold text-gray-900 mb-2">Estado da Candidatura de Professor</h1>
+        <p class="text-sm text-gray-500">Insira o email usado na candidatura para verificar o estado</p>
+    </div>
+
+    <!-- Search form -->
+    <div class="card p-8 mb-6" id="search-card">
+        <div class="mb-5">
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Email da Candidatura</label>
+            <div class="relative">
+                <i class="fas fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                <input type="email" id="search-email" class="input-field" placeholder="professor@email.com"
+                    onkeydown="if(event.key==='Enter') searchStatus()">
+            </div>
+        </div>
+        <button class="btn-primary w-full" id="search-btn" onclick="searchStatus()">
+            <i class="fas fa-search mr-2"></i> Verificar Estado
+        </button>
+        <p class="text-center text-xs text-gray-400 mt-4">
+            Ainda não se candidatou? 
+            <a href="/register-teacher.html" class="text-purple-600 hover:underline font-medium">Candidatar-me agora →</a>
+        </p>
+    </div>
+
+    <!-- Loading -->
+    <div class="card p-8 text-center hidden" id="loading-card">
+        <i class="fas fa-circle-notch fa-spin text-purple-500 text-3xl mb-4"></i>
+        <p class="text-gray-500 text-sm">A verificar candidatura...</p>
+    </div>
+
+    <!-- Error -->
+    <div class="card p-8 text-center hidden" id="error-card">
+        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-search text-gray-400 text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-bold text-gray-900 mb-2">Candidatura não encontrada</h3>
+        <p class="text-sm text-gray-500 mb-6" id="error-msg">Nenhuma candidatura encontrada com este email.</p>
+        <div class="flex flex-col sm:flex-row gap-3 justify-center">
+            <button onclick="resetSearch()" class="btn-primary">
+                <i class="fas fa-search mr-2"></i> Tentar Novamente
+            </button>
+            <a href="/register-teacher.html" class="inline-flex items-center justify-center gap-2 px-4 py-3 border border-purple-600 text-purple-600 rounded-xl font-semibold text-sm hover:bg-purple-50 transition">
+                <i class="fas fa-file-alt"></i> Nova Candidatura
+            </a>
+        </div>
+    </div>
+
+    <!-- Result card -->
+    <div class="card fade-in hidden" id="result-card">
+
+        <!-- Status header -->
+        <div class="p-8 border-b border-gray-100">
+            <div class="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                    <div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Candidatura</div>
+                    <h2 class="text-xl font-bold text-gray-900" id="res-name">—</h2>
+                    <p class="text-sm text-gray-500 mt-0.5" id="res-email">—</p>
+                </div>
+                <div class="flex flex-col items-end gap-2">
+                    <div id="res-badge" class="badge badge-pending">
+                        <i class="fas fa-clock"></i> Pendente
+                    </div>
+                    <div class="text-xs text-gray-400" id="res-date">—</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeline de verificação -->
+        <div class="p-8 border-b border-gray-100">
+            <h3 class="font-semibold text-gray-800 mb-5 text-sm uppercase tracking-wide">Processo de Verificação</h3>
+            <div class="space-y-0" id="timeline-container">
+                <!-- Preenchido por JS -->
+            </div>
+        </div>
+
+        <!-- Informações adicionals -->
+        <div class="p-8 border-b border-gray-100" id="extra-info">
+            <!-- Preenchido por JS conforme status -->
+        </div>
+
+        <!-- Documentos (se existirem) -->
+        <div class="p-8 border-b border-gray-100 hidden" id="docs-section">
+            <h3 class="font-semibold text-gray-800 mb-3 text-sm">Documentos Submetidos</h3>
+            <div class="flex flex-wrap gap-2" id="docs-list"></div>
+        </div>
+
+        <!-- Acções do utilizador -->
+        <div class="p-8" id="actions-section">
+            <!-- Preenchido por JS -->
+        </div>
+    </div>
+
+    <!-- Demo info -->
+    <div class="card p-5 mt-4 bg-purple-50 border border-purple-200">
+        <div class="flex items-start gap-3">
+            <i class="fas fa-flask text-purple-500 mt-0.5"></i>
+            <div>
+                <p class="text-sm font-semibold text-purple-800 mb-1">Modo Demo — Emails de Teste</p>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="fillDemo('helder.chissano@gmail.com')" class="text-xs bg-white text-purple-600 border border-purple-300 px-2 py-1 rounded-lg hover:bg-purple-100 transition">
+                        helder.chissano@gmail.com <span class="text-gray-400">(pending)</span>
+                    </button>
+                    <button onclick="fillDemo('conceicao.ferreira@hotmail.com')" class="text-xs bg-white text-purple-600 border border-purple-300 px-2 py-1 rounded-lg hover:bg-purple-100 transition">
+                        conceicao.ferreira@hotmail.com <span class="text-gray-400">(under_review)</span>
+                    </button>
+                    <button onclick="fillDemo('sofia.manhique@gmail.com')" class="text-xs bg-white text-blue-600 border border-blue-300 px-2 py-1 rounded-lg hover:bg-blue-50 transition">
+                        sofia.manhique@gmail.com <span class="text-green-600">(aprovada ✅)</span>
+                    </button>
+                    <button onclick="fillDemo('r.tembe@yahoo.com')" class="text-xs bg-white text-red-600 border border-red-300 px-2 py-1 rounded-lg hover:bg-red-50 transition">
+                        r.tembe@yahoo.com <span class="text-red-500">(rejeitado ❌)</span>
+                    </button>
+                    <button onclick="fillDemo('p.nhavene@outlook.com')" class="text-xs bg-white text-amber-600 border border-amber-300 px-2 py-1 rounded-lg hover:bg-amber-50 transition">
+                        p.nhavene@outlook.com <span class="text-gray-400">(flagged ⚠️)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <p class="text-center text-xs text-gray-400 mt-6">
+        <a href="/home.html" class="hover:text-purple-600"><i class="fas fa-arrow-left mr-1"></i>Voltar ao início</a>
+        · <a href="/help.html" class="hover:text-purple-600">Centro de Ajuda</a>
+    </p>
+</div>
+
+<script src="/static/app.js"></script>
+<script>
+    const STEPS = [
+        { key: 'initial_screening', label: 'Triagem Inicial',            desc: 'Verificação automática dos dados e pontuação do perfil', icon: 'fa-filter' },
+        { key: 'document_review',   label: 'Revisão de Documentos',       desc: 'Análise do diploma, BI e certificados de docência', icon: 'fa-file-alt' },
+        { key: 'reference_check',   label: 'Verificação de Referências',  desc: 'Contacto com as referências profissionais indicadas', icon: 'fa-users' },
+        { key: 'interview',         label: 'Entrevista de Validação',     desc: 'Videoconferência de 30 min com a equipa pedagógica', icon: 'fa-video' },
+        { key: 'final_review',      label: 'Revisão Final',              desc: 'Decisão final pelo Comité de Admissão de Professores', icon: 'fa-clipboard-check' },
+        { key: 'completed',         label: 'Processo Concluído',          desc: 'Candidatura processada com decisão final comunicada', icon: 'fa-check-double' }
+    ];
+
+    const STATUS_CONFIG = {
+        pending:        { badge: 'badge-pending',       icon: 'fa-clock',         text: '⏳ Pendente' },
+        under_review:   { badge: 'badge-under_review',  icon: 'fa-magnifying-glass', text: '🔍 Em Análise' },
+        info_requested: { badge: 'badge-info_requested',icon: 'fa-question-circle', text: '📋 Info. Solicitada' },
+        approved:       { badge: 'badge-approved',      icon: 'fa-check-circle',  text: '✅ Aprovado' },
+        rejected:       { badge: 'badge-rejected',      icon: 'fa-times-circle',  text: '❌ Rejeitado' }
+    };
+
+    // Auto-fill email from localStorage (se veio do formulário)
+    window.addEventListener('load', () => {
+        const savedEmail = localStorage.getItem('pending_teacher_email');
+        if (savedEmail) {
+            document.getElementById('search-email').value = savedEmail;
+        }
+    });
+
+    function fillDemo(email) {
+        document.getElementById('search-email').value = email;
+        searchStatus();
+    }
+
+    function resetSearch() {
+        ['result-card','error-card','loading-card'].forEach(id => document.getElementById(id).classList.add('hidden'));
+        document.getElementById('search-card').classList.remove('hidden');
+        document.getElementById('search-email').value = '';
+        document.getElementById('search-email').focus();
+    }
+
+    async function searchStatus() {
+        const email = document.getElementById('search-email').value.trim();
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            document.getElementById('search-email').style.borderColor = '#ef4444';
+            return;
+        }
+        document.getElementById('search-email').style.borderColor = '';
+
+        const btn = document.getElementById('search-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i> A verificar...';
+
+        document.getElementById('search-card').classList.add('hidden');
+        document.getElementById('loading-card').classList.remove('hidden');
+
+        try {
+            const res = await fetch(`/api/teacher-verification/status/${encodeURIComponent(email)}`);
+            const data = await res.json();
+
+            document.getElementById('loading-card').classList.add('hidden');
+
+            if (data.success && data.data) {
+                renderResult(data.data);
+            } else {
+                document.getElementById('error-msg').textContent = data.error || 'Candidatura não encontrada';
+                document.getElementById('error-card').classList.remove('hidden');
+            }
+        } catch (err) {
+            document.getElementById('loading-card').classList.add('hidden');
+            document.getElementById('error-msg').textContent = 'Erro de ligação. Tente novamente.';
+            document.getElementById('error-card').classList.remove('hidden');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-search mr-2"></i> Verificar Estado';
+        }
+    }
+
+    function renderResult(d) {
+        document.getElementById('result-card').classList.remove('hidden');
+
+        // Header
+        document.getElementById('res-name').textContent = d.full_name;
+        document.getElementById('res-email').textContent = d.email;
+        document.getElementById('res-date').textContent = 'Submetida: ' + formatDate(d.submitted_at);
+
+        const cfg = STATUS_CONFIG[d.status] || STATUS_CONFIG.pending;
+        const badge = document.getElementById('res-badge');
+        badge.className = `badge ${cfg.badge}`;
+        badge.innerHTML = `<i class="fas ${cfg.icon}"></i> ${cfg.text}`;
+
+        // Timeline
+        buildTimeline(d.verification_step, d.status);
+
+        // Extra info
+        buildExtraInfo(d);
+
+        // Documentos
+        if (d.documents_submitted?.length > 0) {
+            document.getElementById('docs-section').classList.remove('hidden');
+            document.getElementById('docs-list').innerHTML = d.documents_submitted.map(doc =>
+                `<div class="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg text-sm text-gray-700 border border-gray-200">
+                    <i class="fas fa-file-pdf text-red-400"></i> ${doc}
+                </div>`
+            ).join('');
+        }
+
+        // Acções
+        buildActions(d);
+    }
+
+    function buildTimeline(currentStep, status) {
+        const stepIdx  = STEPS.findIndex(s => s.key === currentStep);
+        const done = status === 'approved' || status === 'rejected';
+
+        const html = STEPS.map((step, i) => {
+            let dotClass = 'tl-pending';
+            let iconHtml = `<i class="fas ${step.icon}"></i>`;
+            let textColor = 'text-gray-400';
+            let descColor = 'text-gray-400';
+
+            if (done || i < stepIdx) {
+                dotClass = 'tl-done'; iconHtml = '<i class="fas fa-check"></i>';
+                textColor = 'text-gray-700'; descColor = 'text-gray-500';
+            } else if (i === stepIdx && !done) {
+                dotClass = 'tl-active';
+                textColor = 'text-purple-700 font-bold'; descColor = 'text-purple-500';
+            }
+
+            const isLast = i === STEPS.length - 1;
+            return `
+                <div class="timeline-item">
+                    <div class="flex flex-col items-center">
+                        <div class="timeline-dot ${dotClass}">${iconHtml}</div>
+                        ${!isLast ? '<div class="timeline-line flex-1"></div>' : ''}
+                    </div>
+                    <div class="pb-5 pt-0.5">
+                        <div class="text-sm ${textColor}">${step.label}</div>
+                        <div class="text-xs ${descColor} mt-0.5">${step.desc}</div>
+                    </div>
+                </div>`;
+        }).join('');
+        document.getElementById('timeline-container').innerHTML = html;
+    }
+
+    function buildExtraInfo(d) {
+        const el = document.getElementById('extra-info');
+
+        if (d.status === 'approved') {
+            el.innerHTML = `
+                <div class="bg-green-50 border border-green-200 rounded-xl p-5">
+                    <div class="flex items-center gap-3 mb-3">
+                        <i class="fas fa-check-circle text-green-500 text-2xl"></i>
+                        <div>
+                            <div class="font-bold text-green-800">Parabéns! Candidatura Aprovada</div>
+                            <div class="text-sm text-green-600">Aprovada em ${formatDate(d.approved_at)}</div>
+                        </div>
+                    </div>
+                    <p class="text-sm text-green-700">
+                        Receberá em breve um email com as instruções de acesso ao painel de criação de conteúdo. 
+                        Bem-vindo(a) à família VClass!
+                    </p>
+                </div>`;
+        } else if (d.status === 'rejected') {
+            el.innerHTML = `
+                <div class="bg-red-50 border border-red-200 rounded-xl p-5">
+                    <div class="flex items-center gap-3 mb-3">
+                        <i class="fas fa-times-circle text-red-500 text-2xl"></i>
+                        <div>
+                            <div class="font-bold text-red-800">Candidatura Não Aprovada</div>
+                            <div class="text-sm text-red-600">Decisão em ${formatDate(d.rejected_at)}</div>
+                        </div>
+                    </div>
+                    ${d.rejection_reason ? `<div class="text-sm text-red-700 bg-red-100 rounded-lg p-3 mb-3">
+                        <strong>Motivo:</strong> ${d.rejection_reason}
+                    </div>` : ''}
+                    <p class="text-sm text-red-600">
+                        Pode candidatar-se novamente após 6 meses. Recomendamos que refine as suas qualificações e documentação.
+                    </p>
+                </div>`;
+        } else if (d.status === 'info_requested') {
+            el.innerHTML = `
+                <div class="bg-purple-50 border border-purple-200 rounded-xl p-5">
+                    <div class="flex items-center gap-3 mb-3">
+                        <i class="fas fa-clipboard-list text-purple-500 text-2xl"></i>
+                        <div>
+                            <div class="font-bold text-purple-800">Informações Adicionais Necessárias</div>
+                            <div class="text-sm text-purple-600">A equipa precisa de mais informações</div>
+                        </div>
+                    </div>
+                    <p class="text-sm text-purple-700">
+                        Foi enviado um email com instruções detalhadas. Responda prontamente para não atrasar o processo.
+                    </p>
+                </div>`;
+        } else if (d.status === 'under_review') {
+            const scoreHtml = d.score ? `
+                <div class="mt-3 pt-3 border-t border-blue-200">
+                    <div class="flex items-center gap-3">
+                        <div class="text-sm text-blue-700"><strong>Pontuação preliminar:</strong></div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-24 h-2 bg-blue-100 rounded-full overflow-hidden">
+                                <div class="h-2 rounded-full transition-all" style="width:${d.score}%; background: ${d.score>=70?'#10b981':d.score>=50?'#f59e0b':'#ef4444'}"></div>
+                            </div>
+                            <span class="text-sm font-bold ${d.score>=70?'text-green-600':d.score>=50?'text-yellow-600':'text-red-600'}">${d.score}/100</span>
+                        </div>
+                    </div>
+                </div>` : '';
+            el.innerHTML = `
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-5">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-magnifying-glass text-blue-500"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-blue-800">Em Análise Activa</div>
+                            <div class="text-sm text-blue-600">Etapa: ${d.step_label} · Prazo estimado: ${d.estimated_days_remaining} dia(s)</div>
+                        </div>
+                    </div>
+                    <p class="text-sm text-blue-700">A equipa pedagógica está a analisar a sua candidatura. Receberá uma notificação por email em breve.</p>
+                    ${scoreHtml}
+                </div>`;
+        } else {
+            // Pending
+            const score = d.score;
+            const scoreColor = score >= 70 ? 'text-green-600' : score >= 50 ? 'text-yellow-600' : score ? 'text-red-600' : 'text-gray-400';
+            el.innerHTML = `
+                <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-5">
+                    <div class="flex items-center gap-3 mb-3">
+                        <i class="fas fa-hourglass-half text-yellow-500 text-2xl"></i>
+                        <div>
+                            <div class="font-bold text-yellow-800">Aguardando Análise</div>
+                            <div class="text-sm text-yellow-600">Prazo estimado: até 5 dias úteis</div>
+                        </div>
+                    </div>
+                    <p class="text-sm text-yellow-700">
+                        A sua candidatura foi recebida e está na fila de análise. Será notificado(a) por email quando o processo avançar.
+                    </p>
+                    ${d.flagged ? `<div class="mt-3 flex items-center gap-2 text-sm text-amber-700 bg-amber-100 rounded-lg p-2">
+                        <i class="fas fa-flag text-amber-500"></i>
+                        <span>A sua candidatura requer verificação adicional de alguns dados.</span>
+                    </div>` : ''}
+                </div>`;
+        }
+    }
+
+    function buildActions(d) {
+        const el = document.getElementById('actions-section');
+        if (d.status === 'approved') {
+            el.innerHTML = `
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <a href="/login.html" class="btn-primary flex-1">
+                        <i class="fas fa-sign-in-alt mr-2"></i> Entrar na Plataforma
+                    </a>
+                    <a href="/help.html" class="inline-flex items-center justify-center gap-2 px-4 py-3 border border-purple-600 text-purple-600 rounded-xl font-semibold text-sm hover:bg-purple-50 transition flex-1">
+                        <i class="fas fa-question-circle"></i> Centro de Ajuda
+                    </a>
+                </div>`;
+        } else if (d.status === 'rejected') {
+            el.innerHTML = `
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <a href="/register-teacher.html" class="btn-primary flex-1" style="background: linear-gradient(135deg,#dc2626,#b91c1c)">
+                        <i class="fas fa-redo mr-2"></i> Nova Candidatura (após 6 meses)
+                    </a>
+                    <a href="/help.html" class="inline-flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 text-gray-600 rounded-xl font-semibold text-sm hover:bg-gray-50 transition flex-1">
+                        <i class="fas fa-headset"></i> Contactar Suporte
+                    </a>
+                </div>`;
+        } else {
+            el.innerHTML = `
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <button onclick="resetSearch()" class="btn-primary flex-1">
+                        <i class="fas fa-sync mr-2"></i> Actualizar Estado
+                    </button>
+                    <a href="/home.html" class="inline-flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 text-gray-600 rounded-xl font-semibold text-sm hover:bg-gray-50 transition flex-1">
+                        <i class="fas fa-home"></i> Voltar ao Início
+                    </a>
+                </div>
+                <p class="text-center text-xs text-gray-400 mt-4">
+                    Tem dúvidas? <a href="/help.html" class="text-purple-600 hover:underline">Contacte o suporte</a>
+                </p>`;
+        }
+    }
+
+    function formatDate(iso) {
+        if (!iso) return '—';
+        return new Date(iso).toLocaleDateString('pt-PT', { day:'2-digit', month:'short', year:'numeric' });
+    }
+</script>
+</body>
+</html>
