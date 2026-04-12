@@ -25,6 +25,7 @@ import creatorContentHtml from '../pages/creator-content.html?raw'
 import creatorLessonEditorHtml from '../pages/creator-lesson-editor.html?raw'
 import creatorStudentsHtml from '../pages/creator-students.html?raw'
 import creatorAnalyticsHtml from '../pages/creator-analytics.html?raw'
+import adminDashboardHtml from '../pages/admin-dashboard.html?raw'
 
 // Serve HTML pages
 app.get('/', (c) => c.html(homeHtml))
@@ -52,5 +53,8 @@ app.get('/creator-content.html',      (c) => c.html(creatorContentHtml))
 app.get('/creator-lesson-editor.html',(c) => c.html(creatorLessonEditorHtml))
 app.get('/creator-students.html',     (c) => c.html(creatorStudentsHtml))
 app.get('/creator-analytics.html',    (c) => c.html(creatorAnalyticsHtml))
+
+// Admin Panel
+app.get('/admin-dashboard.html', (c) => c.html(adminDashboardHtml))
 
 export default app

@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin — VClass</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+    <link href="/static/styles.css" rel="stylesheet">
+    <style>
+        :root { --admin: #1e1b4b; --admin-mid: #312e81; --accent: #7c3aed; }
+
+        /* ── Layout ──────────────────────────────────────────────────── */
+        body { background:#f1f5f9; font-family:'Inter',system-ui,sans-serif; }
+        #sidebar { width:260px; min-height:100vh; background:var(--admin); transition:transform .3s; }
+        #sidebar.collapsed { transform:translateX(-260px); }
+        #main { flex:1; min-width:0; }
+
+        /* ── Sidebar links ───────────────────────────────────────────── */
+        .nav-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:10px;
+                    color:#c4b5fd; font-size:.875rem; font-weight:500; transition:all .15s; cursor:pointer; }
+        .nav-item:hover { background:rgba(255,255,255,.08); color:#fff; }
+        .nav-item.active { background:var(--accent); color:#fff; box-shadow:0 4px 14px rgba(124,58,237,.4); }
+        .nav-item i { width:18px; text-align:center; font-size:.9rem; }
+        .nav-section { font-size:.68rem; font-weight:700; color:#6b7280; text-transform:uppercase;
+                       letter-spacing:.08em; padding:16px 16px 6px; }
+
+        /* ── Topbar ──────────────────────────────────────────────────── */
+        #topbar { background:#fff; border-bottom:1px solid #e2e8f0; }
+
+        /* ── Stat cards ──────────────────────────────────────────────── */
+        .stat-card { background:#fff; border-radius:16px; padding:20px 22px; position:relative; overflow:hidden;
+                     transition:transform .2s,box-shadow .2s; border:1px solid #f0f0f0; }
+        .stat-card:hover { transform:translateY(-3px); box-shadow:0 12px 32px rgba(0,0,0,.08); }
+        .stat-card .icon-wrap { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; }
+        .stat-num { font-size:1.9rem; font-weight:800; line-height:1; }
+        .stat-label { font-size:.78rem; color:#64748b; margin-top:2px; }
+        .stat-sub { font-size:.75rem; margin-top:10px; display:flex; align-items:center; gap:4px; }
+        .badge-up   { color:#16a34a; } .badge-down { color:#dc2626; }
+
+        /* ── Table ───────────────────────────────────────────────────── */
+        .data-table { width:100%; border-collapse:collapse; }
+        .data-table th { background:#f8fafc; font-size:.72rem; font-weight:700; color:#64748b; text-transform:uppercase;
+                         letter-spacing:.05em; padding:11px 14px; text-align:left; border-bottom:1px solid #e2e8f0; }
+        .data-table td { padding:12px 14px; font-size:.84rem; color:#1e293b; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+        .data-table tr:hover td { background:#f8fafc; }
+        .data-table tr:last-child td { border-bottom:none; }
+
+        /* ── Pills ───────────────────────────────────────────────────── */
+        .pill { display:inline-flex; align-items:center; gap:4px; font-size:.7rem; font-weight:700;
+                padding:3px 10px; border-radius:999px; white-space:nowrap; }
+        .pill-student  { background:#ede9fe; color:#5b21b6; }
+        .pill-teacher  { background:#dbeafe; color:#1d4ed8; }
+        .pill-admin    { background:#fef3c7; color:#92400e; }
+        .pill-published{ background:#d1fae5; color:#065f46; }
+        .pill-draft    { background:#fef9c3; color:#854d0e; }
+        .pill-archived { background:#f1f5f9; color:#475569; }
+        .pill-active   { background:#dcfce7; color:#166534; }
+        .pill-inactive { background:#fee2e2; color:#991b1b; }
+
+        /* ── Section card ────────────────────────────────────────────── */
+        .section-card { background:#fff; border-radius:16px; border:1px solid #f0f0f0; overflow:hidden; }
+        .section-header { padding:18px 22px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; justify-content:space-between; }
+        .section-title  { font-size:.95rem; font-weight:700; color:#0f172a; display:flex; align-items:center; gap:8px; }
+
+        /* ── Alerts ──────────────────────────────────────────────────── */
+        .alert-info    { border-left:3px solid #3b82f6; background:#eff6ff; }
+        .alert-warning { border-left:3px solid #f59e0b; background:#fffbeb; }
+        .alert-success { border-left:3px solid #22c55e; background:#f0fdf4; }
+        .alert-error   { border-left:3px solid #ef4444; background:#fef2f2; }
+
+        /* ── Animations ──────────────────────────────────────────────── */
+        @keyframes fadeUp { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);} }
+        @keyframes shimmer { 0%{background-position:-200% 0;}100%{background-position:200% 0;} }
+        .fade-up { animation:fadeUp .35s ease forwards; }
+        .skeleton { background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%);
+                    background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:8px; }
+
+        /* ── Tab system ──────────────────────────────────────────────── */
+        .tab-btn { padding:8px 18px; border-radius:10px; font-size:.82rem; font-weight:600; cursor:pointer;
+                   transition:all .15s; color:#64748b; border:1.5px solid transparent; }
+        .tab-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+        .tab-btn:not(.active):hover { border-color:#c4b5fd; color:var(--accent); }
+
+        /* ── Avatar ──────────────────────────────────────────────────── */
+        .avatar { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+                  font-size:.8rem; font-weight:700; color:#fff; flex-shrink:0; }
+
+        /* ── Mobile ──────────────────────────────────────────────────── */
+        @media (max-width:768px) {
+            #sidebar { position:fixed; z-index:50; height:100vh; }
+            #sidebar:not(.collapsed) { box-shadow:0 0 0 100vw rgba(0,0,0,.4); }
+        }
+
+        /* ── Chart container ─────────────────────────────────────────── */
+        .chart-wrap { position:relative; height:230px; }
+
+        /* ── Country flag ────────────────────────────────────────────── */
+        .flag { font-size:1.4rem; }
+
+        /* ── Search input ────────────────────────────────────────────── */
+        .search-input { border:1.5px solid #e2e8f0; border-radius:10px; padding:8px 14px 8px 36px;
+                        font-size:.84rem; outline:none; transition:border .15s; width:220px; }
+        .search-input:focus { border-color:var(--accent); }
+
+        /* ── Action buttons ──────────────────────────────────────────── */
+        .btn-sm { padding:5px 12px; border-radius:8px; font-size:.75rem; font-weight:600; cursor:pointer; transition:all .15s; }
+        .btn-primary { background:var(--accent); color:#fff; }
+        .btn-primary:hover { background:#6d28d9; }
+        .btn-ghost { background:transparent; border:1.5px solid #e2e8f0; color:#475569; }
+        .btn-ghost:hover { border-color:#c4b5fd; color:var(--accent); }
+        .btn-danger { background:#fee2e2; color:#991b1b; }
+        .btn-danger:hover { background:#fecaca; }
+        .btn-success { background:#dcfce7; color:#166534; }
+        .btn-success:hover { background:#bbf7d0; }
+
+        /* ── Progress mini bar ───────────────────────────────────────── */
+        .mini-bar { height:4px; border-radius:2px; background:#e2e8f0; overflow:hidden; }
+        .mini-bar-fill { height:100%; border-radius:2px; transition:width 1s ease; }
+
+        /* ── Scrollbar ───────────────────────────────────────────────── */
+        ::-webkit-scrollbar { width:5px; height:5px; }
+        ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:3px; }
+    </style>
+</head>
+<body>
+<div class="flex min-h-screen">
+
+    <!-- ═══ SIDEBAR ═══════════════════════════════════════════════════ -->
+    <aside id="sidebar" class="flex-shrink-0 flex flex-col">
+
+        <!-- Logo -->
+        <div class="flex items-center gap-3 px-5 py-5 border-b border-white/10">
+            <div class="w-9 h-9 rounded-xl bg-purple-500 flex items-center justify-center font-black text-white text-lg">V</div>
+            <div>
+                <div class="text-white font-bold text-sm">VClass</div>
+                <div class="text-purple-300 text-xs">Admin Panel</div>
+            </div>
+        </div>
+
+        <!-- Nav -->
+        <nav class="flex-1 p-3 overflow-y-auto space-y-0.5">
+            <div class="nav-section">Principal</div>
+            <div class="nav-item active" onclick="showTab('overview')" id="nav-overview">
+                <i class="fas fa-chart-pie"></i> Visão Geral
+            </div>
+            <div class="nav-item" onclick="showTab('users')" id="nav-users">
+                <i class="fas fa-users"></i> Utilizadores
+                <span id="badge-users" class="ml-auto bg-purple-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full hidden"></span>
+            </div>
+            <div class="nav-item" onclick="showTab('content')" id="nav-content">
+                <i class="fas fa-play-circle"></i> Conteúdo
+                <span id="badge-content" class="ml-auto bg-amber-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full hidden"></span>
+            </div>
+            <div class="nav-item" onclick="showTab('countries')" id="nav-countries">
+                <i class="fas fa-globe-africa"></i> Países
+            </div>
+
+            <div class="nav-section">Análises</div>
+            <div class="nav-item" onclick="showTab('analytics')" id="nav-analytics">
+                <i class="fas fa-chart-line"></i> Analytics
+            </div>
+            <div class="nav-item" onclick="showTab('alerts')" id="nav-alerts">
+                <i class="fas fa-bell"></i> Alertas
+                <span id="badge-alerts" class="ml-auto bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full hidden"></span>
+            </div>
+
+            <div class="nav-section">Sistema</div>
+            <div class="nav-item" onclick="window.location.href='/creator-dashboard.html'">
+                <i class="fas fa-chalkboard-teacher"></i> Painel Criador
+            </div>
+            <div class="nav-item" onclick="window.location.href='/dashboard.html'">
+                <i class="fas fa-graduation-cap"></i> Painel Estudante
+            </div>
+        </nav>
+
+        <!-- Admin user info -->
+        <div class="p-4 border-t border-white/10">
+            <div class="flex items-center gap-3">
+                <div class="avatar bg-purple-500" id="sidebar-avatar">A</div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-white text-sm font-semibold truncate" id="sidebar-name">Admin</div>
+                    <div class="text-purple-300 text-xs truncate" id="sidebar-email">admin@vclass.mz</div>
+                </div>
+                <button onclick="logout()" class="text-purple-400 hover:text-white transition" title="Sair">
+                    <i class="fas fa-sign-out-alt text-sm"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ═══ MAIN ═══════════════════════════════════════════════════════ -->
+    <div id="main" class="flex flex-col flex-1">
+
+        <!-- Topbar -->
+        <header id="topbar" class="flex items-center gap-4 px-6 py-3.5 sticky top-0 z-40">
+            <button onclick="toggleSidebar()" class="text-gray-500 hover:text-gray-800 transition lg:hidden">
+                <i class="fas fa-bars text-lg"></i>
+            </button>
+            <!-- Breadcrumb -->
+            <div class="flex items-center gap-2 text-sm text-gray-500">
+                <span class="font-semibold text-gray-800">Admin</span>
+                <i class="fas fa-chevron-right text-xs"></i>
+                <span id="breadcrumb-current">Visão Geral</span>
+            </div>
+            <div class="flex-1"></div>
+            <!-- Status dot -->
+            <div class="flex items-center gap-2 text-xs text-gray-500">
+                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                Sistema operacional
+            </div>
+            <!-- Refresh -->
+            <button onclick="loadData()" class="text-gray-400 hover:text-purple-600 transition" title="Atualizar dados">
+                <i class="fas fa-sync-alt" id="refresh-icon"></i>
+            </button>
+            <!-- Notifications -->
+            <div class="relative">
+                <button onclick="showTab('alerts')" class="text-gray-400 hover:text-purple-600 transition">
+                    <i class="fas fa-bell text-lg"></i>
+                    <span id="topbar-alert-badge" class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center hidden">!</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Content area -->
+        <main class="flex-1 overflow-auto p-6 space-y-6" id="content-area">
+
+            <!-- ══ OVERVIEW TAB ══════════════════════════════════════ -->
+            <div id="tab-overview">
+
+                <!-- Welcome banner -->
+                <div class="rounded-2xl p-6 mb-6 flex items-center justify-between"
+                     style="background:linear-gradient(135deg,#1e1b4b 0%,#4c1d95 60%,#7c3aed 100%);">
+                    <div>
+                        <h1 class="text-white text-xl font-bold" id="welcome-text">Olá, Admin 👋</h1>
+                        <p class="text-purple-200 text-sm mt-1">Aqui está o resumo da plataforma hoje</p>
+                    </div>
+                    <div class="text-right text-purple-200 text-sm hidden md:block">
+                        <div id="current-date" class="font-semibold text-white"></div>
+                        <div id="current-time" class="text-xs mt-0.5"></div>
+                    </div>
+                </div>
+
+                <!-- KPI grid — 6 cards -->
+                <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6" id="kpi-grid">
+                    <!-- skeleton -->
+                    <div class="stat-card col-span-2 lg:col-span-3 xl:col-span-6 h-28 skeleton"></div>
+                </div>
+
+                <!-- Charts + Alerts row -->
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-5">
+                    <!-- Chart -->
+                    <div class="xl:col-span-2 section-card">
+                        <div class="section-header">
+                            <div class="section-title"><i class="fas fa-chart-bar text-purple-500"></i> Actividade da Plataforma</div>
+                            <div class="flex gap-2">
+                                <button class="tab-btn active" id="chart-week-btn" onclick="setChartPeriod('week')">Semana</button>
+                                <button class="tab-btn" id="chart-month-btn" onclick="setChartPeriod('month')">Mês</button>
+                            </div>
+                        </div>
+                        <div class="p-5">
+                            <!-- Chart type selector -->
+                            <div class="flex gap-3 mb-4 flex-wrap">
+                                <label class="flex items-center gap-1.5 text-xs font-semibold text-gray-600 cursor-pointer">
+                                    <input type="checkbox" id="chk-users" checked onchange="updateActivityChart()" class="accent-purple-600"> Novos Utilizadores
+                                </label>
+                                <label class="flex items-center gap-1.5 text-xs font-semibold text-gray-600 cursor-pointer">
+                                    <input type="checkbox" id="chk-views" checked onchange="updateActivityChart()" class="accent-blue-600"> Visualizações
+                                </label>
+                                <label class="flex items-center gap-1.5 text-xs font-semibold text-gray-600 cursor-pointer">
+                                    <input type="checkbox" id="chk-exercises" checked onchange="updateActivityChart()" class="accent-green-600"> Exercícios
+                                </label>
+                            </div>
+                            <div class="chart-wrap"><canvas id="activityChart"></canvas></div>
+                        </div>
+                    </div>
+
+                    <!-- Alerts -->
+                    <div class="section-card flex flex-col">
+                        <div class="section-header">
+                            <div class="section-title"><i class="fas fa-bell text-amber-500"></i> Alertas</div>
+                        </div>
+                        <div class="p-4 flex-1 space-y-2 overflow-y-auto" id="alerts-mini" style="max-height:280px">
+                            <div class="skeleton h-14 rounded-xl"></div>
+                            <div class="skeleton h-14 rounded-xl mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent users + Recent lessons -->
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-5">
+                    <!-- Recent users -->
+                    <div class="section-card">
+                        <div class="section-header">
+                            <div class="section-title"><i class="fas fa-user-plus text-blue-500"></i> Últimos Utilizadores</div>
+                            <button onclick="showTab('users')" class="text-xs text-purple-600 hover:underline font-medium">Ver todos</button>
+                        </div>
+                        <div id="recent-users-table" class="overflow-x-auto">
+                            <div class="p-4 space-y-2">
+                                <div class="skeleton h-10 rounded-xl"></div>
+                                <div class="skeleton h-10 rounded-xl"></div>
+                                <div class="skeleton h-10 rounded-xl"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent lessons -->
+                    <div class="section-card">
+                        <div class="section-header">
+                            <div class="section-title"><i class="fas fa-video text-purple-500"></i> Últimas Lições</div>
+                            <button onclick="showTab('content')" class="text-xs text-purple-600 hover:underline font-medium">Ver todas</button>
+                        </div>
+                        <div id="recent-lessons-table" class="overflow-x-auto">
+                            <div class="p-4 space-y-2">
+                                <div class="skeleton h-10 rounded-xl"></div>
+                                <div class="skeleton h-10 rounded-xl"></div>
+                                <div class="skeleton h-10 rounded-xl"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top lessons -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <div class="section-title"><i class="fas fa-fire text-orange-500"></i> Lições Mais Vistas</div>
+                    </div>
+                    <div id="top-lessons-list" class="p-4">
+                        <div class="skeleton h-10 rounded-xl mb-2"></div>
+                        <div class="skeleton h-10 rounded-xl mb-2"></div>
+                        <div class="skeleton h-10 rounded-xl"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ USERS TAB ═════════════════════════════════════════ -->
+            <div id="tab-users" class="hidden">
+                <div class="section-card">
+                    <div class="section-header flex-wrap gap-3">
+                        <div class="section-title"><i class="fas fa-users text-blue-500"></i> Gestão de Utilizadores</div>
+                        <div class="flex gap-2 flex-wrap items-center">
+                            <!-- search -->
+                            <div class="relative">
+                                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                                <input type="text" id="user-search" class="search-input" placeholder="Pesquisar..."
+                                       oninput="filterUsers()">
+                            </div>
+                            <!-- role filter -->
+                            <select id="role-filter" onchange="filterUsers()"
+                                    class="border-1.5 border-gray-200 rounded-10 px-3 py-2 text-sm outline-none"
+                                    style="border:1.5px solid #e2e8f0;border-radius:10px;padding:7px 12px;font-size:.84rem;outline:none;">
+                                <option value="">Todos os papéis</option>
+                                <option value="student">Estudantes</option>
+                                <option value="teacher">Professores</option>
+                                <option value="admin">Administradores</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- User stats strip -->
+                    <div class="grid grid-cols-3 gap-px bg-gray-100" id="user-stats-strip">
+                        <div class="bg-white p-4 text-center">
+                            <div class="text-xl font-bold text-purple-600" id="us-students">—</div>
+                            <div class="text-xs text-gray-500">Estudantes</div>
+                        </div>
+                        <div class="bg-white p-4 text-center">
+                            <div class="text-xl font-bold text-blue-600" id="us-teachers">—</div>
+                            <div class="text-xs text-gray-500">Professores</div>
+                        </div>
+                        <div class="bg-white p-4 text-center">
+                            <div class="text-xl font-bold text-amber-600" id="us-admins">—</div>
+                            <div class="text-xs text-gray-500">Admins</div>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="data-table" id="users-table">
+                            <thead>
+                                <tr>
+                                    <th>Utilizador</th>
+                                    <th>Email</th>
+                                    <th>Papel</th>
+                                    <th>País</th>
+                                    <th>Estado</th>
+                                    <th>Registado</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-tbody">
+                                <tr><td colspan="7" class="text-center py-8 text-gray-400">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i>A carregar...
+                                </td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ CONTENT TAB ═══════════════════════════════════════ -->
+            <div id="tab-content" class="hidden">
+                <div class="section-card">
+                    <div class="section-header">
+                        <div class="section-title"><i class="fas fa-play-circle text-purple-500"></i> Gestão de Conteúdo</div>
+                        <div class="flex gap-2 flex-wrap items-center">
+                            <select id="status-filter" onchange="filterContent()"
+                                    style="border:1.5px solid #e2e8f0;border-radius:10px;padding:7px 12px;font-size:.84rem;outline:none;">
+                                <option value="">Todos os estados</option>
+                                <option value="published">Publicados</option>
+                                <option value="draft">Rascunhos</option>
+                                <option value="archived">Arquivados</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Content stats strip -->
+                    <div class="grid grid-cols-3 gap-px bg-gray-100">
+                        <div class="bg-white p-4 text-center">
+                            <div class="text-xl font-bold text-green-600" id="cs-published">—</div>
+                            <div class="text-xs text-gray-500">Publicadas</div>
+                        </div>
+                        <div class="bg-white p-4 text-center">
+                            <div class="text-xl font-bold text-amber-600" id="cs-draft">—</div>
+                            <div class="text-xs text-gray-500">Rascunhos</div>
+                        </div>
+                        <div class="bg-white p-4 text-center">
+                            <div class="text-xl font-bold text-purple-600" id="cs-total">—</div>
+                            <div class="text-xs text-gray-500">Total</div>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Título</th>
+                                    <th>Disciplina</th>
+                                    <th>Professor</th>
+                                    <th>Estado</th>
+                                    <th>Visualizações</th>
+                                    <th>Criado</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="content-tbody">
+                                <tr><td colspan="7" class="text-center py-8 text-gray-400">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i>A carregar...
+                                </td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ COUNTRIES TAB ══════════════════════════════════════ -->
+            <div id="tab-countries" class="hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5" id="countries-grid">
+                    <div class="section-card p-6 skeleton h-40"></div>
+                    <div class="section-card p-6 skeleton h-40"></div>
+                    <div class="section-card p-6 skeleton h-40"></div>
+                </div>
+            </div>
+
+            <!-- ══ ANALYTICS TAB ══════════════════════════════════════ -->
+            <div id="tab-analytics" class="hidden">
+                <!-- Top lessons -->
+                <div class="section-card mb-5">
+                    <div class="section-header">
+                        <div class="section-title"><i class="fas fa-trophy text-amber-500"></i> Top 5 Lições Mais Assistidas</div>
+                    </div>
+                    <div id="analytics-top" class="p-5 space-y-4"></div>
+                </div>
+
+                <!-- Donut charts row -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="section-card p-5">
+                        <div class="section-title mb-4"><i class="fas fa-user-tag text-blue-500 mr-2"></i>Distribuição por Papel</div>
+                        <div style="height:200px"><canvas id="roleChart"></canvas></div>
+                    </div>
+                    <div class="section-card p-5">
+                        <div class="section-title mb-4"><i class="fas fa-globe text-green-500 mr-2"></i>Utilizadores por País</div>
+                        <div style="height:200px"><canvas id="countryChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ ALERTS TAB ══════════════════════════════════════ -->
+            <div id="tab-alerts" class="hidden">
+                <div class="section-card">
+                    <div class="section-header">
+                        <div class="section-title"><i class="fas fa-exclamation-triangle text-amber-500"></i> Alertas do Sistema</div>
+                    </div>
+                    <div id="alerts-full" class="p-4 space-y-3"></div>
+                </div>
+            </div>
+
+        </main>
+    </div><!-- /main -->
+</div><!-- /flex -->
+
+<!-- ═══════════════ Toast ═══════════════════════════════════════════ -->
+<div id="toast" class="fixed bottom-5 right-5 z-50 hidden">
+    <div class="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl shadow-xl px-4 py-3 text-sm">
+        <i id="toast-icon" class="fas fa-check-circle text-green-500"></i>
+        <span id="toast-msg">OK</span>
+    </div>
+</div>
+
+<script src="/static/app.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// GUARD — só admins
+// ═══════════════════════════════════════════════════════════════════
+if (!VClass.isAuthenticated()) { window.location.href = '/login.html'; }
+const _adminUser = VClass.getCurrentUser();
+if (!_adminUser || _adminUser.role !== 'admin') {
+    alert('Acesso negado. Esta área é restrita a administradores.');
+    window.location.href = '/dashboard.html';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════
+let DATA = null;
+let activityChart = null;
+let roleChart = null;
+let countryChart = null;
+let chartPeriod = 'week';
+let allUsers = [];
+let allContent = [];
+
+// ═══════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════
+(async function init() {
+    // Sidebar user
+    const n = _adminUser?.name || _adminUser?.full_name || 'Admin';
+    document.getElementById('sidebar-name').textContent  = n;
+    document.getElementById('sidebar-email').textContent = _adminUser?.email || 'admin@vclass.mz';
+    document.getElementById('sidebar-avatar').textContent = n.charAt(0).toUpperCase();
+    document.getElementById('welcome-text').textContent  = `Olá, ${n.split(' ')[0]} 👋`;
+
+    // Clock
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    await loadData();
+})();
+
+function updateClock() {
+    const now = new Date();
+    document.getElementById('current-date').textContent = now.toLocaleDateString('pt-PT', { weekday:'long', day:'numeric', month:'long' });
+    document.getElementById('current-time').textContent = now.toLocaleTimeString('pt-PT', { hour:'2-digit', minute:'2-digit' });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// LOAD DATA
+// ═══════════════════════════════════════════════════════════════════
+async function loadData() {
+    const icon = document.getElementById('refresh-icon');
+    icon.classList.add('fa-spin');
+    try {
+        const token = VClass.storage.get('accessToken') || VClass.storage.get('token') || '';
+        const res = await fetch('/api/admin/dashboard', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || 'Erro ao carregar dados');
+        DATA = json.data;
+
+        renderKPIs(DATA.stats);
+        renderAlertsMini(DATA.system_alerts);
+        renderRecentUsers(DATA.recent_users);
+        renderRecentLessons(DATA.recent_lessons);
+        renderTopLessons(DATA.top_lessons);
+        initActivityChart();
+
+        // Badge
+        const draftCount = DATA.stats?.draft_lessons || 0;
+        if (draftCount > 0) {
+            document.getElementById('badge-content').textContent = draftCount;
+            document.getElementById('badge-content').classList.remove('hidden');
+        }
+
+        const alertCount = (DATA.system_alerts || []).filter(a => a.level === 'warning' || a.level === 'error').length;
+        if (alertCount > 0) {
+            document.getElementById('badge-alerts').textContent = alertCount;
+            document.getElementById('badge-alerts').classList.remove('hidden');
+            document.getElementById('topbar-alert-badge').classList.remove('hidden');
+        }
+
+        // users strip
+        document.getElementById('us-students').textContent = (DATA.stats?.total_students || 0).toLocaleString('pt');
+        document.getElementById('us-teachers').textContent = (DATA.stats?.total_teachers || 0).toLocaleString('pt');
+        document.getElementById('us-admins').textContent   = (DATA.stats?.total_admins   || 0).toLocaleString('pt');
+
+        // content strip
+        document.getElementById('cs-published').textContent = (DATA.stats?.published_lessons || 0).toLocaleString('pt');
+        document.getElementById('cs-draft').textContent     = (DATA.stats?.draft_lessons || 0).toLocaleString('pt');
+        document.getElementById('cs-total').textContent     = (DATA.stats?.total_lessons || 0).toLocaleString('pt');
+
+        // prefill arrays
+        allUsers = DATA.recent_users || [];
+        allContent = DATA.recent_lessons || [];
+        renderUsersTable(allUsers);
+        renderContentTable(allContent);
+        renderCountries(DATA.countries || []);
+        renderAnalytics();
+        renderAlertsTab(DATA.system_alerts || []);
+
+        showToast('Dados actualizados', 'success');
+    } catch (e) {
+        console.error(e);
+        showToast('Erro ao carregar dados: ' + e.message, 'error');
+    } finally {
+        icon.classList.remove('fa-spin');
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// KPI CARDS
+// ═══════════════════════════════════════════════════════════════════
+function renderKPIs(stats) {
+    if (!stats) return;
+    const cards = [
+        { label:'Total Utilizadores',   val:stats.total_users,         sub:`+${stats.new_users_week} esta semana`, icon:'fa-users',      color:'#7c3aed', bg:'#ede9fe' },
+        { label:'Estudantes',           val:stats.total_students,      sub:`${stats.total_teachers} professores`,  icon:'fa-graduation-cap', color:'#2563eb', bg:'#dbeafe' },
+        { label:'Lições Publicadas',    val:stats.published_lessons,   sub:`${stats.draft_lessons} rascunhos`,     icon:'fa-play-circle', color:'#16a34a', bg:'#d1fae5' },
+        { label:'Visualizações Totais', val:stats.total_views,         sub:`${stats.views_today} hoje`,            icon:'fa-eye',         color:'#0891b2', bg:'#cffafe' },
+        { label:'Exercícios Feitos',    val:stats.total_exercises_done,sub:`Média: ${stats.avg_score}%`,           icon:'fa-tasks',       color:'#d97706', bg:'#fef3c7' },
+        { label:'Países Activos',       val:stats.active_countries,    sub:`de ${stats.total_countries} países`,   icon:'fa-globe-africa',color:'#dc2626', bg:'#fee2e2' },
+    ];
+
+    document.getElementById('kpi-grid').innerHTML = cards.map((c, i) => `
+        <div class="stat-card fade-up" style="animation-delay:${i*0.06}s">
+            <div class="flex items-start justify-between mb-3">
+                <div class="icon-wrap" style="background:${c.bg}">
+                    <i class="fas ${c.icon}" style="color:${c.color}"></i>
+                </div>
+            </div>
+            <div class="stat-num" style="color:${c.color}">${(c.val||0).toLocaleString('pt')}</div>
+            <div class="stat-label">${c.label}</div>
+            <div class="stat-sub text-gray-400"><i class="fas fa-info-circle mr-1 text-gray-300"></i>${c.sub}</div>
+        </div>
+    `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ACTIVITY CHART
+// ═══════════════════════════════════════════════════════════════════
+function initActivityChart() {
+    const ctx = document.getElementById('activityChart').getContext('2d');
+    if (activityChart) activityChart.destroy();
+    activityChart = new Chart(ctx, {
+        type: 'bar',
+        data: buildChartData(),
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode:'index', intersect:false },
+            plugins: { legend: { display:false } },
+            scales: {
+                x: { grid: { display:false }, ticks: { font:{ size:11 } } },
+                y: { beginAtZero:true, grid:{ color:'rgba(0,0,0,0.04)' }, ticks:{ font:{size:11} } }
+            }
+        }
+    });
+}
+
+function buildChartData() {
+    if (!DATA) return { labels:[], datasets:[] };
+    const d = chartPeriod === 'week' ? DATA.chart_week : DATA.chart_month;
+    const datasets = [];
+    if (document.getElementById('chk-users')?.checked !== false)
+        datasets.push({ label:'Novos Utilizadores', data:d.new_users, backgroundColor:'rgba(124,58,237,.7)', borderRadius:6 });
+    if (document.getElementById('chk-views')?.checked !== false)
+        datasets.push({ label:'Visualizações',      data:d.lesson_views, backgroundColor:'rgba(37,99,235,.7)', borderRadius:6 });
+    if (document.getElementById('chk-exercises')?.checked !== false)
+        datasets.push({ label:'Exercícios',          data:d.exercises,    backgroundColor:'rgba(22,163,74,.7)', borderRadius:6 });
+    return { labels: d.labels, datasets };
+}
+
+function setChartPeriod(p) {
+    chartPeriod = p;
+    document.getElementById('chart-week-btn').classList.toggle('active', p==='week');
+    document.getElementById('chart-month-btn').classList.toggle('active', p==='month');
+    updateActivityChart();
+}
+
+function updateActivityChart() {
+    if (!activityChart) return;
+    const d = buildChartData();
+    activityChart.data = d;
+    activityChart.update();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RECENT USERS (mini table in overview)
+// ═══════════════════════════════════════════════════════════════════
+function renderRecentUsers(users) {
+    if (!users?.length) return;
+    const FLAG = { mz:'🇲🇿', ao:'🇦🇴', pt:'🇵🇹', br:'🇧🇷', cv:'🇨🇻' };
+    document.getElementById('recent-users-table').innerHTML = `
+    <table class="data-table">
+        <thead><tr><th>Utilizador</th><th>Papel</th><th>País</th><th>Registado</th></tr></thead>
+        <tbody>
+        ${users.slice(0,6).map(u => `
+            <tr>
+                <td>
+                    <div class="flex items-center gap-2">
+                        <div class="avatar text-xs" style="background:${avatarColor(u.name||u.full_name)}">${(u.name||u.full_name||'?').charAt(0)}</div>
+                        <span class="font-medium">${u.name||u.full_name||u.email}</span>
+                    </div>
+                </td>
+                <td><span class="pill pill-${u.role}">${roleLabel(u.role)}</span></td>
+                <td>${FLAG[u.country] || u.country || '—'}</td>
+                <td class="text-gray-400 text-xs">${VClass.formatRelativeTime(u.joined||u.created_at)}</td>
+            </tr>`).join('')}
+        </tbody>
+    </table>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RECENT LESSONS (mini table in overview)
+// ═══════════════════════════════════════════════════════════════════
+function renderRecentLessons(lessons) {
+    if (!lessons?.length) return;
+    document.getElementById('recent-lessons-table').innerHTML = `
+    <table class="data-table">
+        <thead><tr><th>Título</th><th>Disciplina</th><th>Estado</th><th>Vistas</th></tr></thead>
+        <tbody>
+        ${lessons.slice(0,6).map(l => `
+            <tr>
+                <td class="font-medium max-w-xs truncate">${l.title}</td>
+                <td class="text-gray-500">${l.subject||l.chapter||'—'}</td>
+                <td><span class="pill pill-${l.status}">${statusLabel(l.status)}</span></td>
+                <td class="text-gray-400">${(l.views||l.views_count||0).toLocaleString('pt')}</td>
+            </tr>`).join('')}
+        </tbody>
+    </table>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TOP LESSONS
+// ═══════════════════════════════════════════════════════════════════
+function renderTopLessons(lessons) {
+    if (!lessons?.length) return;
+    const max = lessons[0]?.views || 1;
+    document.getElementById('top-lessons-list').innerHTML = lessons.map((l, i) => `
+        <div class="flex items-center gap-4 py-2">
+            <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                 style="background:${i===0?'#fef3c7':i===1?'#f3f4f6':i===2?'#fce7f3':'#f8fafc'};
+                        color:${i===0?'#92400e':i===1?'#374151':i===2?'#9d174d':'#6b7280'}">${i+1}</div>
+            <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold text-gray-800 truncate">${l.title}</div>
+                <div class="text-xs text-gray-400">${l.subject} · Pontuação média: ${l.score}%</div>
+                <div class="mini-bar mt-1.5">
+                    <div class="mini-bar-fill bg-purple-500" style="width:${Math.round((l.views/max)*100)}%"></div>
+                </div>
+            </div>
+            <div class="text-right flex-shrink-0">
+                <div class="text-sm font-bold text-gray-800">${(l.views).toLocaleString('pt')}</div>
+                <div class="text-xs text-gray-400">vistas</div>
+            </div>
+        </div>
+    `).join('<div class="border-t border-gray-50"></div>');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ALERTS
+// ═══════════════════════════════════════════════════════════════════
+function renderAlertsMini(alerts) {
+    if (!alerts?.length) { document.getElementById('alerts-mini').innerHTML = '<p class="text-xs text-gray-400 text-center py-4">Sem alertas</p>'; return; }
+    document.getElementById('alerts-mini').innerHTML = alerts.map(a => `
+        <div class="alert-${a.level} rounded-xl px-4 py-3">
+            <div class="flex items-start gap-2">
+                <i class="fas ${alertIcon(a.level)} mt-0.5 flex-shrink-0" style="color:${alertColor(a.level)}"></i>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-medium text-gray-800">${a.msg}</p>
+                    <p class="text-xs text-gray-400 mt-0.5">${VClass.formatRelativeTime(a.time)}</p>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderAlertsTab(alerts) {
+    document.getElementById('alerts-full').innerHTML = alerts.length ? alerts.map(a => `
+        <div class="alert-${a.level} rounded-xl px-5 py-4">
+            <div class="flex items-center gap-3">
+                <i class="fas ${alertIcon(a.level)} text-lg flex-shrink-0" style="color:${alertColor(a.level)}"></i>
+                <div class="flex-1">
+                    <p class="text-sm font-semibold text-gray-800">${a.msg}</p>
+                    <p class="text-xs text-gray-400 mt-0.5">${VClass.formatRelativeTime(a.time)}</p>
+                </div>
+                <span class="pill pill-${a.level === 'warning' ? 'draft' : a.level === 'success' ? 'published' : a.level === 'error' ? 'inactive' : 'student'}">${a.level}</span>
+            </div>
+        </div>
+    `).join('') : '<p class="text-gray-400 text-sm text-center py-8">Sem alertas de sistema</p>';
+}
+
+function alertIcon(l) { return { warning:'fa-exclamation-triangle', success:'fa-check-circle', error:'fa-times-circle', info:'fa-info-circle' }[l] || 'fa-bell'; }
+function alertColor(l){ return { warning:'#d97706', success:'#16a34a', error:'#dc2626', info:'#2563eb' }[l] || '#7c3aed'; }
+
+// ═══════════════════════════════════════════════════════════════════
+// USERS TABLE (full)
+// ═══════════════════════════════════════════════════════════════════
+function renderUsersTable(users) {
+    const FLAG = { mz:'🇲🇿', ao:'🇦🇴', pt:'🇵🇹', br:'🇧🇷', cv:'🇨🇻' };
+    document.getElementById('users-tbody').innerHTML = users.length ? users.map(u => `
+        <tr>
+            <td>
+                <div class="flex items-center gap-2">
+                    <div class="avatar text-xs" style="background:${avatarColor(u.name||u.full_name)}">${(u.name||u.full_name||'?').charAt(0)}</div>
+                    <span class="font-medium">${u.name||u.full_name||'—'}</span>
+                </div>
+            </td>
+            <td class="text-gray-500 text-xs">${u.email}</td>
+            <td><span class="pill pill-${u.role}">${roleLabel(u.role)}</span></td>
+            <td>${FLAG[u.country] || u.country || '—'}</td>
+            <td>
+                <span class="pill ${u.active ? 'pill-active' : 'pill-inactive'}">
+                    ${u.active ? 'Activo' : 'Inactivo'}
+                </span>
+            </td>
+            <td class="text-gray-400 text-xs">${VClass.formatRelativeTime(u.joined||u.created_at)}</td>
+            <td>
+                <div class="flex gap-1">
+                    <button onclick="toggleUser('${u.id}', ${!u.active})"
+                            class="btn-sm ${u.active ? 'btn-danger' : 'btn-success'}" title="${u.active ? 'Desativar' : 'Ativar'}">
+                        <i class="fas fa-${u.active ? 'ban' : 'check'}"></i>
+                    </button>
+                    <button onclick="changeRole('${u.id}', '${u.role}')"
+                            class="btn-sm btn-ghost" title="Alterar papel">
+                        <i class="fas fa-user-cog"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>`).join('') :
+        `<tr><td colspan="7" class="text-center py-8 text-gray-400">Nenhum utilizador encontrado</td></tr>`;
+}
+
+function filterUsers() {
+    const search = (document.getElementById('user-search').value || '').toLowerCase();
+    const role   = document.getElementById('role-filter').value;
+    let filtered = allUsers;
+    if (role)   filtered = filtered.filter(u => u.role === role);
+    if (search) filtered = filtered.filter(u =>
+        (u.name||u.full_name||'').toLowerCase().includes(search) ||
+        (u.email||'').toLowerCase().includes(search));
+    renderUsersTable(filtered);
+}
+
+async function toggleUser(id, isActive) {
+    const token = VClass.storage.get('accessToken') || VClass.storage.get('token') || '';
+    try {
+        const res = await fetch(`/api/admin/users/${id}`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_active: isActive })
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        // update local
+        const u = allUsers.find(x => x.id === id);
+        if (u) u.active = isActive;
+        filterUsers();
+        showToast(`Utilizador ${isActive ? 'activado' : 'desactivado'}`, 'success');
+    } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+
+async function changeRole(id, currentRole) {
+    const roles = ['student','teacher','admin'];
+    const next = roles[(roles.indexOf(currentRole) + 1) % roles.length];
+    if (!confirm(`Alterar papel para "${roleLabel(next)}"?`)) return;
+    const token = VClass.storage.get('accessToken') || VClass.storage.get('token') || '';
+    try {
+        const res = await fetch(`/api/admin/users/${id}`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role: next })
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        const u = allUsers.find(x => x.id === id);
+        if (u) u.role = next;
+        filterUsers();
+        showToast(`Papel alterado para ${roleLabel(next)}`, 'success');
+    } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CONTENT TABLE
+// ═══════════════════════════════════════════════════════════════════
+function renderContentTable(lessons) {
+    document.getElementById('content-tbody').innerHTML = lessons.length ? lessons.map(l => `
+        <tr>
+            <td class="font-medium max-w-xs"><div class="truncate" title="${l.title}">${l.title}</div></td>
+            <td class="text-gray-500">${l.subject||'—'}</td>
+            <td class="text-gray-500">${l.teacher||'—'}</td>
+            <td><span class="pill pill-${l.status}">${statusLabel(l.status)}</span></td>
+            <td>
+                <div class="flex items-center gap-1">
+                    <i class="fas fa-eye text-gray-300 text-xs"></i>
+                    <span>${(l.views||l.views_count||0).toLocaleString('pt')}</span>
+                </div>
+            </td>
+            <td class="text-gray-400 text-xs">${VClass.formatRelativeTime(l.created)}</td>
+            <td>
+                <div class="flex gap-1">
+                    ${l.status === 'draft' ? `
+                    <button onclick="changeContentStatus('${l.id}','published')" class="btn-sm btn-success" title="Publicar">
+                        <i class="fas fa-check"></i>
+                    </button>` : ''}
+                    ${l.status === 'published' ? `
+                    <button onclick="changeContentStatus('${l.id}','archived')" class="btn-sm btn-ghost" title="Arquivar">
+                        <i class="fas fa-archive"></i>
+                    </button>` : ''}
+                    ${l.status === 'archived' ? `
+                    <button onclick="changeContentStatus('${l.id}','published')" class="btn-sm btn-success" title="Restaurar">
+                        <i class="fas fa-undo"></i>
+                    </button>` : ''}
+                </div>
+            </td>
+        </tr>`).join('') :
+        `<tr><td colspan="7" class="text-center py-8 text-gray-400">Nenhuma lição encontrada</td></tr>`;
+}
+
+function filterContent() {
+    const status = document.getElementById('status-filter').value;
+    const filtered = status ? allContent.filter(l => l.status === status) : allContent;
+    renderContentTable(filtered);
+}
+
+async function changeContentStatus(id, status) {
+    const token = VClass.storage.get('accessToken') || VClass.storage.get('token') || '';
+    try {
+        const res = await fetch(`/api/admin/content/${id}`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status })
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        const l = allContent.find(x => x.id === id);
+        if (l) l.status = status;
+        filterContent();
+        showToast(`Lição ${statusLabel(status)}`, 'success');
+    } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// COUNTRIES
+// ═══════════════════════════════════════════════════════════════════
+function renderCountries(countries) {
+    const maxStudents = Math.max(...countries.map(c => c.students), 1);
+    document.getElementById('countries-grid').innerHTML = countries.map(c => `
+        <div class="section-card p-6 fade-up">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <span class="flag">${c.flag}</span>
+                    <div>
+                        <div class="font-bold text-gray-900">${c.name}</div>
+                        <div class="text-xs text-gray-400 uppercase">${c.code}</div>
+                    </div>
+                </div>
+                <span class="pill ${c.active ? 'pill-active' : 'pill-inactive'}">${c.active ? 'Activo' : 'Inactivo'}</span>
+            </div>
+            <div class="space-y-3">
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-500">Estudantes</span>
+                    <span class="font-bold">${c.students.toLocaleString('pt')}</span>
+                </div>
+                <div class="mini-bar">
+                    <div class="mini-bar-fill bg-purple-500" style="width:${Math.round((c.students/maxStudents)*100)}%"></div>
+                </div>
+                <div class="flex justify-between text-sm mt-2">
+                    <span class="text-gray-500">Lições</span>
+                    <span class="font-semibold text-gray-700">${c.lessons}</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ANALYTICS
+// ═══════════════════════════════════════════════════════════════════
+function renderAnalytics() {
+    if (!DATA) return;
+
+    // Top lessons list
+    renderTopLessonsAnalytics(DATA.top_lessons || []);
+
+    // Role donut
+    if (roleChart) roleChart.destroy();
+    const rCtx = document.getElementById('roleChart')?.getContext('2d');
+    if (rCtx) {
+        const s = DATA.stats || {};
+        roleChart = new Chart(rCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Estudantes','Professores','Admins'],
+                datasets: [{ data:[s.total_students||0, s.total_teachers||0, s.total_admins||0],
+                             backgroundColor:['#7c3aed','#2563eb','#d97706'], borderWidth:0, hoverOffset:6 }]
+            },
+            options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ font:{size:11} } } } }
+        });
+    }
+
+    // Country donut
+    if (countryChart) countryChart.destroy();
+    const cCtx = document.getElementById('countryChart')?.getContext('2d');
+    if (cCtx && DATA.countries) {
+        countryChart = new Chart(cCtx, {
+            type: 'doughnut',
+            data: {
+                labels: DATA.countries.map(c => c.name),
+                datasets: [{ data: DATA.countries.map(c => c.students),
+                             backgroundColor:['#7c3aed','#2563eb','#16a34a','#d97706','#dc2626'],
+                             borderWidth:0, hoverOffset:6 }]
+            },
+            options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ font:{size:11} } } } }
+        });
+    }
+}
+
+function renderTopLessonsAnalytics(lessons) {
+    const max = lessons[0]?.views || 1;
+    document.getElementById('analytics-top').innerHTML = lessons.map((l, i) => `
+        <div class="flex items-center gap-4">
+            <div class="text-2xl font-black text-gray-200 w-8 text-center">${i+1}</div>
+            <div class="flex-1 min-w-0">
+                <div class="flex justify-between mb-1">
+                    <span class="text-sm font-semibold text-gray-800 truncate">${l.title}</span>
+                    <span class="text-sm font-bold text-gray-600 ml-2 flex-shrink-0">${(l.views).toLocaleString('pt')} vistas</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="flex-1 mini-bar">
+                        <div class="mini-bar-fill" style="width:${Math.round((l.views/max)*100)}%;background:${['#7c3aed','#2563eb','#16a34a','#d97706','#dc2626'][i]}"></div>
+                    </div>
+                    <span class="text-xs text-gray-400 flex-shrink-0">${l.subject}</span>
+                    <span class="text-xs font-bold text-gray-600 flex-shrink-0">${l.score}%</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TAB NAVIGATION
+// ═══════════════════════════════════════════════════════════════════
+const TABS = ['overview','users','content','countries','analytics','alerts'];
+const BREADCRUMBS = { overview:'Visão Geral', users:'Utilizadores', content:'Conteúdo', countries:'Países', analytics:'Analytics', alerts:'Alertas' };
+
+function showTab(tab) {
+    TABS.forEach(t => {
+        document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
+        document.getElementById(`nav-${t}`)?.classList.toggle('active', t === tab);
+    });
+    document.getElementById('breadcrumb-current').textContent = BREADCRUMBS[tab] || tab;
+
+    // Render analytics charts when tab becomes visible
+    if (tab === 'analytics' && DATA) renderAnalytics();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════
+function roleLabel(r)   { return { student:'Estudante', teacher:'Professor', admin:'Admin' }[r] || r; }
+function statusLabel(s) { return { published:'Publicada', draft:'Rascunho', archived:'Arquivada' }[s] || s; }
+
+function avatarColor(name) {
+    const colors = ['#7c3aed','#2563eb','#16a34a','#d97706','#dc2626','#0891b2','#7c3aed'];
+    let hash = 0;
+    for (const ch of (name||'A')) hash = ch.charCodeAt(0) + ((hash<<5)-hash);
+    return colors[Math.abs(hash) % colors.length];
+}
+
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('collapsed');
+}
+
+function logout() {
+    if (!confirm('Terminar sessão?')) return;
+    VClass.storage.remove('accessToken');
+    VClass.storage.remove('refreshToken');
+    VClass.storage.remove('user');
+    window.location.href = '/login.html';
+}
+
+let toastTimer;
+function showToast(msg, type='info') {
+    const toast = document.getElementById('toast');
+    const icons = { success:'fa-check-circle text-green-500', error:'fa-times-circle text-red-500', info:'fa-info-circle text-blue-500' };
+    document.getElementById('toast-icon').className = `fas ${icons[type]||icons.info}`;
+    document.getElementById('toast-msg').textContent = msg;
+    toast.classList.remove('hidden');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.add('hidden'), 3000);
+}
+</script>
+</body>
+</html>

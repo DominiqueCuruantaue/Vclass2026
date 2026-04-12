@@ -398,6 +398,12 @@ function _updateNavbarUser() {
       el.style.display = 'block';
     });
   }
+  // Show admin panel link for admins
+  if (user.role === 'admin') {
+    document.querySelectorAll('#nav-admin-section').forEach(el => {
+      el.style.display = 'block';
+    });
+  }
 }
 
 function toggleNavDropdown() {

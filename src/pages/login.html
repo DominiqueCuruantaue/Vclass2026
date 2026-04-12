@@ -208,7 +208,8 @@
         // Redirect if already logged in
         if (VClass.isAuthenticated()) {
             const u = VClass.getCurrentUser();
-            if (u?.role === 'teacher' || u?.role === 'admin') window.location.href = '/creator-dashboard.html';
+            if (u?.role === 'admin') window.location.href = '/admin-dashboard.html';
+            else if (u?.role === 'teacher') window.location.href = '/creator-dashboard.html';
             else window.location.href = '/dashboard.html';
         }
 
@@ -288,7 +289,8 @@
                     showAlert('✅ Login realizado com sucesso! Redirecionando...', 'success');
                     setTimeout(() => {
                         const role = result.data.user.role;
-                        if (role === 'teacher' || role === 'admin') window.location.href = '/creator-dashboard.html';
+                        if (role === 'admin') window.location.href = '/admin-dashboard.html';
+                        else if (role === 'teacher') window.location.href = '/creator-dashboard.html';
                         else window.location.href = '/dashboard.html';
                     }, 1000);
                 } else {
