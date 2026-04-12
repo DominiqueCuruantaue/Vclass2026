@@ -510,13 +510,13 @@
 <script src="/static/app.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════════
-// GUARD — só admins
+// GUARD — só admins (sem alert para não bloquear)
 // ═══════════════════════════════════════════════════════════════════
-if (!VClass.isAuthenticated()) { window.location.href = '/login.html'; }
+if (!VClass.isAuthenticated()) { window.location.replace('/login.html'); }
 const _adminUser = VClass.getCurrentUser();
 if (!_adminUser || _adminUser.role !== 'admin') {
-    alert('Acesso negado. Esta área é restrita a administradores.');
-    window.location.href = '/dashboard.html';
+    // Redirecionar sem alert (evita bloqueio de popup)
+    window.location.replace(_adminUser?.role === 'teacher' ? '/creator-dashboard.html' : '/dashboard.html');
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -561,7 +561,8 @@ async function loadData() {
     const icon = document.getElementById('refresh-icon');
     icon.classList.add('fa-spin');
     try {
-        const token = VClass.storage.get('accessToken') || VClass.storage.get('token') || '';
+        // Usar localStorage directamente — o token é uma string simples (JWT), não JSON
+        const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
         const res = await fetch('/api/admin/dashboard', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -611,8 +612,15 @@ async function loadData() {
 
         showToast('Dados actualizados', 'success');
     } catch (e) {
-        console.error(e);
+        console.error('Admin loadData error:', e);
         showToast('Erro ao carregar dados: ' + e.message, 'error');
+        // Limpar skeletons e mostrar mensagem de erro
+        const errHtml = `<div class="p-6 text-center text-gray-400">
+            <i class="fas fa-exclamation-circle text-red-300 text-3xl mb-2"></i>
+            <p class="text-sm">Erro ao carregar dados.<br>Clique em Actualizar para tentar novamente.</p>
+        </div>`;
+        const skeletonIds = ['recent-users-table','recent-lessons-table','top-lessons-list','kpi-grid'];
+        skeletonIds.forEach(id => { const el = document.getElementById(id); if (el && el.querySelector('.skeleton')) el.innerHTML = errHtml; });
     } finally {
         icon.classList.remove('fa-spin');
     }
@@ -852,7 +860,7 @@ function filterUsers() {
 }
 
 async function toggleUser(id, isActive) {
-    const token = VClass.storage.get('accessToken') || VClass.storage.get('token') || '';
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
     try {
         const res = await fetch(`/api/admin/users/${id}`, {
             method: 'PATCH',
@@ -873,7 +881,7 @@ async function changeRole(id, currentRole) {
     const roles = ['student','teacher','admin'];
     const next = roles[(roles.indexOf(currentRole) + 1) % roles.length];
     if (!confirm(`Alterar papel para "${roleLabel(next)}"?`)) return;
-    const token = VClass.storage.get('accessToken') || VClass.storage.get('token') || '';
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
     try {
         const res = await fetch(`/api/admin/users/${id}`, {
             method: 'PATCH',
@@ -933,7 +941,7 @@ function filterContent() {
 }
 
 async function changeContentStatus(id, status) {
-    const token = VClass.storage.get('accessToken') || VClass.storage.get('token') || '';
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
     try {
         const res = await fetch(`/api/admin/content/${id}`, {
             method: 'PATCH',

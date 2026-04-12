@@ -97,7 +97,7 @@
         // ── Carregar da API ─────────────────────────────────────────────────────
         async function loadNotifications() {
             try {
-                const token = VClass.storage.get('accessToken') || VClass.storage.get('token') || '';
+                const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
                 const res = await fetch('/api/notifications', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -198,7 +198,7 @@
                 saveReadState();
                 render();
                 // Notificar API (fire-and-forget)
-                const token = VClass.storage.get('accessToken') || VClass.storage.get('token') || '';
+                const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
                 fetch(`/api/notifications/${id}/read`, {
                     method: 'PATCH',
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -215,7 +215,7 @@
             saveReadState();
             render();
             VClass.showNotification('Todas marcadas como lidas', 'success');
-            const token = VClass.storage.get('accessToken') || VClass.storage.get('token') || '';
+            const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
             fetch('/api/notifications/mark-all-read', {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }

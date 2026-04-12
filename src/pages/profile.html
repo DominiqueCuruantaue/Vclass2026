@@ -465,7 +465,7 @@
             if (!name) { VClass.showNotification('Nome não pode estar vazio', 'error'); return; }
             VClass.showLoading('A guardar...');
             try {
-                const token = VClass.storage.get('accessToken') || VClass.storage.get('token') || '';
+                const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
                 const res = await fetch('/api/auth/profile', {
                     method: 'PATCH',
                     headers: {
@@ -536,7 +536,7 @@
             if (nw.length < 6) { VClass.showNotification('Senha deve ter pelo menos 6 caracteres', 'error'); return; }
             VClass.showLoading('A alterar senha...');
             try {
-                const token = VClass.storage.get('accessToken') || VClass.storage.get('token') || '';
+                const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
                 const res = await fetch('/api/auth/change-password', {
                     method: 'POST',
                     headers: {
