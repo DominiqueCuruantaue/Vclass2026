@@ -15,6 +15,13 @@ video.use('/*', authMiddleware)
 
 // ── Helpers ─────────────────────────────────────────────────
 
+// ── Secret padrão (substitua por env var VIDEO_SECRET em produção) ──────────
+const DEFAULT_VIDEO_SECRET = 'VCLASS_VIDEO_SECRET_2024_CHANGE_IN_PROD'
+
+function getVideoSecret(env?: Record<string, string>): string {
+  return env?.VIDEO_SECRET || DEFAULT_VIDEO_SECRET
+}
+
 /** Gera um token de acesso ao vídeo assinado com HMAC-SHA256 */
 async function generateSignedToken(payload: {
   userId: string
@@ -22,35 +29,36 @@ async function generateSignedToken(payload: {
   videoId: string
   expiresAt: number          // Unix timestamp ms
   ip?: string
-}): Promise<string> {
+  userAgent?: string
+}, secret: string): Promise<string> {
   const data = JSON.stringify(payload)
   const encoder = new TextEncoder()
   // Usa crypto.subtle disponível no Workers runtime
   const key = await crypto.subtle.importKey(
     'raw',
-    encoder.encode('VCLASS_VIDEO_SECRET_2024'),
+    encoder.encode(secret),
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign']
   )
   const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(data))
   const sigHex = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('')
-  const b64 = btoa(data)
+  const b64 = btoa(unescape(encodeURIComponent(data)))  // UTF-8 safe
   return `${b64}.${sigHex}`
 }
 
 /** Valida o token e retorna o payload ou null */
-async function verifySignedToken(token: string): Promise<{
-  userId: string; lessonId: string; videoId: string; expiresAt: number; ip?: string
+async function verifySignedToken(token: string, secret: string): Promise<{
+  userId: string; lessonId: string; videoId: string; expiresAt: number; ip?: string; userAgent?: string
 } | null> {
   try {
     const [b64, sigHex] = token.split('.')
     if (!b64 || !sigHex) return null
-    const data = atob(b64)
+    const data = decodeURIComponent(escape(atob(b64)))  // UTF-8 safe
     const encoder = new TextEncoder()
     const key = await crypto.subtle.importKey(
       'raw',
-      encoder.encode('VCLASS_VIDEO_SECRET_2024'),
+      encoder.encode(secret),
       { name: 'HMAC', hash: 'SHA-256' },
       false,
       ['verify']
@@ -64,6 +72,16 @@ async function verifySignedToken(token: string): Promise<{
   } catch { return null }
 }
 
+/** Extrai o IP real do cliente de forma robusta */
+function getClientIP(c: Parameters<typeof video.post>[1] extends (...args: infer A) => unknown ? A[0] : never): string {
+  return (
+    c.req.header('cf-connecting-ip') ||
+    c.req.header('x-real-ip') ||
+    c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ||
+    'unknown'
+  )
+}
+
 // ============================================================
 //  POST /api/video/token
 //  Body: { lessonId, videoId }
@@ -72,18 +90,19 @@ async function verifySignedToken(token: string): Promise<{
 // ============================================================
 video.post('/token', async (c) => {
   try {
-    const user = c.get('user')
-    const body = await c.req.json().catch(() => ({}))
+    const user   = c.get('user')
+    const env    = (c.env as Record<string,string>) || {}
+    const secret = getVideoSecret(env)
+    const body   = await c.req.json().catch(() => ({}))
     const { lessonId, videoId } = body
 
     if (!lessonId || !videoId) {
       return c.json<ApiResponse>({ success: false, error: 'lessonId e videoId são obrigatórios' }, 400)
     }
 
-    // IP do utilizador (para bind opcional)
-    const ip = c.req.header('cf-connecting-ip')
-               || c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
-               || 'unknown'
+    // IP e User-Agent do utilizador (para IP binding)
+    const ip        = getClientIP(c as any)
+    const userAgent = c.req.header('user-agent')?.substring(0, 100) || ''
 
     const expiresAt = Date.now() + 4 * 60 * 60 * 1000   // 4 horas
 
@@ -92,8 +111,9 @@ video.post('/token', async (c) => {
       lessonId,
       videoId,
       expiresAt,
-      ip
-    })
+      ip,
+      userAgent
+    }, secret)
 
     // Watermark dinâmico com dados do utilizador (para rastrear fugas)
     const watermark = {
@@ -135,15 +155,17 @@ video.post('/token', async (c) => {
 // ============================================================
 video.get('/stream/:lessonId', async (c) => {
   try {
-    const user   = c.get('user')
+    const user     = c.get('user')
     const lessonId = c.req.param('lessonId')
-    const token  = c.req.query('vt')   // video token na query string
+    const token    = c.req.query('vt')   // video token na query string
+    const env      = (c.env as Record<string,string>) || {}
+    const secret   = getVideoSecret(env)
 
     if (!token) {
       return c.json<ApiResponse>({ success: false, error: 'Token de vídeo em falta' }, 401)
     }
 
-    const payload = await verifySignedToken(token)
+    const payload = await verifySignedToken(token, secret)
     if (!payload) {
       return c.json<ApiResponse>({ success: false, error: 'Token inválido ou expirado' }, 403)
     }
@@ -155,6 +177,17 @@ video.get('/stream/:lessonId', async (c) => {
 
     if (payload.lessonId !== lessonId) {
       return c.json<ApiResponse>({ success: false, error: 'Token não é válido para esta lição' }, 403)
+    }
+
+    // IP binding: verificar se o IP coincide (tolerância para proxies)
+    if (payload.ip && payload.ip !== 'unknown') {
+      const currentIP = getClientIP(c as any)
+      if (currentIP !== 'unknown' && payload.ip !== currentIP) {
+        // Em produção: log do evento de segurança
+        console.warn(`[SECURITY] IP mismatch: token_ip=${payload.ip} request_ip=${currentIP} user=${user.id}`)
+        // Aviso mas não bloquear (IPs podem mudar em mobile/proxies)
+        // Para bloquear: return c.json<ApiResponse>({ success: false, error: 'IP inválido' }, 403)
+      }
     }
 
     // ── Produção com Bunny.net ────────────────────────────────

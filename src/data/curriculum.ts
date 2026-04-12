@@ -437,86 +437,208 @@ export const CHAPTERS: Chapter[] = [
   { id:'ao10bio-3-2', subjectId:'ao10-bio', title:'Fisiologia Humana',                    description:'Sistemas do organismo humano',                                    term:3, displayOrder:6 },
 
   // ══════════════════════════════════════════════════════════
-  //  ANGOLA — 7ª Classe (ES1)
+  //  ANGOLA — 7ª Classe (ES1) — Currículo expandido
   // ══════════════════════════════════════════════════════════
+
+  // ─── Matemática 7ª Classe ─────────────────────────────────
   { id:'ao7mat-1-1', subjectId:'ao7-mat',  title:'Números Inteiros e Operações',      description:'Adição, subtração, multiplicação e divisão de inteiros',   term:1, displayOrder:1 },
   { id:'ao7mat-1-2', subjectId:'ao7-mat',  title:'Fracções e Números Decimais',        description:'Simplificação, operações e conversões',                   term:1, displayOrder:2 },
-  { id:'ao7mat-2-1', subjectId:'ao7-mat',  title:'Equações do 1º Grau',               description:'Resolução de equações simples e problemas',               term:2, displayOrder:3 },
-  { id:'ao7mat-2-2', subjectId:'ao7-mat',  title:'Proporcionalidade',                 description:'Razão, proporção e regra de três',                        term:2, displayOrder:4 },
-  { id:'ao7mat-3-1', subjectId:'ao7-mat',  title:'Geometria Plana — Polígonos',       description:'Triângulos, quadriláteros e suas propriedades',           term:3, displayOrder:5 },
-  { id:'ao7mat-3-2', subjectId:'ao7-mat',  title:'Perímetro e Área',                  description:'Cálculo de áreas de figuras geométricas',                 term:3, displayOrder:6 },
+  { id:'ao7mat-1-3', subjectId:'ao7-mat',  title:'Divisibilidade e Números Primos',    description:'MMC, MDC e critérios de divisibilidade',                  term:1, displayOrder:3 },
+  { id:'ao7mat-2-1', subjectId:'ao7-mat',  title:'Equações do 1º Grau',               description:'Resolução de equações simples e problemas',               term:2, displayOrder:4 },
+  { id:'ao7mat-2-2', subjectId:'ao7-mat',  title:'Proporcionalidade',                 description:'Razão, proporção, regra de três simples e composta',      term:2, displayOrder:5 },
+  { id:'ao7mat-2-3', subjectId:'ao7-mat',  title:'Percentagem e Juros Simples',       description:'Cálculo de percentagens e problemas financeiros básicos',  term:2, displayOrder:6 },
+  { id:'ao7mat-3-1', subjectId:'ao7-mat',  title:'Geometria Plana — Polígonos',       description:'Triângulos, quadriláteros e suas propriedades',           term:3, displayOrder:7 },
+  { id:'ao7mat-3-2', subjectId:'ao7-mat',  title:'Perímetro e Área',                  description:'Cálculo de áreas de figuras planas — triângulo, retângulo, círculo', term:3, displayOrder:8 },
+  { id:'ao7mat-3-3', subjectId:'ao7-mat',  title:'Introdução à Estatística',          description:'Tabelas de frequência e gráficos de barras e setores',    term:3, displayOrder:9 },
 
+  // ─── Língua Portuguesa 7ª Classe ─────────────────────────
   { id:'ao7por-1-1', subjectId:'ao7-port', title:'Comunicação Oral e Escrita',        description:'Tipos de texto e intenção comunicativa',                  term:1, displayOrder:1 },
-  { id:'ao7por-1-2', subjectId:'ao7-port', title:'Classes de Palavras',               description:'Substantivo, adjectivo, verbo e advérbio',               term:1, displayOrder:2 },
-  { id:'ao7por-2-1', subjectId:'ao7-port', title:'Sintaxe Básica',                    description:'Sujeito, predicado e complementos',                       term:2, displayOrder:3 },
-  { id:'ao7por-2-2', subjectId:'ao7-port', title:'Texto Narrativo',                   description:'Estrutura do conto e análise de personagens',             term:2, displayOrder:4 },
-  { id:'ao7por-3-1', subjectId:'ao7-port', title:'Produção Escrita',                  description:'Narração e descrição com coerência',                      term:3, displayOrder:5 },
+  { id:'ao7por-1-2', subjectId:'ao7-port', title:'Classes de Palavras I',             description:'Substantivo, adjectivo, verbo e advérbio',               term:1, displayOrder:2 },
+  { id:'ao7por-1-3', subjectId:'ao7-port', title:'Leitura e Compreensão',             description:'Interpretação de textos narrativos e descritivos',        term:1, displayOrder:3 },
+  { id:'ao7por-2-1', subjectId:'ao7-port', title:'Classes de Palavras II',            description:'Pronomes, preposições, conjunções e interjeições',        term:2, displayOrder:4 },
+  { id:'ao7por-2-2', subjectId:'ao7-port', title:'Sintaxe Básica',                    description:'Sujeito, predicado e complementos',                       term:2, displayOrder:5 },
+  { id:'ao7por-2-3', subjectId:'ao7-port', title:'Texto Narrativo — Conto Angolano',  description:'Análise de contos da tradição oral angolana',             term:2, displayOrder:6 },
+  { id:'ao7por-3-1', subjectId:'ao7-port', title:'Produção Escrita — Narração',       description:'Narração com personagens, espaço e tempo',                term:3, displayOrder:7 },
+  { id:'ao7por-3-2', subjectId:'ao7-port', title:'Produção Escrita — Descrição',      description:'Descrição de pessoas, lugares e objectos',                term:3, displayOrder:8 },
+  { id:'ao7por-3-3', subjectId:'ao7-port', title:'Ortografia e Pontuação',            description:'Regras ortográficas e uso correcto da pontuação',         term:3, displayOrder:9 },
 
-  { id:'ao7cf-1-1',  subjectId:'ao7-fis',  title:'Matéria e suas Propriedades',       description:'Estados físicos e mudanças de estado',                    term:1, displayOrder:1 },
-  { id:'ao7cf-1-2',  subjectId:'ao7-fis',  title:'Energia e Transformações',          description:'Formas de energia e conversões',                          term:1, displayOrder:2 },
-  { id:'ao7cf-2-1',  subjectId:'ao7-fis',  title:'Noções de Química',                 description:'Elementos, compostos e misturas',                         term:2, displayOrder:3 },
-  { id:'ao7cf-3-1',  subjectId:'ao7-fis',  title:'Força e Movimento',                 description:'Noções de mecânica e atrito',                             term:3, displayOrder:4 },
+  // ─── Ciências Físicas 7ª Classe ──────────────────────────
+  { id:'ao7cf-1-1',  subjectId:'ao7-fis',  title:'Matéria e suas Propriedades',       description:'Estados físicos, densidade e mudanças de estado',         term:1, displayOrder:1 },
+  { id:'ao7cf-1-2',  subjectId:'ao7-fis',  title:'Energia e suas Transformações',     description:'Formas de energia: mecânica, térmica, eléctrica, luminosa', term:1, displayOrder:2 },
+  { id:'ao7cf-2-1',  subjectId:'ao7-fis',  title:'Substâncias e Misturas',            description:'Elementos, compostos, misturas e métodos de separação',   term:2, displayOrder:3 },
+  { id:'ao7cf-2-2',  subjectId:'ao7-fis',  title:'Introdução à Química',              description:'Átomo, molécula e símbolo dos elementos mais comuns',     term:2, displayOrder:4 },
+  { id:'ao7cf-3-1',  subjectId:'ao7-fis',  title:'Força e Movimento',                 description:'Tipos de força, velocidade e atrito',                     term:3, displayOrder:5 },
+  { id:'ao7cf-3-2',  subjectId:'ao7-fis',  title:'Energia Solar e Sustentabilidade',  description:'Fontes de energia renováveis e não renováveis em Angola',  term:3, displayOrder:6 },
 
-  { id:'ao7nat-1-1', subjectId:'ao7-nat',  title:'Seres Vivos e Classificação',       description:'Reinos, características dos seres vivos',                 term:1, displayOrder:1 },
-  { id:'ao7nat-2-1', subjectId:'ao7-nat',  title:'Ecossistemas Angolanos',            description:'Savana, floresta e ecologia local',                       term:2, displayOrder:2 },
-  { id:'ao7nat-3-1', subjectId:'ao7-nat',  title:'Saúde e Doenças Comuns em Angola',  description:'Malária, cólera, HIV — prevenção',                        term:3, displayOrder:3 },
+  // ─── Ciências Naturais 7ª Classe ─────────────────────────
+  { id:'ao7nat-1-1', subjectId:'ao7-nat',  title:'Seres Vivos e Classificação',       description:'Reinos, características e critérios de classificação',    term:1, displayOrder:1 },
+  { id:'ao7nat-1-2', subjectId:'ao7-nat',  title:'Célula — Unidade da Vida',          description:'Célula animal e vegetal, organelos e funções',            term:1, displayOrder:2 },
+  { id:'ao7nat-2-1', subjectId:'ao7-nat',  title:'Ecossistemas Angolanos',            description:'Savana, floresta do Maiombe, manguezal e deserto do Namibe', term:2, displayOrder:3 },
+  { id:'ao7nat-2-2', subjectId:'ao7-nat',  title:'Cadeias e Teias Alimentares',       description:'Produtores, consumidores, decompositores e fluxo de energia', term:2, displayOrder:4 },
+  { id:'ao7nat-3-1', subjectId:'ao7-nat',  title:'Saúde e Higiene em Angola',         description:'Doenças transmissíveis: malária, cólera, febre-amarela',  term:3, displayOrder:5 },
+  { id:'ao7nat-3-2', subjectId:'ao7-nat',  title:'HIV/SIDA — Prevenção',              description:'Transmissão, prevenção e vida saudável',                  term:3, displayOrder:6 },
 
-  { id:'ao7his-1-1', subjectId:'ao7-his',  title:'Pré-História',                      description:'Povos primitivos e evolução humana',                      term:1, displayOrder:1 },
-  { id:'ao7his-2-1', subjectId:'ao7-his',  title:'Civilizações Antigas',              description:'Egipto, Mesopotâmia e Grécia',                            term:2, displayOrder:2 },
-  { id:'ao7his-3-1', subjectId:'ao7-his',  title:'Reinos Africanos',                  description:'Reino do Congo, Ndongo e Matamba',                        term:3, displayOrder:3 },
+  // ─── História 7ª Classe ───────────────────────────────────
+  { id:'ao7his-1-1', subjectId:'ao7-his',  title:'Pré-História e Evolução Humana',    description:'Hominídeos, paleolítico, neolítico e revolução agrícola', term:1, displayOrder:1 },
+  { id:'ao7his-1-2', subjectId:'ao7-his',  title:'Primeiros Humanos em Angola',       description:'Povos San e Banto — primeiros habitantes do território',  term:1, displayOrder:2 },
+  { id:'ao7his-2-1', subjectId:'ao7-his',  title:'Civilizações do Nilo — Egipto',     description:'Faraós, pirâmides, escrita hieroglífica e sociedade',     term:2, displayOrder:3 },
+  { id:'ao7his-2-2', subjectId:'ao7-his',  title:'Grécia e Roma Antigas',             description:'Democracia grega e República/Império romano',             term:2, displayOrder:4 },
+  { id:'ao7his-3-1', subjectId:'ao7-his',  title:'Reinos Africanos — Congo e Ndongo', description:'Organização política, social e económica dos reinos',     term:3, displayOrder:5 },
+  { id:'ao7his-3-2', subjectId:'ao7-his',  title:'Chegada dos Portugueses a Angola',  description:'Primeiros contactos europeus, século XV e XVI',           term:3, displayOrder:6 },
+
+  // ─── Geografia 7ª Classe ─────────────────────────────────
+  { id:'ao7geo-1-1', subjectId:'ao7-geo',  title:'Introdução à Geografia',            description:'O que é Geografia, ramos e importância',                 term:1, displayOrder:1 },
+  { id:'ao7geo-1-2', subjectId:'ao7-geo',  title:'Cartografia Básica',                description:'Mapas, escalas, legendas e coordenadas geográficas',     term:1, displayOrder:2 },
+  { id:'ao7geo-2-1', subjectId:'ao7-geo',  title:'Relevo e Solo de Angola',           description:'Planaltos, planícies e serras de Angola',                 term:2, displayOrder:3 },
+  { id:'ao7geo-2-2', subjectId:'ao7-geo',  title:'Clima e Vegetação de Angola',       description:'Tipos de clima, savana, floresta e deserto',              term:2, displayOrder:4 },
+  { id:'ao7geo-3-1', subjectId:'ao7-geo',  title:'Rios e Recursos Hídricos de Angola',description:'Rio Cubango, Cunene, Congo e aproveitamento hídrico',    term:3, displayOrder:5 },
+  { id:'ao7geo-3-2', subjectId:'ao7-geo',  title:'População e Províncias de Angola',  description:'18 províncias, grupos étnicos e distribuição populacional', term:3, displayOrder:6 },
+
+  // ─── Língua Inglesa 7ª Classe ────────────────────────────
+  { id:'ao7ing-1-1', subjectId:'ao7-ing',  title:'Hello! — Greetings & Introductions',description:'Self-introductions, alphabet and classroom language',     term:1, displayOrder:1 },
+  { id:'ao7ing-1-2', subjectId:'ao7-ing',  title:'My Family and My Home',             description:'Family members, numbers 1-100 and describing home',      term:1, displayOrder:2 },
+  { id:'ao7ing-2-1', subjectId:'ao7-ing',  title:'Present Simple — Daily Routines',   description:'Verbs, time expressions and daily activities',            term:2, displayOrder:3 },
+  { id:'ao7ing-2-2', subjectId:'ao7-ing',  title:'Food, Shopping and Prices',         description:'Vocabulary for food, market interactions and numbers',   term:2, displayOrder:4 },
+  { id:'ao7ing-3-1', subjectId:'ao7-ing',  title:'Past Simple — My Weekend',          description:'Regular and irregular verbs in past tense',              term:3, displayOrder:5 },
+  { id:'ao7ing-3-2', subjectId:'ao7-ing',  title:'Angola and the World',              description:'Countries, capitals, flags and basic geography',         term:3, displayOrder:6 },
 
   // ══════════════════════════════════════════════════════════
-  //  ANGOLA — 8ª Classe (ES1)
+  //  ANGOLA — 8ª Classe (ES1) — Currículo expandido
   // ══════════════════════════════════════════════════════════
-  { id:'ao8mat-1-1', subjectId:'ao8-mat',  title:'Álgebra — Expressões Algébricas',   description:'Simplificação e operações com polinómios',                term:1, displayOrder:1 },
-  { id:'ao8mat-1-2', subjectId:'ao8-mat',  title:'Equações do 2º Grau',               description:'Fórmula resolvente e problemas',                          term:1, displayOrder:2 },
-  { id:'ao8mat-2-1', subjectId:'ao8-mat',  title:'Sistemas de Equações',              description:'Métodos de substituição e eliminação',                    term:2, displayOrder:3 },
-  { id:'ao8mat-2-2', subjectId:'ao8-mat',  title:'Geometria — Teorema de Pitágoras',  description:'Triângulo rectângulo e aplicações',                       term:2, displayOrder:4 },
-  { id:'ao8mat-3-1', subjectId:'ao8-mat',  title:'Estatística Básica',                description:'Média, moda, mediana e gráficos',                         term:3, displayOrder:5 },
-  { id:'ao8mat-3-2', subjectId:'ao8-mat',  title:'Probabilidade',                     description:'Eventos, espaço amostral e probabilidade simples',        term:3, displayOrder:6 },
 
-  { id:'ao8por-1-1', subjectId:'ao8-port', title:'Texto Informativo e Científico',    description:'Relatório, notícia e artigo de opinião',                  term:1, displayOrder:1 },
-  { id:'ao8por-1-2', subjectId:'ao8-port', title:'Gramática — Morfossintaxe',         description:'Concordância nominal e verbal',                           term:1, displayOrder:2 },
-  { id:'ao8por-2-1', subjectId:'ao8-port', title:'Literatura Africana de Língua Port',description:'Contos e poemas de autores africanos',                    term:2, displayOrder:3 },
-  { id:'ao8por-3-1', subjectId:'ao8-port', title:'Produção de Texto Argumentativo',   description:'Tese, argumentos e contra-argumentos',                    term:3, displayOrder:4 },
+  // ─── Matemática 8ª Classe ─────────────────────────────────
+  { id:'ao8mat-1-1', subjectId:'ao8-mat',  title:'Números Reais e Radicais',          description:'Raiz quadrada, cúbica e operações com radicais',          term:1, displayOrder:1 },
+  { id:'ao8mat-1-2', subjectId:'ao8-mat',  title:'Álgebra — Expressões Algébricas',   description:'Monómios, polinómios, soma e produto',                    term:1, displayOrder:2 },
+  { id:'ao8mat-1-3', subjectId:'ao8-mat',  title:'Factorização Algébrica',            description:'Factor comum, diferença de quadrados e trinómio perfeito', term:1, displayOrder:3 },
+  { id:'ao8mat-2-1', subjectId:'ao8-mat',  title:'Equações do 2º Grau',               description:'Fórmula resolvente, discriminante e tipos de solução',    term:2, displayOrder:4 },
+  { id:'ao8mat-2-2', subjectId:'ao8-mat',  title:'Sistemas de Equações do 1º Grau',   description:'Métodos de substituição, eliminação e igualação',         term:2, displayOrder:5 },
+  { id:'ao8mat-2-3', subjectId:'ao8-mat',  title:'Geometria — Teorema de Pitágoras',  description:'Triângulo rectângulo, hipotenusa e aplicações práticas',  term:2, displayOrder:6 },
+  { id:'ao8mat-3-1', subjectId:'ao8-mat',  title:'Geometria Espacial — Noções',       description:'Prismas, pirâmides, cilindros — volume e área lateral',  term:3, displayOrder:7 },
+  { id:'ao8mat-3-2', subjectId:'ao8-mat',  title:'Estatística — Medidas de Tendência',description:'Média, moda, mediana e representação gráfica',            term:3, displayOrder:8 },
+  { id:'ao8mat-3-3', subjectId:'ao8-mat',  title:'Probabilidade Básica',              description:'Espaço amostral, eventos e probabilidade clássica',       term:3, displayOrder:9 },
 
-  { id:'ao8cf-1-1',  subjectId:'ao8-fis',  title:'Calor e Temperatura',               description:'Termometria, dilatação e condução de calor',              term:1, displayOrder:1 },
-  { id:'ao8cf-2-1',  subjectId:'ao8-fis',  title:'Energia Eléctrica',                 description:'Circuitos simples e lei de Ohm',                          term:2, displayOrder:2 },
-  { id:'ao8cf-3-1',  subjectId:'ao8-fis',  title:'Reacções Químicas',                 description:'Tipos de reacções e balanceamento',                       term:3, displayOrder:3 },
+  // ─── Língua Portuguesa 8ª Classe ─────────────────────────
+  { id:'ao8por-1-1', subjectId:'ao8-port', title:'Texto Jornalístico — Notícia',      description:'Estrutura da notícia, reportagem e artigo de opinião',   term:1, displayOrder:1 },
+  { id:'ao8por-1-2', subjectId:'ao8-port', title:'Gramática — Morfologia Avançada',   description:'Processos de formação de palavras: derivação e composição', term:1, displayOrder:2 },
+  { id:'ao8por-1-3', subjectId:'ao8-port', title:'Concordância Nominal e Verbal',     description:'Regras de concordância e casos especiais em Português',   term:1, displayOrder:3 },
+  { id:'ao8por-2-1', subjectId:'ao8-port', title:'Literatura Africana de Língua Port',description:'Contos e poemas de autores de Angola, Moçambique e CV',   term:2, displayOrder:4 },
+  { id:'ao8por-2-2', subjectId:'ao8-port', title:'Regência Nominal e Verbal',         description:'Preposições obrigatórias e crase',                        term:2, displayOrder:5 },
+  { id:'ao8por-2-3', subjectId:'ao8-port', title:'Figuras de Linguagem',              description:'Metáfora, comparação, metonímia e hipérbole',             term:2, displayOrder:6 },
+  { id:'ao8por-3-1', subjectId:'ao8-port', title:'Texto Argumentativo',               description:'Tese, argumentos, contra-argumentos e conclusão',         term:3, displayOrder:7 },
+  { id:'ao8por-3-2', subjectId:'ao8-port', title:'Pontuação e Estilo',                description:'Uso do ponto e vírgula, travessão e parênteses',          term:3, displayOrder:8 },
+  { id:'ao8por-3-3', subjectId:'ao8-port', title:'Revisão e Exame Escolar',           description:'Exercícios de consolidação e preparação para provas',      term:3, displayOrder:9 },
 
-  { id:'ao8nat-1-1', subjectId:'ao8-nat',  title:'Célula e Divisão Celular',          description:'Mitose, meiose e ciclo celular',                          term:1, displayOrder:1 },
-  { id:'ao8nat-2-1', subjectId:'ao8-nat',  title:'Reprodução Humana',                 description:'Sistema reprodutor e puberdade',                          term:2, displayOrder:2 },
-  { id:'ao8nat-3-1', subjectId:'ao8-nat',  title:'Genética Básica',                   description:'Hereditariedade e leis de Mendel',                        term:3, displayOrder:3 },
+  // ─── Ciências Físicas 8ª Classe ──────────────────────────
+  { id:'ao8cf-1-1',  subjectId:'ao8-fis',  title:'Calor e Temperatura',               description:'Escalas termométricas, dilatação e calorimetria',        term:1, displayOrder:1 },
+  { id:'ao8cf-1-2',  subjectId:'ao8-fis',  title:'Mudanças de Estado — Gráficos',     description:'Fusão, evaporação, solidificação e condensação',          term:1, displayOrder:2 },
+  { id:'ao8cf-2-1',  subjectId:'ao8-fis',  title:'Electricidade — Carga e Corrente',  description:'Condutores, isolantes, circuitos série e paralelo',       term:2, displayOrder:3 },
+  { id:'ao8cf-2-2',  subjectId:'ao8-fis',  title:'Lei de Ohm e Circuitos Eléctricos', description:'Tensão, corrente, resistência e potência eléctrica',      term:2, displayOrder:4 },
+  { id:'ao8cf-3-1',  subjectId:'ao8-fis',  title:'Reacções Químicas e Balanceamento', description:'Tipos de reacções e balanceamento de equações químicas',  term:3, displayOrder:5 },
+  { id:'ao8cf-3-2',  subjectId:'ao8-fis',  title:'Ácidos, Bases e Sais',              description:'pH, indicadores e funções inorgânicas básicas',           term:3, displayOrder:6 },
 
-  { id:'ao8his-1-1', subjectId:'ao8-his',  title:'Expansão Europeia e África',        description:'Navegações e contacto com reinos africanos',              term:1, displayOrder:1 },
-  { id:'ao8his-2-1', subjectId:'ao8-his',  title:'Tráfico Negreiro',                  description:'Impacto em Angola e resistência dos povos',                term:2, displayOrder:2 },
-  { id:'ao8his-3-1', subjectId:'ao8-his',  title:'Revoluções dos Séculos XVIII-XIX',  description:'Americana, Francesa e Industrial',                        term:3, displayOrder:3 },
+  // ─── Ciências Naturais 8ª Classe ─────────────────────────
+  { id:'ao8nat-1-1', subjectId:'ao8-nat',  title:'A Célula em Detalhe',               description:'Organelos celulares, membrana e núcleo',                  term:1, displayOrder:1 },
+  { id:'ao8nat-1-2', subjectId:'ao8-nat',  title:'Divisão Celular',                   description:'Mitose, meiose — etapas e importância biológica',         term:1, displayOrder:2 },
+  { id:'ao8nat-2-1', subjectId:'ao8-nat',  title:'Sistema Reprodutor Humano',         description:'Anatomia, fisiologia e puberdade',                        term:2, displayOrder:3 },
+  { id:'ao8nat-2-2', subjectId:'ao8-nat',  title:'IST — Infecções Sexualmente Transm.',description:'Prevenção, tratamento e saúde sexual responsável',       term:2, displayOrder:4 },
+  { id:'ao8nat-3-1', subjectId:'ao8-nat',  title:'Genética de Mendel',                description:'1ª e 2ª Lei — cruzamentos e probabilidade hereditária',   term:3, displayOrder:5 },
+  { id:'ao8nat-3-2', subjectId:'ao8-nat',  title:'DNA e Hereditariedade',             description:'Estrutura do DNA, cromossomas e aplicações básicas',      term:3, displayOrder:6 },
+
+  // ─── História 8ª Classe ───────────────────────────────────
+  { id:'ao8his-1-1', subjectId:'ao8-his',  title:'Expansão Europeia e Grandes Naveg.',description:'Portugueses, espanhóis e chegada à África e América',     term:1, displayOrder:1 },
+  { id:'ao8his-1-2', subjectId:'ao8-his',  title:'Contacto Europeu com o Congo e Angola',description:'Aliança entre Portugal e o Reino do Congo, século XV',  term:1, displayOrder:2 },
+  { id:'ao8his-2-1', subjectId:'ao8-his',  title:'Tráfico Negreiro e Escravatura',    description:'Impacto em Angola — resistência, rotas e consequências',   term:2, displayOrder:3 },
+  { id:'ao8his-2-2', subjectId:'ao8-his',  title:'Revolução Americana e Francesa',    description:'Iluminismo, independência e queda do Absolutismo',        term:2, displayOrder:4 },
+  { id:'ao8his-3-1', subjectId:'ao8-his',  title:'Revolução Industrial',              description:'Máquina a vapor, classes sociais e capitalismo industrial', term:3, displayOrder:5 },
+  { id:'ao8his-3-2', subjectId:'ao8-his',  title:'Imperialismo e Colonialismo em África',description:'Conferência de Berlim (1884-85) e partilha de África',  term:3, displayOrder:6 },
+
+  // ─── Geografia 8ª Classe ─────────────────────────────────
+  { id:'ao8geo-1-1', subjectId:'ao8-geo',  title:'Angola — Situação Geográfica',      description:'Localização, fronteiras, superfície e divisão administrativa', term:1, displayOrder:1 },
+  { id:'ao8geo-1-2', subjectId:'ao8-geo',  title:'Hidrografia de Angola',             description:'Bacias hidrográficas, rios e lagos de Angola',             term:1, displayOrder:2 },
+  { id:'ao8geo-2-1', subjectId:'ao8-geo',  title:'Clima e Biomas de Angola',          description:'Subtropical, tropical seco, deserto — fauna e flora',     term:2, displayOrder:3 },
+  { id:'ao8geo-2-2', subjectId:'ao8-geo',  title:'População de Angola',               description:'Crescimento, urbanização, migrações e grupos étnicos',    term:2, displayOrder:4 },
+  { id:'ao8geo-3-1', subjectId:'ao8-geo',  title:'Economia de Angola — Sector Primário',description:'Petróleo, diamantes, agricultura e pesca',              term:3, displayOrder:5 },
+  { id:'ao8geo-3-2', subjectId:'ao8-geo',  title:'Economia de Angola — Turismo e Serv.',description:'Turismo, comércio e desenvolvimento económico',         term:3, displayOrder:6 },
+
+  // ─── Língua Inglesa 8ª Classe ────────────────────────────
+  { id:'ao8ing-1-1', subjectId:'ao8-ing',  title:'Revision: Present Simple & Continuous',description:'Differences, time markers and practice exercises',      term:1, displayOrder:1 },
+  { id:'ao8ing-1-2', subjectId:'ao8-ing',  title:'Past Tense — Storytelling',         description:'Simple past and past continuous for telling stories',    term:1, displayOrder:2 },
+  { id:'ao8ing-2-1', subjectId:'ao8-ing',  title:'Future Tenses — Plans & Predictions',description:'Will, going to and present continuous for future',      term:2, displayOrder:3 },
+  { id:'ao8ing-2-2', subjectId:'ao8-ing',  title:'Reading Comprehension',             description:'Reading strategies, skimming, scanning and inference',   term:2, displayOrder:4 },
+  { id:'ao8ing-3-1', subjectId:'ao8-ing',  title:'Comparative & Superlative Adjectives',description:'Angola and the world — comparisons in English',       term:3, displayOrder:5 },
+  { id:'ao8ing-3-2', subjectId:'ao8-ing',  title:'Writing — Paragraphs and Letters',  description:'Formal and informal letters, email writing',             term:3, displayOrder:6 },
 
   // ══════════════════════════════════════════════════════════
-  //  ANGOLA — 9ª Classe (ES1)
+  //  ANGOLA — 9ª Classe (ES1) — Currículo expandido
   // ══════════════════════════════════════════════════════════
-  { id:'ao9mat-1-1', subjectId:'ao9-mat',  title:'Funções — Conceitos Fundamentais',  description:'Domínio, imagem e representação gráfica',                 term:1, displayOrder:1 },
-  { id:'ao9mat-1-2', subjectId:'ao9-mat',  title:'Função Afim e Quadrática',          description:'Gráficos, raízes e vértice',                              term:1, displayOrder:2 },
-  { id:'ao9mat-2-1', subjectId:'ao9-mat',  title:'Trigonometria no Triângulo',        description:'Seno, cosseno, tangente — aplicações',                    term:2, displayOrder:3 },
-  { id:'ao9mat-2-2', subjectId:'ao9-mat',  title:'Números Reais e Irracionalidade',   description:'Raiz quadrada, potências e logaritmos',                   term:2, displayOrder:4 },
-  { id:'ao9mat-3-1', subjectId:'ao9-mat',  title:'Estatística e Probabilidade',       description:'Frequências, histogramas e combinatória básica',           term:3, displayOrder:5 },
 
-  { id:'ao9por-1-1', subjectId:'ao9-port', title:'Literatura Angolana — Poesia',      description:'Agostinho Neto e a geração da resistência',               term:1, displayOrder:1 },
-  { id:'ao9por-1-2', subjectId:'ao9-port', title:'Literatura Angolana — Prosa',       description:'Luandino Vieira e Pepetela',                              term:1, displayOrder:2 },
-  { id:'ao9por-2-1', subjectId:'ao9-port', title:'Gramática — Sintaxe Avançada',      description:'Orações subordinadas e coordenadas',                      term:2, displayOrder:3 },
-  { id:'ao9por-3-1', subjectId:'ao9-port', title:'Produção Textual — Dissertação',    description:'Argumentação e proposta de solução',                      term:3, displayOrder:4 },
+  // ─── Matemática 9ª Classe ─────────────────────────────────
+  { id:'ao9mat-1-1', subjectId:'ao9-mat',  title:'Conjuntos Numéricos — ℕ, ℤ, ℚ, ℝ', description:'Propriedades, operações e representação na recta real',   term:1, displayOrder:1 },
+  { id:'ao9mat-1-2', subjectId:'ao9-mat',  title:'Funções — Conceito e Domínio',      description:'Definição, domínio, contradomínio e funções numéricas',   term:1, displayOrder:2 },
+  { id:'ao9mat-1-3', subjectId:'ao9-mat',  title:'Função Afim e Quadrática',          description:'Gráficos, raízes, vértice e eixo de simetria',            term:1, displayOrder:3 },
+  { id:'ao9mat-2-1', subjectId:'ao9-mat',  title:'Trigonometria no Triângulo Rect.',   description:'Seno, cosseno, tangente — tabela e calculadora',          term:2, displayOrder:4 },
+  { id:'ao9mat-2-2', subjectId:'ao9-mat',  title:'Trigonometria — Problemas Aplicados',description:'Ângulos de elevação, depressão e distâncias inacessíveis', term:2, displayOrder:5 },
+  { id:'ao9mat-2-3', subjectId:'ao9-mat',  title:'Progressões Aritméticas',           description:'Termo geral, soma dos termos e problemas',                term:2, displayOrder:6 },
+  { id:'ao9mat-3-1', subjectId:'ao9-mat',  title:'Progressões Geométricas',           description:'Razão, termo geral, soma e juros compostos',              term:3, displayOrder:7 },
+  { id:'ao9mat-3-2', subjectId:'ao9-mat',  title:'Estatística — Frequências e Histog.',description:'Tabelas de frequência, histogramas e polígono de frequências', term:3, displayOrder:8 },
+  { id:'ao9mat-3-3', subjectId:'ao9-mat',  title:'Probabilidade — Eventos Compostos', description:'Eventos independentes, condicionais e combinações simples', term:3, displayOrder:9 },
 
-  { id:'ao9cf-1-1',  subjectId:'ao9-fis',  title:'Electricidade e Circuitos',         description:'Corrente, tensão, resistência e potência',                term:1, displayOrder:1 },
-  { id:'ao9cf-2-1',  subjectId:'ao9-fis',  title:'Magnetismo e Electromagnetismo',    description:'Campos magnéticos e indução electromagnética',            term:2, displayOrder:2 },
-  { id:'ao9cf-3-1',  subjectId:'ao9-fis',  title:'Óptica Básica',                     description:'Reflexão, refracção e formação de imagens',               term:3, displayOrder:3 },
+  // ─── Língua Portuguesa 9ª Classe ─────────────────────────
+  { id:'ao9por-1-1', subjectId:'ao9-port', title:'Literatura Angolana — Poesia',      description:'Agostinho Neto, Viriato da Cruz e António Jacinto',       term:1, displayOrder:1 },
+  { id:'ao9por-1-2', subjectId:'ao9-port', title:'Literatura Angolana — Prosa',       description:'Luandino Vieira — "A Vida Verdadeira de Domingos Xavier"', term:1, displayOrder:2 },
+  { id:'ao9por-1-3', subjectId:'ao9-port', title:'Figuras de Estilo e Análise Poética',description:'Metáfora, antítese, anáfora e versificação',             term:1, displayOrder:3 },
+  { id:'ao9por-2-1', subjectId:'ao9-port', title:'Sintaxe — Orações Subordinadas',    description:'Substantivas, relativas, adverbiais e suas funções',      term:2, displayOrder:4 },
+  { id:'ao9por-2-2', subjectId:'ao9-port', title:'Pepetela — Ficção Angolana',        description:'Análise de excertos de obras de Pepetela',                term:2, displayOrder:5 },
+  { id:'ao9por-2-3', subjectId:'ao9-port', title:'Texto de Apreciação Crítica',       description:'Estrutura, argumentação e linguagem formal',              term:2, displayOrder:6 },
+  { id:'ao9por-3-1', subjectId:'ao9-port', title:'Produção Textual — Dissertação',    description:'Tese, argumentação e proposta de solução',                term:3, displayOrder:7 },
+  { id:'ao9por-3-2', subjectId:'ao9-port', title:'Preparação para Exame de Classe',   description:'Revisão geral e exercícios tipo exame nacional',          term:3, displayOrder:8 },
+  { id:'ao9por-3-3', subjectId:'ao9-port', title:'Oralidade — Debate e Exposição',    description:'Técnicas de argumentação oral e debate estruturado',      term:3, displayOrder:9 },
 
-  { id:'ao9nat-1-1', subjectId:'ao9-nat',  title:'Corpo Humano — Sistemas',           description:'Sistema nervoso, circulatório e imunitário',              term:1, displayOrder:1 },
-  { id:'ao9nat-2-1', subjectId:'ao9-nat',  title:'Ecologia e Ambiente',               description:'Cadeias alimentares e impacto ambiental em Angola',      term:2, displayOrder:2 },
-  { id:'ao9nat-3-1', subjectId:'ao9-nat',  title:'Biotecnologia e Saúde',             description:'OGM, vacinação e saúde pública',                          term:3, displayOrder:3 },
+  // ─── Ciências Físicas 9ª Classe ──────────────────────────
+  { id:'ao9cf-1-1',  subjectId:'ao9-fis',  title:'Electricidade — Conceitos Básicos', description:'Carga eléctrica, corrente, tensão e resistência',         term:1, displayOrder:1 },
+  { id:'ao9cf-1-2',  subjectId:'ao9-fis',  title:'Circuitos Eléctricos — Série/Paral.',description:'Leis de Kirchhoff, resistências em série e paralelo',    term:1, displayOrder:2 },
+  { id:'ao9cf-1-3',  subjectId:'ao9-fis',  title:'Potência e Energia Eléctrica',      description:'Cálculo de consumo e factura de electricidade',           term:1, displayOrder:3 },
+  { id:'ao9cf-2-1',  subjectId:'ao9-fis',  title:'Magnetismo',                        description:'Ímanes, campo magnético e bússola',                       term:2, displayOrder:4 },
+  { id:'ao9cf-2-2',  subjectId:'ao9-fis',  title:'Electromagnetismo',                 description:'Lei de Faraday, indução e gerador eléctrico',             term:2, displayOrder:5 },
+  { id:'ao9cf-3-1',  subjectId:'ao9-fis',  title:'Óptica — Reflexão e Espelhos',      description:'Lei da reflexão, espelhos planos e curvos',               term:3, displayOrder:6 },
+  { id:'ao9cf-3-2',  subjectId:'ao9-fis',  title:'Óptica — Refracção e Lentes',       description:'Lei de Snell-Descartes, lentes e óculos',                 term:3, displayOrder:7 },
+  { id:'ao9cf-3-3',  subjectId:'ao9-fis',  title:'Física Nuclear — Introdução',       description:'Radioactividade, isótopos e aplicações em Angola',        term:3, displayOrder:8 },
 
-  { id:'ao9his-1-1', subjectId:'ao9-his',  title:'Colonialismo em Angola',            description:'Administração colonial portuguesa e resistência',          term:1, displayOrder:1 },
-  { id:'ao9his-2-1', subjectId:'ao9-his',  title:'Movimentos de Independência',       description:'MPLA, FNLA, UNITA e a luta armada',                       term:2, displayOrder:2 },
-  { id:'ao9his-3-1', subjectId:'ao9-his',  title:'Angola Independente',               description:'11 de Novembro de 1975 e construção nacional',            term:3, displayOrder:3 },
+  // ─── Ciências Naturais 9ª Classe ─────────────────────────
+  { id:'ao9nat-1-1', subjectId:'ao9-nat',  title:'Sistema Nervoso e Órgãos dos Sentidos',description:'Neurónios, reflexos e sistemas nervoso central e periférico', term:1, displayOrder:1 },
+  { id:'ao9nat-1-2', subjectId:'ao9-nat',  title:'Sistema Circulatório e Imunitário', description:'Coração, vasos, sangue, anticorpos e vacinação',           term:1, displayOrder:2 },
+  { id:'ao9nat-2-1', subjectId:'ao9-nat',  title:'Ecologia — Relações entre Organismos',description:'Predação, simbiose, parasitismo e competição',           term:2, displayOrder:3 },
+  { id:'ao9nat-2-2', subjectId:'ao9-nat',  title:'Poluição e Ambiente em Angola',     description:'Poluição do ar, água e solo — impactos e soluções',       term:2, displayOrder:4 },
+  { id:'ao9nat-3-1', subjectId:'ao9-nat',  title:'Saúde Pública — Doenças Tropicais', description:'Malária, tuberculose, febre-amarela — epidemiologia',     term:3, displayOrder:5 },
+  { id:'ao9nat-3-2', subjectId:'ao9-nat',  title:'Biotecnologia — OGM e Vacinas',     description:'Engenharia genética, produção de vacinas e biofármacos', term:3, displayOrder:6 },
+  { id:'ao9nat-3-3', subjectId:'ao9-nat',  title:'Evolução das Espécies',             description:'Darwin, selecção natural, adaptação e evidências da evolução', term:3, displayOrder:7 },
+
+  // ─── História 9ª Classe ───────────────────────────────────
+  { id:'ao9his-1-1', subjectId:'ao9-his',  title:'Angola no Século XIX — Resistência', description:'Guerras de resistência: Bailundo, Cuamato e Dembos',     term:1, displayOrder:1 },
+  { id:'ao9his-1-2', subjectId:'ao9-his',  title:'Colonialismo Português em Angola',   description:'Sistema colonial, trabalho forçado e contrato',           term:1, displayOrder:2 },
+  { id:'ao9his-2-1', subjectId:'ao9-his',  title:'Movimentos Nacionalistas Africanos', description:'Pan-africanismo e surgimento dos partidos angolanos',      term:2, displayOrder:3 },
+  { id:'ao9his-2-2', subjectId:'ao9-his',  title:'MPLA, FNLA e UNITA — Luta Armada',  description:'Início da guerra de libertação em 1961 e protagonistas',  term:2, displayOrder:4 },
+  { id:'ao9his-3-1', subjectId:'ao9-his',  title:'Revolução dos Cravos e Alvor',       description:'25 de Abril de 1974 e os Acordos de Alvor',               term:3, displayOrder:5 },
+  { id:'ao9his-3-2', subjectId:'ao9-his',  title:'Independência e Guerra Civil',       description:'11 de Nov 1975, MPLA no poder e conflito interno (1975-2002)', term:3, displayOrder:6 },
+  { id:'ao9his-3-3', subjectId:'ao9-his',  title:'Angola no Século XXI',               description:'Paz em 2002, reconstrução nacional e desenvolvimento',    term:3, displayOrder:7 },
+
+  // ─── Geografia 9ª Classe ─────────────────────────────────
+  { id:'ao9geo-1-1', subjectId:'ao9-geo',  title:'Globalização — Conceito e Causas',  description:'Globalização económica, cultural e tecnológica',           term:1, displayOrder:1 },
+  { id:'ao9geo-1-2', subjectId:'ao9-geo',  title:'Angola e a SADC — Integração Regional',description:'Comunidade para o Desenvolvimento da África Austral',   term:1, displayOrder:2 },
+  { id:'ao9geo-2-1', subjectId:'ao9-geo',  title:'Recursos Naturais de Angola',       description:'Petróleo, gás, diamantes, madeiras e pesca — exportações', term:2, displayOrder:3 },
+  { id:'ao9geo-2-2', subjectId:'ao9-geo',  title:'Indústria e Energia em Angola',     description:'Indústria extractiva, barragem de Laúca e energias renov.', term:2, displayOrder:4 },
+  { id:'ao9geo-3-1', subjectId:'ao9-geo',  title:'Problemas Ambientais Globais',      description:'Aquecimento global, desertificação e perda de biodiversidade', term:3, displayOrder:5 },
+  { id:'ao9geo-3-2', subjectId:'ao9-geo',  title:'Desenvolvimento Sustentável',       description:'ODS — Objectivos de Desenvolvimento Sustentável e Angola',  term:3, displayOrder:6 },
+  { id:'ao9geo-3-3', subjectId:'ao9-geo',  title:'Angola — Desenvolvimento Humano',   description:'IDH, educação, saúde e perspectivas para 2050',           term:3, displayOrder:7 },
+
+  // ─── Língua Inglesa 9ª Classe ────────────────────────────
+  { id:'ao9ing-1-1', subjectId:'ao9-ing',  title:'Present Perfect — Life Experiences',description:'Have/has + past participle, ever, never, already, yet',   term:1, displayOrder:1 },
+  { id:'ao9ing-1-2', subjectId:'ao9-ing',  title:'Passive Voice',                     description:'Simple present and past passive — transformation exercises', term:1, displayOrder:2 },
+  { id:'ao9ing-2-1', subjectId:'ao9-ing',  title:'Conditionals — If Clauses',         description:'Zero, first and second conditional sentences',            term:2, displayOrder:3 },
+  { id:'ao9ing-2-2', subjectId:'ao9-ing',  title:'Reading — Texts about Angola',      description:'Comprehension, vocabulary and discussion on Angolan topics', term:2, displayOrder:4 },
+  { id:'ao9ing-3-1', subjectId:'ao9-ing',  title:'Reported Speech',                   description:'Say and tell — statements, questions and commands',       term:3, displayOrder:5 },
+  { id:'ao9ing-3-2', subjectId:'ao9-ing',  title:'Writing — Essays and Arguments',    description:'Opinion essays: structure and language for ENES preparation', term:3, displayOrder:6 },
+  { id:'ao9ing-3-3', subjectId:'ao9-ing',  title:'Speaking — Presentations',          description:'Oral presentations on Angolan topics in English',          term:3, displayOrder:7 },
 
   // ══════════════════════════════════════════════════════════
   //  ANGOLA — 11ª Classe (ES2) — Capítulos

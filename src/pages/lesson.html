@@ -321,13 +321,30 @@
             position: absolute;
             pointer-events: none;
             z-index: 10;
-            font-size: 13px;
+            font-size: 12px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.18);
+            letter-spacing: 1.5px;
+            white-space: nowrap;
+            transition: top 6s ease, left 6s ease;
+            user-select: none;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+            font-family: monospace;
+        }
+        /* Watermark secundário (canto oposto) */
+        #vclass-watermark2 {
+            position: absolute;
+            pointer-events: none;
+            z-index: 10;
+            font-size: 11px;
             font-weight: 600;
-            color: rgba(255,255,255,0.13);
+            color: rgba(255,255,255,0.12);
             letter-spacing: 1px;
             white-space: nowrap;
-            transition: top 8s, left 8s;
+            transition: top 9s ease, left 9s ease;
             user-select: none;
+            font-family: monospace;
+            transform: rotate(-15deg);
         }
         /* Bloquear overlay de captura de ecrã */
         #vclass-protect-overlay {
@@ -335,14 +352,31 @@
             inset: 0;
             z-index: 5;
             pointer-events: none;
-            /* padrão semi-transparente que arruína screenshots */
+            /* padrão semi-transparente que dificulta screenshots */
             background: repeating-linear-gradient(
                 45deg,
                 transparent,
-                transparent 40px,
-                rgba(255,255,255,0.015) 40px,
-                rgba(255,255,255,0.015) 41px
+                transparent 38px,
+                rgba(255,255,255,0.018) 38px,
+                rgba(255,255,255,0.018) 39px
+            ),
+            repeating-linear-gradient(
+                -45deg,
+                transparent,
+                transparent 38px,
+                rgba(255,255,255,0.012) 38px,
+                rgba(255,255,255,0.012) 39px
             );
+        }
+        /* Bloquear seleção de texto no player */
+        #vclass-player-wrap, #vclass-player-wrap * {
+            -webkit-user-select: none !important;
+            -moz-user-select: none !important;
+            user-select: none !important;
+        }
+        /* Bloquear Picture-in-Picture CSS */
+        #vclass-video::-webkit-media-controls-picture-in-picture-button {
+            display: none !important;
         }
         /* Barra de controlos custom */
         #vclass-controls {
@@ -626,8 +660,10 @@
                             </video>
                             <!-- Overlay padrão anti-screenshot -->
                             <div id="vclass-protect-overlay"></div>
-                            <!-- Watermark flutuante dinâmico -->
+                            <!-- Watermark flutuante dinâmico (principal) -->
                             <div id="vclass-watermark"></div>
+                            <!-- Watermark secundário (canto oposto, rotacionado) -->
+                            <div id="vclass-watermark2"></div>
                             <!-- Controlos custom -->
                             <div id="vclass-controls">
                                 <button class="vc-btn" id="vc-play" onclick="vcPlay()" title="Play/Pause">
@@ -1420,23 +1456,73 @@
             }, 30000);
         }
 
-        // ─── Watermark flutuante ─────────────────────────────────────────────
+        // ─── Watermark flutuante dinâmico ────────────────────────────────────
         let _wmTimer = null;
-        function startWatermark(label) {
-            const el = document.getElementById('vclass-watermark');
-            if (!el || !label) return;
-            el.textContent = label;
-            function move() {
+        let _wmTimer2 = null;
+        let _wmUser = null;   // Guardado para regenerar labels
+        function startWatermark(label, userData) {
+            const el  = document.getElementById('vclass-watermark');
+            const el2 = document.getElementById('vclass-watermark2');
+            if (!el) return;
+
+            if (userData) _wmUser = userData;
+
+            // Label principal: nome + timestamp
+            function getMainLabel() {
+                const now = new Date();
+                const ts = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+                return label + ' • ' + ts;
+            }
+            // Label secundário: email mascarado + data
+            function getSecLabel() {
+                const u = _wmUser;
+                if (!u) return 'VClass © ' + new Date().getFullYear();
+                const d = new Date();
+                const ds = d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear();
+                return (u.email || '***') + ' ' + ds;
+            }
+
+            function moveEl(el, opposite) {
                 const wrap = document.getElementById('vclass-player-wrap');
                 if (!wrap) return;
-                const maxX = Math.max(0, wrap.offsetWidth  - el.offsetWidth  - 20);
-                const maxY = Math.max(0, wrap.offsetHeight - el.offsetHeight - 20);
-                el.style.left = Math.random() * maxX + 'px';
-                el.style.top  = Math.random() * maxY + 'px';
+                const maxX = Math.max(0, wrap.offsetWidth  - 220);
+                const maxY = Math.max(0, wrap.offsetHeight - 40);
+                if (opposite) {
+                    // Canto oposto (metade direita/inferior)
+                    el.style.left = (maxX/2 + Math.random() * maxX/2) + 'px';
+                    el.style.top  = (maxY/2 + Math.random() * maxY/2) + 'px';
+                } else {
+                    el.style.left = Math.random() * maxX + 'px';
+                    el.style.top  = Math.random() * maxY + 'px';
+                }
             }
-            move();
+
+            // Inicializar elemento principal
+            el.textContent = getMainLabel();
+            moveEl(el, false);
+
+            // Inicializar secundário
+            if (el2) {
+                el2.textContent = getSecLabel();
+                moveEl(el2, true);
+            }
+
             clearInterval(_wmTimer);
-            _wmTimer = setInterval(move, 8000);
+            clearInterval(_wmTimer2);
+
+            // Mover principal a cada 6s e atualizar timestamp
+            _wmTimer = setInterval(function() {
+                el.textContent = getMainLabel();
+                moveEl(el, false);
+            }, 6000);
+
+            // Mover secundário a cada 9s (dessincronizado)
+            if (el2) {
+                _wmTimer2 = setInterval(function() {
+                    el2.textContent = getSecLabel();
+                    moveEl(el2, true);
+                }, 9000);
+            }
         }
 
         // ─── Carregamento principal do vídeo ────────────────────────────────
@@ -1473,9 +1559,12 @@
                         const tokenData = await tokenRes.json();
                         if (tokenData.success && tokenData.data) {
                             const wm = tokenData.data.watermark;
-                            watermarkLabel = wm
-                                ? `${wm.name} • VClass`
-                                : 'VClass';
+                            if (wm) {
+                                // Label principal usa nome do utilizador
+                                watermarkLabel = wm.name || 'VClass';
+                                // Guardar dados para watermark secundário
+                                _wmUser = { email: wm.email || '' };
+                            }
                             // Em produção com Bunny.net o videoUrl viria do stream endpoint:
                             // videoUrl = await fetchStreamUrl(lessonId, tokenData.data.token);
                         }
@@ -2226,10 +2315,11 @@
         // Initialize
 
         // ══════════════════════════════════════════════════════════════
-        //  Protecções anti-download globais
+        //  Protecções anti-download globais (v2)
         // ══════════════════════════════════════════════════════════════
         (function installAntiDownload() {
-            // Bloquear menu de contexto
+
+            // ── 1. Bloquear menu de contexto no player ─────────────────
             document.addEventListener('contextmenu', function(e) {
                 if (e.target.closest('#vclass-player-wrap, #video-container')) {
                     e.preventDefault();
@@ -2237,21 +2327,25 @@
                 }
             });
 
-            // Bloquear atalhos de teclado perigosos
+            // ── 2. Bloquear atalhos de teclado perigosos ───────────────
             document.addEventListener('keydown', function(e) {
+                const k = e.key.toLowerCase();
                 const blocked = (
-                    // Ctrl+S (guardar), Ctrl+U (ver fonte), Ctrl+Shift+J/I/C (devtools)
-                    (e.ctrlKey && ['s','u','p'].includes(e.key.toLowerCase())) ||
-                    (e.ctrlKey && e.shiftKey && ['j','i','c'].includes(e.key.toLowerCase())) ||
-                    // F12
-                    e.key === 'F12'
+                    // Ctrl+S (guardar), Ctrl+U (ver fonte), Ctrl+P (imprimir)
+                    (e.ctrlKey && !e.shiftKey && ['s','u','p'].includes(k)) ||
+                    // Ctrl+Shift+J/I/C/K (DevTools vários browsers)
+                    (e.ctrlKey && e.shiftKey && ['j','i','c','k'].includes(k)) ||
+                    // Meta (Mac)+Shift+I (Safari DevTools)
+                    (e.metaKey && e.shiftKey && k === 'i') ||
+                    // F12, PrintScreen
+                    e.key === 'F12' || e.key === 'PrintScreen'
                 );
                 if (blocked) {
                     e.preventDefault();
                     e.stopPropagation();
                     return false;
                 }
-                // Espaço = play/pause no player
+                // Espaço = play/pause no player quando foco não é input
                 if (e.key === ' ' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
                     const wrap = document.getElementById('vclass-player-wrap');
                     if (wrap && wrap.offsetParent !== null) {
@@ -2259,28 +2353,91 @@
                         vcPlay();
                     }
                 }
-            });
+            }, true);  // capture=true para interceptar antes de outros handlers
 
-            // Bloquear drag & drop no vídeo
+            // ── 3. Bloquear drag & drop no vídeo ──────────────────────
             document.addEventListener('dragstart', function(e) {
                 if (e.target.tagName === 'VIDEO' || e.target.id === 'vclass-video') {
                     e.preventDefault();
                 }
             });
 
-            // Detectar DevTools (técnica de largura)
-            let _dtOpen = false;
-            setInterval(function() {
-                const threshold = 160;
-                const open = window.outerWidth - window.innerWidth > threshold
-                          || window.outerHeight - window.innerHeight > threshold;
-                if (open && !_dtOpen) {
-                    _dtOpen = true;
-                    const v = document.getElementById('vclass-video');
-                    if (v) v.pause();
+            // ── 4. Bloquear cópia de texto no player ─────────────────
+            document.addEventListener('copy', function(e) {
+                if (e.target.closest && e.target.closest('#vclass-player-wrap')) {
+                    e.preventDefault();
                 }
-                if (!open) _dtOpen = false;
+            });
+
+            // ── 5. Detectar DevTools (técnica de tamanho + debugger) ──
+            let _dtOpen = false;
+            let _dtCount = 0;
+
+            // Técnica 1: Diferença de tamanho de janela
+            function checkDevToolsSize() {
+                const threshold = 160;
+                const wDiff = window.outerWidth  - window.innerWidth;
+                const hDiff = window.outerHeight - window.innerHeight;
+                return wDiff > threshold || hDiff > threshold;
+            }
+
+            // Técnica 2: toString personalizado (DevTools formata objetos)
+            function checkDevToolsToString() {
+                let open = false;
+                const d = /./;
+                d.toString = function() { open = true; return ''; };
+                console.log('%c', d);  // DevTools chama toString ao formatar
+                return open;
+            }
+
+            setInterval(function() {
+                const isOpen = checkDevToolsSize();
+                if (isOpen && !_dtOpen) {
+                    _dtOpen = true;
+                    _dtCount++;
+                    const v = document.getElementById('vclass-video');
+                    if (v) {
+                        v.pause();
+                        // Escurecer o player temporariamente
+                        const wrap = document.getElementById('vclass-player-wrap');
+                        if (wrap) {
+                            wrap.style.filter = 'brightness(0.05)';
+                            setTimeout(function() {
+                                // Só reactivar se DevTools fechou
+                                if (!checkDevToolsSize()) {
+                                    wrap.style.filter = '';
+                                }
+                            }, 3000);
+                        }
+                    }
+                }
+                if (!isOpen && _dtOpen) {
+                    _dtOpen = false;
+                    const wrap = document.getElementById('vclass-player-wrap');
+                    if (wrap) wrap.style.filter = '';
+                }
             }, 1000);
+
+            // ── 6. Bloquear Picture-in-Picture via API ─────────────────
+            document.addEventListener('enterpictureinpicture', function(e) {
+                if (e.target && e.target.id === 'vclass-video') {
+                    document.exitPictureInPicture && document.exitPictureInPicture();
+                }
+            });
+
+            // ── 7. Bloquear captura de ecrã via Visibility API ─────────
+            // Quando a aba fica oculta (ex: alt+tab para capturar), pausar
+            document.addEventListener('visibilitychange', function() {
+                const v = document.getElementById('vclass-video');
+                if (document.hidden && v && !v.paused) {
+                    v.dataset.wasPlaying = 'true';
+                    v.pause();
+                } else if (!document.hidden && v && v.dataset.wasPlaying === 'true') {
+                    delete v.dataset.wasPlaying;
+                    v.play().catch(() => {});
+                }
+            });
+
         })();
 
         loadLesson();

@@ -5,9 +5,15 @@ import { getSupabase } from '../config/supabase'
 import { hashPassword, verifyPassword, validatePassword } from '../utils/password'
 import { generateAccessToken, generateRefreshToken, verifyToken } from '../utils/jwt'
 import { mockUsers } from '../middleware/database'
+import { rateLimitMiddleware } from '../middleware/auth'
 import type { ApiResponse, AuthResponse } from '../types'
 
 const auth = new Hono()
+
+// Rate limiting: máx 20 tentativas de login por minuto por IP
+auth.use('/login',    rateLimitMiddleware(20, 60_000))
+auth.use('/register', rateLimitMiddleware(5,  60_000))
+auth.use('/refresh',  rateLimitMiddleware(30, 60_000))
 
 // Check if database is configured
 function isDatabaseConfigured(env?: any): boolean {

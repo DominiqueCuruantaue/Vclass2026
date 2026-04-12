@@ -2,11 +2,17 @@
 //  VClass — Rota de Notícias
 //  GET /api/news          → lista de notícias (público)
 //  GET /api/news/:id      → notícia individual
+//  Nota: Rotas públicas por design — notícias são marketing.
+//        optionalAuth enriquece a resposta se o utilizador estiver autenticado.
 // ============================================================
 import { Hono } from 'hono'
+import { optionalAuth } from '../middleware/auth'
 import type { ApiResponse } from '../types'
 
 const news = new Hono()
+
+// Auth opcional — enriquece se autenticado, não bloqueia se não
+news.use('/*', optionalAuth)
 
 // ── Dados estáticos de notícias (sem BD necessária) ─────────
 const NEWS_DATA = [

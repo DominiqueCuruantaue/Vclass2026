@@ -1316,7 +1316,10 @@
         // ── Currículo: carregar dados ────────────────────────────────────
         async function loadCurriculumData() {
             try {
-                const res = await fetch('/api/curriculum/full');
+                const token = localStorage.getItem('accessToken') || '';
+                const res = await fetch('/api/curriculum/full', {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                });
                 const json = await res.json();
                 if (json.success) {
                     CURRICULUM_DATA = json.data;
