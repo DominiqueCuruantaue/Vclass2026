@@ -2,6 +2,17 @@ import { Hono } from 'hono'
 
 const app = new Hono()
 
+// ── Cache-Control: força o browser a nunca usar cache para páginas HTML ──────
+// Resolve o problema de actualizações não aparecerem sem Ctrl+F5
+app.use('/*', async (c, next) => {
+  await next()
+  if (c.res.headers.get('content-type')?.includes('text/html')) {
+    c.res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    c.res.headers.set('Pragma', 'no-cache')
+    c.res.headers.set('Expires', '0')
+  }
+})
+
 // Import HTML content as raw strings (will be handled by build)
 import homeHtml from '../pages/home.html?raw'
 import loginHtml from '../pages/login.html?raw'

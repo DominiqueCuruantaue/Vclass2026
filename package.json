@@ -5,7 +5,7 @@
     "dev": "vite",
     "dev:sandbox": "wrangler pages dev dist --ip 0.0.0.0 --port 3000",
     "build": "vite build",
-    "postbuild": "find dist -maxdepth 1 -name '*.html' -delete && echo 'postbuild: static HTMLs removidos do dist/'",
+    "postbuild": "node -e \"const fs=require('fs'),p=require('path');fs.readdirSync('dist').filter(f=>f.endsWith('.html')&&f!=='designs').forEach(f=>{const fp=p.join('dist',f);if(fs.statSync(fp).isFile())fs.unlinkSync(fp);});console.log('postbuild: HTMLs estáticos removidos de dist/')\"",
     "preview": "wrangler pages dev dist",
     "deploy": "npm run build && wrangler pages deploy dist",
     "deploy:prod": "npm run build && wrangler pages deploy dist --project-name vclass",
