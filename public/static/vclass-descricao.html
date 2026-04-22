@@ -196,9 +196,43 @@
     .card .card-title { font-size: 10pt; font-weight: 700; color: #1e3a5f; margin-bottom: 4px; }
     .card .card-body  { font-size: 9pt; color: #6b7280; }
 
+    /* -- Action bar (fixed top) ----------------------------*/
+    .action-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      background: #1e3a5f;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 9.5pt;
+    }
+    .action-bar .ab-title { font-weight: 700; opacity: 0.92; }
+    .action-bar .ab-right { display: flex; align-items: center; gap: 10px; }
+    .btn-dl {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: #7c3aed; color: #fff; border: none; border-radius: 7px;
+      padding: 8px 18px; font-size: 9.5pt; font-weight: 700;
+      cursor: pointer; text-decoration: none; transition: background 0.15s;
+    }
+    .btn-dl:hover { background: #6d28d9; }
+    .btn-outline {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: transparent; color: #fff;
+      border: 1px solid rgba(255,255,255,0.4); border-radius: 7px;
+      padding: 7px 14px; font-size: 9pt; font-weight: 600;
+      cursor: pointer; text-decoration: none; transition: background 0.15s;
+    }
+    .btn-outline:hover { background: rgba(255,255,255,0.12); }
+
     /* -- Print --------------------------------------*/
     @media print {
-      body { background: #fff; font-size: 10pt; }
+      .action-bar { display: none !important; }
+      body { background: #fff; font-size: 10pt; padding-top: 0 !important; }
       .cover { background: #1e3a5f !important; page-break-after: always; }
       .section { border: 1px solid #d1d5db; page-break-inside: avoid; }
       thead th { background: #1e3a5f !important; color: #fff !important; }
@@ -224,7 +258,20 @@
     }
   </style>
 </head>
-<body>
+<body style="padding-top:48px">
+
+<!-- -- BARRA DE ACC&#213;ES ----------------------------------------------- -->
+<div class="action-bar">
+  <span class="ab-title">&#x1F4CB;&nbsp; VClass &mdash; Descri&#231;&#227;o Completa da Plataforma</span>
+  <div class="ab-right">
+    <a href="/download/vclass-descricao" class="btn-dl">
+      &#x2B07;&nbsp;Descarregar
+    </a>
+    <a href="javascript:window.print()" class="btn-outline">
+      &#x1F5A8;&nbsp;Imprimir / PDF
+    </a>
+  </div>
+</div>
 
 <!-- -- CAPA ---------------------------------------------------------- -->
 <div class="cover">

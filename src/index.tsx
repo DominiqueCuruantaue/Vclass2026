@@ -36,7 +36,17 @@ app.use('/api/*', corsConfig)
 app.use('/static/*', serveStatic({ root: './public' }))
 app.use('/designs/*', serveStatic({ root: './public' }))
 
-// Favicon — evita erros 404 nos logs do browser
+// ── Download: serve o documento de descrição como ficheiro para download ──────
+import descricaoHtml from '../public/static/vclass-descricao.html?raw'
+
+app.get('/download/vclass-descricao', (c) => {
+  c.header('Content-Type', 'text/html; charset=utf-8')
+  c.header('Content-Disposition', 'attachment; filename="VClass-Descricao-Plataforma.html"')
+  c.header('Cache-Control', 'no-cache')
+  return c.body(descricaoHtml)
+})
+
+// ── Favicon — evita erros 404 nos logs do browser ─────────────────────────────
 app.get('/favicon.ico', (c) => {
   c.header('Content-Type', 'image/svg+xml')
   c.header('Cache-Control', 'public, max-age=86400')
