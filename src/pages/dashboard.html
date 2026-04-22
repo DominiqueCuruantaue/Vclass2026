@@ -9,839 +9,818 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
     <link href="/static/styles.css" rel="stylesheet">
     <style>
-        .stat-card { transition: transform 0.2s, box-shadow 0.2s; }
-        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px rgba(0,0,0,0.12); }
-        .stat-number { font-variant-numeric: tabular-nums; }
-        @keyframes countUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .count-animate { animation: countUp 0.5s ease forwards; }
-        .streak-flame { animation: flicker 1.5s ease-in-out infinite alternate; }
-        @keyframes flicker { from { transform: scale(1) rotate(-3deg); } to { transform: scale(1.1) rotate(3deg); } }
-        .progress-bar-fill { transition: width 1s cubic-bezier(0.4,0,0.2,1); }
-        .lesson-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
-        .lesson-card { transition: transform 0.2s, box-shadow 0.2s; }
-        .badge { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 50%; font-size: 1.5rem; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+
+        /* ── Nav ── */
         .nav-link-active { background: #f5f3ff; color: #7c3aed; font-weight: 600; }
-        .avatar-circle { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; color: white; }
-        .dropdown-menu { display: none; position: absolute; right: 0; top: calc(100% + 8px); background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); min-width: 220px; z-index: 100; overflow: hidden; }
+        .avatar-circle { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.875rem; color: white; flex-shrink: 0; }
+        .dropdown-menu { display: none; position: absolute; right: 0; top: calc(100% + 8px); background: white; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,0.15); min-width: 230px; z-index: 100; overflow: hidden; }
         .dropdown-menu.open { display: block; }
-        .quick-access-card { cursor: pointer; transition: all 0.2s; border: 2px solid transparent; }
-        .quick-access-card:hover { border-color: #7c3aed; background: #faf5ff; }
-        .greeting-time { font-size: 0.85rem; }
+
+        /* ── Cards ── */
+        .stat-card { transition: transform 0.2s, box-shadow 0.2s; }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(0,0,0,0.1); }
+
+        /* ── Lesson cards ── */
+        .lesson-row { transition: background 0.15s, transform 0.15s; }
+        .lesson-row:hover { background: #faf5ff; transform: translateX(2px); }
+
+        /* ── Progress bar ── */
+        .pbar { transition: width 1s cubic-bezier(0.4,0,0.2,1); }
+
+        /* ── Flame animation ── */
+        @keyframes flicker { from { transform: scale(1) rotate(-3deg); } to { transform: scale(1.1) rotate(3deg); } }
+        .streak-flame { animation: flicker 1.5s ease-in-out infinite alternate; }
+
+        /* ── Count animation ── */
+        @keyframes fadeUp { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+        .count-animate { animation: fadeUp 0.5s ease forwards; }
+
+        /* ── Subject pill ── */
+        .subj-pill { font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; display: inline-block; }
+
+        /* ── Section card ── */
+        .dash-card { background: white; border-radius: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04); }
+
+        /* ── Quick nav ── */
+        .qnav { transition: all 0.2s; border: 2px solid transparent; cursor: pointer; }
+        .qnav:hover { border-color: #7c3aed; background: #faf5ff; }
+
+        /* ── Skeleton ── */
+        @keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
+        .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 800px 100%; animation: shimmer 1.5s infinite; border-radius: 10px; }
+
+        /* ── Lesson thumb ── */
+        .lesson-thumb { width: 56px; height: 40px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+
+        /* ── Badge ── */
+        .bdg { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
+
+        /* ── Scroll list ── */
+        .scroll-x { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+        .scroll-x::-webkit-scrollbar { display: none; }
+
+        /* ── Subject card (horizontal scroll) ── */
+        .subj-card { flex-shrink: 0; width: 140px; border-radius: 14px; padding: 14px 12px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+        .subj-card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
     </style>
 </head>
 <body class="bg-gray-50">
 
-    <!-- Navigation -->
-    <nav class="bg-white shadow-sm sticky top-0 z-50">
-        <div class="container mx-auto px-4">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center space-x-8">
-                    <a href="/dashboard.html" class="flex items-center space-x-2">
-                        <i class="fas fa-graduation-cap text-2xl text-purple-600"></i>
-                        <span class="text-xl font-bold text-gray-900">VClass</span>
+<!-- ══════════ NAVIGATION ══════════ -->
+<nav class="bg-white border-b border-gray-100 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4">
+        <div class="flex items-center justify-between h-16">
+            <!-- Logo + Links -->
+            <div class="flex items-center gap-6">
+                <a href="/dashboard.html" class="flex items-center gap-2">
+                    <i class="fas fa-graduation-cap text-2xl text-purple-600"></i>
+                    <span class="text-xl font-bold text-gray-900">VClass</span>
+                </a>
+                <div class="hidden md:flex items-center gap-1">
+                    <a href="/dashboard.html" class="nav-link-active px-3 py-2 rounded-xl text-sm flex items-center gap-1.5">
+                        <i class="fas fa-home"></i> Dashboard
                     </a>
-                    <div class="hidden md:flex space-x-1">
-                        <a href="/dashboard.html" class="nav-link-active px-3 py-2 rounded-lg text-sm">
-                            <i class="fas fa-home mr-1"></i> Dashboard
-                        </a>
-                        <a href="/browse.html" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100">
-                            <i class="fas fa-book mr-1"></i> Conteúdo
-                        </a>
-                        <a href="/progress.html" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100">
-                            <i class="fas fa-chart-line mr-1"></i> Progresso
-                        </a>
-                        <a href="/library.html" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100">
-                            <i class="fas fa-book-open mr-1"></i> Biblioteca
-                        </a>
-                    </div>
-                </div>
-                <div class="flex items-center space-x-3">
-                    <!-- Notifications -->
-                    <a href="/notifications.html" id="nav-notif-btn" class="relative p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition">
-                        <i class="fas fa-bell text-lg"></i>
-                        <span id="nav-notif-badge" class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full hidden"></span>
+                    <a href="/browse.html" class="px-3 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 flex items-center gap-1.5 transition">
+                        <i class="fas fa-compass"></i> Explorar
                     </a>
-                    <!-- User dropdown -->
-                    <div class="relative" id="user-dropdown-container">
-                        <button onclick="toggleDropdown()" class="flex items-center space-x-2 p-1 rounded-lg hover:bg-gray-100 transition">
-                            <div id="nav-avatar" class="avatar-circle bg-purple-600">?</div>
-                            <span id="nav-user-name" class="hidden md:block text-sm font-medium text-gray-700"></span>
-                            <i class="fas fa-chevron-down text-xs text-gray-500"></i>
-                        </button>
-                        <div class="dropdown-menu" id="user-dropdown">
-                            <div class="px-4 py-3 border-b border-gray-100 bg-purple-50">
-                                <p id="dropdown-name" class="font-semibold text-gray-900"></p>
-                                <p id="dropdown-email" class="text-xs text-gray-500"></p>
-                            </div>
-                            <a href="/profile.html" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition">
-                                <i class="fas fa-user w-5 text-purple-600 mr-2"></i> Meu Perfil
-                            </a>
-                            <a href="/progress.html" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition">
-                                <i class="fas fa-chart-line w-5 text-blue-600 mr-2"></i> Meu Progresso
-                            </a>
-                            <a href="/achievements.html" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition">
-                                <i class="fas fa-trophy w-5 text-yellow-500 mr-2"></i> Conquistas
-                            </a>
-                            <div class="border-t border-gray-100">
-                                <button onclick="VClass.logout()" class="flex items-center w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition">
-                                    <i class="fas fa-sign-out-alt w-5 mr-2"></i> Sair
-                                </button>
-                            </div>
+                    <a href="/progress.html" class="px-3 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 flex items-center gap-1.5 transition">
+                        <i class="fas fa-chart-line"></i> Progresso
+                    </a>
+                    <a href="/library.html" class="px-3 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 flex items-center gap-1.5 transition">
+                        <i class="fas fa-book-open"></i> Biblioteca
+                    </a>
+                </div>
+            </div>
+            <!-- Right side -->
+            <div class="flex items-center gap-2">
+                <a href="/notifications.html" id="nav-notif-btn" class="relative p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition">
+                    <i class="fas fa-bell text-lg"></i>
+                    <span id="nav-notif-badge" class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full hidden"></span>
+                </a>
+                <div class="relative" id="user-dropdown-container">
+                    <button onclick="toggleDropdown()" class="flex items-center gap-2 p-1.5 rounded-xl hover:bg-gray-100 transition">
+                        <div id="nav-avatar" class="avatar-circle bg-purple-600">?</div>
+                        <span id="nav-user-name" class="hidden md:block text-sm font-semibold text-gray-700 max-w-[100px] truncate"></span>
+                        <i class="fas fa-chevron-down text-xs text-gray-400"></i>
+                    </button>
+                    <div class="dropdown-menu" id="user-dropdown">
+                        <div class="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-indigo-50">
+                            <p id="dropdown-name" class="font-bold text-gray-900 text-sm"></p>
+                            <p id="dropdown-email" class="text-xs text-gray-500 mt-0.5"></p>
+                        </div>
+                        <a href="/profile.html" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition gap-3">
+                            <i class="fas fa-user w-4 text-purple-600"></i> Meu Perfil
+                        </a>
+                        <a href="/progress.html" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition gap-3">
+                            <i class="fas fa-chart-line w-4 text-blue-600"></i> Meu Progresso
+                        </a>
+                        <a href="/achievements.html" class="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition gap-3">
+                            <i class="fas fa-trophy w-4 text-yellow-500"></i> Conquistas
+                        </a>
+                        <div class="border-t border-gray-100">
+                            <button onclick="VClass.logout()" class="flex items-center w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition gap-3">
+                                <i class="fas fa-sign-out-alt w-4"></i> Sair
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </nav>
+    </div>
+</nav>
 
-    <!-- Main Content -->
-    <main class="container mx-auto px-4 py-8 max-w-7xl">
+<!-- ══════════ MAIN ══════════ -->
+<main class="max-w-7xl mx-auto px-4 py-7 space-y-6">
 
-        <!-- Welcome Header -->
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-            <div>
-                <div class="flex items-center space-x-3 mb-1">
-                    <h1 class="text-3xl font-bold text-gray-900">
-                        <span id="greeting">Olá</span>, <span id="welcome-name" class="text-purple-600">Estudante</span>! <span id="greeting-emoji">👋</span>
-                    </h1>
+    <!-- ── Plan banner ── -->
+    <div id="plan-banner" class="hidden"></div>
+
+    <!-- ── Welcome row ── -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+            <h1 class="text-2xl font-extrabold text-gray-900">
+                <span id="greeting">Olá</span>, <span id="welcome-name" class="text-purple-600">Estudante</span>! <span id="greeting-emoji">👋</span>
+            </h1>
+            <p class="text-gray-500 text-sm mt-0.5" id="greeting-sub">Continue a sua jornada de aprendizado hoje</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="bg-gradient-to-r from-orange-400 to-rose-500 rounded-2xl px-4 py-2.5 text-white flex items-center gap-2.5 shadow-md shadow-orange-200">
+                <span class="streak-flame text-xl">🔥</span>
+                <div>
+                    <p class="text-[10px] font-semibold opacity-80 uppercase tracking-wide">Sequência</p>
+                    <p class="text-lg font-extrabold leading-none" id="streak-count">0 dias</p>
                 </div>
-                <p class="text-gray-500" id="greeting-sub">Continue sua jornada de aprendizado hoje</p>
             </div>
-            <!-- Streak Counter -->
-            <div class="mt-4 md:mt-0 flex items-center space-x-4">
-                <div class="bg-gradient-to-r from-orange-400 to-red-400 rounded-2xl px-5 py-3 text-white flex items-center space-x-3 shadow-md">
-                    <span class="streak-flame text-2xl">🔥</span>
-                    <div>
-                        <p class="text-xs font-medium opacity-80">Sequência</p>
-                        <p class="text-xl font-bold" id="streak-count">0 dias</p>
-                    </div>
-                </div>
-                <div class="bg-white rounded-2xl px-5 py-3 flex items-center space-x-3 shadow-sm border border-gray-100">
-                    <span class="text-2xl">⭐</span>
-                    <div>
-                        <p class="text-xs font-medium text-gray-500">Pontos XP</p>
-                        <p class="text-xl font-bold text-gray-900" id="xp-count">0</p>
-                    </div>
+            <div class="bg-white rounded-2xl px-4 py-2.5 flex items-center gap-2.5 shadow-sm border border-gray-100">
+                <span class="text-xl">⭐</span>
+                <div>
+                    <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Pontos XP</p>
+                    <p class="text-lg font-extrabold text-gray-900 leading-none" id="xp-count">0</p>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- ── Banner Plano Atual ──────────────────────────────────────────── -->
-        <div id="plan-banner" class="hidden mb-6 rounded-2xl overflow-hidden">
-            <!-- Preenchido por JS com base no plano do utilizador -->
-        </div>
+    <!-- ── Stats row ── -->
+    <div id="stats-container" class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="dash-card p-5 skeleton h-28"></div>
+        <div class="dash-card p-5 skeleton h-28"></div>
+        <div class="dash-card p-5 skeleton h-28"></div>
+        <div class="dash-card p-5 skeleton h-28"></div>
+    </div>
 
-        <!-- Stats Cards -->
-        <div id="stats-container" class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <!-- Loading skeletons -->
-            <div class="bg-white p-6 rounded-2xl shadow-sm animate-pulse"><div class="h-4 bg-gray-200 rounded w-3/4 mb-4"></div><div class="h-8 bg-gray-200 rounded w-1/2"></div></div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm animate-pulse"><div class="h-4 bg-gray-200 rounded w-3/4 mb-4"></div><div class="h-8 bg-gray-200 rounded w-1/2"></div></div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm animate-pulse"><div class="h-4 bg-gray-200 rounded w-3/4 mb-4"></div><div class="h-8 bg-gray-200 rounded w-1/2"></div></div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm animate-pulse"><div class="h-4 bg-gray-200 rounded w-3/4 mb-4"></div><div class="h-8 bg-gray-200 rounded w-1/2"></div></div>
-        </div>
+    <!-- ── Two-column main grid ── -->
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
 
-        <!-- Main Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <!-- ════ LEFT (2/3) ════ -->
+        <div class="xl:col-span-2 space-y-5">
 
-            <!-- Left: Activity Chart + Continue Watching -->
-            <div class="lg:col-span-2 space-y-6">
-
-                <!-- Weekly Activity Chart -->
-                <div class="bg-white rounded-2xl shadow-sm p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-lg font-bold text-gray-900">
-                            <i class="fas fa-chart-bar text-purple-600 mr-2"></i>
-                            Atividade Semanal
-                        </h2>
-                        <div class="flex space-x-1 bg-gray-100 rounded-lg p-1">
-                            <button onclick="switchChart('lessons')" id="btn-lessons" class="chart-tab px-3 py-1 text-xs font-medium rounded-md bg-white text-gray-900 shadow-sm transition">Aulas</button>
-                            <button onclick="switchChart('time')" id="btn-time" class="chart-tab px-3 py-1 text-xs font-medium rounded-md text-gray-500 transition">Tempo</button>
-                            <button onclick="switchChart('exercises')" id="btn-exercises" class="chart-tab px-3 py-1 text-xs font-medium rounded-md text-gray-500 transition">Exercícios</button>
-                        </div>
-                    </div>
-                    <canvas id="activityChart" height="120"></canvas>
-                </div>
-
-                <!-- Continue Watching -->
-                <div class="bg-white rounded-2xl shadow-sm p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-lg font-bold text-gray-900">
-                            <i class="fas fa-play-circle text-purple-600 mr-2"></i>
-                            Continue Assistindo
-                        </h2>
-                        <a href="/browse.html" class="text-sm text-purple-600 hover:text-purple-700 font-medium">Ver tudo →</a>
-                    </div>
-                    <div id="continue-watching" class="space-y-3">
-                        <div class="animate-pulse space-y-3">
-                            <div class="h-20 bg-gray-100 rounded-xl"></div>
-                            <div class="h-20 bg-gray-100 rounded-xl"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Recent Activity -->
-                <div class="bg-white rounded-2xl shadow-sm p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-lg font-bold text-gray-900">
-                            <i class="fas fa-history text-purple-600 mr-2"></i>
-                            Atividade Recente
-                        </h2>
-                    </div>
-                    <div id="recent-activity" class="space-y-3">
-                        <div class="animate-pulse space-y-3">
-                            <div class="h-16 bg-gray-100 rounded-xl"></div>
-                            <div class="h-16 bg-gray-100 rounded-xl"></div>
-                            <div class="h-16 bg-gray-100 rounded-xl"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right Sidebar -->
-            <div class="space-y-6">
-
-                <!-- Daily Goal -->
-                <div class="bg-gradient-to-br from-purple-600 to-purple-800 rounded-2xl p-6 text-white shadow-md">
-                    <div class="flex items-center justify-between mb-3">
-                        <h3 class="font-bold text-lg">Meta Diária</h3>
-                        <span class="text-2xl">🎯</span>
-                    </div>
-                    <div class="mb-3">
-                        <div class="flex justify-between text-sm mb-1">
-                            <span class="opacity-80">Progresso de hoje</span>
-                            <span id="daily-progress-text" class="font-bold">0 / 3 aulas</span>
-                        </div>
-                        <div class="w-full bg-white/20 rounded-full h-3">
-                            <div id="daily-progress-bar" class="bg-white rounded-full h-3 progress-bar-fill" style="width:0%"></div>
-                        </div>
-                    </div>
-                    <p class="text-xs opacity-70" id="daily-msg">Assista 3 aulas hoje para manter sua sequência!</p>
-                </div>
-
-                <!-- Subject Progress -->
-                <div class="bg-white rounded-2xl shadow-sm p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-lg font-bold text-gray-900">
-                            <i class="fas fa-book-open text-purple-600 mr-2"></i>
-                            Disciplinas
-                        </h2>
-                        <a href="/progress.html" class="text-sm text-purple-600 hover:text-purple-700 font-medium">Detalhes →</a>
-                    </div>
-                    <div id="subject-progress" class="space-y-4">
-                        <div class="animate-pulse space-y-4">
-                            <div class="h-14 bg-gray-100 rounded-xl"></div>
-                            <div class="h-14 bg-gray-100 rounded-xl"></div>
-                            <div class="h-14 bg-gray-100 rounded-xl"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Achievements Preview -->
-                <div class="bg-white rounded-2xl shadow-sm p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-lg font-bold text-gray-900">
-                            <i class="fas fa-trophy text-yellow-500 mr-2"></i>
-                            Conquistas
-                        </h2>
-                        <a href="/achievements.html" class="text-sm text-purple-600 hover:text-purple-700 font-medium">Ver todas →</a>
-                    </div>
-                    <div class="grid grid-cols-4 gap-2" id="achievements-preview">
-                        <div class="badge bg-yellow-100 text-2xl" title="Primeiro Passo">🎓</div>
-                        <div class="badge bg-blue-100 text-2xl" title="Explorador">🔭</div>
-                        <div class="badge bg-green-100 text-2xl" title="Dedicado">📚</div>
-                        <div class="badge bg-gray-100 text-2xl opacity-40" title="Bloqueado">🔒</div>
-                        <div class="badge bg-gray-100 text-2xl opacity-40" title="Bloqueado">🔒</div>
-                        <div class="badge bg-gray-100 text-2xl opacity-40" title="Bloqueado">🔒</div>
-                        <div class="badge bg-gray-100 text-2xl opacity-40" title="Bloqueado">🔒</div>
-                        <div class="badge bg-gray-100 text-2xl opacity-40" title="Bloqueado">🔒</div>
-                    </div>
-                    <p class="text-xs text-gray-500 mt-3 text-center">3 de 12 conquistas desbloqueadas</p>
-                </div>
-
-                <!-- Quick Access -->
-                <div class="bg-white rounded-2xl shadow-sm p-6">
-                    <h2 class="text-lg font-bold text-gray-900 mb-4">
-                        <i class="fas fa-bolt text-yellow-500 mr-2"></i>
-                        Acesso Rápido
+            <!-- Continue a estudar -->
+            <section class="dash-card p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                            <i class="fas fa-play text-purple-600 text-sm"></i>
+                        </span>
+                        Continue a Estudar
                     </h2>
-                    <div class="grid grid-cols-2 gap-3">
-                        <a href="/browse.html" class="quick-access-card bg-purple-50 rounded-xl p-3 text-center">
-                            <i class="fas fa-search text-purple-600 text-xl mb-2 block"></i>
-                            <span class="text-xs font-medium text-gray-700">Explorar</span>
-                        </a>
-                        <a href="/library.html" class="quick-access-card bg-blue-50 rounded-xl p-3 text-center">
-                            <i class="fas fa-book-open text-blue-600 text-xl mb-2 block"></i>
-                            <span class="text-xs font-medium text-gray-700">Biblioteca</span>
-                        </a>
-                        <a href="/progress.html" class="quick-access-card bg-green-50 rounded-xl p-3 text-center">
-                            <i class="fas fa-chart-line text-green-600 text-xl mb-2 block"></i>
-                            <span class="text-xs font-medium text-gray-700">Progresso</span>
-                        </a>
-                        <a href="/chat.html" class="quick-access-card bg-orange-50 rounded-xl p-3 text-center">
-                            <i class="fas fa-comments text-orange-500 text-xl mb-2 block"></i>
-                            <span class="text-xs font-medium text-gray-700">Chat IA</span>
-                        </a>
+                    <a href="/browse.html" class="text-xs font-semibold text-purple-600 hover:text-purple-700 flex items-center gap-1">
+                        Ver tudo <i class="fas fa-arrow-right text-[10px]"></i>
+                    </a>
+                </div>
+                <div id="continue-watching" class="space-y-2">
+                    <div class="skeleton h-16 w-full"></div>
+                    <div class="skeleton h-16 w-full"></div>
+                    <div class="skeleton h-16 w-full"></div>
+                </div>
+            </section>
+
+            <!-- Disciplinas (scroll horizontal) -->
+            <section class="dash-card p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                            <i class="fas fa-book-open text-blue-600 text-sm"></i>
+                        </span>
+                        As Minhas Disciplinas
+                    </h2>
+                    <a href="/progress.html" class="text-xs font-semibold text-purple-600 hover:text-purple-700 flex items-center gap-1">
+                        Detalhes <i class="fas fa-arrow-right text-[10px]"></i>
+                    </a>
+                </div>
+                <div class="scroll-x" id="subject-scroll">
+                    <div class="subj-card skeleton w-36 h-28"></div>
+                    <div class="subj-card skeleton w-36 h-28"></div>
+                    <div class="subj-card skeleton w-36 h-28"></div>
+                    <div class="subj-card skeleton w-36 h-28"></div>
+                </div>
+            </section>
+
+            <!-- Actividade semanal (chart) -->
+            <section class="dash-card p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                            <i class="fas fa-chart-bar text-green-600 text-sm"></i>
+                        </span>
+                        Actividade Semanal
+                    </h2>
+                    <div class="flex gap-1 bg-gray-100 rounded-xl p-1">
+                        <button onclick="switchChart('lessons')" id="btn-lessons" class="chart-tab px-3 py-1 text-xs font-semibold rounded-lg bg-white text-gray-900 shadow-sm transition">Aulas</button>
+                        <button onclick="switchChart('time')" id="btn-time" class="chart-tab px-3 py-1 text-xs font-medium rounded-lg text-gray-500 transition">Tempo</button>
+                        <button onclick="switchChart('exercises')" id="btn-exercises" class="chart-tab px-3 py-1 text-xs font-medium rounded-lg text-gray-500 transition">Exercícios</button>
                     </div>
                 </div>
-            </div>
+                <canvas id="activityChart" height="110"></canvas>
+            </section>
+
+            <!-- Actividade recente -->
+            <section class="dash-card p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                            <i class="fas fa-history text-orange-500 text-sm"></i>
+                        </span>
+                        Actividade Recente
+                    </h2>
+                </div>
+                <div id="recent-activity" class="space-y-1">
+                    <div class="skeleton h-14 w-full mb-2"></div>
+                    <div class="skeleton h-14 w-full mb-2"></div>
+                    <div class="skeleton h-14 w-full"></div>
+                </div>
+            </section>
         </div>
 
-        <!-- CTA Banner -->
-        <div class="bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-700 rounded-2xl shadow-lg p-8 text-white flex flex-col md:flex-row items-center justify-between">
-            <div class="mb-4 md:mb-0">
-                <h2 class="text-2xl font-bold mb-1">📖 Pronto para explorar mais?</h2>
-                <p class="text-purple-200">Temos centenas de aulas e exercícios esperando por você!</p>
-            </div>
-            <div class="flex space-x-3">
-                <a href="/browse.html" class="inline-flex items-center px-6 py-3 bg-white text-purple-600 rounded-xl font-semibold hover:bg-gray-100 transition shadow">
-                    <i class="fas fa-search mr-2"></i> Explorar Conteúdo
-                </a>
-                <a href="/progress.html" class="inline-flex items-center px-6 py-3 bg-purple-500/40 text-white rounded-xl font-semibold hover:bg-purple-500/60 transition">
-                    <i class="fas fa-chart-line mr-2"></i> Ver Progresso
-                </a>
-            </div>
+        <!-- ════ RIGHT (1/3) sidebar ════ -->
+        <div class="space-y-5">
+
+            <!-- Meta diária -->
+            <section class="dash-card overflow-hidden">
+                <div class="bg-gradient-to-br from-purple-600 to-indigo-700 p-5 text-white">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-widest opacity-75">Meta Diária</p>
+                            <p class="text-2xl font-extrabold mt-0.5" id="daily-progress-text">0 / 3 aulas</p>
+                        </div>
+                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl">🎯</div>
+                    </div>
+                    <div class="w-full bg-white/20 rounded-full h-2.5 mb-2">
+                        <div id="daily-progress-bar" class="bg-white rounded-full h-2.5 pbar" style="width:0%"></div>
+                    </div>
+                    <p class="text-xs opacity-70" id="daily-msg">Assista 3 aulas hoje para manter a sua sequência!</p>
+                </div>
+                <!-- Progresso por disciplina (lista compacta) -->
+                <div class="p-5 space-y-3" id="subject-progress">
+                    <div class="skeleton h-10 w-full"></div>
+                    <div class="skeleton h-10 w-full"></div>
+                    <div class="skeleton h-10 w-full"></div>
+                </div>
+            </section>
+
+            <!-- Conquistas -->
+            <section class="dash-card p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-bold text-gray-900 flex items-center gap-2">
+                        <i class="fas fa-trophy text-yellow-500"></i> Conquistas
+                    </h2>
+                    <a href="/achievements.html" class="text-xs font-semibold text-purple-600 hover:text-purple-700">Ver todas →</a>
+                </div>
+                <div class="grid grid-cols-4 gap-2" id="achievements-preview">
+                    <div class="bdg bg-yellow-100" title="Primeiro Passo">🎓</div>
+                    <div class="bdg bg-blue-100" title="Explorador">🔭</div>
+                    <div class="bdg bg-green-100" title="Dedicado">📚</div>
+                    <div class="bdg bg-gray-100 opacity-40" title="Bloqueado">🔒</div>
+                    <div class="bdg bg-gray-100 opacity-40" title="Bloqueado">🔒</div>
+                    <div class="bdg bg-gray-100 opacity-40" title="Bloqueado">🔒</div>
+                    <div class="bdg bg-gray-100 opacity-40" title="Bloqueado">🔒</div>
+                    <div class="bdg bg-gray-100 opacity-40" title="Bloqueado">🔒</div>
+                </div>
+                <p class="text-xs text-gray-400 mt-3 text-center">3 de 12 conquistas desbloqueadas</p>
+            </section>
+
+            <!-- Acesso rápido -->
+            <section class="dash-card p-5">
+                <h2 class="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                    <i class="fas fa-bolt text-yellow-500"></i> Acesso Rápido
+                </h2>
+                <div class="grid grid-cols-2 gap-2">
+                    <a href="/browse.html" class="qnav bg-purple-50 rounded-xl p-3 text-center flex flex-col items-center gap-1.5">
+                        <i class="fas fa-compass text-purple-600 text-lg"></i>
+                        <span class="text-xs font-semibold text-gray-700">Explorar</span>
+                    </a>
+                    <a href="/library.html" class="qnav bg-blue-50 rounded-xl p-3 text-center flex flex-col items-center gap-1.5">
+                        <i class="fas fa-book-open text-blue-600 text-lg"></i>
+                        <span class="text-xs font-semibold text-gray-700">Biblioteca</span>
+                    </a>
+                    <a href="/progress.html" class="qnav bg-green-50 rounded-xl p-3 text-center flex flex-col items-center gap-1.5">
+                        <i class="fas fa-chart-line text-green-600 text-lg"></i>
+                        <span class="text-xs font-semibold text-gray-700">Progresso</span>
+                    </a>
+                    <a href="/chat.html" class="qnav bg-orange-50 rounded-xl p-3 text-center flex flex-col items-center gap-1.5">
+                        <i class="fas fa-robot text-orange-500 text-lg"></i>
+                        <span class="text-xs font-semibold text-gray-700">Chat IA</span>
+                    </a>
+                </div>
+            </section>
+
+            <!-- CTA upgrade (se free) -->
+            <section id="cta-upgrade" class="hidden dash-card overflow-hidden">
+                <div class="bg-gradient-to-br from-yellow-400 to-orange-500 p-5 text-white">
+                    <i class="fas fa-crown text-3xl mb-2 block"></i>
+                    <p class="font-extrabold text-lg leading-snug">Desbloqueie tudo com o Premium</p>
+                    <p class="text-sm opacity-80 mt-1">Aulas ilimitadas, Chat IA, certificados e muito mais.</p>
+                    <a href="/plans.html" class="mt-4 inline-block bg-white text-orange-600 font-bold px-5 py-2 rounded-xl text-sm hover:bg-orange-50 transition shadow">
+                        Ver Planos
+                    </a>
+                </div>
+            </section>
         </div>
-    </main>
+    </div>
+</main>
 
-    <script src="/static/app.js"></script>
-    <script>
-        // Authentication check
-        if (!VClass.isAuthenticated()) {
-            window.location.href = '/login.html';
-        }
-        const user = VClass.getCurrentUser();
-        // Redirecionar roles especiais para os seus painéis
-        const _staffRedirects = {
-          admin: '/admin-dashboard.html',
-          support: '/support-dashboard.html',
-          editor: '/editor-dashboard.html',
-          country_manager: '/country-dashboard.html',
-          finance: '/finance-dashboard.html',
-          moderator: '/moderator-dashboard.html'
-        };
-        if (_staffRedirects[user?.role]) { window.location.href = _staffRedirects[user.role]; }
+<script src="/static/app.js"></script>
+<script>
+// ── Auth guard ──────────────────────────────────────────────────────────────
+if (!VClass.isAuthenticated()) { window.location.href = '/login.html'; }
+const _user = VClass.getCurrentUser();
+const _staffRedirects = {
+    admin: '/admin-dashboard.html', support: '/support-dashboard.html',
+    editor: '/editor-dashboard.html', country_manager: '/country-dashboard.html',
+    finance: '/finance-dashboard.html', moderator: '/moderator-dashboard.html'
+};
+if (_staffRedirects[_user?.role]) { window.location.href = _staffRedirects[_user.role]; }
 
-        // Dropdown
-        function toggleDropdown() {
-            document.getElementById('user-dropdown').classList.toggle('open');
-        }
-        document.addEventListener('click', function(e) {
-            const container = document.getElementById('user-dropdown-container');
-            if (!container.contains(e.target)) {
-                document.getElementById('user-dropdown').classList.remove('open');
+// ── Dropdown ────────────────────────────────────────────────────────────────
+function toggleDropdown() { document.getElementById('user-dropdown').classList.toggle('open'); }
+document.addEventListener('click', e => {
+    const c = document.getElementById('user-dropdown-container');
+    if (c && !c.contains(e.target)) document.getElementById('user-dropdown').classList.remove('open');
+});
+
+// ── Setup user info ─────────────────────────────────────────────────────────
+function setupUserInfo() {
+    if (!_user) return;
+    const name     = _user.full_name || _user.name || 'Estudante';
+    const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    document.getElementById('nav-avatar').textContent     = initials;
+    document.getElementById('nav-user-name').textContent  = name.split(' ')[0];
+    document.getElementById('welcome-name').textContent   = name.split(' ')[0];
+    document.getElementById('dropdown-name').textContent  = name;
+    document.getElementById('dropdown-email').textContent = _user.email || '';
+}
+
+// ── Greeting ────────────────────────────────────────────────────────────────
+function setGreeting() {
+    const h = new Date().getHours();
+    const [g, e, sub] = h < 12
+        ? ['Bom dia', '☀️', 'Comece bem o dia com uma nova aula!']
+        : h < 18
+        ? ['Boa tarde', '🌤️', 'Continue a sua jornada de aprendizado!']
+        : ['Boa noite', '🌙', 'Mais uma aula antes de dormir?'];
+    document.getElementById('greeting').textContent     = g;
+    document.getElementById('greeting-emoji').textContent = e;
+    document.getElementById('greeting-sub').textContent = sub;
+}
+
+// ── Counter animation ───────────────────────────────────────────────────────
+function animateCounter(el, target, suffix = '') {
+    if (!el) return;
+    let v = 0;
+    const step = Math.max(1, Math.round(target / 40));
+    const t = setInterval(() => {
+        v = Math.min(v + step, target);
+        el.textContent = v + suffix;
+        if (v >= target) clearInterval(t);
+    }, 20);
+}
+
+// ── Chart ───────────────────────────────────────────────────────────────────
+let _chart = null;
+const _chartData = {
+    lessons:   { data: [2, 3, 1, 4, 3, 5, 2],     label: 'Aulas Assistidas',  color: '#7c3aed', bg: 'rgba(124,58,237,0.12)' },
+    time:      { data: [30, 45, 20, 60, 40, 75, 35],label: 'Minutos Estudados', color: '#2563eb', bg: 'rgba(37,99,235,0.12)' },
+    exercises: { data: [5, 8, 3, 12, 7, 15, 4],    label: 'Exercícios',        color: '#16a34a', bg: 'rgba(22,163,74,0.12)' }
+};
+
+function switchChart(type) {
+    document.querySelectorAll('.chart-tab').forEach(b => {
+        b.classList.remove('bg-white', 'text-gray-900', 'shadow-sm', 'font-semibold');
+        b.classList.add('text-gray-500', 'font-medium');
+    });
+    const btn = document.getElementById(`btn-${type}`);
+    btn.classList.add('bg-white', 'text-gray-900', 'shadow-sm', 'font-semibold');
+    btn.classList.remove('text-gray-500', 'font-medium');
+    const d = _chartData[type];
+    _chart.data.datasets[0].data            = d.data;
+    _chart.data.datasets[0].label           = d.label;
+    _chart.data.datasets[0].borderColor     = d.color;
+    _chart.data.datasets[0].backgroundColor = d.bg;
+    _chart.update('active');
+}
+
+function createChart() {
+    const ctx = document.getElementById('activityChart').getContext('2d');
+    const d   = _chartData.lessons;
+    _chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
+            datasets: [{ label: d.label, data: d.data, backgroundColor: d.bg, borderColor: d.color, borderWidth: 2, borderRadius: 10, borderSkipped: false }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.04)' } },
+                x: { grid: { display: false }, ticks: { font: { size: 11 } } }
             }
-        });
-
-        // Setup user info
-        function setupUserInfo() {
-            if (!user) return;
-            const name = user.full_name || user.name || 'Estudante';
-            const initials = name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
-            document.getElementById('nav-avatar').textContent = initials;
-            document.getElementById('nav-user-name').textContent = name.split(' ')[0];
-            document.getElementById('welcome-name').textContent = name.split(' ')[0];
-            document.getElementById('dropdown-name').textContent = name;
-            document.getElementById('dropdown-email').textContent = user.email || '';
         }
+    });
+}
 
-        // Greeting based on time
-        function setGreeting() {
-            const h = new Date().getHours();
-            let greeting, emoji, sub;
-            if (h < 12) { greeting = 'Bom dia'; emoji = '☀️'; sub = 'Comece bem o dia com uma nova aula!'; }
-            else if (h < 18) { greeting = 'Boa tarde'; emoji = '🌤️'; sub = 'Continue sua jornada de aprendizado!'; }
-            else { greeting = 'Boa noite'; emoji = '🌙'; sub = 'Uma última aula antes de dormir?'; }
-            document.getElementById('greeting').textContent = greeting;
-            document.getElementById('greeting-emoji').textContent = emoji;
-            document.getElementById('greeting-sub').textContent = sub;
-        }
+// ── Stats ───────────────────────────────────────────────────────────────────
+function renderStats(s) {
+    const mins    = Math.floor((s.total_time_spent_seconds || 0) / 60);
+    const lessons = s.lessons_completed || 0;
+    const exs     = s.exercises_completed || 0;
+    const score   = Math.round(s.avg_score || 0);
 
-        // Animated counter
-        function animateCounter(el, target, suffix = '') {
-            let start = 0;
-            const duration = 1000;
-            const step = Math.max(1, Math.round(target / (duration / 16)));
-            const timer = setInterval(() => {
-                start = Math.min(start + step, target);
-                el.textContent = start + suffix;
-                if (start >= target) clearInterval(timer);
-            }, 16);
-        }
+    document.getElementById('stats-container').innerHTML = `
+        <div class="stat-card dash-card p-5">
+            <div class="flex items-start justify-between mb-3">
+                <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-check-circle text-purple-600"></i>
+                </div>
+                <span class="text-[11px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">+2 hoje</span>
+            </div>
+            <p class="text-3xl font-extrabold text-gray-900 count-animate" id="sl">0</p>
+            <p class="text-xs text-gray-500 mt-1 font-medium">Lições Concluídas</p>
+        </div>
+        <div class="stat-card dash-card p-5">
+            <div class="flex items-start justify-between mb-3">
+                <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-tasks text-blue-600"></i>
+                </div>
+                <span class="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">+5 hoje</span>
+            </div>
+            <p class="text-3xl font-extrabold text-gray-900 count-animate" id="se">0</p>
+            <p class="text-xs text-gray-500 mt-1 font-medium">Exercícios Feitos</p>
+        </div>
+        <div class="stat-card dash-card p-5">
+            <div class="flex items-start justify-between mb-3">
+                <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-star text-emerald-600"></i>
+                </div>
+                <span class="text-[11px] font-bold ${score >= 70 ? 'text-emerald-600 bg-emerald-50' : 'text-orange-600 bg-orange-50'} px-2 py-0.5 rounded-full">${score >= 70 ? '😊 Ótimo' : '📈 Melhorar'}</span>
+            </div>
+            <p class="text-3xl font-extrabold text-gray-900 count-animate" id="ss">0%</p>
+            <p class="text-xs text-gray-500 mt-1 font-medium">Pontuação Média</p>
+        </div>
+        <div class="stat-card dash-card p-5">
+            <div class="flex items-start justify-between mb-3">
+                <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-clock text-orange-500"></i>
+                </div>
+                <span class="text-[11px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">Esta semana</span>
+            </div>
+            <p class="text-3xl font-extrabold text-gray-900 count-animate" id="st">0min</p>
+            <p class="text-xs text-gray-500 mt-1 font-medium">Tempo de Estudo</p>
+        </div>`;
 
-        // Chart
-        let activityChartInstance = null;
-        const chartData = {
-            lessons: { data: [2, 3, 1, 4, 3, 5, 2], label: 'Aulas Assistidas', color: '#7c3aed', bg: 'rgba(124,58,237,0.1)' },
-            time:    { data: [30, 45, 20, 60, 40, 75, 35], label: 'Minutos Estudados', color: '#2563eb', bg: 'rgba(37,99,235,0.1)' },
-            exercises:{ data: [5, 8, 3, 12, 7, 15, 4], label: 'Exercícios', color: '#16a34a', bg: 'rgba(22,163,74,0.1)' }
-        };
+    setTimeout(() => {
+        animateCounter(document.getElementById('sl'), lessons);
+        animateCounter(document.getElementById('se'), exs);
+        animateCounter(document.getElementById('ss'), score, '%');
+        animateCounter(document.getElementById('st'), mins, 'min');
+    }, 80);
 
-        function switchChart(type) {
-            // Update tabs
-            document.querySelectorAll('.chart-tab').forEach(btn => {
-                btn.classList.remove('bg-white', 'text-gray-900', 'shadow-sm');
-                btn.classList.add('text-gray-500');
-            });
-            document.getElementById(`btn-${type}`).classList.add('bg-white', 'text-gray-900', 'shadow-sm');
-            document.getElementById(`btn-${type}`).classList.remove('text-gray-500');
-            // Update chart
-            const d = chartData[type];
-            activityChartInstance.data.datasets[0].data = d.data;
-            activityChartInstance.data.datasets[0].label = d.label;
-            activityChartInstance.data.datasets[0].borderColor = d.color;
-            activityChartInstance.data.datasets[0].backgroundColor = d.bg;
-            activityChartInstance.update('active');
-        }
+    // Streak & XP
+    const streak = getStreak();
+    animateCounter(document.getElementById('streak-count'), streak, ' dias');
+    animateCounter(document.getElementById('xp-count'), lessons * 50 + exs * 20);
 
-        function createActivityChart() {
-            const ctx = document.getElementById('activityChart').getContext('2d');
-            const d = chartData.lessons;
-            const labels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
-            activityChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels,
-                    datasets: [{
-                        label: d.label,
-                        data: d.data,
-                        backgroundColor: d.bg,
-                        borderColor: d.color,
-                        borderWidth: 2,
-                        borderRadius: 8,
-                        borderSkipped: false
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(0,0,0,0.05)' } },
-                        x: { grid: { display: false } }
+    // Daily goal
+    const goal   = 3;
+    const today  = Math.min(lessons, goal);
+    document.getElementById('daily-progress-text').textContent = `${today} / ${goal} aulas`;
+    document.getElementById('daily-progress-bar').style.width  = `${(today / goal) * 100}%`;
+    if (today >= goal) document.getElementById('daily-msg').textContent = '🎉 Meta do dia concluída! Parabéns!';
+}
+
+// ── Continue watching (suggested lessons) ───────────────────────────────────
+async function loadSuggestedLessons() {
+    const cont = document.getElementById('continue-watching');
+    try {
+        const u       = VClass.getCurrentUser();
+        const country = u?.country_id?.includes('ao') ? 'ao' : 'mz';
+        const r       = await fetch(`/api/curriculum/tree/${country}`);
+        const d       = await r.json();
+        if (!d.success) throw new Error('no data');
+
+        const suggestions = [];
+        for (const level of (d.data.curriculum || [])) {
+            for (const grade of (level.grades || [])) {
+                for (const subject of (grade.subjects || [])) {
+                    for (const ch of (subject.chapters || []).slice(0, 1)) {
+                        suggestions.push({ ch, subject, grade, level });
+                        if (suggestions.length >= 4) break;
                     }
+                    if (suggestions.length >= 4) break;
                 }
-            });
+                if (suggestions.length >= 4) break;
+            }
+            if (suggestions.length >= 4) break;
         }
 
-        // Render stats
-        function renderStats(summary) {
-            const timeSpent = Math.floor((summary.total_time_spent_seconds || 0) / 60);
-            const lessonsCompleted = summary.lessons_completed || 0;
-            const exercisesDone = summary.exercises_completed || 0;
-            const avgScore = Math.round(summary.avg_score || 0);
-
-            document.getElementById('stats-container').innerHTML = `
-                <div class="stat-card bg-white p-6 rounded-2xl shadow-sm">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                            <i class="fas fa-check-circle text-purple-600 text-xl"></i>
-                        </div>
-                        <span class="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">+2 hoje</span>
-                    </div>
-                    <p class="stat-number text-3xl font-bold text-gray-900 count-animate" id="stat-lessons">0</p>
-                    <p class="text-sm text-gray-500 mt-1">Lições Concluídas</p>
-                </div>
-                <div class="stat-card bg-white p-6 rounded-2xl shadow-sm">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                            <i class="fas fa-tasks text-blue-600 text-xl"></i>
-                        </div>
-                        <span class="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">+5 hoje</span>
-                    </div>
-                    <p class="stat-number text-3xl font-bold text-gray-900 count-animate" id="stat-exercises">0</p>
-                    <p class="text-sm text-gray-500 mt-1">Exercícios Feitos</p>
-                </div>
-                <div class="stat-card bg-white p-6 rounded-2xl shadow-sm">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                            <i class="fas fa-star text-green-600 text-xl"></i>
-                        </div>
-                        <span class="text-xs font-medium ${avgScore >= 70 ? 'text-green-600 bg-green-50' : 'text-orange-600 bg-orange-50'} px-2 py-1 rounded-full">${avgScore >= 70 ? '😊 Ótimo' : '📈 Melhorar'}</span>
-                    </div>
-                    <p class="stat-number text-3xl font-bold text-gray-900 count-animate" id="stat-score">0%</p>
-                    <p class="text-sm text-gray-500 mt-1">Pontuação Média</p>
-                </div>
-                <div class="stat-card bg-white p-6 rounded-2xl shadow-sm">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                            <i class="fas fa-clock text-orange-600 text-xl"></i>
-                        </div>
-                        <span class="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-full">Esta semana</span>
-                    </div>
-                    <p class="stat-number text-3xl font-bold text-gray-900 count-animate" id="stat-time">0min</p>
-                    <p class="text-sm text-gray-500 mt-1">Tempo de Estudo</p>
-                </div>
-            `;
-            // Animate counters
-            setTimeout(() => {
-                animateCounter(document.getElementById('stat-lessons'), lessonsCompleted);
-                animateCounter(document.getElementById('stat-exercises'), exercisesDone);
-                animateCounter(document.getElementById('stat-score'), avgScore, '%');
-                animateCounter(document.getElementById('stat-time'), timeSpent, 'min');
-            }, 100);
-
-            // Update streak & XP
-            animateCounter(document.getElementById('streak-count'), 7, ' dias');
-            animateCounter(document.getElementById('xp-count'), lessonsCompleted * 50 + exercisesDone * 20);
-
-            // Daily goal
-            const dailyGoal = 3;
-            const todayLessons = Math.min(lessonsCompleted, dailyGoal);
-            document.getElementById('daily-progress-text').textContent = `${todayLessons} / ${dailyGoal} aulas`;
-            document.getElementById('daily-progress-bar').style.width = `${(todayLessons/dailyGoal)*100}%`;
-            if (todayLessons >= dailyGoal) {
-                document.getElementById('daily-msg').textContent = '🎉 Meta do dia concluída! Parabéns!';
-            }
+        // Demo fallback if no real content
+        if (suggestions.length === 0) {
+            cont.innerHTML = _demoLessons();
+            return;
         }
 
-        // Continue watching
-        function renderContinueWatching(activities) {
-            const container = document.getElementById('continue-watching');
-            if (!activities || activities.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-8 text-gray-400">
-                        <i class="fas fa-play-circle text-5xl mb-3 block"></i>
-                        <p class="font-medium text-gray-600">Nenhuma aula em progresso</p>
-                        <a href="/browse.html" class="mt-3 inline-block text-sm text-purple-600 font-medium hover:underline">Começar agora →</a>
-                    </div>`;
-                return;
-            }
-            container.innerHTML = activities.slice(0, 3).map(a => `
-                <a href="/lesson.html?id=${a.lesson_id || 'lesson-1'}" class="lesson-card flex items-center space-x-4 p-4 bg-gray-50 rounded-xl hover:bg-purple-50 transition cursor-pointer block">
-                    <div class="w-16 h-12 rounded-lg bg-gradient-to-br from-purple-400 to-indigo-500 flex items-center justify-center flex-shrink-0 shadow">
-                        <i class="fas fa-play text-white"></i>
+        cont.innerHTML = suggestions.map(({ ch, subject, grade, level }) => {
+            const pct = Math.floor(Math.random() * 60); // placeholder
+            const bg  = (subject.color || '#7c3aed') + '22';
+            return `
+            <a href="/browse.html" class="lesson-row flex items-center gap-4 px-3 py-3 rounded-xl transition group cursor-pointer">
+                <div class="lesson-thumb" style="background:${bg}">
+                    <i class="fas ${subject.icon || 'fa-book'} text-sm" style="color:${subject.color || '#7c3aed'}"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-bold text-gray-900 truncate group-hover:text-purple-700 transition">${ch.title}</p>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <span class="subj-pill" style="background:${bg};color:${subject.color || '#7c3aed'}">${subject.name}</span>
+                        <span class="text-[11px] text-gray-400">${grade.name}</span>
                     </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="font-semibold text-gray-900 text-sm truncate">${a.lesson?.title || 'Lição'}</p>
-                        <div class="flex items-center space-x-2 mt-1">
-                            <div class="flex-1 bg-gray-200 rounded-full h-1.5">
-                                <div class="bg-purple-600 h-1.5 rounded-full" style="width:${a.progress_percent || 0}%"></div>
-                            </div>
-                            <span class="text-xs text-gray-500 flex-shrink-0">${a.progress_percent || 0}%</span>
+                    <div class="flex items-center gap-2 mt-1.5">
+                        <div class="flex-1 bg-gray-100 rounded-full h-1.5">
+                            <div class="bg-purple-500 h-1.5 rounded-full" style="width:${pct}%"></div>
                         </div>
+                        <span class="text-[10px] text-gray-400 flex-shrink-0">${pct}%</span>
                     </div>
-                    <i class="fas fa-chevron-right text-gray-300 text-sm flex-shrink-0"></i>
+                </div>
+                <i class="fas fa-play-circle text-purple-300 group-hover:text-purple-500 transition text-lg flex-shrink-0"></i>
+            </a>`;
+        }).join('');
+    } catch {
+        cont.innerHTML = _demoLessons();
+    }
+}
+
+function _demoLessons() {
+    const demos = [
+        { title: 'Leis de Newton — Aplicações', subj: 'Física', grade: '10ª Classe', icon: 'fa-atom', color: '#10b981', pct: 72 },
+        { title: 'Funções Quadráticas', subj: 'Matemática', grade: '10ª Classe', icon: 'fa-square-root-alt', color: '#8b5cf6', pct: 45 },
+        { title: 'Tabela Periódica', subj: 'Química', grade: '10ª Classe', icon: 'fa-flask', color: '#f59e0b', pct: 30 },
+    ];
+    return demos.map(d => `
+        <a href="/browse.html" class="lesson-row flex items-center gap-4 px-3 py-3 rounded-xl transition group cursor-pointer">
+            <div class="lesson-thumb" style="background:${d.color}22">
+                <i class="fas ${d.icon} text-sm" style="color:${d.color}"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-bold text-gray-900 truncate group-hover:text-purple-700 transition">${d.title}</p>
+                <div class="flex items-center gap-2 mt-0.5">
+                    <span class="subj-pill" style="background:${d.color}22;color:${d.color}">${d.subj}</span>
+                    <span class="text-[11px] text-gray-400">${d.grade}</span>
+                </div>
+                <div class="flex items-center gap-2 mt-1.5">
+                    <div class="flex-1 bg-gray-100 rounded-full h-1.5">
+                        <div class="bg-purple-500 h-1.5 rounded-full" style="width:${d.pct}%"></div>
+                    </div>
+                    <span class="text-[10px] text-gray-400 flex-shrink-0">${d.pct}%</span>
+                </div>
+            </div>
+            <i class="fas fa-play-circle text-purple-300 group-hover:text-purple-500 transition text-lg flex-shrink-0"></i>
+        </a>`).join('');
+}
+
+// ── Subject scroll cards ─────────────────────────────────────────────────────
+function renderSubjectScroll(subjects) {
+    const wrap = document.getElementById('subject-scroll');
+    const mock = [
+        { subject_name: 'Física',     progress_percent: 72, subject_color: '#10b981', icon: 'fa-atom' },
+        { subject_name: 'Matemática', progress_percent: 58, subject_color: '#8b5cf6', icon: 'fa-square-root-alt' },
+        { subject_name: 'Química',    progress_percent: 33, subject_color: '#f59e0b', icon: 'fa-flask' },
+        { subject_name: 'Português',  progress_percent: 17, subject_color: '#3b82f6', icon: 'fa-pen-fancy' },
+        { subject_name: 'Biologia',   progress_percent: 50, subject_color: '#ef4444', icon: 'fa-dna' },
+    ];
+    const data = (subjects && subjects.length > 0) ? subjects : mock;
+    wrap.innerHTML = data.slice(0, 6).map(s => {
+        const pct   = s.progress_percent || 0;
+        const color = s.subject_color || '#7c3aed';
+        const icon  = s.icon || 'fa-book';
+        // Circular progress SVG (r=18, circumference≈113)
+        const circ   = 113;
+        const offset = circ - (circ * pct / 100);
+        return `
+        <a href="/browse.html" class="subj-card block" style="background:${color}0d; border: 1.5px solid ${color}22;">
+            <div class="flex items-center justify-between mb-2">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:${color}22">
+                    <i class="fas ${icon} text-sm" style="color:${color}"></i>
+                </div>
+                <svg width="36" height="36" viewBox="0 0 44 44">
+                    <circle cx="22" cy="22" r="18" fill="none" stroke="${color}22" stroke-width="4"/>
+                    <circle cx="22" cy="22" r="18" fill="none" stroke="${color}" stroke-width="4"
+                        stroke-dasharray="${circ}" stroke-dashoffset="${offset}"
+                        stroke-linecap="round" transform="rotate(-90 22 22)"/>
+                </svg>
+            </div>
+            <p class="text-xs font-bold text-gray-900 truncate">${s.subject_name}</p>
+            <p class="text-[11px] mt-0.5 font-semibold" style="color:${color}">${pct}%</p>
+        </a>`;
+    }).join('');
+}
+
+// ── Subject progress (sidebar compact) ─────────────────────────────────────
+function renderSubjectProgress(subjects) {
+    const cont = document.getElementById('subject-progress');
+    const mock = [
+        { subject_name: 'Física',     progress_percent: 72, completed_lessons: 9,  total_lessons: 12, subject_color: '#10b981' },
+        { subject_name: 'Matemática', progress_percent: 58, completed_lessons: 7,  total_lessons: 12, subject_color: '#8b5cf6' },
+        { subject_name: 'Química',    progress_percent: 33, completed_lessons: 4,  total_lessons: 12, subject_color: '#f59e0b' },
+        { subject_name: 'Português',  progress_percent: 17, completed_lessons: 2,  total_lessons: 12, subject_color: '#3b82f6' },
+    ];
+    const data = (subjects && subjects.length > 0) ? subjects : mock;
+    cont.innerHTML = data.slice(0, 4).map(s => {
+        const pct   = s.progress_percent || 0;
+        const color = s.subject_color || '#7c3aed';
+        const done  = s.completed_lessons || 0;
+        const total = s.total_lessons || 0;
+        return `
+        <div>
+            <div class="flex items-center justify-between mb-1">
+                <div class="flex items-center gap-1.5">
+                    <div class="w-2 h-2 rounded-full flex-shrink-0" style="background:${color}"></div>
+                    <span class="text-xs font-semibold text-gray-800 truncate max-w-[100px]">${s.subject_name}</span>
+                </div>
+                <span class="text-xs font-bold flex-shrink-0" style="color:${color}">${pct}%</span>
+            </div>
+            <div class="w-full bg-gray-100 rounded-full h-1.5 mb-0.5">
+                <div class="h-1.5 rounded-full pbar" style="width:${pct}%;background:${color}"></div>
+            </div>
+            <p class="text-[10px] text-gray-400">${done}/${total} lições</p>
+        </div>`;
+    }).join('');
+}
+
+// ── Recent activity ─────────────────────────────────────────────────────────
+function buildActivityFeed() {
+    const raw = localStorage.getItem('vclass_activity_log');
+    let log = raw ? JSON.parse(raw) : [];
+    if (log.length === 0) {
+        const now = Date.now();
+        log = [
+            { type: 'lesson_completed',  title: 'Leis de Newton — Aplicações', subject: 'Física',      icon: 'fa-check-circle', bg: 'bg-green-100',  color: 'text-green-600',  ts: now - 7200000 },
+            { type: 'exercise_submitted',title: 'Exercício: Cinemática',        subject: 'Física',      icon: 'fa-tasks',        bg: 'bg-blue-100',   color: 'text-blue-600',   ts: now - 18000000, score: 88 },
+            { type: 'video_watched',     title: 'Funções e Gráficos',           subject: 'Matemática',  icon: 'fa-play-circle',  bg: 'bg-purple-100', color: 'text-purple-600', ts: now - 86400000 },
+            { type: 'lesson_completed',  title: 'Tabela Periódica',             subject: 'Química',     icon: 'fa-check-circle', bg: 'bg-green-100',  color: 'text-green-600',  ts: now - 172800000 },
+            { type: 'exercise_submitted',title: 'Exercício: Álgebra',           subject: 'Matemática',  icon: 'fa-tasks',        bg: 'bg-blue-100',   color: 'text-blue-600',   ts: now - 259200000, score: 72 },
+        ];
+    }
+    return log;
+}
+
+function renderRecentActivity() {
+    const cont = document.getElementById('recent-activity');
+    const feed = buildActivityFeed();
+    function timeAgo(ts) {
+        const m = Math.floor((Date.now() - ts) / 60000);
+        if (m < 1) return 'agora mesmo';
+        if (m < 60) return `há ${m} min`;
+        if (m < 1440) return `há ${Math.floor(m / 60)}h`;
+        const d = Math.floor(m / 1440);
+        return `há ${d} dia${d > 1 ? 's' : ''}`;
+    }
+    cont.innerHTML = feed.slice(0, 5).map(a => `
+        <div class="flex items-start gap-3 px-2 py-2.5 rounded-xl hover:bg-gray-50 transition">
+            <div class="w-8 h-8 ${a.bg} rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                <i class="fas ${a.icon} ${a.color} text-xs"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-gray-900 leading-snug truncate">${a.title}</p>
+                <p class="text-[11px] text-gray-400 mt-0.5">
+                    ${a.subject ? `<span class="font-medium text-gray-500">${a.subject}</span> · ` : ''}
+                    ${a.score != null ? `<span class="text-green-500 font-bold">${a.score}%</span> · ` : ''}
+                    ${timeAgo(a.ts)}
+                </p>
+            </div>
+        </div>`).join('');
+}
+
+// ── Streak ──────────────────────────────────────────────────────────────────
+function getStreak() {
+    const today     = new Date().toDateString();
+    const last      = localStorage.getItem('vclass_last_study_day');
+    let streak      = parseInt(localStorage.getItem('vclass_streak') || '0');
+    if (last === today) return streak;
+    const yesterday = new Date(Date.now() - 86400000).toDateString();
+    streak = (last === yesterday) ? streak + 1 : 1;
+    localStorage.setItem('vclass_streak', streak);
+    localStorage.setItem('vclass_last_study_day', today);
+    return streak;
+}
+
+// ── Notification badge ──────────────────────────────────────────────────────
+function updateNotifBadge() {
+    try {
+        const unread = (JSON.parse(localStorage.getItem('notifications_v2') || '[]')).filter(n => !n.read).length;
+        const badge  = document.getElementById('nav-notif-badge');
+        if (badge) badge.classList.toggle('hidden', unread === 0);
+    } catch { document.getElementById('nav-notif-badge')?.classList.remove('hidden'); }
+}
+
+// ── Plan banner ─────────────────────────────────────────────────────────────
+async function loadPlanBanner() {
+    const token = localStorage.getItem('vclass_token');
+    if (!token) return;
+    try {
+        const res  = await fetch('/api/plans/my', { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (!data.success) return;
+        const plan   = data.data.current_plan;
+        const banner = document.getElementById('plan-banner');
+        if (!banner) return;
+
+        if (plan.id === 'free') {
+            document.getElementById('cta-upgrade')?.classList.remove('hidden');
+            banner.innerHTML = `
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl shadow-md shadow-purple-200">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-rocket text-yellow-300"></i>
+                    </div>
+                    <div>
+                        <p class="font-bold text-sm">Plano Gratuito activo</p>
+                        <p class="text-purple-200 text-xs mt-0.5">Desbloqueie aulas ilimitadas, Chat IA e certificados com o Premium</p>
+                    </div>
+                </div>
+                <a href="/plans.html" class="flex-shrink-0 bg-yellow-400 text-yellow-900 font-bold px-5 py-2 rounded-xl hover:bg-yellow-300 transition text-sm whitespace-nowrap">
+                    <i class="fas fa-crown mr-1"></i>Ver Planos
                 </a>
-            `).join('');
-        }
-
-        // Recent activity
-        function renderRecentActivity(activities) {
-            const container = document.getElementById('recent-activity');
-            if (!activities || activities.length === 0) {
-                container.innerHTML = `<div class="text-center py-6 text-gray-400"><p class="text-sm">Nenhuma atividade recente</p></div>`;
-                return;
-            }
-            const icons = { lesson_completed: {icon:'fa-check-circle', bg:'bg-green-100', color:'text-green-600'}, exercise_submitted: {icon:'fa-tasks', bg:'bg-blue-100', color:'text-blue-600'}, video_watched: {icon:'fa-play-circle', bg:'bg-purple-100', color:'text-purple-600'} };
-            container.innerHTML = activities.slice(0, 5).map(a => {
-                const style = icons[a.type] || {icon:'fa-circle', bg:'bg-gray-100', color:'text-gray-600'};
-                const date = new Date(a.updated_at || a.created_at);
-                const diff = Math.floor((Date.now()-date)/3600000);
-                const timeAgo = diff < 1 ? 'Agora' : diff < 24 ? `Há ${diff}h` : `Há ${Math.floor(diff/24)}d`;
-                return `
-                <div class="flex items-center space-x-3 p-3 rounded-xl hover:bg-gray-50 transition">
-                    <div class="w-9 h-9 ${style.bg} rounded-lg flex items-center justify-center flex-shrink-0">
-                        <i class="fas ${style.icon} ${style.color} text-sm"></i>
+            </div>`;
+        } else {
+            const planColors = { basic: '#2563eb', premium: '#7c3aed' };
+            const planIcons  = { basic: 'fa-book-open', premium: 'fa-crown' };
+            const color      = planColors[plan.id] || '#6b7280';
+            const icon       = planIcons[plan.id] || 'fa-seedling';
+            const expiry     = plan.expires_at ? new Date(plan.expires_at).toLocaleDateString('pt', { day: '2-digit', month: 'long', year: 'numeric' }) : null;
+            banner.innerHTML = `
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-white border-2 rounded-2xl" style="border-color:${color}33">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:${color}22">
+                        <i class="fas ${icon}" style="color:${color}"></i>
                     </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-gray-900 truncate">${a.lesson?.title || a.title || 'Atividade'}</p>
-                        <p class="text-xs text-gray-500">${a.progress_percent ? `${a.progress_percent}% completo` : ''} · ${timeAgo}</p>
+                    <div>
+                        <p class="font-bold text-sm text-gray-900">Plano ${plan.name} activo</p>
+                        <p class="text-gray-500 text-xs mt-0.5">${expiry ? `Válido até ${expiry}` : 'Subscrição activa'}${plan.auto_renew ? ' · Renovação automática' : ''}</p>
                     </div>
-                </div>`;
-            }).join('');
+                </div>
+                <div class="flex items-center gap-2">
+                    ${data.data.upgrade_available ? `<a href="/plans.html" class="text-xs font-bold px-4 py-2 rounded-xl border-2 hover:bg-purple-50 transition" style="color:${color};border-color:${color}"><i class="fas fa-arrow-up mr-1"></i>Upgrade</a>` : ''}
+                    <a href="/profile.html#subscription" class="text-xs text-gray-500 hover:text-gray-700 font-medium">Gerir plano</a>
+                </div>
+            </div>`;
         }
+        banner.classList.remove('hidden');
+    } catch { /* silent */ }
+}
 
-        // Subject progress
-        function renderSubjectProgress(subjects) {
-            const container = document.getElementById('subject-progress');
-            if (!subjects || subjects.length === 0) {
-                container.innerHTML = `<div class="text-center py-4 text-gray-400 text-sm">Sem progresso ainda</div>`;
-                return;
-            }
-            const colors = ['#7c3aed','#2563eb','#16a34a','#dc2626','#d97706','#0891b2'];
-            container.innerHTML = subjects.slice(0, 5).map((s, i) => {
-                const pct = s.progress_percent || Math.round(((s.completed_lessons||0)/(s.total_lessons||1))*100);
-                const color = s.subject_color || colors[i % colors.length];
-                return `
-                <div class="group">
-                    <div class="flex items-center justify-between mb-1">
-                        <div class="flex items-center space-x-2">
-                            <div class="w-3 h-3 rounded-full" style="background:${color}"></div>
-                            <span class="text-sm font-medium text-gray-900">${s.subject_name}</span>
-                        </div>
-                        <span class="text-sm font-bold" style="color:${color}">${pct}%</span>
-                    </div>
-                    <div class="w-full bg-gray-100 rounded-full h-2">
-                        <div class="h-2 rounded-full progress-bar-fill" style="width:${pct}%; background:${color}"></div>
-                    </div>
-                    <p class="text-xs text-gray-400 mt-1">${s.completed_lessons||0} / ${s.total_lessons||0} lições</p>
-                </div>`;
-            }).join('');
+// ── Load dashboard data ─────────────────────────────────────────────────────
+async function loadDashboard() {
+    try {
+        const result = await VClass.api.progress.getDashboard();
+        if (result.success) {
+            const { summary, recentActivity, subjectProgress } = result.data;
+            renderStats(summary || {});
+            renderSubjectProgress(subjectProgress);
+            renderSubjectScroll(subjectProgress);
+        } else {
+            renderStats({});
+            renderSubjectProgress([]);
+            renderSubjectScroll([]);
         }
+    } catch {
+        renderStats({});
+        renderSubjectProgress([]);
+        renderSubjectScroll([]);
+    }
+    renderRecentActivity();
+    loadSuggestedLessons();
+    const streak = getStreak();
+    animateCounter(document.getElementById('streak-count'), streak, ' dias');
+}
 
-        // ── Streak baseado em localStorage ───────────────────────
-        function getStreak() {
-            const today = new Date().toDateString();
-            const last  = localStorage.getItem('vclass_last_study_day');
-            let streak  = parseInt(localStorage.getItem('vclass_streak') || '0');
-            if (last === today) return streak;
-            const yesterday = new Date(Date.now() - 86400000).toDateString();
-            if (last === yesterday) {
-                streak += 1;
-            } else if (last && last !== today) {
-                streak = 1; // reset
-            } else {
-                streak = 1;
-            }
-            localStorage.setItem('vclass_streak', streak);
-            localStorage.setItem('vclass_last_study_day', today);
-            return streak;
-        }
-
-        // ── Activity feed rico com eventos reais do localStorage ─
-        function buildActivityFeed() {
-            const raw = localStorage.getItem('vclass_activity_log');
-            let log = raw ? JSON.parse(raw) : [];
-            // Se não há log, criar exemplos demo
-            if (log.length === 0) {
-                const now = Date.now();
-                log = [
-                    { type:'lesson_completed', title:'Leis de Newton — Aplicações', subject:'Física', icon:'fa-check-circle', bg:'bg-green-100', color:'text-green-600', ts: now - 3600000 * 2 },
-                    { type:'exercise_submitted', title:'Exercício: Cinemática', subject:'Física', icon:'fa-tasks', bg:'bg-blue-100', color:'text-blue-600', ts: now - 3600000 * 5, score: 88 },
-                    { type:'video_watched', title:'Funções e Gráficos', subject:'Matemática', icon:'fa-play-circle', bg:'bg-purple-100', color:'text-purple-600', ts: now - 86400000 * 1 },
-                    { type:'lesson_completed', title:'Tabela Periódica', subject:'Química', icon:'fa-check-circle', bg:'bg-green-100', color:'text-green-600', ts: now - 86400000 * 2 },
-                    { type:'exercise_submitted', title:'Exercício: Álgebra', subject:'Matemática', icon:'fa-tasks', bg:'bg-blue-100', color:'text-blue-600', ts: now - 86400000 * 3, score: 72 },
-                ];
-            }
-            return log;
-        }
-
-        function renderRecentActivity(apiActivities) {
-            const container = document.getElementById('recent-activity');
-            const feed = buildActivityFeed();
-            if (feed.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-8">
-                        <i class="fas fa-history text-4xl text-gray-200 mb-3 block"></i>
-                        <p class="text-sm text-gray-500 mb-2">Nenhuma actividade ainda</p>
-                        <a href="/browse.html" class="text-sm text-purple-600 font-medium hover:underline">Começar a estudar →</a>
-                    </div>`;
-                return;
-            }
-            function timeAgo(ts) {
-                const diff = Math.floor((Date.now() - ts) / 60000);
-                if (diff < 1) return 'agora mesmo';
-                if (diff < 60) return `há ${diff} min`;
-                if (diff < 1440) return `há ${Math.floor(diff/60)}h`;
-                const d = Math.floor(diff/1440);
-                return `há ${d} dia${d>1?'s':''}`;
-            }
-            container.innerHTML = feed.slice(0, 6).map(a => `
-                <div class="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition">
-                    <div class="w-9 h-9 ${a.bg} rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <i class="fas ${a.icon} ${a.color} text-sm"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-semibold text-gray-900 leading-snug">${a.title}</p>
-                        <p class="text-xs text-gray-500 mt-0.5">
-                            ${a.subject ? `<span class="font-medium text-gray-600">${a.subject}</span> · ` : ''}
-                            ${a.score != null ? `<span class="text-green-600 font-semibold">${a.score}%</span> · ` : ''}
-                            ${timeAgo(a.ts)}
-                        </p>
-                    </div>
-                </div>`).join('');
-        }
-
-        // ── Sugestões de próximas aulas do currículo ─────────────
-        async function loadSuggestedLessons() {
-            const cont = document.getElementById('continue-watching');
-            try {
-                // Pega o país do utilizador (default mz)
-                const u = VClass.getCurrentUser();
-                const country = u?.country_id ? (u.country_id.includes('mz') ? 'mz' : 'ao') : 'mz';
-                const r = await fetch(`/api/curriculum/tree/${country}`);
-                const d = await r.json();
-                if (!d.success) throw new Error('no data');
-                const curriculum = d.data.curriculum || [];
-                // Extrair primeiros 4 capítulos com conteúdo
-                const suggestions = [];
-                for (const level of curriculum) {
-                    for (const grade of (level.grades || [])) {
-                        for (const subject of (grade.subjects || [])) {
-                            for (const ch of (subject.chapters || []).slice(0, 1)) {
-                                suggestions.push({ ch, subject, grade });
-                                if (suggestions.length >= 3) break;
-                            }
-                            if (suggestions.length >= 3) break;
-                        }
-                        if (suggestions.length >= 3) break;
-                    }
-                    if (suggestions.length >= 3) break;
-                }
-                if (suggestions.length === 0) throw new Error('empty');
-                cont.innerHTML = suggestions.map(({ ch, subject, grade }) => `
-                    <a href="/browse.html" class="lesson-card flex items-center gap-3 p-4 bg-gray-50 rounded-xl hover:bg-purple-50 transition cursor-pointer group">
-                        <div class="w-12 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                            style="background:${subject.color}22">
-                            <i class="fas ${subject.icon} text-base" style="color:${subject.color}"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="font-semibold text-gray-900 text-sm truncate group-hover:text-purple-700 transition">${ch.title}</p>
-                            <p class="text-xs text-gray-500 truncate">${subject.name} · ${grade.name}</p>
-                        </div>
-                        <i class="fas fa-chevron-right text-gray-300 text-xs flex-shrink-0"></i>
-                    </a>`).join('');
-            } catch {
-                cont.innerHTML = `
-                    <div class="text-center py-8 text-gray-400">
-                        <i class="fas fa-play-circle text-5xl mb-3 block"></i>
-                        <p class="font-medium text-gray-600 text-sm">Explore o conteúdo disponível</p>
-                        <a href="/browse.html" class="mt-3 inline-block text-sm text-purple-600 font-medium hover:underline">Começar agora →</a>
-                    </div>`;
-            }
-        }
-
-        // ── Subject Progress enriquecido ──────────────────────────
-        function renderSubjectProgress(subjects) {
-            const container = document.getElementById('subject-progress');
-            // Dados mock ricos se API não devolver nada
-            const mockSubjects = [
-                { subject_name: 'Física',      progress_percent: 72, completed_lessons: 9,  total_lessons: 12, subject_color: '#10b981' },
-                { subject_name: 'Matemática',  progress_percent: 58, completed_lessons: 7,  total_lessons: 12, subject_color: '#8b5cf6' },
-                { subject_name: 'Química',     progress_percent: 33, completed_lessons: 4,  total_lessons: 12, subject_color: '#f59e0b' },
-                { subject_name: 'Português',   progress_percent: 17, completed_lessons: 2,  total_lessons: 12, subject_color: '#3b82f6' },
-            ];
-            const data = (subjects && subjects.length > 0) ? subjects : mockSubjects;
-            container.innerHTML = data.slice(0, 5).map((s, i) => {
-                const pct   = s.progress_percent || Math.round(((s.completed_lessons||0)/(s.total_lessons||1))*100);
-                const color = s.subject_color || ['#7c3aed','#2563eb','#16a34a','#dc2626','#d97706'][i % 5];
-                const done  = s.completed_lessons || 0;
-                const total = s.total_lessons || 0;
-                return `
-                <div class="group">
-                    <div class="flex items-center justify-between mb-1.5">
-                        <div class="flex items-center gap-2">
-                            <div class="w-2.5 h-2.5 rounded-full" style="background:${color}"></div>
-                            <span class="text-sm font-semibold text-gray-800">${s.subject_name}</span>
-                        </div>
-                        <span class="text-sm font-bold" style="color:${color}">${pct}%</span>
-                    </div>
-                    <div class="w-full bg-gray-100 rounded-full h-2.5 mb-1">
-                        <div class="h-2.5 rounded-full progress-bar-fill transition-all duration-700"
-                            style="width:${pct}%; background:${color}"></div>
-                    </div>
-                    <p class="text-xs text-gray-400">${done} / ${total} lições concluídas</p>
-                </div>`;
-            }).join('');
-        }
-
-        async function loadDashboard() {
-            try {
-                const result = await VClass.api.progress.getDashboard();
-                if (result.success) {
-                    const { summary, recentActivity, subjectProgress } = result.data;
-                    renderStats(summary || {});
-                    renderRecentActivity(recentActivity);
-                    renderSubjectProgress(subjectProgress);
-                } else {
-                    renderStats({});
-                    renderRecentActivity([]);
-                    renderSubjectProgress([]);
-                }
-            } catch (error) {
-                console.error('Dashboard error:', error);
-                renderStats({});
-                renderRecentActivity([]);
-                renderSubjectProgress([]);
-            }
-            // Sempre carregar sugestões do currículo real
-            loadSuggestedLessons();
-            // Streak
-            const streak = getStreak();
-            animateCounter(document.getElementById('streak-count'), streak, ' dias');
-        }
-
-        // ── Notification badge ────────────────────────────────────
-        function updateNotifBadge() {
-            try {
-                const notifs = JSON.parse(localStorage.getItem('notifications_v2') || '[]');
-                const unread = notifs.filter(n => !n.read).length;
-                const badge = document.getElementById('nav-notif-badge');
-                if (badge) {
-                    if (unread > 0) badge.classList.remove('hidden');
-                    else badge.classList.add('hidden');
-                }
-            } catch(e) {
-                // default: show badge with default notifications
-                const badge = document.getElementById('nav-notif-badge');
-                if (badge) badge.classList.remove('hidden');
-            }
-        }
-
-        // Init
-        setupUserInfo();
-        setGreeting();
-        createActivityChart();
-        loadDashboard();
-        updateNotifBadge();
-        loadPlanBanner();
-
-        // ── Plan Banner ───────────────────────────────────────────────────────
-        async function loadPlanBanner() {
-            const token = localStorage.getItem('vclass_token');
-            if (!token) return;
-            try {
-                const res = await fetch('/api/plans/my', { headers: { Authorization: `Bearer ${token}` } });
-                const data = await res.json();
-                if (!data.success) return;
-                const plan = data.data.current_plan;
-                const banner = document.getElementById('plan-banner');
-                if (!banner) return;
-
-                if (plan.id === 'free') {
-                    // Banner de upgrade para plano free
-                    banner.innerHTML = `
-                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-rocket text-xl text-yellow-300"></i>
-                            </div>
-                            <div>
-                                <p class="font-bold text-sm">Plano Gratuito activo</p>
-                                <p class="text-purple-200 text-xs mt-0.5">Desbloqueie aulas ilimitadas, Chat IA e muito mais com o Premium</p>
-                            </div>
-                        </div>
-                        <a href="/plans.html" class="flex-shrink-0 bg-yellow-400 text-yellow-900 font-bold px-5 py-2.5 rounded-xl hover:bg-yellow-300 transition text-sm whitespace-nowrap">
-                            <i class="fas fa-crown mr-1"></i>Ver Planos
-                        </a>
-                    </div>`;
-                } else {
-                    // Card do plano activo
-                    const planColors = { basic: '#2563eb', premium: '#7c3aed' };
-                    const planIcons  = { basic: 'fa-book-open', premium: 'fa-crown' };
-                    const color = planColors[plan.id] || '#6b7280';
-                    const icon  = planIcons[plan.id] || 'fa-seedling';
-                    const expiry = plan.expires_at ? new Date(plan.expires_at).toLocaleDateString('pt', { day:'2-digit', month:'long', year:'numeric' }) : null;
-                    banner.innerHTML = `
-                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 bg-white border-2 rounded-2xl" style="border-color:${color}22;">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style="background:${color}22">
-                                <i class="fas ${icon} text-xl" style="color:${color}"></i>
-                            </div>
-                            <div>
-                                <p class="font-bold text-sm text-gray-900">Plano ${plan.name} activo</p>
-                                <p class="text-gray-500 text-xs mt-0.5">${expiry ? `Válido até ${expiry}` : 'Subscrição activa'} ${plan.auto_renew ? '· Renovação automática' : ''}</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            ${data.data.upgrade_available ? `<a href="/plans.html" class="text-xs font-semibold px-4 py-2 rounded-xl border-2 hover:bg-purple-50 transition" style="color:${color};border-color:${color}"><i class="fas fa-arrow-up mr-1"></i>Fazer Upgrade</a>` : ''}
-                            <a href="/profile.html#subscription" class="text-xs text-gray-500 hover:text-gray-700 font-medium">Gerir plano</a>
-                        </div>
-                    </div>`;
-                }
-                banner.classList.remove('hidden');
-            } catch(e) { /* silent fail */ }
-        }
-    </script>
+// ── INIT ────────────────────────────────────────────────────────────────────
+setupUserInfo();
+setGreeting();
+createChart();
+loadDashboard();
+updateNotifBadge();
+loadPlanBanner();
+</script>
 </body>
 </html>
