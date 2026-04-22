@@ -16,7 +16,7 @@ const PLANS = [
     name: 'Gratuito',
     price_mzn: 0, price_aoa: 0, price_brl: 0, price_eur: 0,
     features: ['5 aulas por mês', 'Exercícios básicos', 'Biblioteca limitada'],
-    active_users: 8320,
+    active_users: 0, // MVP — dados de teste
     color: '#6b7280'
   },
   {
@@ -24,7 +24,7 @@ const PLANS = [
     name: 'Básico',
     price_mzn: 299, price_aoa: 2500, price_brl: 29.9, price_eur: 4.99,
     features: ['50 aulas por mês', 'Todos os exercícios', 'Download PDF', 'Chat IA 20 msg/dia'],
-    active_users: 2140,
+    active_users: 0, // MVP — dados de teste
     color: '#2563eb'
   },
   {
@@ -32,7 +32,7 @@ const PLANS = [
     name: 'Premium',
     price_mzn: 599, price_aoa: 4900, price_brl: 59.9, price_eur: 9.99,
     features: ['Aulas ilimitadas', 'Exercícios ilimitados', 'Downloads ilimitados', 'Chat IA ilimitado', 'Acesso antecipado'],
-    active_users: 847,
+    active_users: 0, // MVP — dados de teste
     color: '#7c3aed'
   }
 ]
@@ -59,20 +59,20 @@ const MOCK_PAYMENTS = [
   { id: 'pay-008', user: 'Grace Nkosi',   amount: 299,  currency: 'MZN', plan: 'basic',   method: 'M-Pesa',    status: 'success', date: new Date(Date.now() - 86400000 * 12).toISOString(), ref: 'MP24-00654' },
 ]
 
-// Revenue chart — últimos 12 meses (em USD equivalente)
+// Revenue chart — MVP: sem receita real ainda (dados de teste/demonstração)
 const MONTHLY_REVENUE = [
-  { month: 'Jan', revenue: 1240, subscriptions: 42 },
-  { month: 'Fev', revenue: 1580, subscriptions: 56 },
-  { month: 'Mar', revenue: 1820, subscriptions: 64 },
-  { month: 'Abr', revenue: 2100, subscriptions: 78 },
-  { month: 'Mai', revenue: 2350, subscriptions: 89 },
-  { month: 'Jun', revenue: 2780, subscriptions: 102 },
-  { month: 'Jul', revenue: 3120, subscriptions: 118 },
-  { month: 'Ago', revenue: 3540, subscriptions: 134 },
-  { month: 'Set', revenue: 3980, subscriptions: 149 },
-  { month: 'Out', revenue: 4320, subscriptions: 163 },
-  { month: 'Nov', revenue: 4870, subscriptions: 184 },
-  { month: 'Dez', revenue: 5240, subscriptions: 198 },
+  { month: 'Jan', revenue: 0, subscriptions: 0 },
+  { month: 'Fev', revenue: 0, subscriptions: 0 },
+  { month: 'Mar', revenue: 0, subscriptions: 0 },
+  { month: 'Abr', revenue: 0, subscriptions: 0 },
+  { month: 'Mai', revenue: 0, subscriptions: 0 },
+  { month: 'Jun', revenue: 0, subscriptions: 0 },
+  { month: 'Jul', revenue: 0, subscriptions: 0 },
+  { month: 'Ago', revenue: 0, subscriptions: 0 },
+  { month: 'Set', revenue: 0, subscriptions: 0 },
+  { month: 'Out', revenue: 0, subscriptions: 0 },
+  { month: 'Nov', revenue: 0, subscriptions: 0 },
+  { month: 'Dez', revenue: 0, subscriptions: 0 },
 ]
 
 // ── GET /api/finance/stats ────────────────────────────────────────────────────
@@ -100,12 +100,12 @@ finance.get('/stats', (c) => {
         conversion_rate: ((active / (PLANS[0].active_users + active)) * 100).toFixed(1) + '%'
       },
       revenue: {
-        this_month_usd: 5240,
-        last_month_usd: 4870,
-        growth_pct: 7.6,
-        total_year_usd: 36940,
-        mrr_usd: 5240,
-        arr_usd: 62880,
+        this_month_usd: 0,   // MVP — pagamento não activado
+        last_month_usd: 0,
+        growth_pct: 0,
+        total_year_usd: 0,
+        mrr_usd: 0,
+        arr_usd: 0,
         payments_this_week: successPayments.length,
         failed_payments: MOCK_PAYMENTS.filter(p => p.status === 'failed').length,
         refunds: MOCK_PAYMENTS.filter(p => p.status === 'refunded').length,

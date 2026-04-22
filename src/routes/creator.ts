@@ -41,27 +41,26 @@ creator.get('/dashboard', async (c) => {
       data: {
         creator: { id: user.id, name: user.full_name, role: user.role },
         stats: {
-          total_lessons: 16,
-          total_chapters: 61,
-          total_students_reached: 1847,
-          avg_approval_rate: 78,
-          published_lessons: 13,
-          draft_lessons: 3,
-          weekly_views: 312,
-          weekly_completions: 87,
-          weekly_exercises_done: 143
+          total_lessons: 6,         // MVP — 6 aulas demo
+          total_chapters: 4,         // MVP — capítulos demo
+          total_students_reached: 0, // MVP — sem alunos reais
+          avg_approval_rate: 0,
+          published_lessons: 6,
+          draft_lessons: 0,
+          weekly_views: 0,
+          weekly_completions: 0,
+          weekly_exercises_done: 0
         },
         weekly_chart: {
           labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
-          views: [42, 58, 35, 71, 49, 88, 69],
-          completions: [10, 14, 8, 19, 12, 22, 18]
+          views: [0, 0, 0, 0, 0, 0, 0],
+          completions: [0, 0, 0, 0, 0, 0, 0]
         },
         subjects: [
-          { id: 1, name: 'Física',     color: 'teal',   lessons: 13, progress_pct: 72 },
-          { id: 2, name: 'Matemática', color: 'indigo', lessons: 2,  progress_pct: 40 },
-          { id: 3, name: 'Química',    color: 'amber',  lessons: 1,  progress_pct: 10 }
+          { id: 1, name: 'Física',     color: 'teal',   lessons: 2, progress_pct: 0 },
+          { id: 2, name: 'Matemática', color: 'indigo', lessons: 4, progress_pct: 0 }
         ],
-        monthly_goal: { target: 20, achieved: 16 },
+        monthly_goal: { target: 10, achieved: 6 },
         tips: [
           { id: 1, text: 'Lições com exercícios têm 3× mais engajamento. Adicione pelo menos 3 questões por aula!' },
           { id: 2, text: 'Vídeos entre 8 e 15 minutos têm maior taxa de conclusão. Evite aulas muito longas.' },
@@ -101,7 +100,7 @@ creator.get('/dashboard', async (c) => {
           published_lessons:        published,
           draft_lessons:            drafts,
           total_students_reached:   uniqueStudents,
-          avg_approval_rate:        78, // Calculated from exercise results
+          avg_approval_rate:        0,  // Calculado a partir de resultados reais
           weekly_views:             0,  // Requires video analytics
           weekly_completions:       0,
           weekly_exercises_done:    0
@@ -438,7 +437,7 @@ creator.get('/students', async (c) => {
       lessons_done: Math.floor(Math.random() * 10) + 1,
       last_active: `${Math.floor(Math.random() * 14)} dias atrás`
     }))
-    return c.json({ success: true, data: MOCK, total: 1847, page, limit })
+    return c.json({ success: true, data: MOCK, total: MOCK.length, page, limit })
   }
 
   const supabase = createSupabaseClient(c.env)
@@ -642,79 +641,26 @@ creator.get('/earnings', async (c) => {
   const COMMISSION_RATE = 0.40   // 40 % para o professor
   const PLATFORM_FEE    = 0.60   // 60 % para a plataforma
 
-  // Preço médio mensal por aluno pago (mix MZN/AOA/BRL, convertido para MZN)
+  // MVP — sem alunos pagantes reais ainda
   const AVG_SUBSCRIPTION_MZN = 130
+  const PAID_STUDENTS_BASE = 0
 
-  // Alunos pagos que consomem conteúdo deste professor
-  const PAID_STUDENTS_BASE = 312
+  // Dados por período — MVP: todos zeros (pagamento não activado)
+  const zeroPeriods7d  = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'].map(l => ({ label: l, gross: 0, commission: 0, students: 0 }))
+  const zeroPeriods4w  = [1,2,3,4].map(w => ({ label: `Sem ${w}`, gross: 0, commission: 0, students: 0 }))
+  const zeroPeriods3m  = ['Mês 1','Mês 2','Mês 3'].map(l => ({ label: l, gross: 0, commission: 0, students: 0 }))
+  const zeroPeriods12m = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'].map(l => ({ label: l, gross: 0, commission: 0, students: 0 }))
+  const zeroPeriodsTri = ['2025 T1','2025 T2','2025 T3','2025 T4','2026 T1'].map(l => ({ label: l, gross: 0, commission: 0, students: 0 }))
 
-  // Dados por período
   const PERIOD_DATA: Record<string, {
     paid_students: number, avg_watch_min: number, completions: number,
     total_gross_mzn: number, periods: { label: string, gross: number, commission: number, students: number }[]
   }> = {
-    '7d': {
-      paid_students: 187, avg_watch_min: 11.4, completions: 608,
-      total_gross_mzn: 2431,
-      periods: [
-        { label: 'Seg', gross: 320, commission: 128, students: 22 },
-        { label: 'Ter', gross: 290, commission: 116, students: 20 },
-        { label: 'Qua', gross: 410, commission: 164, students: 31 },
-        { label: 'Qui', gross: 375, commission: 150, students: 27 },
-        { label: 'Sex', gross: 460, commission: 184, students: 34 },
-        { label: 'Sáb', gross: 318, commission: 127, students: 24 },
-        { label: 'Dom', gross: 258, commission: 103, students: 19 },
-      ]
-    },
-    '30d': {
-      paid_students: 312, avg_watch_min: 10.8, completions: 2340,
-      total_gross_mzn: 9750,
-      periods: Array.from({ length: 4 }, (_, w) => ({
-        label: `Sem ${w + 1}`,
-        gross: [2100, 2450, 2800, 2400][w],
-        commission: [840, 980, 1120, 960][w],
-        students: [71, 83, 94, 81][w]
-      }))
-    },
-    '90d': {
-      paid_students: 489, avg_watch_min: 10.2, completions: 6900,
-      total_gross_mzn: 28600,
-      periods: Array.from({ length: 3 }, (_, m) => ({
-        label: ['Mês 1', 'Mês 2', 'Mês 3'][m],
-        gross: [8900, 9750, 9950][m],
-        commission: [3560, 3900, 3980][m],
-        students: [276, 312, 342][m]
-      }))
-    },
-    '12m': {
-      paid_students: 847, avg_watch_min: 9.8, completions: 16200,
-      total_gross_mzn: 117000,
-      periods: [
-        { label:'Jan', gross:7200,  commission:2880,  students:231 },
-        { label:'Fev', gross:7800,  commission:3120,  students:248 },
-        { label:'Mar', gross:8400,  commission:3360,  students:267 },
-        { label:'Abr', gross:8900,  commission:3560,  students:276 },
-        { label:'Mai', gross:9200,  commission:3680,  students:287 },
-        { label:'Jun', gross:9750,  commission:3900,  students:312 },
-        { label:'Jul', gross:10100, commission:4040,  students:324 },
-        { label:'Ago', gross:10400, commission:4160,  students:338 },
-        { label:'Set', gross:10800, commission:4320,  students:350 },
-        { label:'Out', gross:11200, commission:4480,  students:362 },
-        { label:'Nov', gross:11750, commission:4700,  students:378 },
-        { label:'Dez', gross:11700, commission:4680,  students:375 },
-      ]
-    },
-    'all': {
-      paid_students: 847, avg_watch_min: 9.8, completions: 58000,
-      total_gross_mzn: 185400,
-      periods: [
-        { label:'2025 T1', gross:23400, commission:9360,  students:267 },
-        { label:'2025 T2', gross:27850, commission:11140, students:312 },
-        { label:'2025 T3', gross:30300, commission:12120, students:338 },
-        { label:'2025 T4', gross:33650, commission:13460, students:375 },
-        { label:'2026 T1', gross:35200, commission:14080, students:390 },
-      ]
-    }
+    '7d':  { paid_students: 0, avg_watch_min: 0, completions: 0, total_gross_mzn: 0, periods: zeroPeriods7d  },
+    '30d': { paid_students: 0, avg_watch_min: 0, completions: 0, total_gross_mzn: 0, periods: zeroPeriods4w  },
+    '90d': { paid_students: 0, avg_watch_min: 0, completions: 0, total_gross_mzn: 0, periods: zeroPeriods3m  },
+    '12m': { paid_students: 0, avg_watch_min: 0, completions: 0, total_gross_mzn: 0, periods: zeroPeriods12m },
+    'all': { paid_students: 0, avg_watch_min: 0, completions: 0, total_gross_mzn: 0, periods: zeroPeriodsTri },
   }
 
   const d = PERIOD_DATA[period] || PERIOD_DATA['30d']

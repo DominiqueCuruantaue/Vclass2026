@@ -28,7 +28,7 @@ export const PLANS_DATA = [
     color_bg: '#f3f4f6',
     icon: 'fa-seedling',
     popular: false,
-    active_users: 8320,
+    active_users: 0, // MVP — sem utilizadores pagantes ainda
     features: [
       { text: '10 aulas por mês', included: true },
       { text: 'Exercícios básicos', included: true },
@@ -57,7 +57,7 @@ export const PLANS_DATA = [
     color_bg: '#eff6ff',
     icon: 'fa-book-open',
     popular: false,
-    active_users: 2140,
+    active_users: 0, // MVP — sem utilizadores pagantes ainda
     features: [
       { text: 'Aulas ilimitadas', included: true },
       { text: 'Todos os exercícios', included: true },
@@ -86,7 +86,7 @@ export const PLANS_DATA = [
     color_bg: '#f5f3ff',
     icon: 'fa-crown',
     popular: true,
-    active_users: 847,
+    active_users: 0, // MVP — sem utilizadores pagantes ainda
     features: [
       { text: 'Aulas ilimitadas', included: true },
       { text: 'Exercícios ilimitados', included: true },

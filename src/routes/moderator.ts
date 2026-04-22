@@ -98,16 +98,16 @@ moderator.get('/stats', (c) => {
       },
       chat: {
         flagged_messages,
-        active_rooms: 12,
-        messages_today: 847,
+        active_rooms: 0,        // MVP — sem chat activo ainda
+        messages_today: 0,      // MVP — dados de teste
         banned_users: MOCK_BANNED_USERS.length
       },
       actions_taken: {
-        total: 143,
-        this_week: 18,
-        removals: 67,
-        warnings: 54,
-        bans: 22
+        total: 0,               // MVP — dados de teste
+        this_week: 0,
+        removals: 0,
+        warnings: 0,
+        bans: 0
       }
     }
   })

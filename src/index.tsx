@@ -76,7 +76,7 @@ app.get('/api/health', (c) => {
   return c.json({
     success: true,
     message: 'VClass API is running',
-    version: '1.6.0',
+    version: '1.7.2',
     timestamp: new Date().toISOString()
   })
 })
