@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VClass -- Descri&#231;&#227;o Completa da Plataforma</title>
+  <style>
+    /* -- Reset & Base ------------------------------- */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 11pt;
+      line-height: 1.65;
+      color: #1a1a2e;
+      background: #f8f9fb;
+    }
+
+    /* -- Cover --------------------------------------*/
+    .cover {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 50%, #7c3aed 100%);
+      color: #fff;
+      min-height: 260px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 48px 32px 40px;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+    .cover .logo-ring {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.15);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px;
+      margin-bottom: 16px;
+    }
+    .cover h1 { font-size: 28pt; font-weight: 700; letter-spacing: -0.5px; }
+    .cover .subtitle { font-size: 13pt; opacity: 0.88; margin-top: 6px; }
+    .cover .badge {
+      display: inline-block;
+      margin-top: 18px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.35);
+      border-radius: 20px;
+      padding: 4px 16px;
+      font-size: 9pt;
+      letter-spacing: 0.5px;
+    }
+    .cover .meta { margin-top: 14px; font-size: 9pt; opacity: 0.7; }
+
+    /* -- Layout -------------------------------------*/
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 24px 64px;
+    }
+
+    /* -- TOC ----------------------------------------*/
+    .toc {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 28px 32px;
+      margin: 32px 0;
+    }
+    .toc h2 { font-size: 12pt; color: #7c3aed; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px; }
+    .toc ol { padding-left: 20px; }
+    .toc li { margin: 5px 0; font-size: 10pt; color: #374151; }
+    .toc a { color: #2d6a9f; text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+
+    /* -- Section ------------------------------------*/
+    .section {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 32px 36px;
+      margin-bottom: 24px;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 2px solid #f1f5f9;
+    }
+    .section-num {
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #2d6a9f, #7c3aed);
+      color: #fff;
+      font-weight: 700;
+      font-size: 13pt;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+    .section h2 { font-size: 15pt; color: #1e3a5f; font-weight: 700; }
+    .section h3 { font-size: 12pt; color: #2d6a9f; font-weight: 700; margin: 18px 0 8px; }
+    .section p { margin-bottom: 10px; color: #374151; }
+    .section ul, .section ol { padding-left: 20px; margin-bottom: 10px; }
+    .section li { margin: 4px 0; color: #374151; }
+
+    /* -- Highlight box ------------------------------*/
+    .highlight {
+      background: linear-gradient(135deg, #eff6ff, #f5f3ff);
+      border-left: 4px solid #7c3aed;
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin: 16px 0;
+      font-style: italic;
+      color: #1e3a5f;
+    }
+
+    /* -- Alert (MVP notice) -------------------------*/
+    .alert-mvp {
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      border-radius: 8px;
+      padding: 12px 18px;
+      margin: 14px 0;
+      font-size: 10pt;
+      color: #92400e;
+    }
+    .alert-mvp strong { color: #78350f; }
+
+    /* -- Table --------------------------------------*/
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.5pt;
+      margin: 14px 0;
+    }
+    thead th {
+      background: #1e3a5f;
+      color: #fff;
+      padding: 9px 12px;
+      text-align: left;
+      font-weight: 700;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+    tbody tr:nth-child(even) { background: #f8fafc; }
+    tbody td { padding: 8px 12px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+
+    /* -- Tag pills ----------------------------------*/
+    .tag {
+      display: inline-block;
+      background: #ede9fe;
+      color: #6d28d9;
+      border-radius: 4px;
+      padding: 1px 8px;
+      font-size: 8.5pt;
+      font-weight: 600;
+      margin: 2px 2px 2px 0;
+    }
+    .tag.green { background: #d1fae5; color: #065f46; }
+    .tag.blue  { background: #dbeafe; color: #1e40af; }
+    .tag.gray  { background: #f3f4f6; color: #374151; }
+    .tag.red   { background: #fee2e2; color: #991b1b; }
+
+    /* -- Status badge -------------------------------*/
+    .status-mvp {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #fef3c7; border: 1px solid #f59e0b;
+      color: #92400e; border-radius: 20px;
+      padding: 3px 12px; font-size: 9pt; font-weight: 600;
+    }
+    .status-prod {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #d1fae5; border: 1px solid #10b981;
+      color: #065f46; border-radius: 20px;
+      padding: 3px 12px; font-size: 9pt; font-weight: 600;
+    }
+
+    /* -- Grid cards ---------------------------------*/
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 14px;
+      margin: 14px 0;
+    }
+    .card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .card .card-icon { font-size: 20px; margin-bottom: 8px; }
+    .card .card-title { font-size: 10pt; font-weight: 700; color: #1e3a5f; margin-bottom: 4px; }
+    .card .card-body  { font-size: 9pt; color: #6b7280; }
+
+    /* -- Print --------------------------------------*/
+    @media print {
+      body { background: #fff; font-size: 10pt; }
+      .cover { background: #1e3a5f !important; page-break-after: always; }
+      .section { border: 1px solid #d1d5db; page-break-inside: avoid; }
+      thead th { background: #1e3a5f !important; color: #fff !important; }
+      a { color: #1e3a5f !important; text-decoration: none; }
+      @page { size: A4; margin: 18mm 16mm; }
+    }
+
+    /* -- Responsive ---------------------------------*/
+    @media (max-width: 600px) {
+      .section { padding: 20px 18px; }
+      .cover h1 { font-size: 20pt; }
+      .card-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* -- Footer -------------------------------------*/
+    .doc-footer {
+      text-align: center;
+      font-size: 8.5pt;
+      color: #9ca3af;
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #e2e8f0;
+    }
+  </style>
+</head>
+<body>
+
+<!-- -- CAPA ---------------------------------------------------------- -->
+<div class="cover">
+  <div class="logo-ring">&#x1F393;</div>
+  <h1>VClass</h1>
+  <div class="subtitle">Plataforma de Ensino Digital para &Aacute;frica e Brasil</div>
+  <span class="badge">DOCUMENTO INTERNO &mdash; PROT&Oacute;TIPO v1.7</span>
+  <div class="meta">Abril de 2026 &bull; Vers&atilde;o para Valida&#231;&#227;o Beta</div>
+</div>
+
+<div class="container">
+
+<!-- -- &Iacute;NDICE ---------------------------------------------------------- -->
+<div class="toc">
+  <h2>&#x1F4CB; &Iacute;ndice</h2>
+  <ol>
+    <li><a href="#s1">Resumo Executivo</a></li>
+    <li><a href="#s2">Vis&atilde;o, Miss&atilde;o e Proposta de Valor</a></li>
+    <li><a href="#s3">Pa&iacute;ses e Curr&iacute;culos Suportados</a></li>
+    <li><a href="#s4">Arquitetura da Plataforma</a></li>
+    <li><a href="#s5">Funcionalidades para Estudantes</a></li>
+    <li><a href="#s6">Funcionalidades para Criadores de Conte&uacute;do</a></li>
+    <li><a href="#s7">Verifica&#231;&#227;o de Professores</a></li>
+    <li><a href="#s8">Planos e Pre&#231;os</a></li>
+    <li><a href="#s9">M&eacute;todos de Pagamento</a></li>
+    <li><a href="#s10">Perfis e Permiss&otilde;es</a></li>
+    <li><a href="#s11">Seguran&ccedil;a e Conformidade</a></li>
+    <li><a href="#s12">Especifica&#231;&#227;o T&eacute;cnica</a></li>
+    <li><a href="#s13">Roadmap</a></li>
+    <li><a href="#s14">Estado Atual do Prot&oacute;tipo</a></li>
+    <li><a href="#s15">Conclus&atilde;o</a></li>
+  </ol>
+</div>
+
+<!-- -- 1. RESUMO EXECUTIVO ---------------------------------------------------------- -->
+<div class="section" id="s1">
+  <div class="section-header">
+    <div class="section-num">1</div>
+    <h2>Resumo Executivo</h2>
+  </div>
+  <div class="alert-mvp">
+    <strong>&#x26A0; Estado atual:</strong> Prot&oacute;tipo MVP em desenvolvimento &mdash; menos de 20 utilizadores de teste internos. Nenhum subscritor pagante ativo. Os dados apresentados s&atilde;o demonstrativos.
+  </div>
+  <p>
+    O <strong>VClass</strong> &eacute; uma plataforma de ensino digital concebida para democratizar o acesso
+    &agrave; educa&ccedil;&atilde;o de qualidade em Mo&ccedil;ambique, Angola, Brasil, Portugal e Cabo Verde.
+    O sistema &eacute; constru&iacute;do sobre curr&iacute;culos escolares oficiais de cada pa&iacute;s, oferecendo aulas em
+    v&iacute;deo, exerc&iacute;cios interativos, chat com intelig&ecirc;ncia artificial e uma biblioteca de recursos --
+    tudo a pre&ccedil;os calibrados aos sal&aacute;rios m&iacute;nimos locais.
+  </p>
+  <div class="highlight">
+    "Queremos que cada estudante em &Aacute;frica e no Brasil tenha acesso ao mesmo n&iacute;vel de educa&ccedil;&atilde;o
+    que qualquer estudante em pa&iacute;ses desenvolvidos -- no seu idioma, com o seu curr&iacute;culo, ao seu pre&ccedil;o."
+  </div>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-icon">&#x1F30D;</div>
+      <div class="card-title">5 Pa&iacute;ses</div>
+      <div class="card-body">MZ &bull; AO &bull; BR &bull; PT &bull; CV</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">&#x1F4DA;</div>
+      <div class="card-title">Curr&iacute;culos Mapeados</div>
+      <div class="card-body">+585 entidades no modelo de dados (n&iacute;veis, graus, disciplinas, cap&iacute;tulos)</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">&#x1F3AC;</div>
+      <div class="card-title">6 Aulas Demo</div>
+      <div class="card-body">Matem&aacute;tica e F&iacute;sica -- v&iacute;deos HLS de teste</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">&#x1F4BB;</div>
+      <div class="card-title">~30 000 linhas</div>
+      <div class="card-body">TypeScript/HTML -- prot&oacute;tipo funcional completo</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">&#x1F465;</div>
+      <div class="card-title">&lt; 20 utilizadores</div>
+      <div class="card-body">Testes internos em curso</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">&#x26A1;</div>
+      <div class="card-title">Edge Deployment</div>
+      <div class="card-body">Cloudflare Pages / Workers</div>
+    </div>
+  </div>
+</div>
+
+<!-- -- 2. VIS&Atilde;O, MISS&Atilde;O ---------------------------------------------------------- -->
+<div class="section" id="s2">
+  <div class="section-header">
+    <div class="section-num">2</div>
+    <h2>Vis&atilde;o, Miss&atilde;o e Proposta de Valor</h2>
+  </div>
+
+  <h3>Vis&atilde;o</h3>
+  <p>Ser a plataforma de refer&ecirc;ncia de educa&ccedil;&atilde;o digital para a comunidade de l&iacute;ngua portuguesa, tornando o acesso ao conhecimento universal e acess&iacute;vel.</p>
+
+  <h3>Miss&atilde;o</h3>
+  <p>Fornecer conte&uacute;do educativo alinhado aos curr&iacute;culos nacionais, produzido por professores verificados, distribu&iacute;do digitalmente a pre&ccedil;os justos e acess&iacute;vel mesmo em condi&ccedil;&otilde;es de baixa largura de banda.</p>
+
+  <h3>Proposta de Valor &Uacute;nica</h3>
+  <ul>
+    <li><strong>Curr&iacute;culo local:</strong> cada pa&iacute;s tem os seus n&iacute;veis, graus e disciplinas exatas.</li>
+    <li><strong>Pre&ccedil;o acess&iacute;vel:</strong> plano b&aacute;sico a ~1,7 % do sal&aacute;rio m&iacute;nimo mo&ccedil;ambicano.</li>
+    <li><strong>Professores verificados:</strong> processo de valida&ccedil;&atilde;o de 6 etapas com revis&atilde;o manual.</li>
+    <li><strong>IA integrada:</strong> chat com base de conhecimento por disciplina e modo offline futuro.</li>
+    <li><strong>Gamifica&ccedil;&atilde;o:</strong> XP, conquistas, streaks e metas di&aacute;rias para manter a motiva&ccedil;&atilde;o.</li>
+  </ul>
+</div>
+
+<!-- -- 3. PA&Iacute;SES E CURR&Iacute;CULOS ---------------------------------------------------------- -->
+<div class="section" id="s3">
+  <div class="section-header">
+    <div class="section-num">3</div>
+    <h2>Pa&iacute;ses e Curr&iacute;culos Suportados</h2>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Pa&iacute;s</th>
+        <th>N&iacute;veis de Ensino</th>
+        <th>Ano Inicial&ndash;Final</th>
+        <th>Calend&aacute;rio</th>
+        <th>Moeda</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>&#x1F1F2;&#x1F1FF; Mo&ccedil;ambique</td>
+        <td>EP1, EP2, ESG1, ESG2, ETP</td>
+        <td>1.&#170; &ndash; 12.&#170;</td>
+        <td>Trimestral</td>
+        <td>MZN</td>
+      </tr>
+      <tr>
+        <td>&#x1F1E6;&#x1F1F4; Angola</td>
+        <td>EP, ES1, ES2, ETP</td>
+        <td>1.&#170; &ndash; 12.&#170;</td>
+        <td>Trimestral</td>
+        <td>AOA</td>
+      </tr>
+      <tr>
+        <td>&#x1F1E7;&#x1F1F7; Brasil</td>
+        <td>EF1, EF2, EM, EJA</td>
+        <td>1.&#170; &ndash; 3.&#170; EM</td>
+        <td>Semestral</td>
+        <td>BRL</td>
+      </tr>
+      <tr>
+        <td>&#x1F1F5;&#x1F1F9; Portugal</td>
+        <td>1EB, 2EB, 3EB, ES, CP</td>
+        <td>1.&#170; &ndash; 12.&#170;</td>
+        <td>Trimestral</td>
+        <td>EUR</td>
+      </tr>
+      <tr>
+        <td>&#x1F1E8;&#x1F1FB; Cabo Verde</td>
+        <td>EB, ES1, ES2</td>
+        <td>1.&#170; &ndash; 12.&#170;</td>
+        <td>Trimestral</td>
+        <td>CVE</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>O modelo de dados cont&eacute;m <strong>+585 entidades</strong> (pa&iacute;ses, n&iacute;veis, graus, disciplinas, cap&iacute;tulos) completamente mapeadas e prontas para receber conte&uacute;do real. As disciplinas incluem: Matem&aacute;tica, F&iacute;sica, Qu&iacute;mica, Biologia, Portugu&ecirc;s, Hist&oacute;ria, Geografia, Ingl&ecirc;s e outras &mdash; com c&oacute;digos, &iacute;cones e cores por &aacute;rea de conhecimento.</p>
+</div>
+
+<!-- -- 4. ARQUITETURA ---------------------------------------------------------- -->
+<div class="section" id="s4">
+  <div class="section-header">
+    <div class="section-num">4</div>
+    <h2>Arquitetura da Plataforma</h2>
+  </div>
+
+  <h3>Stack T&eacute;cnico</h3>
+  <table>
+    <thead>
+      <tr><th>Camada</th><th>Tecnologia</th><th>Fun&ccedil;&atilde;o</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Backend/API</td><td>Hono.js (TypeScript)</td><td>API REST edge-first, middleware JWT, CORS, rate-limit</td></tr>
+      <tr><td>Frontend</td><td>HTML5 + TailwindCSS (CDN) + Chart.js</td><td>Interface sem framework &mdash; SPA leve</td></tr>
+      <tr><td>Autentica&#231;&#227;o</td><td>JWT (HS256) + bcrypt</td><td>Tokens de acesso + refresh, hash de passwords</td></tr>
+      <tr><td>Base de Dados</td><td>Supabase (PostgreSQL)</td><td>Utilizadores, progresso, conte&uacute;do, notifica&ccedil;&otilde;es</td></tr>
+      <tr><td>V&iacute;deo</td><td>HLS.js + Mux (planeado)</td><td>Streaming adaptativo, watermark, tokens seguros</td></tr>
+      <tr><td>IA / Chat</td><td>API externa (planeada)</td><td>Chat por disciplina com base de conhecimento interna</td></tr>
+      <tr><td>Deploy</td><td>Cloudflare Pages / Workers</td><td>Edge global, CDN, SSL autom&aacute;tico</td></tr>
+      <tr><td>Valida&ccedil;&atilde;o</td><td>Zod</td><td>Schemas tipados no servidor</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Fluxo de Dados</h3>
+  <p>
+    Browser &rarr; <strong>Cloudflare CDN</strong> (assets est&aacute;ticos) &rarr; <strong>Hono Worker</strong> (API) &rarr; <strong>Supabase</strong> (DB) &rarr; resposta JSON &rarr; Browser.
+    V&iacute;deos s&atilde;o entregues via CDN de v&iacute;deo dedicada (HLS), com token de acesso por sess&atilde;o gerado pelo backend.
+  </p>
+
+  <h3>Rotas de API (vis&atilde;o geral)</h3>
+  <p>Existem <strong>21 ficheiros de rotas</strong> cobrindo:</p>
+  <p>
+    <span class="tag blue">auth</span>
+    <span class="tag blue">content</span>
+    <span class="tag blue">video</span>
+    <span class="tag blue">exercises</span>
+    <span class="tag blue">progress</span>
+    <span class="tag blue">search</span>
+    <span class="tag blue">chat (IA)</span>
+    <span class="tag blue">library</span>
+    <span class="tag blue">notifications</span>
+    <span class="tag blue">plans</span>
+    <span class="tag blue">curriculum</span>
+    <span class="tag blue">creator</span>
+    <span class="tag blue">admin</span>
+    <span class="tag blue">support</span>
+    <span class="tag blue">editor</span>
+    <span class="tag blue">finance</span>
+    <span class="tag blue">moderator</span>
+    <span class="tag blue">country</span>
+    <span class="tag blue">news</span>
+    <span class="tag blue">teacher-verification</span>
+    <span class="tag blue">pages</span>
+  </p>
+</div>
+
+<!-- -- 5. FUNCIONALIDADES PARA ESTUDANTES ---------------------------------------------------------- -->
+<div class="section" id="s5">
+  <div class="section-header">
+    <div class="section-num">5</div>
+    <h2>Funcionalidades para Estudantes</h2>
+  </div>
+
+  <h3>&#x1F3AC; Player de V&iacute;deo</h3>
+  <ul>
+    <li>Streaming HLS adaptativo com suporte a baixa largura de banda</li>
+    <li>Watermark pessoal (nome + email) sobre o v&iacute;deo para dissuadir pirataria</li>
+    <li>Token de acesso seguro por sess&atilde;o (expira em 4 horas)</li>
+    <li>Controlo de velocidade (0,5&times;&ndash;2,5&times;), fullscreen, atalhos de teclado</li>
+    <li>Barra de progresso com marcadores de cap&iacute;tulo</li>
+    <li>Auto-save de posi&ccedil;&atilde;o a cada 30 segundos</li>
+  </ul>
+
+  <h3>&#x1F4DD; Exerc&iacute;cios Interativos</h3>
+  <ul>
+    <li>Quest&otilde;es de escolha m&uacute;ltipla com feedback imediato</li>
+    <li>Submiss&atilde;o de respostas via API com registo de pontua&ccedil;&atilde;o</li>
+    <li>Hist&oacute;rico de resultados por aula</li>
+  </ul>
+
+  <h3>&#x1F916; Chat com IA</h3>
+  <ul>
+    <li>Assistente especializado por disciplina (Matem&aacute;tica, F&iacute;sica, Qu&iacute;mica&hellip;)</li>
+    <li>Base de conhecimento interna para respostas contextualizadas</li>
+    <li>Limite di&aacute;rio por plano: 20 msg/dia (B&aacute;sico), ilimitado (Premium)</li>
+  </ul>
+
+  <h3>&#x1F4CA; Painel de Progresso (Dashboard)</h3>
+  <ul>
+    <li>Cards de estat&iacute;sticas: tempo de estudo, aulas conclu&iacute;das, exerc&iacute;cios, m&eacute;dia</li>
+    <li>Gr&aacute;fico de actividade semanal (aulas, minutos, exerc&iacute;cios)</li>
+    <li>Sec&#231;&#227;o "Continuar a Estudar" com barra de progresso por aula</li>
+    <li>Actividade recente com timestamp relativo (ex.: "h&aacute; 2 horas")</li>
+    <li>Meta di&aacute;ria com progresso por disciplina</li>
+    <li>Streak de dias consecutivos e pontos XP</li>
+  </ul>
+
+  <h3>&#x1F3C6; Gamifica&ccedil;&atilde;o</h3>
+  <ul>
+    <li>Sistema de XP (pontos de experi&ecirc;ncia) por aulas e exerc&iacute;cios</li>
+    <li>Streak di&aacute;rio com recompensa visual</li>
+    <li>12 conquistas (badges) desbloqueadas por marcos de aprendizagem</li>
+    <li>P&aacute;gina de conquistas dedicada com progresso detalhado</li>
+  </ul>
+
+  <h3>&#x1F4DA; Biblioteca de Recursos</h3>
+  <ul>
+    <li>10 recursos demo (PDFs, fichas, guias)</li>
+    <li>Filtros por disciplina, grau e categoria</li>
+    <li>Download de PDFs (planos B&aacute;sico e Premium)</li>
+  </ul>
+
+  <h3>&#x1F514; Notifica&ccedil;&otilde;es</h3>
+  <ul>
+    <li>Sistema de notifica&ccedil;&otilde;es em tempo real (conquistas, streaks, novidades)</li>
+    <li>Centro de notifica&ccedil;&otilde;es com marca&ccedil;&atilde;o de lidas</li>
+  </ul>
+</div>
+
+<!-- -- 6. CRIADORES DE CONTE&Uacute;DO ---------------------------------------------------------- -->
+<div class="section" id="s6">
+  <div class="section-header">
+    <div class="section-num">6</div>
+    <h2>Funcionalidades para Criadores de Conte&uacute;do</h2>
+  </div>
+
+  <p>Professores verificados t&ecirc;m acesso a um painel dedicado com:</p>
+  <ul>
+    <li><strong>Dashboard de criador:</strong> estat&iacute;sticas de alcance, aulas publicadas vs rascunho, visualiza&ccedil;&otilde;es semanais</li>
+    <li><strong>Editor de aulas:</strong> editor rico com suporte a v&iacute;deo, texto, exerc&iacute;cios e metadata de curr&iacute;culo</li>
+    <li><strong>Gest&atilde;o de conte&uacute;do:</strong> criar, editar, publicar e arquivar aulas e cap&iacute;tulos</li>
+    <li><strong>Upload de v&iacute;deo:</strong> gera&ccedil;&atilde;o de URL de upload direto (planeado com Mux)</li>
+    <li><strong>An&aacute;lise:</strong> visualiza&ccedil;&otilde;es, tempo m&eacute;dio de visualiza&ccedil;&atilde;o, taxa de conclus&atilde;o</li>
+    <li><strong>Alunos:</strong> lista de alunos que seguem o conteudo criado</li>
+    <li><strong>Ganhos:</strong> dashboard de receita com hist&oacute;rico de pagamentos e pedido de levantamento</li>
+  </ul>
+
+  <h3>API do Criador</h3>
+  <table>
+    <thead><tr><th>M&eacute;todo</th><th>Endpoint</th><th>Fun&ccedil;&atilde;o</th></tr></thead>
+    <tbody>
+      <tr><td>GET</td><td>/api/creator/dashboard</td><td>Estat&iacute;sticas do criador</td></tr>
+      <tr><td>GET</td><td>/api/creator/lessons</td><td>Listar aulas pr&oacute;prias</td></tr>
+      <tr><td>POST</td><td>/api/creator/lesson</td><td>Criar nova aula</td></tr>
+      <tr><td>PUT</td><td>/api/creator/lesson/:id</td><td>Editar aula</td></tr>
+      <tr><td>DELETE</td><td>/api/creator/lesson/:id</td><td>Remover aula</td></tr>
+      <tr><td>POST</td><td>/api/creator/video/upload-url</td><td>Obter URL de upload</td></tr>
+      <tr><td>GET</td><td>/api/creator/earnings</td><td>Ver ganhos</td></tr>
+      <tr><td>POST</td><td>/api/creator/earnings/withdraw</td><td>Pedir levantamento</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- -- 7. VERIFICA&Ccedil;&Atilde;O DE PROFESSORES ---------------------------------------------------------- -->
+<div class="section" id="s7">
+  <div class="section-header">
+    <div class="section-num">7</div>
+    <h2>Verifica&ccedil;&atilde;o de Professores</h2>
+  </div>
+
+  <p>Para garantir qualidade, os professores passam por um processo estruturado antes de publicar conte&uacute;do:</p>
+
+  <table>
+    <thead><tr><th>Etapa</th><th>Descri&ccedil;&atilde;o</th></tr></thead>
+    <tbody>
+      <tr><td>1. Candidatura</td><td>Preenchimento de formul&aacute;rio com dados pessoais e acad&eacute;micos (com valida&ccedil;&atilde;o Zod)</td></tr>
+      <tr><td>2. Qualifica&ccedil;&otilde;es</td><td>Submiss&atilde;o de grau, institui&ccedil;&atilde;o, disciplinas lecionadas e experi&ecirc;ncia</td></tr>
+      <tr><td>3. Refer&ecirc;ncias</td><td>Dados de duas refer&ecirc;ncias profissionais (nome, institui&ccedil;&atilde;o, role, contacto)</td></tr>
+      <tr><td>4. Amostra de conte&uacute;do</td><td>Link ou descri&ccedil;&atilde;o de conte&uacute;do produzido anteriormente</td></tr>
+      <tr><td>5. Revis&atilde;o manual</td><td>Equipa de editores verifica documentos e aprova/rejeita</td></tr>
+      <tr><td>6. Ativa&ccedil;&atilde;o</td><td>Role promovido de <code>student</code> para <code>teacher</code> com acesso ao painel de criador</td></tr>
+    </tbody>
+  </table>
+
+  <div class="alert-mvp">
+    <strong>&#x26A0; Estado MVP:</strong> Sistema constru&iacute;do e funcional, mas ainda sem professores aprovados reais.
+  </div>
+</div>
+
+<!-- -- 8. PLANOS E PRE&Ccedil;OS ---------------------------------------------------------- -->
+<div class="section" id="s8">
+  <div class="section-header">
+    <div class="section-num">8</div>
+    <h2>Planos e Pre&ccedil;os</h2>
+  </div>
+
+  <p>Os pre&ccedil;os s&atilde;o calibrados aos sal&aacute;rios m&iacute;nimos locais para garantir acessibilidade genuina:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Funcionalidade</th>
+        <th>Gratuito</th>
+        <th>B&aacute;sico</th>
+        <th>Premium</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Pre&ccedil;o mensal (MZN)</td><td>0</td><td>99</td><td>199</td></tr>
+      <tr><td>Pre&ccedil;o mensal (AOA)</td><td>0</td><td>800</td><td>1 600</td></tr>
+      <tr><td>Pre&ccedil;o mensal (BRL)</td><td>0</td><td>9,90</td><td>19,90</td></tr>
+      <tr><td>Pre&ccedil;o mensal (EUR)</td><td>0</td><td>1,99</td><td>3,49</td></tr>
+      <tr><td>Desconto anual</td><td>&mdash;</td><td>30 %</td><td>30 %</td></tr>
+      <tr><td>Aulas por m&ecirc;s</td><td>5</td><td>50</td><td>Ilimitadas</td></tr>
+      <tr><td>Exerc&iacute;cios</td><td>B&aacute;sicos</td><td>Todos</td><td>Ilimitados</td></tr>
+      <tr><td>Download de PDFs</td><td>&#x2717;</td><td>&#x2713;</td><td>&#x2713; Ilimitados</td></tr>
+      <tr><td>Chat com IA</td><td>&#x2717;</td><td>20 msg/dia</td><td>Ilimitado</td></tr>
+      <tr><td>Biblioteca</td><td>20 items</td><td>Completa</td><td>Completa + Exclusivos</td></tr>
+      <tr><td>Certificados</td><td>&#x2717;</td><td>&#x2717;</td><td>&#x2713;</td></tr>
+      <tr><td>Acesso antecipado</td><td>&#x2717;</td><td>&#x2717;</td><td>&#x2713;</td></tr>
+      <tr><td>Suporte priorit&aacute;rio</td><td>&#x2717;</td><td>&#x2717;</td><td>&#x2713;</td></tr>
+      <tr><td>XP e conquistas</td><td>&#x2713;</td><td>&#x2713;</td><td>&#x2713;</td></tr>
+      <tr><td>Streak de estudo</td><td>&#x2713;</td><td>&#x2713;</td><td>&#x2713;</td></tr>
+    </tbody>
+  </table>
+
+  <div class="alert-mvp">
+    <strong>&#x26A0; Estado MVP:</strong> Sistema de planos e API de subscri&ccedil;&atilde;o constru&iacute;dos. Pagamento real ainda n&atilde;o ativado. Zero subscritores pagantes.
+  </div>
+</div>
+
+<!-- -- 9. M&Eacute;TODOS DE PAGAMENTO ---------------------------------------------------------- -->
+<div class="section" id="s9">
+  <div class="section-header">
+    <div class="section-num">9</div>
+    <h2>M&eacute;todos de Pagamento Planeados</h2>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>M&eacute;todo</th><th>Pa&iacute;s</th><th>Estado</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>M-Pesa</td><td>Mo&ccedil;ambique</td><td><span class="tag gray">Planeado</span></td></tr>
+      <tr><td>e-Mola</td><td>Mo&ccedil;ambique</td><td><span class="tag gray">Planeado</span></td></tr>
+      <tr><td>Multicaixa Express</td><td>Angola</td><td><span class="tag gray">Planeado</span></td></tr>
+      <tr><td>Stripe</td><td>Portugal, Brasil, Internacional</td><td><span class="tag gray">Planeado</span></td></tr>
+      <tr><td>PayPal</td><td>Portugal, Brasil, Internacional</td><td><span class="tag gray">Planeado</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- -- 10. PERFIS E PERMISS&Otilde;ES ---------------------------------------------------------- -->
+<div class="section" id="s10">
+  <div class="section-header">
+    <div class="section-num">10</div>
+    <h2>Perfis e Permiss&otilde;es</h2>
+  </div>
+
+  <p>A plataforma suporta <strong>8 perfis de utilizador</strong>, cada um com acesso ao seu painel dedicado:</p>
+
+  <table>
+    <thead>
+      <tr><th>Role</th><th>Descri&ccedil;&atilde;o</th><th>Painel</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="tag">student</span></td><td>Estudante -- acesso a aulas, exerc&iacute;cios, IA, biblioteca</td><td>/dashboard.html</td></tr>
+      <tr><td><span class="tag">teacher</span></td><td>Professor verificado -- criar e gerir conte&uacute;do</td><td>/creator-dashboard.html</td></tr>
+      <tr><td><span class="tag">admin</span></td><td>Administrador -- gest&atilde;o global de utilizadores e conte&uacute;do</td><td>/admin-dashboard.html</td></tr>
+      <tr><td><span class="tag">support</span></td><td>Suporte -- gerir tickets e pedidos de ajuda</td><td>/support-dashboard.html</td></tr>
+      <tr><td><span class="tag">editor</span></td><td>Editor -- rever e aprovar conte&uacute;do de professores</td><td>/editor-dashboard.html</td></tr>
+      <tr><td><span class="tag">country_manager</span></td><td>Gestor de pa&iacute;s -- gerir curr&iacute;culo e utilizadores de um pa&iacute;s</td><td>/country-dashboard.html</td></tr>
+      <tr><td><span class="tag">finance</span></td><td>Financeiro -- gerir pagamentos, levantamentos e relat&oacute;rios</td><td>/finance-dashboard.html</td></tr>
+      <tr><td><span class="tag">moderator</span></td><td>Moderador -- gerir not&iacute;cias, coment&aacute;rios e conte&uacute;do comunit&aacute;rio</td><td>/moderator-dashboard.html</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- -- 11. SEGURAN&Ccedil;A ---------------------------------------------------------- -->
+<div class="section" id="s11">
+  <div class="section-header">
+    <div class="section-num">11</div>
+    <h2>Seguran&ccedil;a e Conformidade</h2>
+  </div>
+
+  <ul>
+    <li><strong>Autentica&ccedil;&atilde;o JWT HS256</strong> com tokens de acesso (expira&ccedil;&atilde;o curta) e refresh tokens</li>
+    <li><strong>Hash de passwords</strong> com bcrypt (salt rounds configur&aacute;vel)</li>
+    <li><strong>Rate limiting</strong> nas rotas cr&iacute;ticas (login, candidatura a professor)</li>
+    <li><strong>CORS configurado</strong> por ambiente (desenvolvimento / produ&ccedil;&atilde;o)</li>
+    <li><strong>Valida&ccedil;&atilde;o de input</strong> com Zod em todos os endpoints POST/PATCH</li>
+    <li><strong>Watermark em v&iacute;deo</strong>: nome + email do utilizador sobrepostos no player para dissuadir grava&ccedil;&otilde;es n&atilde;o autorizadas</li>
+    <li><strong>Token de v&iacute;deo por sess&atilde;o</strong>: cada visualiza&ccedil;&atilde;o requer um token tempor&aacute;rio gerado pelo backend</li>
+    <li><strong>Controlo de acesso por role</strong>: middleware verifica role antes de expor rotas administrativas</li>
+    <li><strong>HTTPS obrigat&oacute;rio</strong>: Cloudflare Pages for&ccedil;a HTTPS em todos os dom&iacute;nios</li>
+  </ul>
+</div>
+
+<!-- -- 12. ESPECIFICA&Ccedil;&Atilde;O T&Eacute;CNICA ---------------------------------------------------------- -->
+<div class="section" id="s12">
+  <div class="section-header">
+    <div class="section-num">12</div>
+    <h2>Especifica&ccedil;&atilde;o T&eacute;cnica</h2>
+  </div>
+
+  <h3>Depend&ecirc;ncias Principais</h3>
+  <table>
+    <thead><tr><th>Pacote</th><th>Vers&atilde;o</th><th>Uso</th></tr></thead>
+    <tbody>
+      <tr><td>hono</td><td>^4.12</td><td>Framework web edge</td></tr>
+      <tr><td>@supabase/supabase-js</td><td>^2.39</td><td>Cliente de base de dados</td></tr>
+      <tr><td>zod</td><td>^3.22</td><td>Valida&ccedil;&atilde;o de schemas</td></tr>
+      <tr><td>bcryptjs</td><td>^2.4</td><td>Hash de passwords</td></tr>
+      <tr><td>jsonwebtoken</td><td>^9.0</td><td>JWT sign / verify</td></tr>
+      <tr><td>vite</td><td>^6.3</td><td>Build tool</td></tr>
+      <tr><td>wrangler</td><td>^4.4</td><td>Deploy Cloudflare</td></tr>
+      <tr><td>typescript</td><td>^5.3</td><td>Tipagem est&aacute;tica</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Endpoints de API (lista completa)</h3>
+  <table>
+    <thead><tr><th>M&eacute;todo</th><th>Rota</th><th>&Aacute;rea</th></tr></thead>
+    <tbody>
+      <tr><td>POST</td><td>/api/auth/register</td><td>Auth</td></tr>
+      <tr><td>POST</td><td>/api/auth/login</td><td>Auth</td></tr>
+      <tr><td>POST</td><td>/api/auth/logout</td><td>Auth</td></tr>
+      <tr><td>GET</td><td>/api/auth/me</td><td>Auth</td></tr>
+      <tr><td>GET</td><td>/api/content/countries</td><td>Conte&uacute;do</td></tr>
+      <tr><td>GET</td><td>/api/content/education-systems/:country_id</td><td>Conte&uacute;do</td></tr>
+      <tr><td>GET</td><td>/api/content/grades/:education_system_id</td><td>Conte&uacute;do</td></tr>
+      <tr><td>GET</td><td>/api/content/subjects/:grade_id</td><td>Conte&uacute;do</td></tr>
+      <tr><td>GET</td><td>/api/content/chapters/:grade_subject_id</td><td>Conte&uacute;do</td></tr>
+      <tr><td>GET</td><td>/api/content/lessons/:chapter_id</td><td>Conte&uacute;do</td></tr>
+      <tr><td>GET</td><td>/api/content/lesson/:lesson_id</td><td>Conte&uacute;do</td></tr>
+      <tr><td>GET</td><td>/api/exercises/:lesson_id</td><td>Exerc&iacute;cios</td></tr>
+      <tr><td>POST</td><td>/api/exercises/submit</td><td>Exerc&iacute;cios</td></tr>
+      <tr><td>GET</td><td>/api/exercises/results/:lesson_id</td><td>Exerc&iacute;cios</td></tr>
+      <tr><td>GET</td><td>/api/progress/dashboard</td><td>Progresso</td></tr>
+      <tr><td>GET</td><td>/api/progress/lesson/:lesson_id</td><td>Progresso</td></tr>
+      <tr><td>GET</td><td>/api/progress/subject/:grade_subject_id</td><td>Progresso</td></tr>
+      <tr><td>GET</td><td>/api/progress/recommendations</td><td>Progresso</td></tr>
+      <tr><td>POST</td><td>/api/chat/</td><td>IA</td></tr>
+      <tr><td>GET</td><td>/api/plans/</td><td>Planos</td></tr>
+      <tr><td>POST</td><td>/api/plans/subscribe</td><td>Planos</td></tr>
+      <tr><td>GET</td><td>/api/curriculum/full</td><td>Curr&iacute;culo</td></tr>
+      <tr><td>GET</td><td>/api/curriculum/tree/:countryId</td><td>Curr&iacute;culo</td></tr>
+      <tr><td>GET</td><td>/api/admin/dashboard</td><td>Admin</td></tr>
+      <tr><td>GET</td><td>/api/admin/users</td><td>Admin</td></tr>
+      <tr><td>PATCH</td><td>/api/admin/users/:id</td><td>Admin</td></tr>
+      <tr><td>GET</td><td>/api/creator/dashboard</td><td>Criador</td></tr>
+      <tr><td>POST</td><td>/api/creator/lesson</td><td>Criador</td></tr>
+      <tr><td>GET</td><td>/api/video/token</td><td>V&iacute;deo</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Dimens&atilde;o do C&oacute;digo</h3>
+  <ul>
+    <li><strong>~30 000 linhas</strong> de TypeScript e HTML</li>
+    <li><strong>33 p&aacute;ginas HTML</strong> (paineis, fluxos de autenti&ccedil;&atilde;o, visualiza&ccedil;&atilde;o de conte&uacute;do)</li>
+    <li><strong>21 m&oacute;dulos de rotas</strong> + 3 middlewares + utilit&aacute;rios</li>
+    <li><strong>888 linhas</strong> de dados de curr&iacute;culo estruturado (<code>src/data/curriculum.ts</code>)</li>
+  </ul>
+</div>
+
+<!-- -- 13. ROADMAP ---------------------------------------------------------- -->
+<div class="section" id="s13">
+  <div class="section-header">
+    <div class="section-num">13</div>
+    <h2>Roadmap</h2>
+  </div>
+
+  <h3>Fase 1 &mdash; Beta Fechado (em curso)</h3>
+  <ul>
+    <li>&#x2705; Prot&oacute;tipo completo com todas as rotas funcionais</li>
+    <li>&#x2705; Interface para estudante, professor e 6 roles administrativos</li>
+    <li>&#x2705; Curr&iacute;culos mapeados para 5 pa&iacute;ses</li>
+    <li>&#x2705; Sistema de autentica&ccedil;&atilde;o JWT + perfis de utilizador</li>
+    <li>&#x2B1C; Recrutamento de utilizadores beta (objetivo: 50&ndash;100)</li>
+    <li>&#x2B1C; Conex&atilde;o ao Supabase em produ&ccedil;&atilde;o</li>
+  </ul>
+
+  <h3>Fase 2 &mdash; Conte&uacute;do Real</h3>
+  <ul>
+    <li>&#x2B1C; Integra&ccedil;&atilde;o com Mux (upload e streaming de v&iacute;deo real)</li>
+    <li>&#x2B1C; Primeiro lote de professores verificados</li>
+    <li>&#x2B1C; 50+ aulas reais publicadas</li>
+    <li>&#x2B1C; Integra&ccedil;&atilde;o de IA (OpenAI ou similar)</li>
+  </ul>
+
+  <h3>Fase 3 &mdash; Monet&iacute;za&ccedil;&atilde;o</h3>
+  <ul>
+    <li>&#x2B1C; M-Pesa e e-Mola (Mo&ccedil;ambique)</li>
+    <li>&#x2B1C; Multicaixa Express (Angola)</li>
+    <li>&#x2B1C; Stripe (Portugal, Brasil)</li>
+    <li>&#x2B1C; Primeiros subscritores pagantes</li>
+  </ul>
+
+  <h3>Fase 4 &mdash; Escala</h3>
+  <ul>
+    <li>&#x2B1C; App m&oacute;vel com suporte offline (React Native ou PWA)</li>
+    <li>&#x2B1C; Sess&otilde;es ao vivo com professores</li>
+    <li>&#x2B1C; Certificados de conclus&atilde;o reconhecidos</li>
+    <li>&#x2B1C; Expans&atilde;o para S&atilde;o Tom&eacute; e Pr&iacute;ncipe, Guin&eacute;-Bissau</li>
+  </ul>
+</div>
+
+<!-- -- 14. ESTADO ATUAL ---------------------------------------------------------- -->
+<div class="section" id="s14">
+  <div class="section-header">
+    <div class="section-num">14</div>
+    <h2>Estado Atual do Prot&oacute;tipo</h2>
+  </div>
+
+  <div class="alert-mvp">
+    <strong>Documento de honestidade:</strong> Este documento descreve o que foi <em>constru&iacute;do</em>, n&atilde;o o que foi <em>validado pelo mercado</em>. Os dados s&atilde;o todos demonstrativos.
+  </div>
+
+  <table>
+    <thead><tr><th>Item</th><th>Estado</th><th>Detalhe</th></tr></thead>
+    <tbody>
+      <tr><td>Utilizadores reais</td><td><span class="tag red">MVP</span></td><td>Menos de 20 (testes internos)</td></tr>
+      <tr><td>Subscritores pagantes</td><td><span class="tag red">MVP</span></td><td>0 &mdash; pagamento ainda n&atilde;o ativo</td></tr>
+      <tr><td>Professores verificados</td><td><span class="tag red">MVP</span></td><td>0 &mdash; sistema pronto, sem candidatos ainda</td></tr>
+      <tr><td>Aulas reais</td><td><span class="tag red">MVP</span></td><td>6 demo (v&iacute;deos de teste Mux)</td></tr>
+      <tr><td>Base de dados (Supabase)</td><td><span class="tag gray">Pendente</span></td><td>Configura&ccedil;&atilde;o em produ&ccedil;&atilde;o pendente</td></tr>
+      <tr><td>Pagamentos</td><td><span class="tag gray">Pendente</span></td><td>APIs integradas no c&oacute;digo, ativa&ccedil;&atilde;o pendente</td></tr>
+      <tr><td>C&oacute;digo funcional</td><td><span class="tag green">OK</span></td><td>~30 000 linhas, build bem-sucedido</td></tr>
+      <tr><td>Curr&iacute;culos mapeados</td><td><span class="tag green">OK</span></td><td>5 pa&iacute;ses, +585 entidades</td></tr>
+      <tr><td>Interface completa</td><td><span class="tag green">OK</span></td><td>33 p&aacute;ginas, 8 roles, todos os fluxos</td></tr>
+      <tr><td>Deploy na Cloud</td><td><span class="tag green">OK</span></td><td>Cloudflare Pages, HTTPS, CDN global</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- -- 15. CONCLUS&Atilde;O ---------------------------------------------------------- -->
+<div class="section" id="s15">
+  <div class="section-header">
+    <div class="section-num">15</div>
+    <h2>Conclus&atilde;o</h2>
+  </div>
+
+  <p>
+    O <strong>VClass</strong> &eacute; um prot&oacute;tipo MVP completo e funcional de uma plataforma de ensino digital
+    para a comunidade de l&iacute;ngua portuguesa. A arquitetura est&aacute; pronta para escalar, o modelo de neg&oacute;cio
+    est&aacute; definido e os curr&iacute;culos de 5 pa&iacute;ses est&atilde;o mapeados.
+  </p>
+  <p>
+    O pr&oacute;ximo passo cr&iacute;tico &eacute; a valida&ccedil;&atilde;o com utilizadores reais: recrutar estudantes beta,
+    verificar os primeiros professores e publicar as primeiras aulas com conte&uacute;do real.
+  </p>
+  <div class="highlight">
+    O prot&oacute;tipo demonstra capacidade t&eacute;cnica e clareza de vis&atilde;o. A pr&oacute;xima fase &eacute; de valida&ccedil;&atilde;o &mdash;
+    transformar o que foi constru&iacute;do em algo que estudantes reais usam todos os dias.
+  </div>
+</div>
+
+<div class="doc-footer">
+  VClass &mdash; Documento Interno de Prot&oacute;tipo &bull; Vers&atilde;o 1.7 &bull; Abril 2026<br>
+  Gerado automaticamente a partir do c&oacute;digo-fonte do projeto.
+</div>
+
+</div><!-- /container -->
+</body>
+</html>
