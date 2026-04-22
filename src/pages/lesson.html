@@ -697,13 +697,18 @@
                             </div>
                         </div>
                     </div>
-                    <div id="video-error" class="p-10 text-center hidden bg-gray-900">
-                        <i class="fas fa-exclamation-circle text-4xl text-red-400 mb-4"></i>
-                        <h3 class="text-lg font-bold text-white mb-2">Erro ao Carregar Vídeo</h3>
-                        <p class="text-gray-400 text-sm mb-4">Não foi possível carregar o vídeo desta lição.</p>
-                        <button onclick="loadVideo()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
-                            <i class="fas fa-redo mr-2"></i>Tentar Novamente
-                        </button>
+                    <div id="video-error" class="p-10 text-center hidden bg-gray-900 rounded-2xl">
+                        <i class="fas fa-play-circle text-5xl text-gray-600 mb-4"></i>
+                        <h3 class="text-lg font-bold text-white mb-2">Vídeo não disponível</h3>
+                        <p class="text-gray-400 text-sm mb-6">Esta lição ainda não tem vídeo associado ou o conteúdo não está disponível no seu plano.</p>
+                        <div class="flex items-center justify-center gap-3 flex-wrap">
+                            <button onclick="loadVideo()" class="px-5 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm font-semibold transition">
+                                <i class="fas fa-redo mr-2"></i>Tentar Novamente
+                            </button>
+                            <a href="/browse.html" class="px-5 py-2 bg-white/10 text-white rounded-xl hover:bg-white/20 text-sm font-semibold transition">
+                                <i class="fas fa-compass mr-2"></i>Explorar Conteúdo
+                            </a>
+                        </div>
                     </div>
                 </div>
 
@@ -1188,16 +1193,51 @@
         }
 
         // Get lesson ID from URL
+        // Se vier um ID que não seja de lição (ex: chapter ID), usar lesson-1 como fallback demo
         const urlParams = new URLSearchParams(window.location.search);
-        const lessonId = urlParams.get('id');
+        let lessonId = urlParams.get('id') || urlParams.get('lesson') || urlParams.get('lesson_id');
+        // Normalizar: se não parece um lesson ID conhecido, usar lesson-1
+        const KNOWN_LESSON_IDS = ['lesson-1','lesson-2','lesson-3','lesson-4','lesson-5','lesson-6','lesson-7','lesson-8'];
+        if (lessonId && !KNOWN_LESSON_IDS.includes(lessonId) && !lessonId.startsWith('lesson-')) {
+            console.info('ID desconhecido, usando lesson-1 como demo:', lessonId);
+            lessonId = 'lesson-1';
+        }
 
         let player = null;
         let lessonData = null;
 
+        // Show page-level error (replaces loading state cleanly)
+        function showLessonError(msg, showBrowse = true) {
+            // Always hide video loading overlay
+            const vload = document.getElementById('vc-loading');
+            if (vload) vload.classList.add('hidden');
+            const vcont = document.getElementById('video-container');
+            if (vcont) vcont.classList.add('hidden');
+            const verr = document.getElementById('video-error');
+            if (verr) verr.classList.remove('hidden');
+
+            // Update lesson title/desc
+            const titleEl = document.getElementById('lesson-title');
+            const descEl  = document.getElementById('lesson-description');
+            if (titleEl) titleEl.textContent = 'Lição não encontrada';
+            if (descEl)  descEl.textContent  = msg || 'Não foi possível carregar esta lição.';
+
+            // Optionally redirect back
+            if (showBrowse) {
+                setTimeout(() => {
+                    VClass.showNotification('A redirecionar para o conteúdo...', 'info');
+                    setTimeout(() => { window.location.href = '/browse.html'; }, 2000);
+                }, 1500);
+            }
+        }
+
         // Load lesson data
         async function loadLesson() {
+            // Esconder sempre o vc-loading no fim
+            const vload = document.getElementById('vc-loading');
+
             if (!lessonId) {
-                VClass.showNotification('ID da lição não fornecido', 'error');
+                showLessonError('Nenhuma lição foi selecionada. Escolha uma lição a partir do conteúdo.');
                 return;
             }
 
@@ -1205,11 +1245,11 @@
 
             try {
                 const result = await VClass.api.content.getLesson(lessonId);
-                
+
                 if (result.success && result.data) {
                     lessonData = result.data;
                     displayLessonInfo();
-                    buildLeftSidebar();   // Sumário, keywords, outras lições
+                    buildLeftSidebar();
                     await loadVideo();
                     await loadExercises();
                     await loadProgress();
@@ -1218,10 +1258,15 @@
                     loadFavoriteState();
                     loadRating();
                 } else {
-                    VClass.showNotification(result.error || 'Erro ao carregar lição', 'error');
+                    // Lição não existe nos mocks/BD — mostrar erro limpo
+                    if (vload) vload.classList.add('hidden');
+                    showLessonError(result.error || 'Esta lição ainda não está disponível.');
+                    VClass.showNotification(result.error || 'Lição não disponível', 'error');
                 }
             } catch (error) {
                 console.error('Error loading lesson:', error);
+                if (vload) vload.classList.add('hidden');
+                showLessonError('Ocorreu um erro ao carregar a lição. Tente novamente.');
                 VClass.showNotification('Erro ao carregar lição', 'error');
             } finally {
                 VClass.hideLoading();
@@ -1533,6 +1578,7 @@
             const vclass_video = document.getElementById('vclass-video');
 
             if (!lessonData || !lessonData.video_url) {
+                if (vload) vload.classList.add('hidden');
                 vcont.classList.add('hidden');
                 verr.classList.remove('hidden');
                 return;
@@ -1651,6 +1697,8 @@
 
             } catch (error) {
                 console.error('Error loading video:', error);
+                // Garantir que o overlay de loading é sempre removido
+                if (vload) vload.classList.add('hidden');
                 vcont.classList.add('hidden');
                 verr.classList.remove('hidden');
             }
