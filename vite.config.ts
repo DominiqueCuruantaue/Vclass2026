@@ -2,7 +2,7 @@ import build from '@hono/vite-build/cloudflare-pages'
 import devServer from '@hono/vite-dev-server'
 import adapter from '@hono/vite-dev-server/cloudflare'
 import { defineConfig } from 'vite'
-import { readdirSync, unlinkSync, statSync } from 'node:fs'
+import { readdirSync, unlinkSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 // Plugin que remove ficheiros HTML estáticos do dist/ após o build
@@ -25,6 +25,17 @@ function removeStaticHtmlPlugin() {
           }
         })
         if (removed > 0) console.log(`[remove-static-html] Removidos ${removed} ficheiro(s) HTML estático(s) de dist/`)
+
+        // Reescreve _routes.json para deixar o worker lidar com todas as rotas HTML
+        // (o auto-gerado excluía /login.html, /register.html, etc., causando 404 após a remoção)
+        const routesPath = join(distDir, '_routes.json')
+        const routes = {
+          version: 1,
+          include: ['/*'],
+          exclude: ['/static/*', '/designs/*', '/favicon.svg']
+        }
+        writeFileSync(routesPath, JSON.stringify(routes))
+        console.log('[remove-static-html] _routes.json reescrito para encaminhar HTMLs para o worker')
       } catch (_) {
         // dist/ pode não existir ainda na primeira execução
       }
