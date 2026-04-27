@@ -3,9 +3,20 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { getSupabase } from '../config/supabase'
 import { hashPassword, verifyPassword, validatePassword } from '../utils/password'
-import { generateAccessToken, generateRefreshToken, verifyToken } from '../utils/jwt'
+import { generateAccessToken, generateRefreshToken, verifyToken, verifyRefreshToken } from '../utils/jwt'
+import { storeRefreshToken, isRefreshTokenActive, revokeRefreshToken, revokeAllUserTokens } from '../utils/refreshTokens'
 import { mockUsers, DEMO_PASSWORD } from '../middleware/database'
 import { rateLimitMiddleware } from '../middleware/auth'
+
+function requestMeta(c: any) {
+  return {
+    user_agent: c.req.header('user-agent') || undefined,
+    ip_address:
+      c.req.header('cf-connecting-ip') ||
+      c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ||
+      undefined
+  }
+}
 import type { ApiResponse, AuthResponse } from '../types'
 
 const auth = new Hono()
@@ -64,18 +75,14 @@ auth.post('/register', async (c) => {
       }, 400)
     }
     
-    // Get Supabase credentials from env
-    const supabaseUrl = c.env?.SUPABASE_URL
-    const supabaseKey = c.env?.SUPABASE_ANON_KEY
-    
-    if (!supabaseUrl || !supabaseKey) {
+    // Use service_role client (consistente com login/refresh/me)
+    const supabase = getSupabase(c.env)
+    if (!supabase) {
       return c.json<ApiResponse>({
         success: false,
         error: 'Database configuration missing'
       }, 500)
     }
-    
-    const supabase = initSupabase(supabaseUrl, supabaseKey)
     
     // Check if email already exists
     const { data: existingUser } = await supabase
@@ -114,8 +121,10 @@ auth.post('/register', async (c) => {
       console.error('Registration error:', error)
       return c.json<ApiResponse>({
         success: false,
-        error: 'Failed to create user'
-      }, 500)
+        error: 'Failed to create user',
+        // DEBUG TEMPORÁRIO — remover após validar
+        debug: { message: error?.message, code: (error as any)?.code, details: (error as any)?.details, hint: (error as any)?.hint }
+      } as any, 500)
     }
     
     // Generate tokens
@@ -123,14 +132,16 @@ auth.post('/register', async (c) => {
       sub: user.id,
       email: user.email,
       role: user.role
-    })
-    
+    }, c.env?.JWT_SECRET)
+
     const refreshToken = generateRefreshToken({
       sub: user.id,
       email: user.email,
       role: user.role
-    })
-    
+    }, c.env?.JWT_SECRET)
+
+    await storeRefreshToken(supabase, user.id, refreshToken, requestMeta(c))
+
     return c.json<ApiResponse<AuthResponse>>({
       success: true,
       data: {
@@ -141,12 +152,14 @@ auth.post('/register', async (c) => {
       message: 'Registration successful'
     }, 201)
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('Register error:', error)
     return c.json<ApiResponse>({
       success: false,
-      error: 'Internal server error'
-    }, 500)
+      error: 'Internal server error',
+      // DEBUG TEMPORÁRIO — remover após validar
+      debug: { message: error?.message, stack: error?.stack?.split('\n').slice(0,3) }
+    } as any, 500)
   }
 })
 
@@ -186,14 +199,14 @@ auth.post('/login', async (c) => {
         email: demoUser.email,
         role: demoUser.role as 'student' | 'teacher' | 'admin',
         name: demoUser.full_name
-      })
-      
+      }, c.env?.JWT_SECRET)
+
       const refreshToken = generateRefreshToken({
         sub: demoUser.id,
         email: demoUser.email,
         role: demoUser.role as 'student' | 'teacher' | 'admin',
         name: demoUser.full_name
-      })
+      }, c.env?.JWT_SECRET)
       
       return c.json<ApiResponse<AuthResponse>>({
         success: true,
@@ -256,14 +269,16 @@ auth.post('/login', async (c) => {
       sub: user.id,
       email: user.email,
       role: user.role
-    })
-    
+    }, c.env?.JWT_SECRET)
+
     const refreshToken = generateRefreshToken({
       sub: user.id,
       email: user.email,
       role: user.role
-    })
-    
+    }, c.env?.JWT_SECRET)
+
+    await storeRefreshToken(supabase, user.id, refreshToken, requestMeta(c))
+
     // Remove password_hash from response
     const { password_hash, ...userWithoutPassword } = user
     
@@ -300,26 +315,49 @@ auth.post('/refresh', async (c) => {
       }, 400)
     }
     
-    // Verify refresh token
-    const decoded = verifyToken(refreshToken)
-    
+    // Verify refresh token (must have type: 'refresh' claim)
+    const decoded = verifyRefreshToken(refreshToken, c.env?.JWT_SECRET)
+
     if (!decoded) {
       return c.json<ApiResponse>({
         success: false,
         error: 'Invalid or expired refresh token'
       }, 401)
     }
-    
-    // Generate new access token
+
+    // Verificar contra BD: token tem de existir, não estar revogado e não ter expirado
+    const supabase = isDatabaseConfigured(c.env) ? getSupabase(c.env) : null
+    if (supabase) {
+      const active = await isRefreshTokenActive(supabase, refreshToken)
+      if (!active) {
+        return c.json<ApiResponse>({
+          success: false,
+          error: 'Refresh token revoked or unknown'
+        }, 401)
+      }
+    }
+
+    // Rotação: emitir novo par e revogar o antigo
     const accessToken = generateAccessToken({
       sub: decoded.sub,
       email: decoded.email,
       role: decoded.role
-    })
-    
-    return c.json<ApiResponse<{ accessToken: string }>>({
+    }, c.env?.JWT_SECRET)
+
+    const newRefreshToken = generateRefreshToken({
+      sub: decoded.sub,
+      email: decoded.email,
+      role: decoded.role
+    }, c.env?.JWT_SECRET)
+
+    if (supabase) {
+      await revokeRefreshToken(supabase, refreshToken)
+      await storeRefreshToken(supabase, decoded.sub, newRefreshToken, requestMeta(c))
+    }
+
+    return c.json<ApiResponse<{ accessToken: string; refreshToken: string }>>({
       success: true,
-      data: { accessToken },
+      data: { accessToken, refreshToken: newRefreshToken },
       message: 'Token refreshed successfully'
     })
     
@@ -334,13 +372,31 @@ auth.post('/refresh', async (c) => {
 
 /**
  * POST /api/auth/logout
- * Logout user (client-side token removal)
+ * Revoga o refresh token (se enviado) e remove a sessão server-side.
+ * O cliente deve apagar accessToken/refreshToken do storage.
  */
 auth.post('/logout', async (c) => {
-  return c.json<ApiResponse>({
-    success: true,
-    message: 'Logged out successfully'
-  })
+  try {
+    const body = await c.req.json().catch(() => ({})) as { refreshToken?: string; allDevices?: boolean }
+    const supabase = isDatabaseConfigured(c.env) ? getSupabase(c.env) : null
+
+    if (supabase) {
+      if (body.allDevices) {
+        // Revogar todos os tokens do utilizador — exige access token válido
+        const authHeader = c.req.header('Authorization')
+        const token = authHeader?.replace('Bearer ', '') || ''
+        const decoded = verifyToken(token, c.env?.JWT_SECRET)
+        if (decoded) await revokeAllUserTokens(supabase, decoded.sub)
+      } else if (body.refreshToken) {
+        await revokeRefreshToken(supabase, body.refreshToken)
+      }
+    }
+
+    return c.json<ApiResponse>({ success: true, message: 'Logged out successfully' })
+  } catch (e) {
+    console.error('Logout error:', e)
+    return c.json<ApiResponse>({ success: true, message: 'Logged out' })
+  }
 })
 
 /**
@@ -360,15 +416,15 @@ auth.get('/me', async (c) => {
       }, 401)
     }
     
-    const decoded = verifyToken(token)
-    
+    const decoded = verifyToken(token, c.env?.JWT_SECRET)
+
     if (!decoded) {
       return c.json<ApiResponse>({
         success: false,
         error: 'Invalid token'
       }, 401)
     }
-    
+
     // Check if database is configured
     if (!isDatabaseConfigured(c.env)) {
       // DEMO MODE: Return mock user
@@ -437,7 +493,7 @@ auth.patch('/profile', async (c) => {
   try {
     const authHeader = c.req.header('Authorization')
     const token = authHeader?.replace('Bearer ', '') || ''
-    const decoded = verifyToken(token)
+    const decoded = verifyToken(token, c.env?.JWT_SECRET)
 
     if (!decoded) return c.json<ApiResponse>({ success: false, error: 'Not authenticated' }, 401)
 
@@ -493,7 +549,7 @@ auth.post('/change-password', async (c) => {
   try {
     const authHeader = c.req.header('Authorization')
     const token = authHeader?.replace('Bearer ', '') || ''
-    const decoded = verifyToken(token)
+    const decoded = verifyToken(token, c.env?.JWT_SECRET)
 
     if (!decoded) return c.json<ApiResponse>({ success: false, error: 'Not authenticated' }, 401)
 
@@ -503,8 +559,13 @@ auth.post('/change-password', async (c) => {
     if (!current_password || !new_password) {
       return c.json<ApiResponse>({ success: false, error: 'Senha actual e nova senha são obrigatórias' }, 400)
     }
-    if (new_password.length < 6) {
-      return c.json<ApiResponse>({ success: false, error: 'Nova senha deve ter pelo menos 6 caracteres' }, 400)
+    // Aplicar mesma política de força exigida no registo (≥8 chars, maiúscula, minúscula, dígito)
+    const strength = validatePassword(new_password)
+    if (!strength.valid) {
+      return c.json<ApiResponse>({ success: false, error: strength.message || 'Senha fraca' }, 400)
+    }
+    if (current_password === new_password) {
+      return c.json<ApiResponse>({ success: false, error: 'A nova senha tem de ser diferente da actual' }, 400)
     }
 
     if (!isDatabaseConfigured(c.env)) {
@@ -541,7 +602,10 @@ auth.post('/change-password', async (c) => {
 
     if (updateErr) return c.json<ApiResponse>({ success: false, error: updateErr.message }, 500)
 
-    return c.json<ApiResponse>({ success: true, message: 'Senha alterada com sucesso' })
+    // Após mudar password: invalidar todas as sessões existentes (forçar re-login noutros devices)
+    await revokeAllUserTokens(supabase, decoded.sub)
+
+    return c.json<ApiResponse>({ success: true, message: 'Senha alterada com sucesso. Por segurança, faça login novamente nos outros dispositivos.' })
   } catch (e: any) {
     console.error('Change password error:', e)
     return c.json<ApiResponse>({ success: false, error: 'Internal server error' }, 500)

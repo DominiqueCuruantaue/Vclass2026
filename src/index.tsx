@@ -32,6 +32,31 @@ const app = new Hono()
 app.use('*', logger())
 app.use('/api/*', corsConfig)
 
+// Security headers (aplicados a todas as respostas)
+app.use('*', async (c, next) => {
+  await next()
+  c.header('X-Frame-Options', 'DENY')
+  c.header('X-Content-Type-Options', 'nosniff')
+  c.header('Referrer-Policy', 'strict-origin-when-cross-origin')
+  c.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+  c.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+  c.header(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://unpkg.com",
+      "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com",
+      "font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com",
+      "img-src 'self' data: blob: https:",
+      "media-src 'self' blob: https:",
+      "connect-src 'self' https: wss:",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'"
+    ].join('; ')
+  )
+})
+
 // Serve static files from public directory
 app.use('/static/*', serveStatic({ root: './public' }))
 app.use('/designs/*', serveStatic({ root: './public' }))
@@ -86,7 +111,7 @@ app.get('/api/health', (c) => {
   return c.json({
     success: true,
     message: 'VClass API is running',
-    version: '1.7.2',
+    version: '1.7.4',
     timestamp: new Date().toISOString()
   })
 })

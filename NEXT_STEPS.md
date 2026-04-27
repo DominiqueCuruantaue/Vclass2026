@@ -56,11 +56,6 @@ Seeds ainda contêm dados demo. Fluxo de upload por professor (`creator-lesson-e
 - Sentry ou similar para erros no frontend.
 - Dashboard Supabase para queries lentas.
 
-**Tempo:** 2 dias.
-
-### 6. App mobile Flutter 🟢
-Não iniciado. Avaliar se PWA (home.html já tem manifest?) não resolve antes de investir em nativo.
-
 **Tempo:** 4–6 semanas se Flutter, ~1 semana se PWA.
 
 ---
@@ -86,7 +81,7 @@ database/migrations/004_explicit_rls_deny_policies.sql
 | 3 | Upload de conteúdo real (Bunny) | 🟡 Média | 1–2 sem |
 | 4 | Pagamentos (M-Pesa/Stripe) | 🟡 Média | 1 sem |
 | 5 | Observabilidade | 🟢 Baixa | 2 dias |
-| 6 | Mobile (PWA ou Flutter) | 🟢 Baixa | 1–6 sem |
+| 6 | Mobile (PWA) | 🟢 Baixa | 1–6 sem |
 
 ---
 

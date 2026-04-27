@@ -3,7 +3,6 @@ import { Context, Next } from 'hono'
 import { extractToken, verifyToken } from '../utils/jwt'
 import type { UserRole } from '../types'
 
-// Extend Hono context to include user info
 declare module 'hono' {
   interface ContextVariableMap {
     user: {
@@ -15,138 +14,83 @@ declare module 'hono' {
   }
 }
 
-/**
- * Authentication middleware - verifies JWT token
- */
 export async function authMiddleware(c: Context, next: Next) {
   const authHeader = c.req.header('Authorization')
   const token = extractToken(authHeader || '')
-  
+
   if (!token) {
     return c.json({ success: false, error: 'No token provided' }, 401)
   }
-  
-  const decoded = verifyToken(token)
-  
+
+  const decoded = verifyToken(token, c.env?.JWT_SECRET)
+
   if (!decoded) {
     return c.json({ success: false, error: 'Invalid or expired token' }, 401)
   }
-  
-  // Set user in context
+
   c.set('user', {
     id: decoded.sub,
     email: decoded.email,
     role: decoded.role,
     full_name: (decoded as any).name || decoded.email?.split('@')[0] || 'Utilizador'
   })
-  
+
   await next()
 }
 
-/**
- * Role-based authorization middleware
- */
 export function requireRole(...roles: UserRole[]) {
   return async (c: Context, next: Next) => {
     const user = c.get('user')
-    
+
     if (!user) {
       return c.json({ success: false, error: 'Authentication required' }, 401)
     }
-    
+
     if (!roles.includes(user.role)) {
-      return c.json({ 
-        success: false, 
-        error: `Access denied. Required role: ${roles.join(' or ')}` 
+      return c.json({
+        success: false,
+        error: `Access denied. Required role: ${roles.join(' or ')}`
       }, 403)
     }
-    
+
     await next()
   }
 }
 
-/**
- * Student-only routes
- */
 export const requireStudent = requireRole('student')
-
-/**
- * Teacher-only routes
- */
 export const requireTeacher = requireRole('teacher')
-
-/**
- * Admin-only routes
- */
 export const requireAdmin = requireRole('admin')
-
-/**
- * Teacher or Admin routes
- */
 export const requireTeacherOrAdmin = requireRole('teacher', 'admin')
-
-/**
- * Support-only routes
- */
 export const requireSupport = requireRole('support')
-
-/**
- * Support or Admin routes (acesso a ferramentas de suporte)
- */
 export const requireSupportOrAdmin = requireRole('support', 'admin')
-
-/**
- * Support, Teacher or Admin routes
- */
 export const requireStaff = requireRole('support', 'teacher', 'admin')
-
-/**
- * Editor routes — revisão e aprovação de conteúdo
- */
 export const requireEditor = requireRole('editor')
 export const requireEditorOrAdmin = requireRole('editor', 'admin')
-
-/**
- * Country Manager routes — gestão por país/região
- */
 export const requireCountryManager = requireRole('country_manager')
 export const requireCountryManagerOrAdmin = requireRole('country_manager', 'admin')
-
-/**
- * Finance routes — subscrições, pagamentos, receitas
- */
 export const requireFinance = requireRole('finance')
 export const requireFinanceOrAdmin = requireRole('finance', 'admin')
-
-/**
- * Moderator routes — moderação de chat e comunidade
- */
 export const requireModerator = requireRole('moderator')
 export const requireModeratorOrAdmin = requireRole('moderator', 'admin')
-
-/**
- * Qualquer role de gestão (todos excepto student)
- */
 export const requireAnyStaff = requireRole('teacher', 'admin', 'support', 'editor', 'country_manager', 'finance', 'moderator')
 
-/**
- * Optional auth middleware — não bloqueia se não houver token,
- * mas popula c.get('user') se o token for válido.
- * Útil para rotas públicas que beneficiam de dados do utilizador autenticado.
- */
 export async function optionalAuth(c: Context, next: Next) {
   const authHeader = c.req.header('Authorization')
   const token = extractToken(authHeader || '')
 
   if (token) {
-    const decoded = verifyToken(token)
-    if (decoded) {
-      c.set('user', {
-        id: decoded.sub,
-        email: decoded.email,
-        role: decoded.role,
-        full_name: (decoded as any).name || decoded.email?.split('@')[0] || 'Utilizador'
-      })
+    try {
+      const decoded = verifyToken(token, c.env?.JWT_SECRET)
+      if (decoded) {
+        c.set('user', {
+          id: decoded.sub,
+          email: decoded.email,
+          role: decoded.role,
+          full_name: (decoded as any).name || decoded.email?.split('@')[0] || 'Utilizador'
+        })
+      }
+    } catch {
+      // Sem JWT_SECRET configurado: tratar como não autenticado.
     }
   }
 
@@ -154,10 +98,26 @@ export async function optionalAuth(c: Context, next: Next) {
 }
 
 /**
- * Rate limiting simples por IP (em memória — reset no restart do worker)
- * Uso: app.use('/api/auth/*', rateLimitMiddleware(10, 60000))  → 10 req/min por IP
+ * Rate limiting partilhado entre isolates Workers via Cloudflare KV.
+ *
+ * Estratégia: contador fixed-window por (IP + path). Janela = `windowMs`.
+ * Fallback in-memory quando o binding KV não está disponível (dev local sem KV
+ * configurado ou demo mode) — emite warning para tornar visível.
+ *
+ * Limitações conhecidas (aceitáveis para auth endpoints):
+ *  - KV é eventualmente consistente (~60s globalmente). Burst muito rápido em
+ *    múltiplas regiões pode passar do limite por um curto período. Para auth,
+ *    a barreira contra brute-force distribuído é o que interessa.
+ *  - TTL mínimo do KV é 60s — janelas mais curtas usam o campo `resetAt`.
  */
-const _rateLimitStore: Map<string, { count: number; resetAt: number }> = new Map()
+
+const _memoryStore: Map<string, { count: number; resetAt: number }> = new Map()
+let _memoryWarned = false
+
+interface RateEntry {
+  count: number
+  resetAt: number
+}
 
 export function rateLimitMiddleware(maxRequests: number, windowMs: number) {
   return async (c: Context, next: Next) => {
@@ -165,24 +125,52 @@ export function rateLimitMiddleware(maxRequests: number, windowMs: number) {
             || c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
             || 'unknown'
     const now = Date.now()
-    const key = `${ip}:${c.req.path}`
-    const entry = _rateLimitStore.get(key)
+    const key = `rl:${ip}:${c.req.path}`
+    const kv = c.env?.RATE_LIMIT as KVNamespace | undefined
 
-    if (entry) {
-      if (now < entry.resetAt) {
-        if (entry.count >= maxRequests) {
-          return c.json({
-            success: false,
-            error: 'Demasiadas tentativas. Tente novamente mais tarde.'
-          }, 429)
-        }
-        entry.count++
-      } else {
-        // Janela expirou — reset
-        _rateLimitStore.set(key, { count: 1, resetAt: now + windowMs })
+    let entry: RateEntry | null = null
+
+    if (kv) {
+      try {
+        const raw = await kv.get(key)
+        entry = raw ? JSON.parse(raw) as RateEntry : null
+      } catch (err) {
+        console.error('Rate limit KV read failed:', err)
       }
     } else {
-      _rateLimitStore.set(key, { count: 1, resetAt: now + windowMs })
+      if (!_memoryWarned) {
+        console.warn('[rate-limit] KV binding RATE_LIMIT ausente — a usar fallback in-memory (não eficaz em produção).')
+        _memoryWarned = true
+      }
+      entry = _memoryStore.get(key) || null
+    }
+
+    // Janela ainda válida
+    if (entry && now < entry.resetAt) {
+      if (entry.count >= maxRequests) {
+        const retryAfter = Math.ceil((entry.resetAt - now) / 1000)
+        c.header('Retry-After', String(retryAfter))
+        return c.json({
+          success: false,
+          error: 'Demasiadas tentativas. Tente novamente mais tarde.'
+        }, 429)
+      }
+      entry.count++
+    } else {
+      entry = { count: 1, resetAt: now + windowMs }
+    }
+
+    // Persistir
+    if (kv) {
+      // KV TTL mínimo é 60s; usamos max(60, windowMs/1000) e confiamos em resetAt para janelas curtas
+      const ttlSeconds = Math.max(60, Math.ceil(windowMs / 1000))
+      try {
+        await kv.put(key, JSON.stringify(entry), { expirationTtl: ttlSeconds })
+      } catch (err) {
+        console.error('Rate limit KV write failed:', err)
+      }
+    } else {
+      _memoryStore.set(key, entry)
     }
 
     await next()

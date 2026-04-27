@@ -1,95 +1,90 @@
 // JWT utilities for authentication
 import jwt from 'jsonwebtoken'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-in-production'
-const JWT_EXPIRES_IN = '8h' // 8 hours (was 30min - increased for better UX)
-const REFRESH_TOKEN_EXPIRES_IN = '30d' // 30 days (was 7d)
+const JWT_EXPIRES_IN = '8h'
+const REFRESH_TOKEN_EXPIRES_IN = '30d'
+const VIDEO_TOKEN_EXPIRES_IN = '15m'
 
 export interface JWTPayload {
-  sub: string // user_id
+  sub: string
   email: string
   role: 'student' | 'teacher' | 'admin'
-  name?: string  // display name for watermark
+  name?: string
   iat?: number
   exp?: number
 }
 
-/**
- * Generate access token (short-lived)
- */
-export function generateAccessToken(payload: JWTPayload): string {
-  return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: JWT_EXPIRES_IN
-  })
+interface RefreshPayload extends JWTPayload {
+  type: 'refresh'
 }
 
-/**
- * Generate refresh token (long-lived)
- */
-export function generateRefreshToken(payload: JWTPayload): string {
-  return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: REFRESH_TOKEN_EXPIRES_IN
-  })
+interface VideoPayload {
+  userId: string
+  lessonId: string
+  videoId: string
+  type: 'video_access'
 }
 
-/**
- * Verify and decode JWT token
- */
-export function verifyToken(token: string): JWTPayload | null {
+function requireSecret(secret: string | undefined): string {
+  if (!secret || secret.length < 16) {
+    throw new Error('JWT_SECRET not configured (must be set as Cloudflare secret with ≥16 chars)')
+  }
+  return secret
+}
+
+export function generateAccessToken(payload: JWTPayload, secret: string | undefined): string {
+  return jwt.sign(payload, requireSecret(secret), { expiresIn: JWT_EXPIRES_IN })
+}
+
+export function generateRefreshToken(payload: JWTPayload, secret: string | undefined): string {
+  const refreshPayload: RefreshPayload = { ...payload, type: 'refresh' }
+  return jwt.sign(refreshPayload, requireSecret(secret), { expiresIn: REFRESH_TOKEN_EXPIRES_IN })
+}
+
+export function verifyToken(token: string, secret: string | undefined): JWTPayload | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload
-    return decoded
-  } catch (error) {
-    console.error('Token verification failed:', error)
+    return jwt.verify(token, requireSecret(secret)) as JWTPayload
+  } catch {
     return null
   }
 }
 
-/**
- * Extract token from Authorization header
- */
+export function verifyRefreshToken(token: string, secret: string | undefined): JWTPayload | null {
+  try {
+    const decoded = jwt.verify(token, requireSecret(secret)) as RefreshPayload
+    if (decoded.type !== 'refresh') return null
+    return decoded
+  } catch {
+    return null
+  }
+}
+
 export function extractToken(authHeader: string | null): string | null {
   if (!authHeader) return null
-  
   const parts = authHeader.split(' ')
   if (parts.length !== 2 || parts[0] !== 'Bearer') return null
-  
   return parts[1]
 }
 
-/**
- * Generate video streaming token (short-lived, 15 minutes)
- */
-export function generateVideoToken(userId: string, lessonId: string, videoId: string): string {
-  return jwt.sign(
-    {
-      userId,
-      lessonId,
-      videoId,
-      type: 'video_access'
-    },
-    JWT_SECRET,
-    { expiresIn: '15m' }
-  )
+export function generateVideoToken(
+  userId: string,
+  lessonId: string,
+  videoId: string,
+  secret: string | undefined
+): string {
+  const payload: VideoPayload = { userId, lessonId, videoId, type: 'video_access' }
+  return jwt.sign(payload, requireSecret(secret), { expiresIn: VIDEO_TOKEN_EXPIRES_IN })
 }
 
-/**
- * Verify video token
- */
-export function verifyVideoToken(token: string): { userId: string; lessonId: string; videoId: string } | null {
+export function verifyVideoToken(
+  token: string,
+  secret: string | undefined
+): { userId: string; lessonId: string; videoId: string } | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any
-    
-    if (decoded.type !== 'video_access') {
-      return null
-    }
-    
-    return {
-      userId: decoded.userId,
-      lessonId: decoded.lessonId,
-      videoId: decoded.videoId
-    }
-  } catch (error) {
+    const decoded = jwt.verify(token, requireSecret(secret)) as VideoPayload
+    if (decoded.type !== 'video_access') return null
+    return { userId: decoded.userId, lessonId: decoded.lessonId, videoId: decoded.videoId }
+  } catch {
     return null
   }
 }
