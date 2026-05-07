@@ -1,10 +1,11 @@
 // Editor Routes — /api/editor/*
 // Revisão e aprovação pedagógica de conteúdo
 import { Hono } from 'hono'
+import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware, requireEditorOrAdmin } from '../middleware/auth'
 import type { ApiResponse } from '../types'
 
-const editor = new Hono()
+const editor = new Hono<{ Bindings: CloudflareBindings }>()
 editor.use('/*', authMiddleware)
 editor.use('/*', requireEditorOrAdmin)
 

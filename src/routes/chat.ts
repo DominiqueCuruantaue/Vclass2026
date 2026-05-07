@@ -2,11 +2,12 @@
 // Usa OpenAI-compatible endpoint (configurável via OPENAI_API_KEY + OPENAI_BASE_URL)
 // Fallback inteligente para base de conhecimento local quando sem chave API
 import { Hono } from 'hono'
+import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware } from '../middleware/auth'
 import { z } from 'zod'
 import type { ApiResponse } from '../types'
 
-const chat = new Hono()
+const chat = new Hono<{ Bindings: CloudflareBindings }>()
 chat.use('*', authMiddleware)
 
 // ── Knowledge base local (fallback sem API key) ───────────────────────────────

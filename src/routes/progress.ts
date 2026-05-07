@@ -1,11 +1,12 @@
 // Student Progress & Dashboard Routes
 import { Hono } from 'hono'
+import type { CloudflareBindings } from '../types/bindings'
 import { getSupabase } from '../config/supabase'
 import { authMiddleware, requireStudent } from '../middleware/auth'
 import { getMockDashboard } from '../middleware/database'
 import type { ApiResponse } from '../types'
 
-const progress = new Hono()
+const progress = new Hono<{ Bindings: CloudflareBindings }>()
 
 // Apply auth middleware
 progress.use('/*', authMiddleware)
@@ -112,17 +113,13 @@ progress.get('/lesson/:lesson_id', requireStudent, async (c) => {
     const lesson_id = c.req.param('lesson_id')
     const user = c.get('user')
     
-    const supabaseUrl = c.env?.SUPABASE_URL
-    const supabaseKey = c.env?.SUPABASE_ANON_KEY
-    
-    if (!supabaseUrl || !supabaseKey) {
+    const supabase = getSupabase(c.env)
+    if (!supabase) {
       return c.json<ApiResponse>({
         success: false,
         error: 'Database configuration missing'
       }, 500)
     }
-    
-    const supabase = initSupabase(supabaseUrl, supabaseKey)
     
     const { data, error } = await supabase
       .from('student_progress')
@@ -169,17 +166,13 @@ progress.get('/subject/:grade_subject_id', requireStudent, async (c) => {
     const grade_subject_id = c.req.param('grade_subject_id')
     const user = c.get('user')
     
-    const supabaseUrl = c.env?.SUPABASE_URL
-    const supabaseKey = c.env?.SUPABASE_ANON_KEY
-    
-    if (!supabaseUrl || !supabaseKey) {
+    const supabase = getSupabase(c.env)
+    if (!supabase) {
       return c.json<ApiResponse>({
         success: false,
         error: 'Database configuration missing'
       }, 500)
     }
-    
-    const supabase = initSupabase(supabaseUrl, supabaseKey)
     
     // Get all chapters and lessons for this subject
     const { data: chapters, error } = await supabase
@@ -269,17 +262,13 @@ progress.get('/recommendations', requireStudent, async (c) => {
   try {
     const user = c.get('user')
     
-    const supabaseUrl = c.env?.SUPABASE_URL
-    const supabaseKey = c.env?.SUPABASE_ANON_KEY
-    
-    if (!supabaseUrl || !supabaseKey) {
+    const supabase = getSupabase(c.env)
+    if (!supabase) {
       return c.json<ApiResponse>({
         success: false,
         error: 'Database configuration missing'
       }, 500)
     }
-    
-    const supabase = initSupabase(supabaseUrl, supabaseKey)
     
     // Get lessons with low scores (need review)
     const { data: weakLessons } = await supabase

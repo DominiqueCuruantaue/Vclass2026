@@ -6,10 +6,11 @@
 //        optionalAuth enriquece a resposta se o utilizador estiver autenticado.
 // ============================================================
 import { Hono } from 'hono'
+import type { CloudflareBindings } from '../types/bindings'
 import { optionalAuth } from '../middleware/auth'
 import type { ApiResponse } from '../types'
 
-const news = new Hono()
+const news = new Hono<{ Bindings: CloudflareBindings }>()
 
 // Auth opcional — enriquece se autenticado, não bloqueia se não
 news.use('/*', optionalAuth)

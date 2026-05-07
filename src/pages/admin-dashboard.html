@@ -124,6 +124,7 @@
         ::-webkit-scrollbar-track { background:transparent; }
         ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:3px; }
     </style>
+  <script src="/static/safe-dom.js"></script>
 </head>
 <body>
 <div class="flex min-h-screen">
@@ -156,6 +157,9 @@
             </div>
             <div class="nav-item" onclick="showTab('countries')" id="nav-countries">
                 <i class="fas fa-globe-africa"></i> Países
+            </div>
+            <div class="nav-item" onclick="showTab('curriculum')" id="nav-curriculum">
+                <i class="fas fa-book"></i> Currículo
             </div>
 
             <div class="nav-section">Análises</div>
@@ -485,6 +489,91 @@
                     <div class="section-card p-5">
                         <div class="section-title mb-4"><i class="fas fa-globe text-green-500 mr-2"></i>Utilizadores por País</div>
                         <div style="height:200px"><canvas id="countryChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ CURRICULUM TAB ═════════════════════════════════ -->
+            <div id="tab-curriculum" class="hidden">
+                <div class="section-card mb-5">
+                    <div class="section-header flex items-center justify-between">
+                        <div class="section-title"><i class="fas fa-book text-purple-500"></i> Disciplinas</div>
+                        <button onclick="openSubjectModal()" class="bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition">
+                            <i class="fas fa-plus mr-1"></i> Nova Disciplina
+                        </button>
+                    </div>
+                    <div id="curriculum-subjects" class="p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        <div class="skeleton h-32 rounded-lg"></div>
+                        <div class="skeleton h-32 rounded-lg"></div>
+                        <div class="skeleton h-32 rounded-lg"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subject Modal -->
+            <div id="subject-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
+                    <div class="p-5 border-b border-gray-200 flex items-center justify-between">
+                        <h3 class="font-bold text-gray-800" id="subject-modal-title">Nova Disciplina</h3>
+                        <button onclick="closeSubjectModal()" class="text-gray-400 hover:text-gray-700"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="p-5 space-y-4">
+                        <input type="hidden" id="subject-id">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Nome *</label>
+                            <input id="subject-name" type="text" placeholder="Ex: Matemática" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Descrição</label>
+                            <textarea id="subject-description" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">Cor</label>
+                                <input id="subject-color" type="color" value="#3B82F6" class="w-full h-10 border border-gray-300 rounded-lg cursor-pointer">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">Ícone (URL)</label>
+                                <input id="subject-icon" type="text" placeholder="opcional" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-5 border-t border-gray-200 flex justify-end gap-2">
+                        <button onclick="closeSubjectModal()" class="px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 rounded-lg">Cancelar</button>
+                        <button onclick="saveSubject()" class="px-4 py-2 text-sm font-semibold bg-purple-600 hover:bg-purple-700 text-white rounded-lg">Guardar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Link Grade Modal -->
+            <div id="link-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+                    <div class="p-5 border-b border-gray-200 flex items-center justify-between">
+                        <h3 class="font-bold text-gray-800">Vincular Classe à <span id="link-subject-name"></span></h3>
+                        <button onclick="closeLinkModal()" class="text-gray-400 hover:text-gray-700"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="p-5 space-y-4">
+                        <input type="hidden" id="link-subject-id">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Classe *</label>
+                            <select id="link-grade" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"></select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">Carga horária</label>
+                                <input id="link-workload" type="number" min="0" placeholder="ex: 60" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            </div>
+                            <div class="flex items-end">
+                                <label class="flex items-center gap-2 text-sm text-gray-700">
+                                    <input id="link-mandatory" type="checkbox" checked class="w-4 h-4 text-purple-600 rounded">
+                                    Obrigatória
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-5 border-t border-gray-200 flex justify-end gap-2">
+                        <button onclick="closeLinkModal()" class="px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 rounded-lg">Cancelar</button>
+                        <button onclick="saveLink()" class="px-4 py-2 text-sm font-semibold bg-purple-600 hover:bg-purple-700 text-white rounded-lg">Vincular</button>
                     </div>
                 </div>
             </div>
@@ -821,12 +910,12 @@ function renderRecentUsers(users) {
             <tr>
                 <td>
                     <div class="flex items-center gap-2">
-                        <div class="avatar text-xs" style="background:${avatarColor(u.name||u.full_name)}">${(u.name||u.full_name||'?').charAt(0)}</div>
-                        <span class="font-medium">${u.name||u.full_name||u.email}</span>
+                        <div class="avatar text-xs" style="background:${escapeAttr(avatarColor(u.name||u.full_name))}">${escapeHtml((u.name||u.full_name||'?').charAt(0))}</div>
+                        <span class="font-medium">${escapeHtml(u.name||u.full_name||u.email)}</span>
                     </div>
                 </td>
-                <td><span class="pill pill-${u.role}">${roleLabel(u.role)}</span></td>
-                <td>${FLAG[u.country] || u.country || '—'}</td>
+                <td><span class="pill pill-${escapeAttr(u.role)}">${escapeHtml(roleLabel(u.role))}</span></td>
+                <td>${FLAG[u.country] || escapeHtml(u.country) || '—'}</td>
                 <td class="text-gray-400 text-xs">${VClass.formatRelativeTime(u.joined||u.created_at)}</td>
             </tr>`).join('')}
         </tbody>
@@ -844,9 +933,9 @@ function renderRecentLessons(lessons) {
         <tbody>
         ${lessons.slice(0,6).map(l => `
             <tr>
-                <td class="font-medium max-w-xs truncate">${l.title}</td>
-                <td class="text-gray-500">${l.subject||l.chapter||'—'}</td>
-                <td><span class="pill pill-${l.status}">${statusLabel(l.status)}</span></td>
+                <td class="font-medium max-w-xs truncate">${escapeHtml(l.title)}</td>
+                <td class="text-gray-500">${escapeHtml(l.subject||l.chapter||'—')}</td>
+                <td><span class="pill pill-${escapeAttr(l.status)}">${escapeHtml(statusLabel(l.status))}</span></td>
                 <td class="text-gray-400">${(l.views||l.views_count||0).toLocaleString('pt')}</td>
             </tr>`).join('')}
         </tbody>
@@ -865,8 +954,8 @@ function renderTopLessons(lessons) {
                  style="background:${i===0?'#fef3c7':i===1?'#f3f4f6':i===2?'#fce7f3':'#f8fafc'};
                         color:${i===0?'#92400e':i===1?'#374151':i===2?'#9d174d':'#6b7280'}">${i+1}</div>
             <div class="flex-1 min-w-0">
-                <div class="text-sm font-semibold text-gray-800 truncate">${l.title}</div>
-                <div class="text-xs text-gray-400">${l.subject} · Pontuação média: ${l.score}%</div>
+                <div class="text-sm font-semibold text-gray-800 truncate">${escapeHtml(l.title)}</div>
+                <div class="text-xs text-gray-400">${escapeHtml(l.subject)} · Pontuação média: ${escapeHtml(l.score)}%</div>
                 <div class="mini-bar mt-1.5">
                     <div class="mini-bar-fill bg-purple-500" style="width:${Math.round((l.views/max)*100)}%"></div>
                 </div>
@@ -889,7 +978,7 @@ function renderAlertsMini(alerts) {
             <div class="flex items-start gap-2">
                 <i class="fas ${alertIcon(a.level)} mt-0.5 flex-shrink-0" style="color:${alertColor(a.level)}"></i>
                 <div class="flex-1 min-w-0">
-                    <p class="text-xs font-medium text-gray-800">${a.msg}</p>
+                    <p class="text-xs font-medium text-gray-800">${escapeHtml(a.msg)}</p>
                     <p class="text-xs text-gray-400 mt-0.5">${VClass.formatRelativeTime(a.time)}</p>
                 </div>
             </div>
@@ -903,7 +992,7 @@ function renderAlertsTab(alerts) {
             <div class="flex items-center gap-3">
                 <i class="fas ${alertIcon(a.level)} text-lg flex-shrink-0" style="color:${alertColor(a.level)}"></i>
                 <div class="flex-1">
-                    <p class="text-sm font-semibold text-gray-800">${a.msg}</p>
+                    <p class="text-sm font-semibold text-gray-800">${escapeHtml(a.msg)}</p>
                     <p class="text-xs text-gray-400 mt-0.5">${VClass.formatRelativeTime(a.time)}</p>
                 </div>
                 <span class="pill pill-${a.level === 'warning' ? 'draft' : a.level === 'success' ? 'published' : a.level === 'error' ? 'inactive' : 'student'}">${a.level}</span>
@@ -924,13 +1013,13 @@ function renderUsersTable(users) {
         <tr>
             <td>
                 <div class="flex items-center gap-2">
-                    <div class="avatar text-xs" style="background:${avatarColor(u.name||u.full_name)}">${(u.name||u.full_name||'?').charAt(0)}</div>
-                    <span class="font-medium">${u.name||u.full_name||'—'}</span>
+                    <div class="avatar text-xs" style="background:${escapeAttr(avatarColor(u.name||u.full_name))}">${escapeHtml((u.name||u.full_name||'?').charAt(0))}</div>
+                    <span class="font-medium">${escapeHtml(u.name||u.full_name||'—')}</span>
                 </div>
             </td>
-            <td class="text-gray-500 text-xs">${u.email}</td>
-            <td><span class="pill pill-${u.role}">${roleLabel(u.role)}</span></td>
-            <td>${FLAG[u.country] || u.country || '—'}</td>
+            <td class="text-gray-500 text-xs">${escapeHtml(u.email)}</td>
+            <td><span class="pill pill-${escapeAttr(u.role)}">${escapeHtml(roleLabel(u.role))}</span></td>
+            <td>${FLAG[u.country] || escapeHtml(u.country) || '—'}</td>
             <td>
                 <span class="pill ${u.active ? 'pill-active' : 'pill-inactive'}">
                     ${u.active ? 'Activo' : 'Inactivo'}
@@ -1008,10 +1097,10 @@ async function changeRole(id, currentRole) {
 function renderContentTable(lessons) {
     document.getElementById('content-tbody').innerHTML = lessons.length ? lessons.map(l => `
         <tr>
-            <td class="font-medium max-w-xs"><div class="truncate" title="${l.title}">${l.title}</div></td>
-            <td class="text-gray-500">${l.subject||'—'}</td>
-            <td class="text-gray-500">${l.teacher||'—'}</td>
-            <td><span class="pill pill-${l.status}">${statusLabel(l.status)}</span></td>
+            <td class="font-medium max-w-xs"><div class="truncate" title="${escapeAttr(l.title)}">${escapeHtml(l.title)}</div></td>
+            <td class="text-gray-500">${escapeHtml(l.subject||'—')}</td>
+            <td class="text-gray-500">${escapeHtml(l.teacher||'—')}</td>
+            <td><span class="pill pill-${escapeAttr(l.status)}">${escapeHtml(statusLabel(l.status))}</span></td>
             <td>
                 <div class="flex items-center gap-1">
                     <i class="fas fa-eye text-gray-300 text-xs"></i>
@@ -1071,10 +1160,10 @@ function renderCountries(countries) {
         <div class="section-card p-6 fade-up">
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-3">
-                    <span class="flag">${c.flag}</span>
+                    <span class="flag">${escapeHtml(c.flag)}</span>
                     <div>
-                        <div class="font-bold text-gray-900">${c.name}</div>
-                        <div class="text-xs text-gray-400 uppercase">${c.code}</div>
+                        <div class="font-bold text-gray-900">${escapeHtml(c.name)}</div>
+                        <div class="text-xs text-gray-400 uppercase">${escapeHtml(c.code)}</div>
                     </div>
                 </div>
                 <span class="pill ${c.active ? 'pill-active' : 'pill-inactive'}">${c.active ? 'Activo' : 'Inactivo'}</span>
@@ -1145,15 +1234,15 @@ function renderTopLessonsAnalytics(lessons) {
             <div class="text-2xl font-black text-gray-200 w-8 text-center">${i+1}</div>
             <div class="flex-1 min-w-0">
                 <div class="flex justify-between mb-1">
-                    <span class="text-sm font-semibold text-gray-800 truncate">${l.title}</span>
+                    <span class="text-sm font-semibold text-gray-800 truncate">${escapeHtml(l.title)}</span>
                     <span class="text-sm font-bold text-gray-600 ml-2 flex-shrink-0">${(l.views).toLocaleString('pt')} vistas</span>
                 </div>
                 <div class="flex items-center gap-3">
                     <div class="flex-1 mini-bar">
                         <div class="mini-bar-fill" style="width:${Math.round((l.views/max)*100)}%;background:${['#7c3aed','#2563eb','#16a34a','#d97706','#dc2626'][i]}"></div>
                     </div>
-                    <span class="text-xs text-gray-400 flex-shrink-0">${l.subject}</span>
-                    <span class="text-xs font-bold text-gray-600 flex-shrink-0">${l.score}%</span>
+                    <span class="text-xs text-gray-400 flex-shrink-0">${escapeHtml(l.subject)}</span>
+                    <span class="text-xs font-bold text-gray-600 flex-shrink-0">${escapeHtml(l.score)}%</span>
                 </div>
             </div>
         </div>
@@ -1163,8 +1252,8 @@ function renderTopLessonsAnalytics(lessons) {
 // ═══════════════════════════════════════════════════════════════════
 // TAB NAVIGATION
 // ═══════════════════════════════════════════════════════════════════
-const TABS = ['overview','users','content','countries','analytics','alerts','teachers'];
-const BREADCRUMBS = { overview:'Visão Geral', users:'Utilizadores', content:'Conteúdo', countries:'Países', analytics:'Analytics', alerts:'Alertas', teachers:'Verificação de Professores' };
+const TABS = ['overview','users','content','countries','curriculum','analytics','alerts','teachers'];
+const BREADCRUMBS = { overview:'Visão Geral', users:'Utilizadores', content:'Conteúdo', countries:'Países', curriculum:'Currículo', analytics:'Analytics', alerts:'Alertas', teachers:'Verificação de Professores' };
 
 function showTab(tab) {
     TABS.forEach(t => {
@@ -1176,6 +1265,159 @@ function showTab(tab) {
     // Render analytics charts when tab becomes visible
     if (tab === 'analytics' && DATA) renderAnalytics();
     if (tab === 'teachers') loadTeacherApplications();
+    if (tab === 'curriculum') loadCurriculum();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CURRICULUM MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════
+let CURRICULUM = { subjects: [], grades: [], grade_subjects: [] };
+
+async function authFetch(url, options = {}) {
+    const token = localStorage.getItem('accessToken');
+    const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(url, { ...options, headers });
+    return res.json();
+}
+
+async function loadCurriculum() {
+    const grid = document.getElementById('curriculum-subjects');
+    grid.innerHTML = '<div class="skeleton h-32 rounded-lg"></div><div class="skeleton h-32 rounded-lg"></div><div class="skeleton h-32 rounded-lg"></div>';
+    const r = await authFetch('/api/admin/curriculum');
+    if (!r.success) {
+        grid.innerHTML = `<div class="col-span-full text-center text-red-600 py-8">${r.error || 'Erro a carregar currículo'}</div>`;
+        return;
+    }
+    CURRICULUM = r.data;
+    renderCurriculum();
+}
+
+function gradeLabel(g) {
+    const sys = g.education_systems;
+    const country = sys?.countries;
+    const flag = country?.flag || '';
+    return `${flag} ${g.name}${sys?.name ? ' — ' + sys.name : ''}`;
+}
+
+function renderCurriculum() {
+    const grid = document.getElementById('curriculum-subjects');
+    if (!CURRICULUM.subjects.length) {
+        grid.innerHTML = '<div class="col-span-full text-center text-gray-500 py-8">Sem disciplinas. Clique em <b>Nova Disciplina</b>.</div>';
+        return;
+    }
+    const gradesById = Object.fromEntries(CURRICULUM.grades.map(g => [g.id, g]));
+    grid.innerHTML = CURRICULUM.subjects.map(s => {
+        const links = CURRICULUM.grade_subjects.filter(gs => gs.subject_id === s.id);
+        const linksHtml = links.length
+            ? links.map(gs => {
+                const g = gradesById[gs.grade_id];
+                const label = g ? gradeLabel(g) : '?';
+                return `<span class="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full">
+                    ${label}${gs.is_mandatory ? '' : ' (opt)'}
+                    <button onclick="unlinkGradeSubject('${gs.id}')" class="text-red-500 hover:text-red-700 ml-1" title="Remover"><i class="fas fa-times text-xs"></i></button>
+                </span>`;
+            }).join(' ')
+            : '<span class="text-xs text-gray-400">Nenhuma classe vinculada</span>';
+        return `
+        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+            <div class="flex items-start justify-between mb-2">
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full" style="background:${s.color || '#3B82F6'}"></div>
+                    <div class="font-semibold text-gray-800">${escapeHtml(s.name)}</div>
+                </div>
+                <div class="flex gap-1">
+                    <button onclick="openSubjectModal('${s.id}')" class="text-gray-400 hover:text-purple-600" title="Editar"><i class="fas fa-pen text-xs"></i></button>
+                    <button onclick="deleteSubject('${s.id}')" class="text-gray-400 hover:text-red-600" title="Apagar"><i class="fas fa-trash text-xs"></i></button>
+                </div>
+            </div>
+            ${s.description ? `<div class="text-xs text-gray-500 mb-3">${escapeHtml(s.description)}</div>` : ''}
+            <div class="flex flex-wrap gap-1 mb-3">${linksHtml}</div>
+            <button onclick="openLinkModal('${s.id}')" class="text-xs text-purple-600 hover:underline font-medium">
+                <i class="fas fa-link mr-1"></i> Vincular classe
+            </button>
+        </div>`;
+    }).join('');
+}
+
+function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function openSubjectModal(id) {
+    document.getElementById('subject-modal-title').textContent = id ? 'Editar Disciplina' : 'Nova Disciplina';
+    const s = id ? CURRICULUM.subjects.find(x => x.id === id) : null;
+    document.getElementById('subject-id').value          = s?.id          || '';
+    document.getElementById('subject-name').value        = s?.name        || '';
+    document.getElementById('subject-description').value = s?.description || '';
+    document.getElementById('subject-color').value       = s?.color       || '#3B82F6';
+    document.getElementById('subject-icon').value        = s?.icon_url    || '';
+    document.getElementById('subject-modal').classList.remove('hidden');
+}
+function closeSubjectModal() { document.getElementById('subject-modal').classList.add('hidden'); }
+
+async function saveSubject() {
+    const id   = document.getElementById('subject-id').value;
+    const body = {
+        name:        document.getElementById('subject-name').value.trim(),
+        description: document.getElementById('subject-description').value.trim(),
+        color:       document.getElementById('subject-color').value,
+        icon_url:    document.getElementById('subject-icon').value.trim(),
+    };
+    if (!body.name) { showToast('Nome é obrigatório', 'error'); return; }
+    const url    = id ? `/api/admin/curriculum/subjects/${id}` : '/api/admin/curriculum/subjects';
+    const method = id ? 'PATCH' : 'POST';
+    const r = await authFetch(url, { method, body: JSON.stringify(body) });
+    if (!r.success) { showToast(r.error || 'Erro', 'error'); return; }
+    showToast(id ? 'Disciplina atualizada' : 'Disciplina criada', 'success');
+    closeSubjectModal();
+    loadCurriculum();
+}
+
+async function deleteSubject(id) {
+    const s = CURRICULUM.subjects.find(x => x.id === id);
+    if (!confirm(`Apagar "${s?.name}"? Capítulos e lições associadas serão também removidos.`)) return;
+    const r = await authFetch(`/api/admin/curriculum/subjects/${id}`, { method: 'DELETE' });
+    if (!r.success) { showToast(r.error || 'Erro', 'error'); return; }
+    showToast('Disciplina apagada', 'success');
+    loadCurriculum();
+}
+
+function openLinkModal(subjectId) {
+    const s = CURRICULUM.subjects.find(x => x.id === subjectId);
+    document.getElementById('link-subject-id').value   = subjectId;
+    document.getElementById('link-subject-name').textContent = s?.name || '';
+    const linked = new Set(CURRICULUM.grade_subjects.filter(gs => gs.subject_id === subjectId).map(gs => gs.grade_id));
+    const sel = document.getElementById('link-grade');
+    sel.innerHTML = CURRICULUM.grades
+        .filter(g => !linked.has(g.id))
+        .map(g => `<option value="${g.id}">${gradeLabel(g)}</option>`)
+        .join('');
+    document.getElementById('link-workload').value  = '';
+    document.getElementById('link-mandatory').checked = true;
+    document.getElementById('link-modal').classList.remove('hidden');
+}
+function closeLinkModal() { document.getElementById('link-modal').classList.add('hidden'); }
+
+async function saveLink() {
+    const body = {
+        subject_id:     document.getElementById('link-subject-id').value,
+        grade_id:       document.getElementById('link-grade').value,
+        is_mandatory:   document.getElementById('link-mandatory').checked,
+        workload_hours: parseInt(document.getElementById('link-workload').value) || null,
+    };
+    if (!body.grade_id) { showToast('Escolha uma classe', 'error'); return; }
+    const r = await authFetch('/api/admin/curriculum/grade-subjects', { method: 'POST', body: JSON.stringify(body) });
+    if (!r.success) { showToast(r.error || 'Erro', 'error'); return; }
+    showToast('Classe vinculada', 'success');
+    closeLinkModal();
+    loadCurriculum();
+}
+
+async function unlinkGradeSubject(gsId) {
+    if (!confirm('Remover este vínculo? (capítulos da disciplina nessa classe ficarão órfãos)')) return;
+    const r = await authFetch(`/api/admin/curriculum/grade-subjects/${gsId}`, { method: 'DELETE' });
+    if (!r.success) { showToast(r.error || 'Erro', 'error'); return; }
+    showToast('Vínculo removido', 'success');
+    loadCurriculum();
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1295,21 +1537,21 @@ function renderTeacherTable(apps) {
             <td>
                 <div class="flex items-center gap-3">
                     <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                         style="background:${avatarColor(a.full_name)}">${(a.full_name||'?')[0].toUpperCase()}</div>
+                         style="background:${escapeAttr(avatarColor(a.full_name))}">${escapeHtml((a.full_name||'?')[0].toUpperCase())}</div>
                     <div>
-                        <div class="font-semibold text-sm">${a.full_name}${flag}</div>
-                        <div class="text-xs text-gray-400">${a.email}</div>
+                        <div class="font-semibold text-sm">${escapeHtml(a.full_name)}${flag}</div>
+                        <div class="text-xs text-gray-400">${escapeHtml(a.email)}</div>
                     </div>
                 </div>
             </td>
-            <td><span class="text-sm">${degreeShort[a.degree]||'—'}${certBadge}</span><div class="text-xs text-gray-400">${a.degree_field?.substring(0,20)||'—'}</div></td>
-            <td class="text-sm">${subjects || '—'}</td>
+            <td><span class="text-sm">${degreeShort[a.degree]||'—'}${certBadge}</span><div class="text-xs text-gray-400">${escapeHtml(a.degree_field?.substring(0,20)||'—')}</div></td>
+            <td class="text-sm">${escapeHtml(subjects) || '—'}</td>
             <td class="text-center">${score}/100</td>
             <td><span class="pill ${s.cls}">${s.lbl}</span></td>
             <td class="text-xs text-gray-500">${date}</td>
             <td>
                 <div class="flex gap-1">
-                    <button onclick='openTvModal(${JSON.stringify(a)})' class="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs hover:bg-purple-200 transition font-medium">
+                    <button onclick="openTvModal('${escapeAttr(a.id)}')" class="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs hover:bg-purple-200 transition font-medium">
                         <i class="fas fa-eye"></i>
                     </button>
                     ${a.status==='pending'||a.status==='under_review'||a.status==='info_requested' ? `
@@ -1322,7 +1564,10 @@ function renderTeacherTable(apps) {
     }).join('');
 }
 
-function openTvModal(app) {
+function openTvModal(appOrId) {
+    // Aceita objecto (legacy) ou id (novo) — quando id, faz lookup em tvApps
+    const app = typeof appOrId === 'string' ? tvApps.find(x => x.id === appOrId) : appOrId;
+    if (!app) { console.warn('openTvModal: app not found', appOrId); return; }
     const stepLabels = { initial_screening:'Triagem Inicial', document_review:'Revisão de Docs', reference_check:'Verificação de Refs', interview:'Entrevista', final_review:'Revisão Final', completed:'Concluído' };
     const certText = app.has_teaching_cert ? '✅ Sim' + (app.teaching_cert_type ? ` (${app.teaching_cert_type})` : '') : '❌ Não';
     const flagHtml = app.flagged ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium"><i class="fas fa-flag"></i> Sinalizado</span>' : '';
@@ -1333,9 +1578,9 @@ function openTvModal(app) {
             <!-- Header -->
             <div class="flex items-center justify-between flex-wrap gap-3">
                 <div>
-                    <h3 class="text-lg font-bold text-gray-900">${app.full_name} ${flagHtml}</h3>
-                    <p class="text-sm text-gray-500">${app.email} · ${app.phone}</p>
-                    <p class="text-xs text-gray-400">ID: ${app.id} · Submetida: ${new Date(app.submitted_at).toLocaleDateString('pt-PT')}</p>
+                    <h3 class="text-lg font-bold text-gray-900">${escapeHtml(app.full_name)} ${flagHtml}</h3>
+                    <p class="text-sm text-gray-500">${escapeHtml(app.email)} · ${escapeHtml(app.phone)}</p>
+                    <p class="text-xs text-gray-400">ID: ${escapeHtml(app.id)} · Submetida: ${new Date(app.submitted_at).toLocaleDateString('pt-PT')}</p>
                 </div>
                 <div class="text-right">
                     <div class="text-3xl font-black ${scoreColor}">${app.score ?? '—'}<span class="text-sm font-normal text-gray-400">/100</span></div>
@@ -1348,19 +1593,19 @@ function openTvModal(app) {
                 <div class="bg-gray-50 rounded-xl p-4">
                     <div class="font-semibold text-gray-700 mb-2 text-xs uppercase">📋 Qualificações</div>
                     <div class="space-y-1 text-gray-600">
-                        <div><strong>Grau:</strong> ${app.degree}</div>
-                        <div><strong>Área:</strong> ${app.degree_field}</div>
-                        <div><strong>Instituição:</strong> ${app.institution}</div>
+                        <div><strong>Grau:</strong> ${escapeHtml(app.degree)}</div>
+                        <div><strong>Área:</strong> ${escapeHtml(app.degree_field)}</div>
+                        <div><strong>Instituição:</strong> ${escapeHtml(app.institution)}</div>
                         <div><strong>Certificado:</strong> ${certText}</div>
                     </div>
                 </div>
                 <div class="bg-gray-50 rounded-xl p-4">
                     <div class="font-semibold text-gray-700 mb-2 text-xs uppercase">👨‍🏫 Experiência</div>
                     <div class="space-y-1 text-gray-600">
-                        <div><strong>Experiência:</strong> ${app.years_experience} anos</div>
-                        <div><strong>Escola:</strong> ${app.current_school || '—'}</div>
-                        <div><strong>Disciplinas:</strong> ${(app.subjects||[]).join(', ')}</div>
-                        <div><strong>Literacia:</strong> ${app.digital_literacy}</div>
+                        <div><strong>Experiência:</strong> ${escapeHtml(app.years_experience)} anos</div>
+                        <div><strong>Escola:</strong> ${escapeHtml(app.current_school || '—')}</div>
+                        <div><strong>Disciplinas:</strong> ${escapeHtml((app.subjects||[]).join(', '))}</div>
+                        <div><strong>Literacia:</strong> ${escapeHtml(app.digital_literacy)}</div>
                     </div>
                 </div>
                 <div class="bg-gray-50 rounded-xl p-4">

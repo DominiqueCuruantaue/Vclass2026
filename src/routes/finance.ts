@@ -1,10 +1,11 @@
 // Finance Routes — /api/finance/*
 // Gestão de subscrições, pagamentos e receita
 import { Hono } from 'hono'
+import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware, requireFinanceOrAdmin } from '../middleware/auth'
 import type { ApiResponse } from '../types'
 
-const finance = new Hono()
+const finance = new Hono<{ Bindings: CloudflareBindings }>()
 finance.use('/*', authMiddleware)
 finance.use('/*', requireFinanceOrAdmin)
 

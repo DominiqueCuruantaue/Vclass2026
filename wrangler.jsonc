@@ -15,12 +15,16 @@
 			"binding": "RATE_LIMIT",
 			"id": "3b7b3d313d06408f9c58005e1a7888fd",
 			"preview_id": "52e3065693f6493dae73a7f0f10e14a3",
-			"remote": true
+			"remote": false
 		}
 	]
 	// Environment variables (set via wrangler secrets or .dev.vars):
 	// - SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
 	// - JWT_SECRET (≥16 chars)
-	// - BUNNY_CDN_URL
+	// - VIDEO_SECRET (HMAC para tokens de vídeo curtos, ≥32 chars)
+	// - BUNNY_API_KEY        (master key da Stream Library — server-only)
+	// - BUNNY_LIBRARY_ID     (id numérico da Library)
+	// - BUNNY_CDN_HOST       (ex: vz-xxxxxx.b-cdn.net — para signed HLS)
+	// - BUNNY_TOKEN_KEY      (Token Authentication Key da Library Security)
 	// - ALLOWED_ORIGINS (CSV de origens permitidas em CORS)
 }

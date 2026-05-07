@@ -5,13 +5,23 @@
 //           sem download, sem partilha directa
 // ============================================================
 import { Hono } from 'hono'
+import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware } from '../middleware/auth'
+import { signBunnyPath, isBunnyConfigured } from '../utils/bunny'
 import type { ApiResponse } from '../types'
 
-const video = new Hono()
+const video = new Hono<{ Bindings: CloudflareBindings }>()
 
-// ── Auth em todas as rotas de vídeo ─────────────────────────
-video.use('/*', authMiddleware)
+// ── Auth em todas as rotas de vídeo, EXCEPTO o proxy HLS ────
+//   O HLS.js fetch dos m3u8 não consegue enviar Authorization header de
+//   forma fiável (depende de configuração do loader). Por isso o proxy
+//   autentica via `vt` (token HMAC com escopo userId × lessonId × videoId)
+//   na query string — basta para validar o pedido.
+video.use('/*', async (c, next) => {
+  const path = c.req.path
+  if (path.includes('/hls/')) return next()
+  return authMiddleware(c, next)
+})
 
 // ── Helpers ─────────────────────────────────────────────────
 
@@ -148,6 +158,102 @@ video.post('/token', async (c) => {
 })
 
 // ============================================================
+//  GET /api/video/hls/:lessonId/*  — Proxy/rewriter de m3u8
+//
+//  Bunny Stream exige assinatura por path. HLS.js só carrega uma URL
+//  inicial e depois resolve sub-playlists e segmentos relativos. Este
+//  endpoint busca o m3u8 ao Bunny (com signed URL), reescreve as
+//  referências para URLs com tokens individuais, e devolve ao player.
+//
+//  - Master m3u8: variantes apontam para este mesmo proxy (para que
+//    o variant m3u8 também seja reescrito).
+//  - Variant m3u8: segmentos .ts apontam directamente para o Bunny CDN
+//    com signed URL — não passam pelo worker (poupança de bandwidth).
+// ============================================================
+video.get('/hls/:lessonId/:rest{.+\\.m3u8$}', async (c) => {
+  try {
+    const env      = (c.env as Record<string, string>) || {}
+    const secret   = getVideoSecret(env)
+    const lessonId = c.req.param('lessonId')
+    const rest     = c.req.param('rest')               // ex: "master.m3u8" ou "360p/video.m3u8"
+    const vt       = c.req.query('vt')
+
+    if (!vt)  return c.text('Missing vt', 401)
+    if (!isBunnyConfigured(env)) return c.text('Bunny não configurado', 500)
+
+    const payload = await verifySignedToken(vt, secret)
+    if (!payload || payload.lessonId !== lessonId) {
+      return c.text('Token inválido ou expirado', 403)
+    }
+
+    const cdn = env.BUNNY_CDN_HOST!
+    const key = env.BUNNY_TOKEN_KEY!
+    const vid = payload.videoId
+
+    // Mapear "master.m3u8" → "/{vid}/playlist.m3u8" (caminho real no Bunny)
+    const bunnyPath = rest === 'master.m3u8'
+      ? `/${vid}/playlist.m3u8`
+      : `/${vid}/${rest}`
+
+    // Token + expiração partilhados entre todos os recursos deste m3u8.
+    // Uso o expiresAt do próprio vt para não estender vida do acesso.
+    const expires = Math.floor(payload.expiresAt / 1000)
+    const sig     = await signBunnyPath(key, bunnyPath, expires)
+
+    // Buscar o m3u8 ao Bunny já assinado
+    const bunnyUrl = `https://${cdn}${bunnyPath}?token=${sig}&expires=${expires}`
+    const upstream = await fetch(bunnyUrl, {
+      headers: { Referer: `https://${cdn}/` }
+    })
+    if (!upstream.ok) {
+      return c.text(`Bunny ${upstream.status}`, upstream.status as any)
+    }
+    const m3u8 = await upstream.text()
+
+    // Determinar a directoria base relativa ao vídeo dentro do m3u8.
+    // Para master ("/{vid}/playlist.m3u8"): baseDir = ""
+    // Para variant "/{vid}/360p/video.m3u8": baseDir = "360p/"
+    const insideVideo = bunnyPath.replace(`/${vid}/`, '')   // ex: "playlist.m3u8" ou "360p/video.m3u8"
+    const baseDir     = insideVideo.includes('/') ? insideVideo.split('/').slice(0, -1).join('/') + '/' : ''
+
+    // Reescrever cada linha de URL (não-comentário, não-vazia)
+    const rewritten = await Promise.all(
+      m3u8.split(/\r?\n/).map(async (line) => {
+        const t = line.trim()
+        if (!t || t.startsWith('#')) return line
+
+        // Path completo dentro do vídeo no Bunny (ex: "360p/video.m3u8" ou "360p/video0.ts")
+        const childInside = baseDir + t
+        const childBunnyPath = `/${vid}/${childInside}`
+
+        if (t.endsWith('.m3u8')) {
+          // Sub-playlist → roteia através do nosso proxy para podermos
+          // reescrever também os segmentos lá dentro.
+          return `/api/video/hls/${encodeURIComponent(lessonId)}/${childInside}?vt=${encodeURIComponent(vt)}`
+        }
+        // Segmento .ts (ou outro) → URL directa pré-assinada do Bunny
+        const segSig = await signBunnyPath(key, childBunnyPath, expires)
+        return `https://${cdn}${childBunnyPath}?token=${segSig}&expires=${expires}`
+      })
+    )
+
+    return new Response(rewritten.join('\n'), {
+      status: 200,
+      headers: {
+        'content-type': 'application/vnd.apple.mpegurl',
+        'cache-control': 'no-store',
+        // CORS — HLS.js fetch é same-origin (vai para o nosso worker), mas
+        // deixar permissivo evita surpresas com CDN intermediária.
+        'access-control-allow-origin': '*'
+      }
+    })
+  } catch (err) {
+    console.error('hls proxy error:', err)
+    return c.text('Internal error', 500)
+  }
+})
+
+// ============================================================
 //  GET /api/video/stream/:lessonId
 //  Header: Authorization: Bearer <token>   (token do POST acima)
 //  → Proxy do stream HLS ou redirect com Signed URL Bunny.net
@@ -190,33 +296,27 @@ video.get('/stream/:lessonId', async (c) => {
       }
     }
 
-    // ── Produção com Bunny.net ────────────────────────────────
-    // const BUNNY_API_KEY    = c.env?.BUNNY_API_KEY    || ''
-    // const BUNNY_LIBRARY_ID = c.env?.BUNNY_LIBRARY_ID || ''
-    // const BUNNY_CDN_HOST   = c.env?.BUNNY_CDN_HOST   || 'vz-xxx.b-cdn.net'
-    // const BUNNY_TOKEN_KEY  = c.env?.BUNNY_TOKEN_KEY  || ''
-    //
-    // // Gerar Signed URL Bunny.net (válido por 2h)
-    // const expires    = Math.floor(Date.now() / 1000) + 7200
-    // const hashBase   = BUNNY_TOKEN_KEY + '/' + payload.videoId + '/playlist.m3u8' + expires
-    // const hashBytes  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(hashBase))
-    // const hashB64    = btoa(String.fromCharCode(...new Uint8Array(hashBytes)))
-    //                      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
-    // const signedUrl  = `https://${BUNNY_CDN_HOST}/${payload.videoId}/playlist.m3u8?token=${hashB64}&expires=${expires}`
-    // return c.redirect(signedUrl, 302)
+    // ── Produção com Bunny.net ───────────────────────────────────────────
+    // Bunny Stream exige que CADA recurso (master, variant, segment) tenha
+    // o seu próprio token assinado individualmente. Como o HLS.js só vê
+    // uma URL inicial, devolvemos uma URL do nosso proxy que faz o rewrite
+    // dos m3u8 com tokens pré-assinados — segmentos .ts streamam directos
+    // do Bunny CDN, sem passar pelo worker.
+    if (isBunnyConfigured(env)) {
+      const proxyUrl = `/api/video/hls/${encodeURIComponent(lessonId)}/master.m3u8?vt=${encodeURIComponent(token)}`
+      return c.json<ApiResponse>({
+        success: true,
+        data: {
+          videoId:    payload.videoId,
+          streamUrl:  proxyUrl,
+          streamType: 'hls',
+          tokenValid: true,
+          expiresAt:  new Date(payload.expiresAt).toISOString()
+        }
+      })
+    }
 
-    // ── Demo mode ─────────────────────────────────────────────
-    // Em demo devolve config para o player usar o videoId directamente
-    return c.json<ApiResponse>({
-      success: true,
-      data: {
-        videoId: payload.videoId,
-        // Em produção NUNCA devolver o URL raw — apenas o Signed URL com expiração
-        streamUrl: `https://iframe.mediadelivery.net/embed/${payload.videoId}?autoplay=false`,
-        tokenValid: true,
-        expiresAt: new Date(payload.expiresAt).toISOString()
-      }
-    })
+    return c.json<ApiResponse>({ success: false, error: 'Bunny.net não configurado' }, 503)
 
   } catch (err) {
     console.error('video/stream error:', err)

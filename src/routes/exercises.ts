@@ -1,11 +1,12 @@
 // Exercises Routes
 import { Hono } from 'hono'
+import type { CloudflareBindings } from '../types/bindings'
 import { z } from 'zod'
 import { initSupabase } from '../config/supabase'
 import { authMiddleware, requireStudent } from '../middleware/auth'
 import type { ApiResponse } from '../types'
 
-const exercises = new Hono()
+const exercises = new Hono<{ Bindings: CloudflareBindings }>()
 
 // Apply auth middleware
 exercises.use('/*', authMiddleware)

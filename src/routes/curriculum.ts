@@ -6,7 +6,9 @@
 //    - Endpoints detalhados (/levels, /grades, /subjects, /chapters) → COM auth
 // ============================================================
 import { Hono } from 'hono'
+import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware } from '../middleware/auth'
+import { getSupabase } from '../config/supabase'
 import {
   getCountries,
   getLevelsByCountry,
@@ -21,7 +23,147 @@ import {
   CHAPTERS,
 } from '../data/curriculum'
 
-const curriculum = new Hono()
+// Mescla capítulos persistidos no DB (criados por professores) na árvore
+// curricular estática.
+//
+// O slug de capítulo segue o padrão `${subjectId}-${ts}` onde `subjectId`
+// pode conter hífen (ex.: `mz12-mat-1762…`). MAS a página de Conteúdos
+// deduplica disciplinas por NOME (mostra uma só "Matemática" para todas as
+// classes) e atribui o id da primeira classe vista — então um capítulo
+// criado para "Matemática" pode receber slug `mz10-mat-…` mesmo quando o
+// criador o associou mentalmente à 12ª.
+//
+// Para isso o matching é feito em duas etapas:
+//   1) Extrair do slug a parte que coincida com um id de disciplina estática.
+//   2) Adicionar esse capítulo a TODAS as disciplinas da árvore que tenham
+//      o mesmo NOME (independente da classe).
+// Injecta disciplinas criadas via /admin (que vivem em `subjects` + `grade_subjects`)
+// na árvore curricular estática, ligando-as à classe pelo nome (ex: "12ª Classe").
+//
+// Estratégia: fazer match por (countryName + gradeName) sempre que possível;
+// se o country não bater, anexar a todas as classes com o mesmo nome — mesmo
+// dedup pragmático que já existe no merge de chapters.
+async function mergeDbSubjectsIntoTree(env: any, tree: any[]) {
+  const supabase = getSupabase(env)
+  if (!supabase) return tree
+  try {
+    const { data, error } = await supabase
+      .from('grade_subjects')
+      .select('id, grade_id, is_mandatory, workload_hours, subjects(id, name, description, color, icon_url), grades(name, education_systems(countries(name)))')
+    if (error || !Array.isArray(data) || !data.length) return tree
+
+    // Indexar grades estáticas por (countryName|gradeName) e por gradeName
+    const gradesByCountryGrade: Record<string, any[]> = {}
+    const gradesByGrade:        Record<string, any[]> = {}
+    for (const country of tree) {
+      const cn = String(country.name || '').toLowerCase().trim()
+      for (const level of (country.levels || [])) {
+        for (const grade of (level.grades || [])) {
+          const gn = String(grade.name || '').toLowerCase().trim()
+          ;(gradesByCountryGrade[`${cn}|${gn}`] = gradesByCountryGrade[`${cn}|${gn}`] || []).push(grade)
+          ;(gradesByGrade[gn] = gradesByGrade[gn] || []).push(grade)
+        }
+      }
+    }
+
+    for (const gs of data) {
+      const subj = (gs as any).subjects
+      const gr   = (gs as any).grades
+      if (!subj || !gr) continue
+      const gradeName   = String(gr.name || '').toLowerCase().trim()
+      const countryName = String(gr.education_systems?.countries?.name || '').toLowerCase().trim()
+      const targets =
+        gradesByCountryGrade[`${countryName}|${gradeName}`] ||
+        gradesByGrade[gradeName] ||
+        []
+      if (!targets.length) continue
+
+      for (const targetGrade of targets) {
+        const list = targetGrade.subjects || (targetGrade.subjects = [])
+        // Evitar duplicar: se já existe disciplina (estática ou de BD) com mesmo nome, skip
+        const dupe = list.some((s: any) => String(s.name || '').toLowerCase().trim() === String(subj.name || '').toLowerCase().trim())
+        if (dupe) continue
+        list.push({
+          id: subj.id,
+          gradeId: targetGrade.id,
+          name: subj.name,
+          shortName: String(subj.name || '').slice(0, 3).toUpperCase(),
+          icon: 'fa-book',
+          color: subj.color || '#3B82F6',
+          description: subj.description || '',
+          displayOrder: 999,
+          chapters: [],
+          fromDb: true,
+        })
+      }
+    }
+  } catch (e) {
+    console.warn('mergeDbSubjectsIntoTree failed:', e)
+  }
+  return tree
+}
+
+async function mergeDbChaptersIntoTree(env: any, tree: any[]) {
+  const supabase = getSupabase(env)
+  if (!supabase) return tree
+  try {
+    const { data: dbChapters, error } = await supabase
+      .from('chapters')
+      .select('id, title, slug, description, display_order, trimester, grade_subject_id, created_at')
+      .order('display_order', { ascending: true })
+    if (error || !Array.isArray(dbChapters) || !dbChapters.length) return tree
+
+    // Achatar disciplinas e indexar por nome
+    const allSubjects: any[] = []
+    const subjectsByName: Record<string, any[]> = {}
+    for (const level of tree) {
+      for (const grade of (level.grades || [])) {
+        for (const subject of (grade.subjects || [])) {
+          allSubjects.push(subject)
+          const key = String(subject.name || '').toLowerCase().trim()
+          if (key) (subjectsByName[key] = subjectsByName[key] || []).push(subject)
+        }
+      }
+    }
+
+    for (const ch of dbChapters) {
+      const slug = String(ch.slug || '').toLowerCase()
+      if (!slug) continue
+
+      // 1) Encontrar a disciplina cujo id é prefixo do slug
+      const seed = allSubjects.find(s => slug.startsWith(String(s.id).toLowerCase() + '-'))
+      // 2) Aplicar a TODAS as disciplinas com o mesmo nome
+      const targets = seed
+        ? (subjectsByName[String(seed.name || '').toLowerCase().trim()] || [seed])
+        : []
+
+      if (!targets.length) continue
+
+      const mapped = {
+        id: ch.id,
+        title: ch.title,
+        slug: ch.slug,
+        description: ch.description || '',
+        displayOrder: ch.display_order ?? 999,
+        term: ch.trimester ?? null,
+        trimester: ch.trimester ?? null,
+        fromDb: true,
+      }
+
+      for (const target of targets) {
+        const existing = target.chapters || (target.chapters = [])
+        if (!existing.some((c: any) => c.id === mapped.id)) {
+          existing.push({ ...mapped, subjectId: target.id })
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('mergeDbChaptersIntoTree failed:', e)
+  }
+  return tree
+}
+
+const curriculum = new Hono<{ Bindings: CloudflareBindings }>()
 
 // ── Endpoints PÚBLICOS (sem autenticação) ────────────────────────────────────
 
@@ -31,7 +173,7 @@ curriculum.get('/countries', (c) => {
 })
 
 // GET /api/curriculum/full — JSON completo de todos os currículos (para browse.html)
-curriculum.get('/full', (c) => {
+curriculum.get('/full', async (c) => {
   const tree = COUNTRIES
     .filter(ct => ct.is_active)
     .map(country => ({
@@ -47,15 +189,25 @@ curriculum.get('/full', (c) => {
         })),
       })),
     }))
+  // 1) Injetar disciplinas criadas via admin (BD) na árvore estática
+  await mergeDbSubjectsIntoTree(c.env, tree)
+  // 2) Mesclar capítulos do DB em cada país
+  for (const country of tree) {
+    await mergeDbChaptersIntoTree(c.env, country.levels)
+  }
   return c.json({ success: true, data: tree })
 })
 
 // GET /api/curriculum/tree/:countryId — árvore completa de um país (público)
-curriculum.get('/tree/:countryId', (c) => {
+curriculum.get('/tree/:countryId', async (c) => {
   const { countryId } = c.req.param()
   const country = COUNTRIES.find(ct => ct.id === countryId)
   if (!country) return c.json({ success: false, error: 'País não encontrado' }, 404)
-  return c.json({ success: true, data: { country, curriculum: getCurriculumTree(countryId) } })
+  const staticTree = getCurriculumTree(countryId)
+  // mergeDbSubjectsIntoTree espera árvore por país; embrulhar para reutilizar
+  await mergeDbSubjectsIntoTree(c.env, [{ name: country.name, levels: staticTree }])
+  const tree = await mergeDbChaptersIntoTree(c.env, staticTree)
+  return c.json({ success: true, data: { country, curriculum: tree } })
 })
 
 // GET /api/curriculum/search?q=newton&countryId=mz (público)

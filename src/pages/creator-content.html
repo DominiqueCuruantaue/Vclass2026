@@ -32,6 +32,7 @@
         .chapter-group { border-left: 3px solid #e5e7eb; }
         .chapter-group:hover { border-color: #8b5cf6; }
     </style>
+  <script src="/static/safe-dom.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
 
@@ -101,16 +102,16 @@
             <!-- Tab bar -->
             <div class="flex items-center border-b border-gray-100 px-6 overflow-x-auto gap-1">
                 <button onclick="switchTab('all')" id="tab-all" class="tab-btn active whitespace-nowrap px-4 py-4 text-sm font-medium text-purple-700">
-                    Todas <span class="ml-1 text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full" id="count-all">16</span>
+                    Todas <span class="ml-1 text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full" id="count-all">0</span>
                 </button>
                 <button onclick="switchTab('published')" id="tab-published" class="tab-btn whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-500 hover:text-gray-700">
-                    Publicadas <span class="ml-1 text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full" id="count-published">13</span>
+                    Publicadas <span class="ml-1 text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full" id="count-published">0</span>
                 </button>
                 <button onclick="switchTab('draft')" id="tab-draft" class="tab-btn whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-500 hover:text-gray-700">
-                    Rascunhos <span class="ml-1 text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full" id="count-draft">3</span>
+                    Rascunhos <span class="ml-1 text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full" id="count-draft">0</span>
                 </button>
                 <button onclick="switchTab('no-exercises')" id="tab-no-exercises" class="tab-btn whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-500 hover:text-gray-700">
-                    Sem Exercícios <span class="ml-1 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">5</span>
+                    Sem Exercícios <span class="ml-1 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full" id="count-no-exercises">0</span>
                 </button>
             </div>
 
@@ -183,7 +184,7 @@
 
             <!-- Pagination -->
             <div class="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50">
-                <span class="text-xs text-gray-500">Exibindo <span id="showing-count">16</span> lições</span>
+                <span class="text-xs text-gray-500">Exibindo <span id="showing-count">0</span> lições</span>
                 <div class="flex items-center gap-1">
                     <button class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 text-sm disabled:opacity-40" disabled>
                         <i class="fas fa-chevron-left text-xs"></i>
@@ -310,7 +311,7 @@
         </div>
     </div>
 
-    <!-- ── MODAL: Confirmar Exclusão ─────────────────────────────────── -->
+    <!-- ── MODAL: Confirmar Exclusão Lição ──────────────────────────── -->
     <div id="modal-delete" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm modal-card p-6 text-center">
             <div class="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -321,6 +322,22 @@
             <div class="flex gap-3">
                 <button onclick="closeModal('modal-delete')" class="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition">Cancelar</button>
                 <button onclick="confirmDelete()" class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 transition">Excluir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── MODAL: Confirmar Exclusão Capítulo ────────────────────────── -->
+    <div id="modal-delete-chapter" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm modal-card p-6 text-center">
+            <div class="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-folder-minus text-red-600 text-xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900 mb-2">Eliminar capítulo?</h3>
+            <p class="text-sm text-gray-500 mb-1" id="delete-chapter-name">Esta ação não pode ser desfeita.</p>
+            <p class="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2 mb-6">Só é possível eliminar capítulos sem lições. Elimine primeiro todas as lições do capítulo.</p>
+            <div class="flex gap-3">
+                <button onclick="closeModal('modal-delete-chapter')" class="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition">Cancelar</button>
+                <button onclick="confirmDeleteChapter()" class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 transition">Eliminar</button>
             </div>
         </div>
     </div>
@@ -337,39 +354,15 @@
             document.getElementById('nav-avatar-sm').textContent = initials;
         }
 
-        // ── Mock Data ────────────────────────────────────────────────────
-        const SUBJECT_META = {
-            fisica:     { label: 'Física',      color: 'teal',   icon: 'fa-atom' },
-            matematica: { label: 'Matemática',   color: 'indigo', icon: 'fa-calculator' },
-            quimica:    { label: 'Química',      color: 'amber',  icon: 'fa-flask' },
-            portugues:  { label: 'Português',    color: 'pink',   icon: 'fa-book' },
-        };
+        // Subject metadata e capítulos são preenchidos por loadCurriculumForContent()
+        let SUBJECT_META = {};
+        let CHAPTERS_BY_SUBJECT = {};
 
-        const CHAPTERS_BY_SUBJECT = {
-            fisica:     ['Cinemática','Dinâmica','Óptica','Termodinâmica','Eletricidade'],
-            matematica: ['Funções','Álgebra Linear','Geometria Analítica','Trigonometria'],
-            quimica:    ['Átomos e Moléculas','Soluções','Reações Orgânicas'],
-            portugues:  ['Gramática','Literatura','Interpretação de Texto','Redação'],
-        };
+        // Lições reais carregadas via loadRealLessons()
+        let ALL_LESSONS = [];
 
-        let ALL_LESSONS = [
-            { id:1,  title:'Leis de Newton — Aplicações',          subject:'fisica',     chapter:'Dinâmica',              status:'published', views:128, exercises:5, duration:14, access:'free',    updated:'2026-04-07' },
-            { id:2,  title:'Cinemática — Movimento Uniforme',       subject:'fisica',     chapter:'Cinemática',            status:'published', views:96,  exercises:4, duration:12, access:'free',    updated:'2026-04-05' },
-            { id:3,  title:'Óptica Geométrica — Reflexão',          subject:'fisica',     chapter:'Óptica',                status:'draft',     views:0,   exercises:0, duration:11, access:'free',    updated:'2026-04-04' },
-            { id:4,  title:'Óptica Geométrica — Refração',          subject:'fisica',     chapter:'Óptica',                status:'draft',     views:0,   exercises:2, duration:13, access:'free',    updated:'2026-04-03' },
-            { id:5,  title:'Termodinâmica — 1ª Lei',                subject:'fisica',     chapter:'Termodinâmica',         status:'published', views:71,  exercises:3, duration:15, access:'premium', updated:'2026-04-01' },
-            { id:6,  title:'Eletricidade — Lei de Ohm',             subject:'fisica',     chapter:'Eletricidade',          status:'published', views:88,  exercises:5, duration:16, access:'free',    updated:'2026-03-30' },
-            { id:7,  title:'Movimento Circular Uniforme',           subject:'fisica',     chapter:'Cinemática',            status:'published', views:55,  exercises:4, duration:10, access:'free',    updated:'2026-03-28' },
-            { id:8,  title:'Queda Livre e Lançamento Vertical',     subject:'fisica',     chapter:'Cinemática',            status:'published', views:62,  exercises:5, duration:13, access:'free',    updated:'2026-03-25' },
-            { id:9,  title:'Força de Atrito',                       subject:'fisica',     chapter:'Dinâmica',              status:'published', views:44,  exercises:3, duration:9,  access:'free',    updated:'2026-03-22' },
-            { id:10, title:'Energia Cinética e Potencial',          subject:'fisica',     chapter:'Dinâmica',              status:'published', views:50,  exercises:4, duration:12, access:'free',    updated:'2026-03-20' },
-            { id:11, title:'Ondas Mecânicas — Conceitos',           subject:'fisica',     chapter:'Óptica',                status:'draft',     views:0,   exercises:0, duration:11, access:'free',    updated:'2026-03-18' },
-            { id:12, title:'Circuitos Elétricos Simples',           subject:'fisica',     chapter:'Eletricidade',          status:'published', views:39,  exercises:4, duration:14, access:'premium', updated:'2026-03-15' },
-            { id:13, title:'Lei de Coulomb',                        subject:'fisica',     chapter:'Eletricidade',          status:'published', views:33,  exercises:3, duration:10, access:'free',    updated:'2026-03-12' },
-            { id:14, title:'Funções Quadráticas — Gráficos',        subject:'matematica', chapter:'Funções',               status:'published', views:54,  exercises:6, duration:18, access:'free',    updated:'2026-04-02' },
-            { id:15, title:'Geometria Analítica — Ponto e Reta',    subject:'matematica', chapter:'Geometria Analítica',   status:'published', views:41,  exercises:4, duration:15, access:'free',    updated:'2026-03-28' },
-            { id:16, title:'Tabela Periódica — Grupos e Períodos',  subject:'quimica',    chapter:'Átomos e Moléculas',    status:'draft',     views:0,   exercises:2, duration:12, access:'free',    updated:'2026-03-26' },
-        ];
+        // Capítulos criados pelo professor (via /api/creator/chapters)
+        let CREATOR_CHAPTERS = [];
 
         let currentTab = 'all';
         let currentView = 'list';
@@ -426,14 +419,27 @@
         function filterLessons() { renderLessons(); }
 
         // ── Render ───────────────────────────────────────────────────────
+        function updateTabCounts() {
+            const all = ALL_LESSONS;
+            document.getElementById('count-all').textContent          = all.length;
+            document.getElementById('count-published').textContent    = all.filter(l => l.status === 'published').length;
+            document.getElementById('count-draft').textContent        = all.filter(l => l.status === 'draft').length;
+            document.getElementById('count-no-exercises').textContent = all.filter(l => (l.exercises || 0) === 0).length;
+        }
+
         function renderLessons() {
+            updateTabCounts();
             const list = getFiltered();
             const container = document.getElementById('content-list');
             const empty = document.getElementById('empty-state');
 
             document.getElementById('showing-count').textContent = list.length;
 
-            if (list.length === 0) {
+            // IDs de capítulos que já têm pelo menos uma lição (no filtro actual)
+            const usedChapterIds = new Set(list.map(l => l.chapter_id).filter(Boolean));
+            const emptyChapters = (CREATOR_CHAPTERS || []).filter(ch => ch.id && !usedChapterIds.has(ch.id));
+
+            if (list.length === 0 && emptyChapters.length === 0) {
                 container.innerHTML = '';
                 empty.classList.remove('hidden');
                 empty.classList.add('flex');
@@ -447,6 +453,59 @@
             } else {
                 renderList(list, container);
             }
+
+            // Anexar capítulos vazios (sem lições) — permite editar/eliminar
+            if (emptyChapters.length) {
+                container.insertAdjacentHTML('beforeend', renderEmptyChaptersBlock(emptyChapters));
+            }
+        }
+
+        function renderEmptyChaptersBlock(chapters) {
+            const rows = chapters.map(ch => {
+                // Inferir disciplina a partir do slug (ex: "mz10mat-1762…").
+                // Tentar também casar por nome para encontrar o meta desduplicado.
+                const slugPrefix = (ch.slug || '').split('-')[0];
+                let subjKey = slugPrefix;
+                let meta = SUBJECT_META[subjKey];
+                if (!meta) {
+                    // Procurar por nome em CURRENT_COUNTRY (slugs de classes diferentes
+                    // podem apontar para a mesma disciplina desduplicada).
+                    let found = null;
+                    CURRENT_COUNTRY?.levels?.forEach(lv => lv.grades?.forEach(g => g.subjects?.forEach(s => {
+                        if (s.id === slugPrefix) found = s.name;
+                    })));
+                    if (found) {
+                        const k = Object.keys(SUBJECT_META).find(k => SUBJECT_META[k].label === found);
+                        if (k) { subjKey = k; meta = SUBJECT_META[k]; }
+                    }
+                }
+                meta = meta || { label: slugPrefix || '—', color: 'gray', icon: 'fa-folder' };
+                const safeTitle = (ch.title || '').replace(/'/g, "\\'");
+                return `
+                <div class="flex items-center gap-3 px-6 py-3 border-b border-gray-50 last:border-b-0">
+                    <i class="fas fa-folder text-${meta.color}-400 text-sm"></i>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-gray-700 truncate">${ch.title || '(sem título)'}</p>
+                        <p class="text-xs text-gray-400">${meta.label} · sem lições${ch.trimester ? ` · período ${ch.trimester}` : ''}</p>
+                    </div>
+                    <button onclick="openNewLessonModal('${subjKey}','${safeTitle}')" class="text-xs text-purple-600 hover:text-purple-800 font-medium">
+                        <i class="fas fa-plus text-xs"></i> Adicionar lição
+                    </button>
+                    <button onclick="openDeleteChapterModal('${ch.id}','${safeTitle}')" class="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition" title="Eliminar capítulo">
+                        <i class="fas fa-trash text-xs"></i>
+                    </button>
+                </div>`;
+            }).join('');
+
+            return `
+            <div class="chapter-group ml-0">
+                <div class="flex items-center gap-2 px-6 py-3 bg-amber-50 border-b border-amber-100">
+                    <i class="fas fa-folder-open text-amber-500 text-sm"></i>
+                    <span class="text-sm font-semibold text-amber-800">Capítulos sem lições</span>
+                    <span class="text-xs text-amber-600 ml-auto">${chapters.length} capítulo(s)</span>
+                </div>
+                ${rows}
+            </div>`;
         }
 
         function statusBadge(s) {
@@ -460,7 +519,7 @@
             const grouped = {};
             list.forEach(l => {
                 const key = `${l.subject}__${l.chapter}`;
-                if (!grouped[key]) grouped[key] = { subject: l.subject, chapter: l.chapter, lessons: [] };
+                if (!grouped[key]) grouped[key] = { subject: l.subject, chapter: l.chapter, chapterId: l.chapter_id || '', lessons: [] };
                 grouped[key].lessons.push(l);
             });
 
@@ -471,7 +530,7 @@
                     return `
                     <div class="lesson-row flex items-center gap-4 px-6 py-3.5 border-b border-gray-50 last:border-b-0">
                         <input type="checkbox" class="lesson-check w-4 h-4 rounded accent-purple-600" data-id="${l.id}"
-                            ${checked ? 'checked' : ''} onchange="toggleSelect(${l.id}, this.checked)">
+                            ${checked ? 'checked' : ''} onchange="toggleSelect('${l.id}', this.checked)">
                         <i class="drag-handle fas fa-grip-vertical text-sm"></i>
                         <div class="w-8 h-8 bg-${meta.color}-100 rounded-lg flex items-center justify-center flex-shrink-0">
                             <i class="fas fa-play-circle text-${meta.color}-600 text-sm"></i>
@@ -489,19 +548,23 @@
                         </div>
                         ${statusBadge(l.status)}
                         <div class="flex items-center gap-1">
+                            <a href="/lesson.html?id=${l.id}" target="_blank" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition" title="Visualizar">
+                                <i class="fas fa-eye text-xs"></i>
+                            </a>
                             <a href="/creator-lesson-editor.html?id=${l.id}" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition" title="Editar">
                                 <i class="fas fa-pen text-xs"></i>
                             </a>
-                            <button onclick="toggleLessonStatus(${l.id})" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition" title="${l.status === 'published' ? 'Mover p/ rascunho' : 'Publicar'}">
+                            <button onclick="toggleLessonStatus('${l.id}')" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition" title="${l.status === 'published' ? 'Mover p/ rascunho' : 'Publicar'}">
                                 <i class="fas ${l.status === 'published' ? 'fa-eye-slash' : 'fa-check-circle'} text-xs"></i>
                             </button>
-                            <button onclick="openDeleteModal(${l.id})" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition" title="Excluir">
+                            <button onclick="openDeleteModal('${l.id}')" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition" title="Excluir">
                                 <i class="fas fa-trash text-xs"></i>
                             </button>
                         </div>
                     </div>`;
                 }).join('');
 
+                const chapterId = g.chapterId || '';
                 return `
                 <div class="chapter-group ml-0 transition">
                     <div class="flex items-center gap-3 px-6 py-3 bg-gray-50 border-b border-gray-100">
@@ -512,6 +575,9 @@
                         <button onclick="openNewLessonModal('${g.subject}','${g.chapter}')" class="text-xs text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1">
                             <i class="fas fa-plus text-xs"></i> Adicionar
                         </button>
+                        ${chapterId ? `<button onclick="openDeleteChapterModal('${chapterId}','${g.chapter.replace(/'/g,"\\'")}')" class="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition" title="Eliminar capítulo">
+                            <i class="fas fa-trash text-xs"></i>
+                        </button>` : ''}
                     </div>
                     ${rows}
                 </div>`;
@@ -540,13 +606,16 @@
                                 <span class="ml-auto">${l.access === 'premium' ? '🔒' : '🆓'}</span>
                             </div>
                             <div class="flex items-center gap-2">
+                                <a href="/lesson.html?id=${l.id}" target="_blank" class="py-2 px-3 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition" title="Visualizar">
+                                    <i class="fas fa-eye"></i>
+                                </a>
                                 <a href="/creator-lesson-editor.html?id=${l.id}" class="flex-1 text-center py-2 text-xs font-semibold text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition">
                                     <i class="fas fa-pen mr-1"></i> Editar
                                 </a>
-                                <button onclick="toggleLessonStatus(${l.id})" class="py-2 px-3 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
+                                <button onclick="toggleLessonStatus('${l.id}')" class="py-2 px-3 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
                                     <i class="fas ${l.status==='published'?'fa-eye-slash':'fa-check-circle'}"></i>
                                 </button>
-                                <button onclick="openDeleteModal(${l.id})" class="py-2 px-3 text-xs text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition">
+                                <button onclick="openDeleteModal('${l.id}')" class="py-2 px-3 text-xs text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
@@ -580,42 +649,61 @@
             document.querySelectorAll('.lesson-check').forEach(c => c.checked = false);
         }
 
-        function bulkPublish() {
-            selectedIds.forEach(id => {
-                const l = ALL_LESSONS.find(x => x.id === id);
-                if (l) l.status = 'published';
-            });
-            VClass.showNotification(`${selectedIds.size} lições publicadas!`, 'success');
+        async function bulkSetStatus(status) {
+            const ids = [...selectedIds];
+            const results = await Promise.allSettled(ids.map(id =>
+                fetch(`/api/creator/lesson/${id}`, { method: 'PUT', headers: apiHeaders(), body: JSON.stringify({ status }) }).then(r => r.json())
+            ));
+            const ok = results.filter(r => r.status === 'fulfilled' && r.value?.success).length;
+            ids.forEach(id => { const l = ALL_LESSONS.find(x => x.id === id); if (l) l.status = status; });
+            VClass.showNotification(`${ok}/${ids.length} lições atualizadas.`, ok ? 'success' : 'error');
             clearSelection();
             renderLessons();
         }
 
-        function bulkDraft() {
-            selectedIds.forEach(id => {
-                const l = ALL_LESSONS.find(x => x.id === id);
-                if (l) l.status = 'draft';
-            });
-            VClass.showNotification(`${selectedIds.size} lições movidas para rascunho.`, 'info');
-            clearSelection();
-            renderLessons();
-        }
+        function bulkPublish() { return bulkSetStatus('published'); }
+        function bulkDraft()   { return bulkSetStatus('draft'); }
 
-        function bulkDelete() {
+        async function bulkDelete() {
             if (!confirm(`Excluir ${selectedIds.size} lições? Esta ação não pode ser desfeita.`)) return;
-            ALL_LESSONS = ALL_LESSONS.filter(l => !selectedIds.has(l.id));
-            VClass.showNotification(`${selectedIds.size} lições excluídas.`, 'warning');
+            const ids = [...selectedIds];
+            const results = await Promise.allSettled(ids.map(id =>
+                fetch(`/api/creator/lesson/${id}`, { method: 'DELETE', headers: apiHeaders() }).then(r => r.json())
+            ));
+            const ok = results.filter(r => r.status === 'fulfilled' && r.value?.success).length;
+            ALL_LESSONS = ALL_LESSONS.filter(l => !ids.includes(l.id) || !ids.includes(l.id));
+            // Remover apenas os que foram eliminados com sucesso
+            const deletedSet = new Set(ids.filter((_, i) => results[i].status === 'fulfilled' && results[i].value?.success));
+            ALL_LESSONS = ALL_LESSONS.filter(l => !deletedSet.has(l.id));
+            VClass.showNotification(`${ok}/${ids.length} lições eliminadas.`, ok ? 'warning' : 'error');
             clearSelection();
             renderLessons();
         }
 
-        // ── Toggle Status ────────────────────────────────────────────────
-        function toggleLessonStatus(id) {
+        // ── API helper ───────────────────────────────────────────────────
+        function apiHeaders() {
+            const token = localStorage.getItem('accessToken') || '';
+            return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+        }
+
+        // ── Toggle Status (publicar/rascunho) ────────────────────────────
+        async function toggleLessonStatus(id) {
             const l = ALL_LESSONS.find(x => x.id === id);
             if (!l) return;
-            l.status = l.status === 'published' ? 'draft' : 'published';
-            const msg = l.status === 'published' ? `"${l.title}" publicada!` : `"${l.title}" movida para rascunho.`;
-            VClass.showNotification(msg, l.status === 'published' ? 'success' : 'info');
-            renderLessons();
+            const newStatus = l.status === 'published' ? 'draft' : 'published';
+            try {
+                const r = await fetch(`/api/creator/lesson/${id}`, {
+                    method: 'PUT', headers: apiHeaders(),
+                    body: JSON.stringify({ status: newStatus })
+                });
+                const d = await r.json();
+                if (!d.success) throw new Error(d.error || 'Falha ao atualizar');
+                l.status = newStatus;
+                VClass.showNotification(newStatus === 'published' ? `"${l.title}" publicada!` : `"${l.title}" movida para rascunho.`, newStatus === 'published' ? 'success' : 'info');
+                renderLessons();
+            } catch (e) {
+                VClass.showNotification(e.message || 'Erro ao atualizar lição', 'error');
+            }
         }
 
         // ── Delete ───────────────────────────────────────────────────────
@@ -626,11 +714,23 @@
             document.getElementById('modal-delete').classList.remove('hidden');
         }
 
-        function confirmDelete() {
-            ALL_LESSONS = ALL_LESSONS.filter(l => l.id !== deletingId);
-            VClass.showNotification('Lição excluída.', 'warning');
-            closeModal('modal-delete');
-            renderLessons();
+        async function confirmDelete() {
+            if (!deletingId) return;
+            try {
+                const r = await fetch(`/api/creator/lesson/${deletingId}`, {
+                    method: 'DELETE', headers: apiHeaders()
+                });
+                const d = await r.json();
+                if (!d.success) throw new Error(d.error || 'Falha ao eliminar');
+                ALL_LESSONS = ALL_LESSONS.filter(l => l.id !== deletingId);
+                VClass.showNotification('Lição excluída.', 'warning');
+                closeModal('modal-delete');
+                renderLessons();
+            } catch (e) {
+                VClass.showNotification(e.message || 'Erro ao eliminar', 'error');
+            } finally {
+                deletingId = null;
+            }
         }
 
         // ── Modal Helpers ────────────────────────────────────────────────
@@ -646,8 +746,39 @@
             document.getElementById('modal-new-chapter').classList.remove('hidden');
         }
 
+        // ── Delete Chapter ───────────────────────────────────────────────
+        let deletingChapterId = null;
+
+        function openDeleteChapterModal(chapterId, chapterTitle) {
+            deletingChapterId = chapterId;
+            document.getElementById('delete-chapter-name').textContent = 'Eliminar "' + chapterTitle + '"? Esta ação não pode ser desfeita.';
+            document.getElementById('modal-delete-chapter').classList.remove('hidden');
+        }
+
+        async function confirmDeleteChapter() {
+            if (!deletingChapterId) return;
+            try {
+                const r = await fetch('/api/creator/chapter/' + deletingChapterId, {
+                    method: 'DELETE', headers: apiHeaders()
+                });
+                const d = await r.json();
+                if (!d.success) throw new Error(d.error || 'Falha ao eliminar capítulo');
+                // Remover lições desse capítulo do estado local
+                ALL_LESSONS = ALL_LESSONS.filter(l => l.chapter_id !== deletingChapterId);
+                // Remover também da lista de capítulos do professor
+                CREATOR_CHAPTERS = CREATOR_CHAPTERS.filter(ch => ch.id !== deletingChapterId);
+                VClass.showNotification('Capítulo eliminado com sucesso.', 'warning');
+                closeModal('modal-delete-chapter');
+                renderLessons();
+            } catch(e) {
+                VClass.showNotification(e.message || 'Erro ao eliminar capítulo', 'error');
+            } finally {
+                deletingChapterId = null;
+            }
+        }
+
         // Close modals on backdrop click
-        ['modal-new-lesson','modal-new-chapter','modal-delete'].forEach(id => {
+        ['modal-new-lesson','modal-new-chapter','modal-delete','modal-delete-chapter'].forEach(id => {
             document.getElementById(id)?.addEventListener('click', function(e) {
                 if (e.target === this) closeModal(id);
             });
@@ -690,14 +821,39 @@
             location.href = `/creator-lesson-editor.html?id=${id}&title=${encodeURIComponent(title)}`;
         }
 
-        function createChapter() {
-            const name      = document.getElementById('new-chapter-name').value.trim();
+        async function createChapter() {
+            const title     = document.getElementById('new-chapter-name').value.trim();
             const subjectId = document.getElementById('new-chapter-subject').value;
-            if (!name || !subjectId) { VClass.showNotification('Preencha o nome e a disciplina.', 'warning'); return; }
-            if (!CHAPTERS_BY_SUBJECT[subjectId]) CHAPTERS_BY_SUBJECT[subjectId] = [];
-            CHAPTERS_BY_SUBJECT[subjectId].unshift({ title: name, term: parseInt(document.getElementById('new-chapter-trimester').value) || 1 });
-            VClass.showNotification(`Capítulo "${name}" criado com sucesso!`, 'success');
-            closeModal('modal-new-chapter');
+            const trimester = parseInt(document.getElementById('new-chapter-trimester').value) || 1;
+            const description = document.getElementById('new-chapter-desc')?.value || '';
+            if (!title || !subjectId) { VClass.showNotification('Preencha o nome e a disciplina.', 'warning'); return; }
+
+            // subjectId pode ser slug do currículo (ex: "mz10mat") ou só "fisica".
+            // O backend resolve via subject_slug → grade_subject_id quando possível.
+            try {
+                const r = await fetch('/api/creator/chapter', {
+                    method: 'POST', headers: apiHeaders(),
+                    body: JSON.stringify({ title, subject_slug: subjectId, slug: `${subjectId}-${Date.now()}`, trimester, description })
+                });
+                const d = await r.json();
+                if (!d.success) throw new Error(d.error || 'Falha ao criar capítulo');
+
+                if (!CHAPTERS_BY_SUBJECT[subjectId]) CHAPTERS_BY_SUBJECT[subjectId] = [];
+                CHAPTERS_BY_SUBJECT[subjectId].unshift({ title, term: trimester, id: d.data?.id });
+                // Adicionar também à lista de capítulos do professor (usada nos dropdowns)
+                if (d.data) {
+                    CREATOR_CHAPTERS.unshift({
+                        id: d.data.id, title, slug: d.data.slug || `${subjectId}-${Date.now()}`,
+                        trimester, description, grade_subject_id: d.data.grade_subject_id
+                    });
+                }
+                VClass.showNotification(`Capítulo "${title}" criado com sucesso!`, 'success');
+                closeModal('modal-new-chapter');
+                document.getElementById('new-chapter-name').value = '';
+                if (document.getElementById('new-chapter-desc')) document.getElementById('new-chapter-desc').value = '';
+            } catch (e) {
+                VClass.showNotification(e.message || 'Erro ao criar capítulo', 'error');
+            }
         }
 
         // ── Currículo dinâmico ─────────────────────────────────────────────
@@ -745,15 +901,21 @@
 
                 SUBJECT_META = {};
                 CHAPTERS_BY_SUBJECT = {};
+                // Desduplicar por nome de disciplina (várias classes podem ter
+                // a mesma disciplina com IDs diferentes, ex: mz10mat / mz11mat).
+                const seenByName = new Map(); // nome lowercase → key escolhida
                 if (CURRENT_COUNTRY) {
                     CURRENT_COUNTRY.levels.forEach(level => {
                         level.grades.forEach(grade => {
                             grade.subjects.forEach(subj => {
-                                const key = subj.id;
-                                if (!SUBJECT_META[key]) {
+                                const nameKey = (subj.name || '').toLowerCase().trim();
+                                let key = seenByName.get(nameKey);
+                                if (!key) {
+                                    key = subj.id;
+                                    seenByName.set(nameKey, key);
                                     SUBJECT_META[key] = { label: subj.name, color: getColorForSubject(subj.name), icon: subj.icon || 'fa-book' };
+                                    CHAPTERS_BY_SUBJECT[key] = [];
                                 }
-                                if (!CHAPTERS_BY_SUBJECT[key]) CHAPTERS_BY_SUBJECT[key] = [];
                                 subj.chapters.forEach(ch => {
                                     if (!CHAPTERS_BY_SUBJECT[key].find(x => x.title === ch.title)) {
                                         CHAPTERS_BY_SUBJECT[key].push({ title: ch.title, term: ch.term });
@@ -787,29 +949,103 @@
         function loadChaptersForSubject() {
             const subj = document.getElementById('new-lesson-subject').value;
             const sel  = document.getElementById('new-lesson-chapter');
-            const chapters = CHAPTERS_BY_SUBJECT[subj] || [];
-            if (!chapters.length) { sel.innerHTML = '<option value="">Nenhum capítulo disponível</option>'; return; }
-            if (typeof chapters[0] === 'object') {
-                const terms = [...new Set(chapters.map(c => c.term))].sort();
-                const termLabel = CURRENT_COUNTRY?.educationTerms === 'bimestres' ? 'Bimestre'
-                                : CURRENT_COUNTRY?.educationTerms === 'semestres'  ? 'Semestre'
-                                : 'Trimestre';
-                let opts = '<option value="">Selecionar capítulo...</option>';
+            if (!subj) { sel.innerHTML = '<option value="">Selecione a disciplina</option>'; return; }
+
+            // Mostrar APENAS capítulos criados pelo professor (filtra por slug = `${subj}-…`)
+            const mine = (CREATOR_CHAPTERS || []).filter(ch =>
+                (ch.slug || '').toLowerCase().startsWith(subj.toLowerCase() + '-')
+            );
+
+            if (!mine.length) {
+                sel.innerHTML = '<option value="">— Sem capítulos. Crie pelo botão "Novo Capítulo" —</option>';
+                return;
+            }
+
+            const termLabel = CURRENT_COUNTRY?.educationTerms === 'bimestres' ? 'Bimestre'
+                            : CURRENT_COUNTRY?.educationTerms === 'semestres'  ? 'Semestre'
+                            : 'Trimestre';
+
+            const hasTerms = mine.some(c => c.trimester);
+            let opts = '<option value="">Selecionar capítulo...</option>';
+            if (hasTerms) {
+                const terms = [...new Set(mine.map(c => c.trimester || 0))].sort();
                 terms.forEach(t => {
-                    const group = chapters.filter(c => c.term === t);
-                    opts += `<optgroup label="── ${termLabel} ${t} ──">`;
-                    opts += group.map(c => `<option value="${c.title}">${c.title}</option>`).join('');
+                    const group = mine.filter(c => (c.trimester || 0) === t);
+                    opts += t ? `<optgroup label="── ${termLabel} ${t} ──">` : `<optgroup label="── Sem período ──">`;
+                    opts += group.map(c => `<option value="${c.id}" data-title="${(c.title||'').replace(/"/g,'&quot;')}">${c.title}</option>`).join('');
                     opts += '</optgroup>';
                 });
-                sel.innerHTML = opts;
             } else {
-                sel.innerHTML = chapters.map(c => `<option value="${c}">${c}</option>`).join('');
+                opts += mine.map(c => `<option value="${c.id}" data-title="${(c.title||'').replace(/"/g,'&quot;')}">${c.title}</option>`).join('');
+            }
+            sel.innerHTML = opts;
+        }
+
+        async function loadCreatorChapters() {
+            try {
+                const token = localStorage.getItem('accessToken') || '';
+                const r = await fetch('/api/creator/chapters', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const d = await r.json();
+                if (d.success && Array.isArray(d.data)) CREATOR_CHAPTERS = d.data;
+            } catch (e) {
+                console.warn('loadCreatorChapters failed', e);
             }
         }
 
+        // ── Carregar lições reais da API ───────────────────────────────
+        async function loadRealLessons() {
+            try {
+                const token = localStorage.getItem('accessToken') || '';
+                const r = await fetch('/api/creator/lessons?limit=200', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const d = await r.json();
+                if (!d.success || !Array.isArray(d.data)) return;
+
+                // Mapear formato API → formato esperado pelo render
+                const apiLessons = d.data.map(l => ({
+                    id:        l.id,
+                    title:     l.title,
+                    // Determinar disciplina a partir do nome do capítulo (heurística);
+                    // se não conseguir, fica 'outra' (ainda visível com filtro "Todas").
+                    subject:   guessSubjectFromText((l.chapter || '') + ' ' + (l.title || '')),
+                    chapter:   l.chapter || '—',
+                    chapter_id: l.chapter_id,
+                    status:    l.status || 'draft',
+                    views:     l.views || 0,
+                    exercises: 0,
+                    duration:  l.duration || 0,
+                    access:    l.access || 'free',
+                    updated:   l.updated || (l.created_at ? l.created_at.slice(0, 10) : ''),
+                    video_id:  l.video_id,
+                    isReal:    true   // flag para distinguir de mocks
+                }));
+
+                ALL_LESSONS = apiLessons;
+                renderLessons();
+            } catch (e) {
+                console.warn('loadRealLessons failed:', e);
+            }
+        }
+
+        function guessSubjectFromText(t) {
+            const s = (t || '').toLowerCase();
+            if (s.match(/(mat|funç|álgeb|geomet|trigon)/)) return 'matematica';
+            if (s.match(/(fís|cinemát|dinâm|óptica|ótica|termodinâm|eletric|ondas)/)) return 'fisica';
+            if (s.match(/(quím|átomo|reaç|tabela peri|moléc)/)) return 'quimica';
+            if (s.match(/(port|gramát|literat|redaç)/)) return 'portugues';
+            if (s.match(/(bio|célul|fisiol)/)) return 'biologia';
+            if (s.match(/(hist)/)) return 'historia';
+            if (s.match(/(geo)/)) return 'geografia';
+            return 'matematica';
+        }
+
         // ── Init ───────────────────────────────────────────────────────
-        renderLessons();
         loadCurriculumForContent();
+        loadCreatorChapters();
+        loadRealLessons();
     </script>
 </body>
 </html>

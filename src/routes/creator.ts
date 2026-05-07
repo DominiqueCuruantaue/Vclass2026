@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
+import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware } from '../middleware/auth'
 import { getSupabase } from '../config/supabase'
+import { createBunnyVideo, buildBunnyTusCredentials, getBunnyVideoStatus } from '../utils/bunny'
 
 function isDatabaseConfigured(env?: any): boolean {
   const hasUrl = !!(env?.SUPABASE_URL || process.env.SUPABASE_URL)
@@ -9,10 +11,12 @@ function isDatabaseConfigured(env?: any): boolean {
 }
 
 function createSupabaseClient(env?: any) {
-  return getSupabase(env)
+  const sb = getSupabase(env)
+  if (!sb) throw new Error('Database not configured')
+  return sb
 }
 
-const creator = new Hono()
+const creator = new Hono<{ Bindings: CloudflareBindings }>()
 
 // ── Middleware: todos os endpoints requerem autenticação ──────────────────────
 creator.use('*', authMiddleware)
@@ -33,78 +37,133 @@ creator.use('*', async (c, next) => {
 // ═════════════════════════════════════════════════════════════════════════════
 creator.get('/dashboard', async (c) => {
   const user = c.get('user') as any
-
-  if (!isDatabaseConfigured(c.env)) {
-    // Dados mock para o modo demo
-    return c.json({
-      success: true,
-      data: {
-        creator: { id: user.id, name: user.full_name, role: user.role },
-        stats: {
-          total_lessons: 6,         // MVP — 6 aulas demo
-          total_chapters: 4,         // MVP — capítulos demo
-          total_students_reached: 0, // MVP — sem alunos reais
-          avg_approval_rate: 0,
-          published_lessons: 6,
-          draft_lessons: 0,
-          weekly_views: 0,
-          weekly_completions: 0,
-          weekly_exercises_done: 0
-        },
-        weekly_chart: {
-          labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
-          views: [0, 0, 0, 0, 0, 0, 0],
-          completions: [0, 0, 0, 0, 0, 0, 0]
-        },
-        subjects: [
-          { id: 1, name: 'Física',     color: 'teal',   lessons: 2, progress_pct: 0 },
-          { id: 2, name: 'Matemática', color: 'indigo', lessons: 4, progress_pct: 0 }
-        ],
-        monthly_goal: { target: 10, achieved: 6 },
-        tips: [
-          { id: 1, text: 'Lições com exercícios têm 3× mais engajamento. Adicione pelo menos 3 questões por aula!' },
-          { id: 2, text: 'Vídeos entre 8 e 15 minutos têm maior taxa de conclusão. Evite aulas muito longas.' },
-          { id: 3, text: 'Organize conteúdo em capítulos com sequência lógica para melhor progressão.' }
-        ]
-      }
-    })
-  }
-
   const supabase = createSupabaseClient(c.env)
 
   try {
     // Lições do criador
     const { data: lessons } = await supabase
       .from('lessons')
-      .select('id, status')
+      .select('id, status, chapter_id')
       .eq('created_by', user.id)
 
     const totalLessons = lessons?.length ?? 0
     const published    = lessons?.filter((l: any) => l.status === 'published').length ?? 0
     const drafts       = lessons?.filter((l: any) => l.status === 'draft').length ?? 0
+    const reviewing    = lessons?.filter((l: any) => l.status === 'review').length ?? 0
     const lessonIds    = lessons?.map((l: any) => l.id) ?? []
 
+    // Capítulos criados pelo professor (com fallback se created_by não existir)
+    let chaptersCount = 0
+    try {
+      const { count } = await supabase
+        .from('chapters')
+        .select('id', { count: 'exact', head: true })
+        .eq('created_by', user.id)
+      chaptersCount = count ?? 0
+    } catch {
+      // created_by pode não existir — contar pelos chapter_ids das lições
+      const uniqueChapters = new Set((lessons ?? []).map((l: any) => l.chapter_id).filter(Boolean))
+      chaptersCount = uniqueChapters.size
+    }
+    if (chaptersCount === 0) {
+      const uniqueChapters = new Set((lessons ?? []).map((l: any) => l.chapter_id).filter(Boolean))
+      chaptersCount = uniqueChapters.size
+    }
+
     // Progresso de alunos nessas lições
-    const { data: progress } = lessonIds.length
-      ? await supabase.from('lesson_progress').select('user_id').in('lesson_id', lessonIds)
+    const { data: allProgress } = lessonIds.length
+      ? await supabase
+          .from('lesson_progress')
+          .select('user_id, progress_percent, created_at')
+          .in('lesson_id', lessonIds)
       : { data: [] }
 
-    const uniqueStudents = new Set((progress ?? []).map((p: any) => p.user_id)).size
+    const uniqueStudents = new Set((allProgress ?? []).map((p: any) => p.user_id)).size
+
+    // Score médio (aprovação) dos alunos com pelo menos 50% de progresso
+    const progWithScore = (allProgress ?? []).filter((p: any) => p.progress_percent >= 50)
+    const avgScore = progWithScore.length > 0
+      ? Math.round(progWithScore.reduce((acc: number, p: any) => acc + (p.progress_percent ?? 0), 0) / progWithScore.length)
+      : 0
+
+    // Engajamento semanal (últimos 7 dias)
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+    const weeklyProgress = (allProgress ?? []).filter((p: any) => p.created_at >= sevenDaysAgo)
+
+    const weeklyViews       = weeklyProgress.length
+    const weeklyCompletions = weeklyProgress.filter((p: any) => (p.progress_percent ?? 0) >= 80).length
+
+    // Distribuição por dia da semana (Seg=0 ... Dom=6)
+    const byDay = [0, 0, 0, 0, 0, 0, 0]
+    for (const p of weeklyProgress) {
+      const d = new Date(p.created_at)
+      byDay[(d.getDay() + 6) % 7]++
+    }
+
+    // Lições sem exercícios
+    let lessonsWithoutExercises = 0
+    if (lessonIds.length > 0) {
+      try {
+        const { data: exData } = await supabase
+          .from('exercises')
+          .select('lesson_id')
+          .in('lesson_id', lessonIds)
+        const lessonsWithEx = new Set((exData ?? []).map((e: any) => e.lesson_id))
+        lessonsWithoutExercises = lessonIds.filter((id: string) => !lessonsWithEx.has(id)).length
+      } catch {}
+    }
+
+    // Disciplinas: agrupar lições por subject via chapters -> grade_subjects -> subjects
+    let subjects: any[] = []
+    try {
+      const { data: lessonsWithSubj } = await supabase
+        .from('lessons')
+        .select('id, status, chapters(title, grade_subjects(subjects(name, icon_name)))')
+        .eq('created_by', user.id)
+
+      const subjectMap = new Map<string, { lessons: number; published: number; icon: string }>()
+      for (const l of lessonsWithSubj ?? []) {
+        const ch = (l as any).chapters
+        const subjectName: string = ch?.grade_subjects?.subjects?.name || 'Outros'
+        const subjectIcon: string = ch?.grade_subjects?.subjects?.icon_name || 'fa-book'
+        if (!subjectMap.has(subjectName)) {
+          subjectMap.set(subjectName, { lessons: 0, published: 0, icon: subjectIcon })
+        }
+        const s = subjectMap.get(subjectName)!
+        s.lessons++
+        if ((l as any).status === 'published') s.published++
+      }
+
+      subjects = Array.from(subjectMap.entries())
+        .map(([name, data]) => ({
+          name,
+          lessons: data.lessons,
+          published: data.published,
+          pct: data.lessons > 0 ? Math.round((data.published / data.lessons) * 100) : 0,
+          icon: data.icon
+        }))
+        .sort((a, b) => b.lessons - a.lessons)
+    } catch {}
 
     return c.json({
       success: true,
       data: {
         creator: { id: user.id, name: user.full_name, role: user.role },
         stats: {
-          total_lessons:            totalLessons,
-          published_lessons:        published,
-          draft_lessons:            drafts,
-          total_students_reached:   uniqueStudents,
-          avg_approval_rate:        0,  // Calculado a partir de resultados reais
-          weekly_views:             0,  // Requires video analytics
-          weekly_completions:       0,
-          weekly_exercises_done:    0
-        }
+          total_lessons:               totalLessons,
+          published_lessons:           published,
+          draft_lessons:               drafts,
+          review_lessons:              reviewing,
+          total_chapters:              chaptersCount,
+          total_students_reached:      uniqueStudents,
+          avg_approval_rate:           avgScore,
+          weekly_views:                weeklyViews,
+          weekly_completions:          weeklyCompletions,
+          weekly_exercises_done:       0,  // requer tabela de respostas de exercícios
+          weekly_by_day:               byDay,
+          lessons_without_exercises:   lessonsWithoutExercises,
+        },
+        subjects
       }
     })
   } catch (error: any) {
@@ -122,38 +181,48 @@ creator.get('/lessons', async (c) => {
   const page   = parseInt(c.req.query('page') || '1')
   const limit  = parseInt(c.req.query('limit') || '20')
 
-  if (!isDatabaseConfigured(c.env)) {
-    const MOCK_LESSONS = [
-      { id: 1,  title: 'Leis de Newton — Aplicações',      subject: 'Física',      chapter: 'Dinâmica',    status: 'published', views: 128, exercises: 5, duration: 14, access: 'free',    updated: '2026-04-07' },
-      { id: 2,  title: 'Cinemática — Movimento Uniforme',  subject: 'Física',      chapter: 'Cinemática',  status: 'published', views: 96,  exercises: 4, duration: 12, access: 'free',    updated: '2026-04-05' },
-      { id: 3,  title: 'Óptica Geométrica — Reflexão',     subject: 'Física',      chapter: 'Óptica',      status: 'draft',     views: 0,   exercises: 0, duration: 11, access: 'free',    updated: '2026-04-04' },
-      { id: 14, title: 'Funções Quadráticas — Gráficos',   subject: 'Matemática',  chapter: 'Funções',     status: 'published', views: 54,  exercises: 6, duration: 18, access: 'free',    updated: '2026-04-02' },
-      { id: 16, title: 'Tabela Periódica',                  subject: 'Química',     chapter: 'Átomos',      status: 'draft',     views: 0,   exercises: 2, duration: 12, access: 'free',    updated: '2026-03-26' }
-    ]
-    let filtered = status && status !== 'all' ? MOCK_LESSONS.filter(l => l.status === status) : MOCK_LESSONS
-    if (search) filtered = filtered.filter(l => l.title.toLowerCase().includes(search.toLowerCase()))
-    return c.json({ success: true, data: filtered, total: filtered.length, page, limit })
-  }
-
   const supabase = createSupabaseClient(c.env)
 
   try {
     let query = supabase
       .from('lessons')
-      .select('*, chapters(name, grade_subjects(subjects(name), grades(name)))')
+      // Schema real: chapters.title (não .name). Join é nullable porque chapters
+      // criados via slug podem não ter grade_subject_id.
+      .select('id, title, description, video_id, video_url, video_duration, status, views_count, display_order, is_free, thumbnail_url, created_at, updated_at, chapter_id, chapters(title, grade_subjects(subjects(name)))', { count: 'exact' })
       .eq('created_by', user.id)
       .order('created_at', { ascending: false })
       .range((page - 1) * limit, page * limit - 1)
 
-    if (status && status !== 'all') query = query.eq('status', status)
-    if (search) query = query.ilike('title', `%${search}%`)
+    if (status && status !== 'all') query = query.eq('status', status) as any
+    if (search) query = query.ilike('title', `%${search}%`) as any
 
     const { data, error, count } = await query
     if (error) throw error
 
-    return c.json({ success: true, data: data ?? [], total: count ?? 0, page, limit })
+    // Normalizar formato esperado pelo frontend
+    const normalized = (data ?? []).map((l: any) => ({
+      id: l.id,
+      title: l.title,
+      description: l.description,
+      subject: l.chapters?.grade_subjects?.subjects?.name || '—',
+      chapter: l.chapters?.title || '—',
+      chapter_id: l.chapter_id,
+      video_id: l.video_id,
+      video_url: l.video_url,
+      duration: Math.round((l.video_duration || 0) / 60),
+      status: l.status,
+      views: l.views_count || 0,
+      exercises: 0,  // preenchido separadamente se necessário
+      access: l.is_free ? 'free' : 'premium',
+      thumbnail_url: l.thumbnail_url,
+      updated: l.updated_at?.slice(0, 10),
+      created_at: l.created_at
+    }))
+
+    return c.json({ success: true, data: normalized, total: count ?? 0, page, limit })
   } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
+    console.error('List creator lessons error:', error)
+    return c.json({ success: false, error: error.message || 'DB error' }, 500)
   }
 })
 
@@ -163,32 +232,39 @@ creator.get('/lessons', async (c) => {
 creator.get('/lesson/:id', async (c) => {
   const user = c.get('user') as any
   const id   = c.req.param('id')
-
-  if (!isDatabaseConfigured(c.env)) {
-    return c.json({
-      success: true,
-      data: {
-        id, title: 'Lição Demo', desc: 'Descrição da lição demo.',
-        notes: '', subject: 'fisica', chapter: 'Dinâmica',
-        order: 1, duration: 12, difficulty: 'medium',
-        video_id: '', status: 'draft', objectives: [], exercises: [], resources: []
-      }
-    })
-  }
-
   const supabase = createSupabaseClient(c.env)
 
   try {
+    // Query principal sem JOIN (mais robusto: nem todas as DBs têm exercises/options seedadas)
     const { data, error } = await supabase
       .from('lessons')
-      .select('*, exercises(*, options(*))')
+      .select('*')
       .eq('id', id)
       .eq('created_by', user.id)
-      .single()
+      .maybeSingle()
 
-    if (error || !data) return c.json({ success: false, error: 'Lição não encontrada' }, 404)
-    return c.json({ success: true, data })
+    if (error) {
+      console.error('Get lesson error:', error)
+      return c.json({ success: false, error: error.message || 'DB error' }, 500)
+    }
+    if (!data) return c.json({ success: false, error: 'Lição não encontrada' }, 404)
+
+    // Buscar exercises separadamente (não bloqueia se a tabela não existir)
+    let exercises: any[] = []
+    try {
+      const { data: exs } = await supabase
+        .from('exercises')
+        .select('*, options(*)')
+        .eq('lesson_id', id)
+        .order('order', { ascending: true })
+      exercises = exs || []
+    } catch (e: any) {
+      console.warn('exercises fetch failed:', e?.message)
+    }
+
+    return c.json({ success: true, data: { ...data, exercises } })
   } catch (error: any) {
+    console.error('Get lesson error:', error)
     return c.json({ success: false, error: error.message }, 500)
   }
 })
@@ -196,11 +272,151 @@ creator.get('/lesson/:id', async (c) => {
 // ═════════════════════════════════════════════════════════════════════════════
 // POST /api/creator/lesson — Criar nova lição
 // ═════════════════════════════════════════════════════════════════════════════
+/**
+ * Resolve um chapter_id que pode ser:
+ *  - UUID válido (FK directo)
+ *  - Slug do curriculum tree (ex: "mz10mat-1-1") → busca/cria chapter na DB
+ * Devolve sempre um UUID válido pronto para FK em lessons.
+ */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// Slug do currículo estático: ex. "mz11mat-1-1" → country=mz, grade=11, subject=mat, term=1, ord=1
+// O prefixo curricular "{country}{grade}{subject}" identifica o grade_subject na BD.
+//
+// Fallback estático para disciplinas seedadas (alguns shortnames têm 4 letras
+// como "port" ou abreviações que não derivam linearmente do nome).
+const STATIC_SUBJECT_SHORTNAME: Record<string, string> = {
+  mat: 'Matemática',     por: 'Português',  port: 'Português',
+  fis: 'Física',         qui: 'Química',    bio: 'Biologia',
+  geo: 'Geografia',      his: 'História',   ing: 'Inglês',
+  edm: 'Ed. Moral e Cívica'
+}
+
+// Normaliza nome → short de 3 letras (sem acentos/lowercase). "Robótica" → "rob"
+function nameToShort3(name: string): string {
+  return String(name || '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/[^a-z]/g, '')
+    .slice(0, 3)
+}
+
+// Cache curto (60s) para evitar query repetida a cada chapter criado, mas
+// permitir que disciplinas novas apareçam sem redeploy.
+let _shortMapCache: { data: Record<string, string>; expires: number } | null = null
+const SHORTMAP_TTL_MS = 60_000
+
+async function getSubjectShortMap(supabase: any): Promise<Record<string, string>> {
+  if (_shortMapCache && _shortMapCache.expires > Date.now()) return _shortMapCache.data
+  const map: Record<string, string> = { ...STATIC_SUBJECT_SHORTNAME }
+  try {
+    const { data } = await supabase.from('subjects').select('name')
+    for (const row of (data || [])) {
+      const short = nameToShort3(row.name)
+      if (short && short.length === 3 && !map[short]) {
+        map[short] = row.name
+      }
+    }
+  } catch (e) {
+    console.warn('getSubjectShortMap: BD lookup falhou, usando estático', e)
+  }
+  _shortMapCache = { data: map, expires: Date.now() + SHORTMAP_TTL_MS }
+  return map
+}
+
+/**
+ * Parseia "mz11mat-1-1" e devolve o grade_subjects.id correspondente na BD,
+ * fazendo lookup por nome de grade ("11ª Classe") e subject ("Matemática").
+ * Devolve null se o padrão não bater ou a relação não existir na BD.
+ */
+async function resolveGradeSubjectFromSlug(supabase: any, slug: string): Promise<string | null> {
+  // Padrão: 2 letras (país) + 2 dígitos (classe) + 3+ letras (subject) + "-" + resto
+  const m = slug.match(/^([a-z]{2})(\d{2})([a-z]{3,4})-/i)
+  if (!m) return null
+  const [, , gradeNum, subjShort] = m
+  const shortMap = await getSubjectShortMap(supabase)
+  const subjectName = shortMap[subjShort.toLowerCase()]
+  if (!subjectName) return null
+  const gradeName = `${parseInt(gradeNum, 10)}ª Classe`
+
+  // Lookup grade_subjects via JOIN inline (PostgREST)
+  const { data, error } = await supabase
+    .from('grade_subjects')
+    .select('id, grades!inner(name), subjects!inner(name)')
+    .eq('grades.name', gradeName)
+    .eq('subjects.name', subjectName)
+    .maybeSingle()
+
+  if (error) {
+    console.warn('resolveGradeSubjectFromSlug lookup failed:', error.message)
+    return null
+  }
+  return data?.id ?? null
+}
+
+async function resolveChapterUuid(supabase: any, chapterId: string, fallbackTitle?: string): Promise<string | null> {
+  if (!chapterId) return null
+  if (UUID_RE.test(chapterId)) return chapterId
+
+  // É slug — find-or-create
+  const { data: existing } = await supabase
+    .from('chapters')
+    .select('id, grade_subject_id')
+    .eq('slug', chapterId)
+    .maybeSingle()
+
+  if (existing?.id) {
+    // Backfill: chapters criados antes do fix podem ter grade_subject_id NULL,
+    // o que os torna invisíveis aos alunos. Resolver e UPDATE de forma idempotente.
+    if (!existing.grade_subject_id) {
+      const gsid = await resolveGradeSubjectFromSlug(supabase, chapterId)
+      if (gsid) {
+        await supabase.from('chapters').update({ grade_subject_id: gsid }).eq('id', existing.id)
+      }
+    }
+    return existing.id
+  }
+
+  // Resolver grade_subject_id a partir do slug — sem isto, o chapter fica
+  // invisível aos alunos (filtram por grade_subject_id em /api/content/chapters).
+  const gradeSubjectId = await resolveGradeSubjectFromSlug(supabase, chapterId)
+
+  const { data: created, error } = await supabase
+    .from('chapters')
+    .insert({
+      slug: chapterId,
+      title: fallbackTitle || chapterId,
+      description: 'Auto-criado via editor de lições',
+      display_order: 1,
+      grade_subject_id: gradeSubjectId   // null se a relação ainda não existir seedada
+    })
+    .select('id')
+    .single()
+
+  if (error) {
+    console.error('resolveChapterUuid: failed to create chapter for slug', chapterId, error)
+    return null
+  }
+  return created.id
+}
+
 creator.post('/lesson', async (c) => {
   const user = c.get('user') as any
   const body = await c.req.json()
 
-  const { title, desc, notes, chapter_id, duration, difficulty, video_id, order } = body
+  const {
+    title,
+    description = body.desc,
+    content     = body.notes,
+    chapter_id,
+    chapter_title,                                 // útil quando chapter_id é slug
+    video_duration = (body.duration || 0),
+    video_id,
+    video_url,
+    thumbnail_url,
+    is_free = false,
+    display_order = body.order || 1,
+    status = 'draft'
+  } = body
 
   if (!title || title.length < 3) {
     return c.json({ success: false, error: 'Título obrigatório (mín. 3 caracteres)' }, 400)
@@ -209,26 +425,36 @@ creator.post('/lesson', async (c) => {
     return c.json({ success: false, error: 'Capítulo obrigatório' }, 400)
   }
 
-  if (!isDatabaseConfigured(c.env)) {
-    return c.json({
-      success: true,
-      data: { id: Date.now(), title, desc, notes, chapter_id, duration, difficulty, video_id, order, status: 'draft', created_by: user.id },
-      message: 'Lição criada (modo demo)'
-    }, 201)
-  }
-
   const supabase = createSupabaseClient(c.env)
-
   try {
+    const resolvedChapterId = await resolveChapterUuid(supabase, chapter_id, chapter_title)
+    if (!resolvedChapterId) {
+      return c.json({ success: false, error: 'Não foi possível resolver capítulo. Tente outro.' }, 400)
+    }
+
     const { data, error } = await supabase
       .from('lessons')
-      .insert({ title, description: desc, notes, chapter_id, duration_seconds: (duration || 12) * 60, difficulty: difficulty || 'medium', video_id, order: order || 1, status: 'draft', created_by: user.id })
+      .insert({
+        title,
+        description,
+        content,
+        chapter_id: resolvedChapterId,
+        video_id,
+        video_url,
+        video_duration: typeof video_duration === 'number' ? video_duration : 0,
+        thumbnail_url,
+        is_free,
+        display_order,
+        status,
+        created_by: user.id
+      })
       .select()
       .single()
 
     if (error) throw error
-    return c.json({ success: true, data, message: 'Lição criada com sucesso!' }, 201)
+    return c.json({ success: true, data, message: 'Lição criada' }, 201)
   } catch (error: any) {
+    console.error('Create lesson error:', error)
     return c.json({ success: false, error: error.message }, 500)
   }
 })
@@ -240,11 +466,6 @@ creator.put('/lesson/:id', async (c) => {
   const user = c.get('user') as any
   const id   = c.req.param('id')
   const body = await c.req.json()
-
-  if (!isDatabaseConfigured(c.env)) {
-    return c.json({ success: true, data: { id, ...body }, message: 'Lição atualizada (modo demo)' })
-  }
-
   const supabase = createSupabaseClient(c.env)
 
   try {
@@ -252,24 +473,49 @@ creator.put('/lesson/:id', async (c) => {
     const { data: existing } = await supabase.from('lessons').select('id').eq('id', id).eq('created_by', user.id).single()
     if (!existing) return c.json({ success: false, error: 'Lição não encontrada ou sem permissão' }, 404)
 
-    const { title, desc, notes, duration, difficulty, video_id, order, status } = body
+    const {
+      title,
+      description = body.desc,
+      content     = body.notes,
+      video_duration = body.duration,
+      video_id,
+      video_url,
+      thumbnail_url,
+      is_free,
+      display_order = body.order,
+      status
+    } = body
 
     // Validações de publicação
     if (status === 'published') {
       if (!title || title.length < 3) return c.json({ success: false, error: 'Título obrigatório para publicar' }, 400)
-      if (!video_id) return c.json({ success: false, error: 'Vídeo obrigatório para publicar' }, 400)
+      if (!video_id && !video_url) return c.json({ success: false, error: 'Vídeo obrigatório para publicar' }, 400)
     }
+
+    // Construir payload só com campos definidos (evita NULL acidental)
+    const patch: Record<string, any> = { updated_at: new Date().toISOString() }
+    if (title          !== undefined) patch.title          = title
+    if (description    !== undefined) patch.description    = description
+    if (content        !== undefined) patch.content        = content
+    if (video_duration !== undefined) patch.video_duration = video_duration
+    if (video_id       !== undefined) patch.video_id       = video_id
+    if (video_url      !== undefined) patch.video_url      = video_url
+    if (thumbnail_url  !== undefined) patch.thumbnail_url  = thumbnail_url
+    if (is_free        !== undefined) patch.is_free        = is_free
+    if (display_order  !== undefined) patch.display_order  = display_order
+    if (status         !== undefined) patch.status         = status
 
     const { data, error } = await supabase
       .from('lessons')
-      .update({ title, description: desc, notes, duration_seconds: (duration || 12) * 60, difficulty, video_id, order, status, updated_at: new Date().toISOString() })
+      .update(patch)
       .eq('id', id)
       .select()
       .single()
 
     if (error) throw error
-    return c.json({ success: true, data, message: 'Lição atualizada com sucesso!' })
+    return c.json({ success: true, data, message: 'Lição atualizada' })
   } catch (error: any) {
+    console.error('Update lesson error:', error)
     return c.json({ success: false, error: error.message }, 500)
   }
 })
@@ -280,11 +526,6 @@ creator.put('/lesson/:id', async (c) => {
 creator.delete('/lesson/:id', async (c) => {
   const user = c.get('user') as any
   const id   = c.req.param('id')
-
-  if (!isDatabaseConfigured(c.env)) {
-    return c.json({ success: true, message: 'Lição excluída (modo demo)' })
-  }
-
   const supabase = createSupabaseClient(c.env)
 
   try {
@@ -327,10 +568,6 @@ creator.post('/lesson/:id/exercises', async (c) => {
     if (ex.options.some((o: string) => !o || o.trim().length === 0)) {
       return c.json({ success: false, error: 'Todas as alternativas devem ser preenchidas' }, 400)
     }
-  }
-
-  if (!isDatabaseConfigured(c.env)) {
-    return c.json({ success: true, data: exercises, message: `${exercises.length} exercícios guardados (modo demo)` })
   }
 
   const supabase = createSupabaseClient(c.env)
@@ -443,20 +680,88 @@ creator.get('/students', async (c) => {
   const supabase = createSupabaseClient(c.env)
 
   try {
-    // Buscar lições do criador
+    // 1) Buscar todos os alunos registados (role='student')
+    let usersQuery = supabase
+      .from('users')
+      .select('id, full_name, email, created_at', { count: 'exact' })
+      .eq('role', 'student')
+      .eq('is_active', true)
+
+    if (search) {
+      usersQuery = usersQuery.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`)
+    }
+
+    const { data: studentsRaw, count } = await usersQuery
+      .order('created_at', { ascending: false })
+      .range((page - 1) * limit, page * limit - 1)
+
+    const students = studentsRaw ?? []
+    if (students.length === 0) return c.json({ success: true, data: [], total: count ?? 0, page, limit })
+
+    // 2) Buscar lições do criador (para agregar progresso só nelas)
     const { data: lessons } = await supabase.from('lessons').select('id').eq('created_by', user.id)
     const lessonIds = (lessons ?? []).map((l: any) => l.id)
 
-    if (lessonIds.length === 0) return c.json({ success: true, data: [], total: 0, page, limit })
+    // 3) Buscar progresso desses alunos nas lições do criador
+    const studentIds = students.map((s: any) => s.id)
+    let progressByStudent: Record<string, { sumPct: number; n: number; done: number; lastAt: number }> = {}
 
-    // Buscar alunos com progresso nessas lições
-    const { data: students, count } = await supabase
-      .from('lesson_progress')
-      .select('user_id, users(id, full_name, email), progress_percent, score', { count: 'exact' })
-      .in('lesson_id', lessonIds)
-      .range((page - 1) * limit, page * limit - 1)
+    if (lessonIds.length > 0) {
+      const { data: progress } = await supabase
+        .from('student_progress')
+        .select('student_id, lesson_id, status, progress_percent, updated_at')
+        .in('student_id', studentIds)
+        .in('lesson_id', lessonIds)
 
-    return c.json({ success: true, data: students ?? [], total: count ?? 0, page, limit })
+      for (const p of progress ?? []) {
+        const sid = (p as any).student_id
+        const acc = progressByStudent[sid] ?? { sumPct: 0, n: 0, done: 0, lastAt: 0 }
+        acc.sumPct += (p as any).progress_percent ?? 0
+        acc.n += 1
+        if ((p as any).status === 'completed') acc.done += 1
+        const t = (p as any).updated_at ? new Date((p as any).updated_at).getTime() : 0
+        if (t > acc.lastAt) acc.lastAt = t
+        progressByStudent[sid] = acc
+      }
+    }
+
+    // 4) Pontuação média a partir de exercise_submissions (todas as submissões do aluno)
+    const scoreByStudent: Record<string, { correct: number; total: number }> = {}
+    {
+      const { data: subs } = await supabase
+        .from('exercise_submissions')
+        .select('student_id, is_correct')
+        .in('student_id', studentIds)
+      for (const s of subs ?? []) {
+        const sid = (s as any).student_id
+        const acc = scoreByStudent[sid] ?? { correct: 0, total: 0 }
+        acc.total += 1
+        if ((s as any).is_correct) acc.correct += 1
+        scoreByStudent[sid] = acc
+      }
+    }
+
+    const now = Date.now()
+    const data = students.map((s: any) => {
+      const p = progressByStudent[s.id]
+      const sc = scoreByStudent[s.id]
+      const progress = p && p.n ? Math.round(p.sumPct / p.n) : 0
+      const score = sc && sc.total ? Math.round((sc.correct / sc.total) * 100) : 0
+      const lastTs = p?.lastAt || (s.created_at ? new Date(s.created_at).getTime() : 0)
+      const daysAgo = lastTs ? Math.max(0, Math.floor((now - lastTs) / 86400000)) : 999
+      return {
+        user_id: s.id,
+        id: s.id,
+        full_name: s.full_name,
+        email: s.email,
+        progress_percent: progress,
+        score,
+        lessons_done: p?.done ?? 0,
+        last_active: `${daysAgo} dias atrás`,
+      }
+    })
+
+    return c.json({ success: true, data, total: count ?? data.length, page, limit })
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500)
   }
@@ -467,34 +772,141 @@ creator.get('/students', async (c) => {
 // ═════════════════════════════════════════════════════════════════════════════
 creator.post('/chapter', async (c) => {
   const user = c.get('user') as any
-  const { name, grade_subject_id, trimester, description } = await c.req.json()
+  const body = await c.req.json()
+  const title = (body.title || body.name || '').trim()
+  let { grade_subject_id, trimester, description, subject_slug, slug } = body
 
-  if (!name || name.trim().length < 2) {
-    return c.json({ success: false, error: 'Nome do capítulo obrigatório (mín. 2 caracteres)' }, 400)
-  }
-  if (!grade_subject_id) {
-    return c.json({ success: false, error: 'Disciplina/série obrigatória' }, 400)
-  }
-
-  if (!isDatabaseConfigured(c.env)) {
-    return c.json({
-      success: true,
-      data: { id: Date.now(), name: name.trim(), grade_subject_id, trimester: trimester || 1, description: description || '', created_by: user.id },
-      message: 'Capítulo criado (modo demo)'
-    }, 201)
+  if (!title || title.length < 2) {
+    return c.json({ success: false, error: 'Título do capítulo obrigatório (mín. 2 caracteres)' }, 400)
   }
 
   const supabase = createSupabaseClient(c.env)
 
+  // Resolver grade_subject_id a partir de subject_slug (ex: "mz10mat") se não fornecido
+  if (!grade_subject_id && subject_slug) {
+    const resolved = await resolveGradeSubjectFromSlug(supabase, `${subject_slug}-`)
+    if (resolved) grade_subject_id = resolved
+  }
+
+  // Columns available since migration 010 (created_by, trimester, updated_at).
+  // If the migration has not run yet, a retry without those columns is attempted.
+  const buildInsert = (withExtras: boolean): any => {
+    const obj: any = { title, description: description || '', display_order: 1 }
+    if (grade_subject_id) obj.grade_subject_id = grade_subject_id
+    if (slug) obj.slug = slug
+    if (withExtras) {
+      obj.created_by = user.id
+      obj.trimester  = trimester || 1
+    }
+    return obj
+  }
+
   try {
-    const { data, error } = await supabase
-      .from('chapters')
-      .insert({ name: name.trim(), grade_subject_id, trimester: trimester || 1, description: description || '', created_by: user.id })
-      .select()
-      .single()
+    let { data, error } = await supabase.from('chapters').insert(buildInsert(true)).select().single()
+
+    if (error?.message?.includes("created_by") || error?.message?.includes("trimester")) {
+      // Migration 010 not yet applied — retry without those columns
+      const res = await supabase.from('chapters').insert(buildInsert(false)).select().single()
+      data  = res.data
+      error = res.error
+    }
 
     if (error) throw error
     return c.json({ success: true, data, message: 'Capítulo criado com sucesso!' }, 201)
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// ═════════════════════════════════════════════════════════════════════════════
+// GET /api/creator/chapters — Listar capítulos criados pelo professor
+// ═════════════════════════════════════════════════════════════════════════════
+creator.get('/chapters', async (c) => {
+  const user = c.get('user') as any
+  const supabase = createSupabaseClient(c.env)
+
+  try {
+    // Try with created_by filter (requires migration 010).
+    // Fall back to unfiltered if column missing.
+    let { data, error } = await supabase
+      .from('chapters')
+      .select('id, title, slug, description, display_order, grade_subject_id, trimester, created_at')
+      .eq('created_by', user.id)
+      .order('created_at', { ascending: false })
+
+    if (error?.message?.includes('created_by') || error?.message?.includes('trimester')) {
+      const res = await supabase
+        .from('chapters')
+        .select('id, title, slug, description, display_order, grade_subject_id, created_at')
+        .order('created_at', { ascending: false })
+      data  = res.data
+      error = res.error
+    }
+
+    if (error) throw error
+    return c.json({ success: true, data: data ?? [] })
+  } catch (error: any) {
+    console.error('List chapters error:', error)
+    return c.json({ success: false, error: error.message || 'DB error' }, 500)
+  }
+})
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PUT /api/creator/chapter/:id — Atualizar capítulo
+// ═════════════════════════════════════════════════════════════════════════════
+creator.put('/chapter/:id', async (c) => {
+  const user = c.get('user') as any
+  const id = c.req.param('id')
+  const body = await c.req.json()
+  const supabase = createSupabaseClient(c.env)
+
+  const patch: any = {}
+  if (body.title !== undefined)         patch.title         = String(body.title).trim()
+  if (body.description !== undefined)   patch.description   = body.description
+  if (body.display_order !== undefined) patch.display_order = body.display_order
+
+  try {
+    let { data, error } = await supabase
+      .from('chapters').update(patch).eq('id', id).eq('created_by', user.id).select().maybeSingle()
+
+    if (error?.message?.includes('created_by')) {
+      const res = await supabase.from('chapters').update(patch).eq('id', id).select().maybeSingle()
+      data  = res.data
+      error = res.error
+    }
+
+    if (error) throw error
+    if (!data) return c.json({ success: false, error: 'Capítulo não encontrado' }, 404)
+    return c.json({ success: true, data, message: 'Capítulo atualizado' })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// ═════════════════════════════════════════════════════════════════════════════
+// DELETE /api/creator/chapter/:id — Eliminar capítulo (apenas se sem lições)
+// ═════════════════════════════════════════════════════════════════════════════
+creator.delete('/chapter/:id', async (c) => {
+  const user = c.get('user') as any
+  const id = c.req.param('id')
+  const supabase = createSupabaseClient(c.env)
+
+  try {
+    const { count } = await supabase
+      .from('lessons')
+      .select('id', { count: 'exact', head: true })
+      .eq('chapter_id', id)
+    if ((count ?? 0) > 0) {
+      return c.json({ success: false, error: 'Capítulo tem lições. Elimine-as primeiro.' }, 409)
+    }
+
+    let { error } = await supabase.from('chapters').delete().eq('id', id).eq('created_by', user.id)
+    if (error?.message?.includes('created_by')) {
+      const res = await supabase.from('chapters').delete().eq('id', id)
+      error = res.error
+    }
+    if (error) throw error
+    return c.json({ success: true, message: 'Capítulo eliminado' })
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500)
   }
@@ -506,72 +918,53 @@ creator.post('/chapter', async (c) => {
 // O browser faz o PUT directamente para o Bunny — o vídeo nunca passa pelo servidor.
 // ═════════════════════════════════════════════════════════════════════════════
 creator.post('/video/upload-url', async (c) => {
-  const user = c.get('user') as any
   const body = await c.req.json().catch(() => ({}))
   const { filename = 'video.mp4', title = 'Nova Lição' } = body
 
-  // Verificar se a Bunny API Key está configurada
-  const bunnyApiKey    = (c.env as any)?.BUNNY_API_KEY    || process.env.BUNNY_API_KEY    || ''
-  const bunnyLibraryId = (c.env as any)?.BUNNY_LIBRARY_ID || process.env.BUNNY_LIBRARY_ID || ''
-  const isBunnyConfigured = !!(bunnyApiKey && bunnyLibraryId)
+  const apiKey    = c.env?.BUNNY_API_KEY    || ''
+  const libraryId = c.env?.BUNNY_LIBRARY_ID || ''
 
-  // ── MODO DEMO: simular criação sem Bunny.net ─────────────────────────────
-  if (!isBunnyConfigured) {
-    const fakeVideoId = `demo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-    return c.json({
-      success: true,
-      demo: true,
-      data: {
-        videoId:   fakeVideoId,
-        uploadUrl: null,                  // sem URL real em modo demo
-        libraryId: 'demo-library',
-        title,
-        filename,
-        message:   'Modo demo: upload simulado. Configure BUNNY_API_KEY e BUNNY_LIBRARY_ID para uploads reais.'
-      }
-    })
+  if (!apiKey || !libraryId) {
+    return c.json({ success: false, error: 'Bunny.net não configurado (BUNNY_API_KEY / BUNNY_LIBRARY_ID em falta)' }, 503)
   }
 
-  // ── MODO PRODUÇÃO: criar vídeo no Bunny e devolver URL de upload ──────────
+  // ── Criar vídeo no Bunny + devolver credenciais TUS assinadas ──
+  // A master API key NUNCA é exposta ao browser. Em vez disso, devolvemos
+  // uma assinatura HMAC com escopo (videoId × expiração) — só permite upload
+  // daquele vídeo específico durante 24h.
   try {
-    // 1. Criar entrada de vídeo na biblioteca Bunny
-    const createRes = await fetch(
-      `https://video.bunnycdn.com/library/${bunnyLibraryId}/videos`,
-      {
-        method: 'POST',
-        headers: {
-          AccessKey: bunnyApiKey,
-          'Content-Type': 'application/json',
-          Accept: 'application/json'
-        },
-        body: JSON.stringify({ title: title || filename })
-      }
-    )
+    const videoId = await createBunnyVideo(apiKey, libraryId, title || filename)
+    const tus = await buildBunnyTusCredentials(apiKey, libraryId, videoId)
 
-    if (!createRes.ok) {
-      const err = await createRes.text()
-      return c.json({ success: false, error: `Bunny.net: ${err}` }, 502)
-    }
-
-    const video = await createRes.json() as any
-    const videoId = video.guid
-
-    // 2. Devolver ao browser o videoId + endpoint + header de autorização
-    // O browser fará um PUT para este endpoint com o ficheiro como body
     return c.json({
       success: true,
       demo: false,
       data: {
         videoId,
-        uploadUrl: `https://video.bunnycdn.com/library/${bunnyLibraryId}/videos/${videoId}`,
-        authHeader: bunnyApiKey,          // apenas para PUT directo do browser
-        libraryId:  bunnyLibraryId,
         title,
-        filename
+        filename,
+        upload: {
+          // Endpoint TUS oficial Bunny.net Stream
+          endpoint: tus.endpoint,
+          // Bunny exige a autenticação como HTTP headers (não como Upload-Metadata)
+          headers: {
+            AuthorizationSignature: tus.authorizationSignature,
+            AuthorizationExpire:    String(tus.authorizationExpire),
+            VideoId:                tus.videoId,
+            LibraryId:              tus.libraryId
+          },
+          // Properties do vídeo vão em TUS Upload-Metadata
+          metadata: {
+            filetype: 'video/mp4',
+            title:    title || filename
+          },
+          expiresAt: tus.expiresAtIso
+        }
       }
     })
   } catch (err: any) {
-    return c.json({ success: false, error: err.message }, 500)
+    console.error('upload-url error:', err)
+    return c.json({ success: false, error: err.message || 'Bunny upload error' }, 502)
   }
 })
 
@@ -583,14 +976,8 @@ creator.get('/video/:videoId/status', async (c) => {
   const videoId        = c.req.param('videoId')
   const bunnyApiKey    = (c.env as any)?.BUNNY_API_KEY    || process.env.BUNNY_API_KEY    || ''
   const bunnyLibraryId = (c.env as any)?.BUNNY_LIBRARY_ID || process.env.BUNNY_LIBRARY_ID || ''
-  const isBunnyConfigured = !!(bunnyApiKey && bunnyLibraryId)
-
-  if (!isBunnyConfigured || videoId.startsWith('demo-')) {
-    return c.json({
-      success: true,
-      demo: true,
-      data: { videoId, status: 'ready', encodeProgress: 100, availableResolutions: '1080p,720p,480p' }
-    })
+  if (!bunnyApiKey || !bunnyLibraryId) {
+    return c.json({ success: false, error: 'Bunny.net não configurado' }, 503)
   }
 
   try {
@@ -601,10 +988,13 @@ creator.get('/video/:videoId/status', async (c) => {
     if (!res.ok) return c.json({ success: false, error: 'Vídeo não encontrado no Bunny.net' }, 404)
 
     const v = await res.json() as any
-    // status: 0=criado, 1=upload, 2=processando, 3=transcoding, 4=finalizando, 5=erro, 6=pronto
+    // Bunny Stream status oficial:
+    // 0=Created 1=Uploaded 2=Processing 3=Transcoding 4=Finished(ready)
+    // 5=Error 6=UploadFailed 7=JitSegmenting 8=JitPlaylistsCreated
     const statusMap: Record<number, string> = {
       0: 'created', 1: 'uploading', 2: 'processing',
-      3: 'transcoding', 4: 'finishing', 5: 'error', 6: 'ready'
+      3: 'transcoding', 4: 'ready', 5: 'error', 6: 'error',
+      7: 'transcoding', 8: 'ready'
     }
     return c.json({
       success: true,

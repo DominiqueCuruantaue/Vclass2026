@@ -5,6 +5,7 @@
 //  POLÍTICA: exige autenticação — sem acesso anónimo ao conteúdo
 // ============================================================
 import { Hono } from 'hono'
+import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware } from '../middleware/auth'
 import {
   COUNTRIES,
@@ -15,7 +16,7 @@ import {
 } from '../data/curriculum'
 import { mockLessons } from '../middleware/database'
 
-const search = new Hono()
+const search = new Hono<{ Bindings: CloudflareBindings }>()
 
 // ── Busca exige sessão autenticada ───────────────────────────────────────────
 search.use('/*', authMiddleware)

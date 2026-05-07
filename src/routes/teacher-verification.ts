@@ -1,23 +1,25 @@
-// Teacher Verification Routes
-// Sistema rigoroso de verificação de professores
+// Teacher Verification Routes (KYT — Know Your Teacher)
+// Persistência via Supabase. Migration 006 cria a tabela teacher_applications.
+// Aprovação cria automaticamente o utilizador em `users` com role='teacher'.
+
 import { Hono } from 'hono'
+import type { CloudflareBindings } from '../types/bindings'
 import { z } from 'zod'
-import { authMiddleware, requireAdmin } from '../middleware/auth'
-import { rateLimitMiddleware } from '../middleware/auth'
-import { hashPassword, validatePassword } from '../utils/password'
-import { DEMO_PASSWORD } from '../middleware/database'
+import { authMiddleware, requireAdmin, rateLimitMiddleware } from '../middleware/auth'
+import { hashPassword } from '../utils/password'
+import { getSupabase } from '../config/supabase'
 import type { ApiResponse } from '../types'
 
-const tv = new Hono()
+const tv = new Hono<{ Bindings: CloudflareBindings }>()
 
-// Rate limiting rigoroso para registo de professores: max 3 por hora por IP
-tv.use('/apply', rateLimitMiddleware(3, 3_600_000))
+// Rate limiting: 10 candidaturas/hora durante o piloto (apertar para 3 quando entrar em produção)
+tv.use('/apply', rateLimitMiddleware(10, 3_600_000))
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  Schema de candidatura de professor — multi-etapas
-// ══════════════════════════════════════════════════════════════════════════════
+// ──────────────────────────────────────────────────────────────────────────────
+//  Schema da candidatura — preserva o flow multi-etapa do PDF
+// ──────────────────────────────────────────────────────────────────────────────
 const teacherApplicationSchema = z.object({
-  // Dados Pessoais
+  // Dados pessoais
   full_name:    z.string().min(5, 'Nome completo deve ter pelo menos 5 caracteres'),
   email:        z.string().email('Email inválido'),
   phone:        z.string().min(9, 'Telefone deve ter pelo menos 9 dígitos'),
@@ -28,304 +30,92 @@ const teacherApplicationSchema = z.object({
   city:         z.string().min(2, 'Cidade é obrigatória'),
   address:      z.string().min(5, 'Endereço é obrigatório'),
 
-  // Qualificações Académicas
-  degree:             z.enum(['licenciatura', 'mestrado', 'doutoramento', 'bacharel', 'outro'], {
-    errorMap: () => ({ message: 'Grau académico inválido' })
-  }),
+  // Qualificações
+  degree:             z.enum(['licenciatura', 'mestrado', 'doutoramento', 'bacharel', 'outro']),
   degree_field:       z.string().min(3, 'Área de formação é obrigatória'),
-  institution:        z.string().min(3, 'Instituição de formação é obrigatória'),
-  graduation_year:    z.number().int().min(1960).max(new Date().getFullYear()),
+  institution:        z.string().min(3, 'Instituição é obrigatória'),
+  // Limite superior conservador (2100). Validação contra ano-actual feita em runtime
+  // via .refine() — evitar `new Date().getFullYear()` no schema porque é resolvido
+  // a 1970 em cold-starts do Cloudflare Workers.
+  graduation_year:    z.number().int().min(1960).max(2100),
   has_teaching_cert:  z.boolean(),
   teaching_cert_type: z.string().optional(),
 
-  // Experiência Profissional
+  // Experiência
   years_experience:   z.number().int().min(0).max(50),
   current_school:     z.string().optional(),
   previous_schools:   z.array(z.string()).optional(),
   teaching_levels:    z.array(z.enum(['primary', 'secondary', 'tertiary'])).min(1, 'Selecione pelo menos um nível'),
-  subjects:           z.array(z.string()).min(1, 'Selecione pelo menos uma disciplina').max(5, 'Máximo 5 disciplinas'),
+  subjects:           z.array(z.string()).min(1).max(5, 'Máximo 5 disciplinas'),
   subjects_other:     z.string().optional(),
 
-  // Motivação & Referências
-  motivation_letter:  z.string().min(200, 'Carta de motivação deve ter pelo menos 200 caracteres').max(2000),
-  reference_1_name:   z.string().min(3, 'Nome da referência 1 é obrigatório'),
-  reference_1_phone:  z.string().min(9, 'Telefone da referência 1 é obrigatório'),
-  reference_1_role:   z.string().min(2, 'Cargo da referência 1 é obrigatório'),
+  // Motivação & referências
+  motivation_letter:  z.string().min(200, 'Carta de motivação ≥ 200 caracteres').max(2000),
+  reference_1_name:   z.string().min(3),
+  reference_1_phone:  z.string().min(9),
+  reference_1_role:   z.string().min(2),
   reference_2_name:   z.string().optional(),
   reference_2_phone:  z.string().optional(),
 
-  // Competências Digitais
+  // Competências digitais
   digital_literacy:   z.enum(['basico', 'intermedio', 'avancado']),
   has_computer:       z.boolean(),
   has_internet:       z.boolean(),
-  available_hours:    z.number().int().min(1).max(40, 'Máximo 40 horas/semana'),
+  available_hours:    z.number().int().min(1).max(40),
   preferred_schedule: z.enum(['manha', 'tarde', 'noite', 'flexivel']),
 
-  // Credenciais de acesso
+  // Credenciais
   password:           z.string().min(8, 'Senha deve ter pelo menos 8 caracteres'),
-  confirm_password:   z.string()
-}).refine(d => d.password === d.confirm_password, {
-  message: 'As senhas não coincidem',
-  path: ['confirm_password']
-}).refine(d => {
-  // Validar que candidato tem pelo menos 21 anos
-  const birth = new Date(d.birth_date)
-  const age = (Date.now() - birth.getTime()) / (365.25 * 24 * 3600 * 1000)
-  return age >= 21
-}, {
-  message: 'É necessário ter pelo menos 21 anos para se candidatar como professor',
-  path: ['birth_date']
+  confirm_password:   z.string(),
+
+  // Documentos (workaround piloto: link Drive na carta)
+  documents_link:     z.string().url('Link dos documentos deve ser uma URL válida').optional()
 })
+  .refine(d => d.password === d.confirm_password, { message: 'As senhas não coincidem', path: ['confirm_password'] })
+  .refine(d => {
+    const birth = new Date(d.birth_date)
+    const age = (Date.now() - birth.getTime()) / (365.25 * 24 * 3600 * 1000)
+    return age >= 21
+  }, { message: 'É necessário ter pelo menos 21 anos para se candidatar', path: ['birth_date'] })
+  .refine(d => {
+    // Ano de conclusão não pode estar no futuro (calculado em runtime, não em load)
+    const currentYear = new Date().getFullYear()
+    return d.graduation_year <= Math.max(currentYear, 2025)
+  }, { message: 'Ano de conclusão não pode estar no futuro', path: ['graduation_year'] })
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  Mock store de candidaturas (demo mode)
-// ══════════════════════════════════════════════════════════════════════════════
-export const mockTeacherApplications: any[] = [
-  {
-    id: 'app-001',
-    full_name: 'Hélder António Chissano',
-    email: 'helder.chissano@gmail.com',
-    phone: '+258 84 234 5678',
-    birth_date: '1988-03-14',
-    national_id: '0234567890MZ',
-    country_id: 'mz',
-    province: 'Maputo',
-    city: 'Maputo',
-    address: 'Av. 25 de Setembro, 1234',
-    degree: 'licenciatura',
-    degree_field: 'Matemática e Física',
-    institution: 'Universidade Eduardo Mondlane',
-    graduation_year: 2012,
-    has_teaching_cert: true,
-    teaching_cert_type: 'CFPEF — Certificado de Formação de Professores',
-    years_experience: 11,
-    current_school: 'Escola Secundária Josina Machel',
-    previous_schools: ['Escola Secundária de Machava'],
-    teaching_levels: ['secondary'],
-    subjects: ['Matemática', 'Física'],
-    motivation_letter: 'Tenho 11 anos de experiência no ensino secundário e desejo expandir o meu alcance para estudantes que não têm acesso a boa qualidade de ensino presencial. Acredito que a educação digital é o futuro de Moçambique e quero contribuir activamente para esse processo através da plataforma VClass.',
-    reference_1_name: 'Dr. João Sitoi',
-    reference_1_phone: '+258 82 111 2222',
-    reference_1_role: 'Director Pedagógico, ESJ Machel',
-    digital_literacy: 'avancado',
-    has_computer: true,
-    has_internet: true,
-    available_hours: 15,
-    preferred_schedule: 'tarde',
-    status: 'pending',
-    verification_step: 'document_review',
-    submitted_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-    score: null,
-    admin_notes: '',
-    documents_submitted: ['diploma_scan.pdf', 'bi_scan.pdf', 'cert_docencia.pdf'],
-    flagged: false
-  },
-  {
-    id: 'app-002',
-    full_name: 'Conceição Maria Ferreira',
-    email: 'conceicao.ferreira@hotmail.com',
-    phone: '+244 923 456 789',
-    birth_date: '1991-07-22',
-    national_id: '056789012AO',
-    country_id: 'ao',
-    province: 'Luanda',
-    city: 'Luanda',
-    address: 'Rua Major Kanhangulo, 45, Bairro Ingombota',
-    degree: 'mestrado',
-    degree_field: 'Química e Biologia',
-    institution: 'Universidade Agostinho Neto',
-    graduation_year: 2016,
-    has_teaching_cert: true,
-    teaching_cert_type: 'INIDE — Instituto Nacional de Investigação e Desenvolvimento da Educação',
-    years_experience: 8,
-    current_school: 'Escola do 1º Ciclo do Ensino Secundário Patrice Lumumba',
-    previous_schools: [],
-    teaching_levels: ['secondary'],
-    subjects: ['Química', 'Biologia'],
-    motivation_letter: 'Como professora com mestrado em Química e Biologia e 8 anos de docência, sinto a necessidade urgente de criar materiais digitais de qualidade para os nossos alunos angolanos. Muitos deles vivem em províncias sem acesso a bons professores dessas disciplinas e a VClass pode ser a solução.',
-    reference_1_name: 'Prof.ª Beatriz Tchilemba',
-    reference_1_phone: '+244 912 333 444',
-    reference_1_role: 'Directora Pedagógica, ESEP Lumumba',
-    reference_2_name: 'Dr. António Mbemba',
-    reference_2_phone: '+244 922 555 666',
-    digital_literacy: 'intermedio',
-    has_computer: true,
-    has_internet: true,
-    available_hours: 20,
-    preferred_schedule: 'manha',
-    status: 'under_review',
-    verification_step: 'reference_check',
-    submitted_at: new Date(Date.now() - 86400000 * 5).toISOString(),
-    score: 78,
-    admin_notes: 'Referências contactadas. Aguardar confirmação.',
-    documents_submitted: ['diploma_scan.pdf', 'bi_scan.pdf', 'mestrado_certificado.pdf'],
-    flagged: false
-  },
-  {
-    id: 'app-003',
-    full_name: 'Paulo Ernesto Nhavene',
-    email: 'p.nhavene@outlook.com',
-    phone: '+258 82 678 9012',
-    birth_date: '1995-11-05',
-    national_id: '0456789012MZ',
-    country_id: 'mz',
-    province: 'Inhambane',
-    city: 'Inhambane',
-    address: 'Bairro Muelé, Rua das Acácias, 78',
-    degree: 'licenciatura',
-    degree_field: 'Língua Portuguesa e Literatura',
-    institution: 'Universidade Pedagógica de Moçambique',
-    graduation_year: 2019,
-    has_teaching_cert: false,
-    teaching_cert_type: '',
-    years_experience: 3,
-    current_school: 'Escola Secundária de Inhambane',
-    previous_schools: [],
-    teaching_levels: ['secondary'],
-    subjects: ['Português', 'Literatura'],
-    motivation_letter: 'Sou professor de Português há 3 anos e tenho muita paixão pelo ensino. Quero criar aulas em vídeo que ajudem os estudantes a melhorar a sua expressão oral e escrita, que são competências fundamentais para o sucesso académico e profissional.',
-    reference_1_name: 'Prof. Manuel Zunguza',
-    reference_1_phone: '+258 84 777 8888',
-    reference_1_role: 'Coordenador de Português, ESI',
-    digital_literacy: 'basico',
-    has_computer: false,
-    has_internet: false,
-    available_hours: 8,
-    preferred_schedule: 'noite',
-    status: 'pending',
-    verification_step: 'initial_screening',
-    submitted_at: new Date(Date.now() - 3600000 * 6).toISOString(),
-    score: null,
-    admin_notes: 'Sem certificado de docência. Sem computador. Rever cuidadosamente.',
-    documents_submitted: ['diploma_scan.pdf'],
-    flagged: true
-  },
-  {
-    id: 'app-004',
-    full_name: 'Sofia Isabel Manhique',
-    email: 'sofia.manhique@gmail.com',
-    phone: '+258 84 345 6789',
-    birth_date: '1985-04-18',
-    national_id: '0123456789MZ',
-    country_id: 'mz',
-    province: 'Sofala',
-    city: 'Beira',
-    address: 'Av. Daniel Napatima, 234, Munhava',
-    degree: 'doutoramento',
-    degree_field: 'Física e Ciências Naturais',
-    institution: 'Universidade de Coimbra + UEM',
-    graduation_year: 2018,
-    has_teaching_cert: true,
-    teaching_cert_type: 'CFPEF + Certificado Internacional UNESCO',
-    years_experience: 15,
-    current_school: 'Instituto Superior de Ciências e Tecnologia de Moçambique',
-    previous_schools: ['Universidade Pedagógica', 'ESS Sofala'],
-    teaching_levels: ['secondary', 'tertiary'],
-    subjects: ['Física', 'Ciências Naturais'],
-    motivation_letter: 'Sou Doutora em Física com 15 anos de experiência no ensino universitário e secundário. O meu sonho é democratizar o ensino de Física em Moçambique através da tecnologia. Tenho experiência em produção de conteúdo digital e já leccionei online durante a pandemia.',
-    reference_1_name: 'Prof. Dr. Armando Mucavele',
-    reference_1_phone: '+258 21 400 1234',
-    reference_1_role: 'Reitor, ISCTEM',
-    reference_2_name: 'Dra. Palmira Bila',
-    reference_2_phone: '+258 82 456 7890',
-    digital_literacy: 'avancado',
-    has_computer: true,
-    has_internet: true,
-    available_hours: 25,
-    preferred_schedule: 'flexivel',
-    status: 'approved',
-    verification_step: 'completed',
-    submitted_at: new Date(Date.now() - 86400000 * 14).toISOString(),
-    score: 96,
-    admin_notes: 'Candidatura exemplar. Aprovação unânime. Prioridade de onboarding.',
-    documents_submitted: ['diploma_scan.pdf', 'doutoramento_diploma.pdf', 'bi_scan.pdf', 'cert_docencia.pdf', 'publicacoes.pdf'],
-    flagged: false,
-    approved_at: new Date(Date.now() - 86400000 * 7).toISOString(),
-    approved_by: 'Administrador VClass'
-  },
-  {
-    id: 'app-005',
-    full_name: 'Roberto Caetano Tembe',
-    email: 'r.tembe@yahoo.com',
-    phone: '+258 82 111 2345',
-    birth_date: '1992-09-30',
-    national_id: '0567890123MZ',
-    country_id: 'mz',
-    province: 'Gaza',
-    city: 'Xai-Xai',
-    address: 'Bairro 1 de Maio, Rua Maputo 45',
-    degree: 'licenciatura',
-    degree_field: 'História e Ciências Sociais',
-    institution: 'Universidade Pedagógica de Moçambique — Delegação de Gaza',
-    graduation_year: 2017,
-    has_teaching_cert: true,
-    teaching_cert_type: 'CFPEF',
-    years_experience: 6,
-    current_school: 'Escola Secundária de Chibuto',
-    previous_schools: [],
-    teaching_levels: ['secondary'],
-    subjects: ['História'],
-    motivation_letter: 'Com 6 anos de experiência no ensino de História, quero contribuir para que os jovens moçambicanos compreendam a riqueza da nossa história e cultura. A educação digital permite-me alcançar estudantes em zonas rurais onde os recursos são escassos.',
-    reference_1_name: 'Prof. Carlos Mondlane',
-    reference_1_phone: '+258 84 234 5678',
-    reference_1_role: 'Director, ES Chibuto',
-    digital_literacy: 'intermedio',
-    has_computer: true,
-    has_internet: true,
-    available_hours: 12,
-    preferred_schedule: 'tarde',
-    status: 'rejected',
-    verification_step: 'completed',
-    submitted_at: new Date(Date.now() - 86400000 * 20).toISOString(),
-    score: 42,
-    admin_notes: 'Reprovado: Carta de motivação genérica. Referências não verificáveis. Solicitar reenvio de documentos e nova candidatura após 6 meses.',
-    documents_submitted: ['diploma_scan.pdf'],
-    flagged: true,
-    rejected_at: new Date(Date.now() - 86400000 * 15).toISOString(),
-    rejection_reason: 'Documentação incompleta e referências não verificadas'
-  }
-]
+// Validação de força de senha (≥8, maiús, min, dígito, especial)
+function validatePasswordStrict(pwd: string): { valid: boolean; message: string } {
+  if (pwd.length < 8) return { valid: false, message: 'Senha deve ter ≥ 8 caracteres' }
+  if (!/[A-Z]/.test(pwd)) return { valid: false, message: 'Senha deve conter pelo menos uma letra maiúscula' }
+  if (!/[a-z]/.test(pwd)) return { valid: false, message: 'Senha deve conter pelo menos uma letra minúscula' }
+  if (!/[0-9]/.test(pwd)) return { valid: false, message: 'Senha deve conter pelo menos um número' }
+  if (!/[^A-Za-z0-9]/.test(pwd)) return { valid: false, message: 'Senha deve conter pelo menos um carácter especial (!@#$%...)' }
+  return { valid: true, message: 'OK' }
+}
 
-// Scores de avaliação automática
+// Auto-scoring (mantém o algoritmo original)
 function autoScoreApplication(app: any): number {
   let score = 0
-  // Grau académico (30 pts)
-  const degreeScore: Record<string, number> = {
-    doutoramento: 30, mestrado: 25, licenciatura: 20, bacharel: 12, outro: 5
-  }
+  const degreeScore: Record<string, number> = { doutoramento: 30, mestrado: 25, licenciatura: 20, bacharel: 12, outro: 5 }
   score += degreeScore[app.degree] || 0
-
-  // Experiência (20 pts)
-  score += Math.min(app.years_experience * 2, 20)
-
-  // Certificado de docência (15 pts)
+  score += Math.min((app.years_experience || 0) * 2, 20)
   if (app.has_teaching_cert) score += 15
-
-  // Literacia digital (10 pts)
   const digScore: Record<string, number> = { avancado: 10, intermedio: 6, basico: 2 }
   score += digScore[app.digital_literacy] || 0
-
-  // Infra-estrutura (10 pts)
   if (app.has_computer) score += 5
   if (app.has_internet) score += 5
-
-  // Carta de motivação (10 pts — baseado no comprimento)
   const letterLen = (app.motivation_letter || '').length
   if (letterLen >= 800) score += 10
   else if (letterLen >= 500) score += 7
   else if (letterLen >= 200) score += 4
-
-  // Disponibilidade (5 pts)
   if (app.available_hours >= 10) score += 5
   else if (app.available_hours >= 5) score += 3
-
   return Math.min(score, 100)
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  POST /api/teacher-verification/apply
-//  Submeter candidatura de professor
-// ══════════════════════════════════════════════════════════════════════════════
+// ──────────────────────────────────────────────────────────────────────────────
+//  POST /apply — submeter candidatura
+// ──────────────────────────────────────────────────────────────────────────────
 tv.post('/apply', async (c) => {
   try {
     const body = await c.req.json()
@@ -342,67 +132,128 @@ tv.post('/apply', async (c) => {
 
     const data = validation.data
 
-    // Validação de força da senha
-    const { valid: pwdOk, message: pwdMsg } = validatePasswordStrict(data.password)
-    if (!pwdOk) {
-      return c.json<ApiResponse>({ success: false, error: pwdMsg }, 400)
+    const pwdCheck = validatePasswordStrict(data.password)
+    if (!pwdCheck.valid) {
+      return c.json<ApiResponse>({ success: false, error: pwdCheck.message }, 400)
     }
 
-    // Verificar duplicado de email (demo mode)
-    const exists = mockTeacherApplications.find(a => a.email === data.email)
-    if (exists) {
+    const supabase = getSupabase(c.env)
+    if (!supabase) {
+      return c.json<ApiResponse>({ success: false, error: 'Database não configurada' }, 500)
+    }
+
+    // Verificar se já existe candidatura ou utilizador com este email
+    const [{ data: existingApp }, { data: existingUser }] = await Promise.all([
+      supabase.from('teacher_applications').select('id, status').eq('email', data.email).maybeSingle(),
+      supabase.from('users').select('id').eq('email', data.email).maybeSingle()
+    ])
+
+    if (existingApp) {
       return c.json<ApiResponse>({
         success: false,
-        error: 'Já existe uma candidatura com este email. Verifique o estado em /teacher-verification.html'
+        error: `Já existe uma candidatura com este email (estado: ${existingApp.status}). Acompanhe em /teacher-verification.html?email=${encodeURIComponent(data.email)}`
+      }, 409)
+    }
+    if (existingUser) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Email já registado como utilizador. Use uma conta diferente para candidatar-se como professor.'
       }, 409)
     }
 
-    // Calcular score automático
+    // Hash da password — guardada para criar utilizador na aprovação
+    const password_hash = await hashPassword(data.password)
+
+    // Score automático
     const score = autoScoreApplication(data)
     const flagged = score < 40 || !data.has_computer || !data.has_internet
 
-    const newApp: any = {
-      id: `app-${String(mockTeacherApplications.length + 1).padStart(3, '0')}`,
-      ...data,
-      password: undefined, // Nunca guardar em texto limpo
-      confirm_password: undefined,
-      status: 'pending',
-      verification_step: 'initial_screening',
-      submitted_at: new Date().toISOString(),
-      score,
-      flagged,
-      admin_notes: '',
-      documents_submitted: []
+    const { data: inserted, error } = await supabase
+      .from('teacher_applications')
+      .insert({
+        full_name: data.full_name,
+        email: data.email,
+        phone: data.phone,
+        birth_date: data.birth_date,
+        national_id: data.national_id,
+        country_id: data.country_id,
+        province: data.province,
+        city: data.city,
+        address: data.address,
+        degree: data.degree,
+        degree_field: data.degree_field,
+        institution: data.institution,
+        graduation_year: data.graduation_year,
+        has_teaching_cert: data.has_teaching_cert,
+        teaching_cert_type: data.teaching_cert_type || null,
+        years_experience: data.years_experience,
+        current_school: data.current_school || null,
+        previous_schools: data.previous_schools || [],
+        teaching_levels: data.teaching_levels,
+        subjects: data.subjects,
+        subjects_other: data.subjects_other || null,
+        motivation_letter: data.motivation_letter,
+        reference_1_name: data.reference_1_name,
+        reference_1_phone: data.reference_1_phone,
+        reference_1_role: data.reference_1_role,
+        reference_2_name: data.reference_2_name || null,
+        reference_2_phone: data.reference_2_phone || null,
+        digital_literacy: data.digital_literacy,
+        has_computer: data.has_computer,
+        has_internet: data.has_internet,
+        available_hours: data.available_hours,
+        preferred_schedule: data.preferred_schedule,
+        password_hash,
+        documents_link: data.documents_link || null,
+        score,
+        flagged,
+        status: 'pending',
+        verification_step: 'initial_screening'
+      })
+      .select('id')
+      .single()
+
+    if (error || !inserted) {
+      console.error('Teacher apply error:', error)
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Falha ao registar candidatura'
+      }, 500)
     }
 
-    mockTeacherApplications.push(newApp)
+    // TODO: enviar email de confirmação via Resend/SendGrid (piloto: notificação manual)
+    console.log(`[KYT] Nova candidatura ${inserted.id} de ${data.email} (score ${score}${flagged ? ', flagged' : ''})`)
 
     return c.json<ApiResponse>({
       success: true,
       data: {
-        application_id: newApp.id,
+        application_id: inserted.id,
         status: 'pending',
-        message: 'Candidatura submetida com sucesso',
         estimated_review_days: 5,
         tracking_email: data.email,
         score_preview: score >= 60 ? 'Perfil promissor' : score >= 40 ? 'Perfil a avaliar' : 'Perfil com lacunas — pode ser contactado para esclarecimentos'
       },
-      message: 'A sua candidatura foi recebida e será analisada em até 5 dias úteis.'
+      message: 'A sua candidatura foi recebida. Será contactado em até 5 dias úteis.'
     }, 201)
-
   } catch (err: any) {
     console.error('Teacher apply error:', err)
     return c.json<ApiResponse>({ success: false, error: 'Erro interno do servidor' }, 500)
   }
 })
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  GET /api/teacher-verification/status/:email
-//  Verificar estado da candidatura por email
-// ══════════════════════════════════════════════════════════════════════════════
+// ──────────────────────────────────────────────────────────────────────────────
+//  GET /status/:email — tracking público da candidatura
+// ──────────────────────────────────────────────────────────────────────────────
 tv.get('/status/:email', async (c) => {
   const email = decodeURIComponent(c.req.param('email'))
-  const app = mockTeacherApplications.find(a => a.email === email)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'Database não configurada' }, 500)
+
+  const { data: app } = await supabase
+    .from('teacher_applications')
+    .select('id, full_name, email, status, verification_step, submitted_at, score, flagged, approved_at, rejected_at, rejection_reason, allow_reapply, reapply_after_months, documents_submitted')
+    .eq('email', email)
+    .maybeSingle()
 
   if (!app) {
     return c.json<ApiResponse>({ success: false, error: 'Nenhuma candidatura encontrada com este email' }, 404)
@@ -420,236 +271,327 @@ tv.get('/status/:email', async (c) => {
   return c.json<ApiResponse>({
     success: true,
     data: {
-      id: app.id,
-      full_name: app.full_name,
-      email: app.email,
-      status: app.status,
-      verification_step: app.verification_step,
+      ...app,
       step_label: stepLabels[app.verification_step] || app.verification_step,
-      submitted_at: app.submitted_at,
-      score: app.score,
-      flagged: app.flagged,
-      approved_at: app.approved_at || null,
-      rejected_at: app.rejected_at || null,
-      rejection_reason: app.rejection_reason || null,
-      documents_submitted: app.documents_submitted || [],
       estimated_days_remaining: app.status === 'pending' ? 5 : app.status === 'under_review' ? 2 : 0
     }
   })
 })
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  GET /api/teacher-verification/applications  (admin only)
-//  Listar todas as candidaturas com filtros
-// ══════════════════════════════════════════════════════════════════════════════
+// ──────────────────────────────────────────────────────────────────────────────
+//  GET /applications — listar (admin)
+// ──────────────────────────────────────────────────────────────────────────────
 tv.get('/applications', authMiddleware, requireAdmin, async (c) => {
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'Database não configurada' }, 500)
+
   const status  = c.req.query('status')  || 'all'
   const country = c.req.query('country') || 'all'
   const flagged = c.req.query('flagged')
   const search  = (c.req.query('search') || '').toLowerCase()
   const page    = parseInt(c.req.query('page') || '1')
-  const limit   = parseInt(c.req.query('limit') || '10')
+  const limit   = Math.min(parseInt(c.req.query('limit') || '10'), 50)
 
-  let apps = [...mockTeacherApplications]
-
-  if (status  !== 'all') apps = apps.filter(a => a.status === status)
-  if (country !== 'all') apps = apps.filter(a => a.country_id === country)
-  if (flagged === 'true') apps = apps.filter(a => a.flagged)
-  if (search) apps = apps.filter(a =>
-    a.full_name.toLowerCase().includes(search) ||
-    a.email.toLowerCase().includes(search) ||
-    a.subjects?.some((s: string) => s.toLowerCase().includes(search))
+  let q = supabase.from('teacher_applications').select(
+    'id, full_name, email, phone, country_id, degree, degree_field, years_experience, subjects, has_teaching_cert, digital_literacy, status, verification_step, submitted_at, score, flagged, admin_notes, documents_submitted, documents_link',
+    { count: 'exact' }
   )
+  if (status  !== 'all') q = q.eq('status', status)
+  if (country !== 'all') q = q.eq('country_id', country)
+  if (flagged === 'true') q = q.eq('flagged', true)
+  if (search) q = q.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`)
+  q = q.order('submitted_at', { ascending: false }).range((page - 1) * limit, page * limit - 1)
 
-  const total  = apps.length
-  const offset = (page - 1) * limit
-  const paged  = apps.slice(offset, offset + limit).map(a => ({
-    id: a.id, full_name: a.full_name, email: a.email, phone: a.phone,
-    country_id: a.country_id, degree: a.degree, degree_field: a.degree_field,
-    years_experience: a.years_experience, subjects: a.subjects,
-    has_teaching_cert: a.has_teaching_cert, digital_literacy: a.digital_literacy,
-    status: a.status, verification_step: a.verification_step,
-    submitted_at: a.submitted_at, score: a.score, flagged: a.flagged,
-    admin_notes: a.admin_notes, documents_submitted: a.documents_submitted
-  }))
+  const { data: apps, count, error } = await q
+  if (error) {
+    console.error('TV list error:', error)
+    return c.json<ApiResponse>({ success: false, error: 'Falha ao listar' }, 500)
+  }
 
+  // Stats globais
+  const { data: statsRows } = await supabase.from('teacher_applications').select('status, flagged')
+  const all = statsRows || []
   const stats = {
-    total: mockTeacherApplications.length,
-    pending:      mockTeacherApplications.filter(a => a.status === 'pending').length,
-    under_review: mockTeacherApplications.filter(a => a.status === 'under_review').length,
-    approved:     mockTeacherApplications.filter(a => a.status === 'approved').length,
-    rejected:     mockTeacherApplications.filter(a => a.status === 'rejected').length,
-    flagged:      mockTeacherApplications.filter(a => a.flagged).length
+    total: all.length,
+    pending:        all.filter(a => a.status === 'pending').length,
+    under_review:   all.filter(a => a.status === 'under_review').length,
+    approved:       all.filter(a => a.status === 'approved').length,
+    rejected:       all.filter(a => a.status === 'rejected').length,
+    info_requested: all.filter(a => a.status === 'info_requested').length,
+    flagged:        all.filter(a => a.flagged).length
   }
 
   return c.json<ApiResponse>({
     success: true,
-    data: { applications: paged, total, page, limit, pages: Math.ceil(total / limit), stats }
+    data: { applications: apps || [], total: count || 0, page, limit, pages: Math.ceil((count || 0) / limit), stats }
   })
 })
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  GET /api/teacher-verification/applications/:id  (admin)
-//  Ver candidatura completa
-// ══════════════════════════════════════════════════════════════════════════════
+// ──────────────────────────────────────────────────────────────────────────────
+//  GET /applications/:id — detalhe (admin)
+// ──────────────────────────────────────────────────────────────────────────────
 tv.get('/applications/:id', authMiddleware, requireAdmin, async (c) => {
   const id = c.req.param('id')
-  const app = mockTeacherApplications.find(a => a.id === id)
-  if (!app) return c.json<ApiResponse>({ success: false, error: 'Candidatura não encontrada' }, 404)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'Database não configurada' }, 500)
 
-  return c.json<ApiResponse>({ success: true, data: { ...app, password: undefined, confirm_password: undefined } })
-})
+  const { data: app, error } = await supabase
+    .from('teacher_applications')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  PATCH /api/teacher-verification/applications/:id/review  (admin)
-//  Actualizar status / step / notas
-// ══════════════════════════════════════════════════════════════════════════════
-tv.patch('/applications/:id/review', authMiddleware, requireAdmin, async (c) => {
-  const id = c.req.param('id')
-  const idx = mockTeacherApplications.findIndex(a => a.id === id)
-  if (idx === -1) return c.json<ApiResponse>({ success: false, error: 'Candidatura não encontrada' }, 404)
-
-  const body = await c.req.json() as {
-    status?: string; verification_step?: string; admin_notes?: string
-    score?: number; flagged?: boolean
+  if (error || !app) {
+    return c.json<ApiResponse>({ success: false, error: 'Candidatura não encontrada' }, 404)
   }
 
-  const app = mockTeacherApplications[idx]
-  if (body.status)            app.status = body.status
-  if (body.verification_step) app.verification_step = body.verification_step
-  if (body.admin_notes !== undefined) app.admin_notes = body.admin_notes
-  if (body.score !== undefined)       app.score = body.score
-  if (body.flagged !== undefined)     app.flagged = body.flagged
-
-  return c.json<ApiResponse>({
-    success: true,
-    data: { id, status: app.status, verification_step: app.verification_step, score: app.score },
-    message: 'Candidatura actualizada'
-  })
+  // Nunca retornar password_hash
+  delete (app as any).password_hash
+  return c.json<ApiResponse>({ success: true, data: app })
 })
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  POST /api/teacher-verification/applications/:id/approve  (admin)
-// ══════════════════════════════════════════════════════════════════════════════
+// ──────────────────────────────────────────────────────────────────────────────
+//  PATCH /applications/:id/review — alterar status / step / notas (admin)
+// ──────────────────────────────────────────────────────────────────────────────
+tv.patch('/applications/:id/review', authMiddleware, requireAdmin, async (c) => {
+  const id = c.req.param('id')
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'Database não configurada' }, 500)
+
+  const body = await c.req.json() as { status?: string; verification_step?: string; admin_notes?: string; score?: number; flagged?: boolean }
+  const update: any = {}
+  if (body.status)            update.status = body.status
+  if (body.verification_step) update.verification_step = body.verification_step
+  if (body.admin_notes !== undefined) update.admin_notes = body.admin_notes
+  if (body.score !== undefined)       update.score = body.score
+  if (body.flagged !== undefined)     update.flagged = body.flagged
+
+  if (Object.keys(update).length === 0) {
+    return c.json<ApiResponse>({ success: false, error: 'Nada para actualizar' }, 400)
+  }
+
+  const { data, error } = await supabase
+    .from('teacher_applications')
+    .update(update)
+    .eq('id', id)
+    .select('id, status, verification_step, score')
+    .maybeSingle()
+
+  if (error || !data) {
+    return c.json<ApiResponse>({ success: false, error: error?.message || 'Candidatura não encontrada' }, 404)
+  }
+
+  return c.json<ApiResponse>({ success: true, data, message: 'Candidatura actualizada' })
+})
+
+// ──────────────────────────────────────────────────────────────────────────────
+//  POST /applications/:id/approve (admin)
+//  → cria conta de utilizador com role=teacher e password do candidato
+// ──────────────────────────────────────────────────────────────────────────────
 tv.post('/applications/:id/approve', authMiddleware, requireAdmin, async (c) => {
   const id = c.req.param('id')
-  const idx = mockTeacherApplications.findIndex(a => a.id === id)
-  if (idx === -1) return c.json<ApiResponse>({ success: false, error: 'Candidatura não encontrada' }, 404)
+  const admin = c.get('user')
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'Database não configurada' }, 500)
 
-  const user = c.get('user')
   const body = await c.req.json().catch(() => ({})) as { notes?: string }
-  const app  = mockTeacherApplications[idx]
 
-  app.status = 'approved'
-  app.verification_step = 'completed'
-  app.approved_at = new Date().toISOString()
-  app.approved_by = user.full_name || user.email
-  if (body.notes) app.admin_notes = body.notes
+  // Buscar candidatura completa (incluindo password_hash)
+  const { data: app, error: fetchErr } = await supabase
+    .from('teacher_applications')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
 
-  // Calcular score final se ainda não existe
-  if (!app.score) app.score = autoScoreApplication(app)
+  if (fetchErr || !app) return c.json<ApiResponse>({ success: false, error: 'Candidatura não encontrada' }, 404)
+  if (app.status === 'approved') return c.json<ApiResponse>({ success: false, error: 'Candidatura já aprovada' }, 409)
+
+  // Resolver country_id: candidatura guarda código ("mz"), users espera UUID (FK).
+  // Procurar UUID em countries.code; null se não encontrar (não bloqueia aprovação).
+  let countryUuid: string | null = null
+  if (app.country_id) {
+    const { data: countryRow } = await supabase
+      .from('countries')
+      .select('id')
+      .eq('code', app.country_id)
+      .maybeSingle()
+    countryUuid = countryRow?.id || null
+  }
+
+  // Verificar se utilizador já existe (email duplicado)
+  const { data: dupUser } = await supabase.from('users').select('id').eq('email', app.email).maybeSingle()
+  let userId: string
+
+  if (dupUser) {
+    userId = dupUser.id
+    const { error: updErr } = await supabase
+      .from('users')
+      .update({ role: 'teacher', is_verified: true, full_name: app.full_name, country_id: countryUuid, phone: app.phone })
+      .eq('id', userId)
+    if (updErr) {
+      return c.json<ApiResponse>({ success: false, error: 'Falha ao promover utilizador existente: ' + updErr.message }, 500)
+    }
+  } else {
+    const { data: newUser, error: insertErr } = await supabase
+      .from('users')
+      .insert({
+        email: app.email,
+        password_hash: app.password_hash,
+        full_name: app.full_name,
+        role: 'teacher',
+        country_id: countryUuid,
+        phone: app.phone,
+        is_active: true,
+        is_verified: true
+      })
+      .select('id')
+      .single()
+
+    if (insertErr || !newUser) {
+      console.error('Approve insert user error:', insertErr)
+      return c.json<ApiResponse>({ success: false, error: 'Falha ao criar conta do utilizador: ' + (insertErr?.message || '?') }, 500)
+    }
+    userId = newUser.id
+  }
+
+  // Atualizar candidatura
+  const score = app.score || autoScoreApplication(app)
+  const { error: updErr } = await supabase
+    .from('teacher_applications')
+    .update({
+      status: 'approved',
+      verification_step: 'completed',
+      approved_at: new Date().toISOString(),
+      approved_by: admin.full_name || admin.email,
+      user_id: userId,
+      score,
+      ...(body.notes ? { admin_notes: body.notes } : {})
+    })
+    .eq('id', id)
+
+  if (updErr) {
+    console.error('Approve update error:', updErr)
+    return c.json<ApiResponse>({ success: false, error: 'Conta criada mas falhou actualizar candidatura: ' + updErr.message }, 500)
+  }
+
+  console.log(`[KYT] Aprovada candidatura ${id} → user ${userId} (${app.email})`)
 
   return c.json<ApiResponse>({
     success: true,
-    data: { id, status: 'approved', approved_at: app.approved_at, score: app.score },
-    message: `Professor ${app.full_name} aprovado com sucesso. Email de boas-vindas será enviado.`
+    data: { id, status: 'approved', user_id: userId, score, login_email: app.email },
+    message: `Professor ${app.full_name} aprovado. Conta criada — pode fazer login com email + senha que registou na candidatura.`
   })
 })
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  POST /api/teacher-verification/applications/:id/reject  (admin)
-// ══════════════════════════════════════════════════════════════════════════════
+// ──────────────────────────────────────────────────────────────────────────────
+//  POST /applications/:id/reject (admin)
+// ──────────────────────────────────────────────────────────────────────────────
 tv.post('/applications/:id/reject', authMiddleware, requireAdmin, async (c) => {
   const id = c.req.param('id')
-  const idx = mockTeacherApplications.findIndex(a => a.id === id)
-  if (idx === -1) return c.json<ApiResponse>({ success: false, error: 'Candidatura não encontrada' }, 404)
+  const admin = c.get('user')
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'Database não configurada' }, 500)
 
-  const user = c.get('user')
   const body = await c.req.json() as { reason: string; allow_reapply?: boolean; reapply_after_months?: number }
   if (!body.reason) return c.json<ApiResponse>({ success: false, error: 'Motivo de rejeição é obrigatório' }, 400)
 
-  const app = mockTeacherApplications[idx]
-  app.status = 'rejected'
-  app.verification_step = 'completed'
-  app.rejected_at = new Date().toISOString()
-  app.rejected_by = user.full_name || user.email
-  app.rejection_reason = body.reason
-  app.allow_reapply = body.allow_reapply !== false
-  app.reapply_after_months = body.reapply_after_months || 6
+  const { data, error } = await supabase
+    .from('teacher_applications')
+    .update({
+      status: 'rejected',
+      verification_step: 'completed',
+      rejected_at: new Date().toISOString(),
+      rejected_by: admin.full_name || admin.email,
+      rejection_reason: body.reason,
+      allow_reapply: body.allow_reapply !== false,
+      reapply_after_months: body.reapply_after_months || 6
+    })
+    .eq('id', id)
+    .select('id, full_name, status, rejected_at, rejection_reason, allow_reapply, reapply_after_months')
+    .maybeSingle()
+
+  if (error || !data) {
+    return c.json<ApiResponse>({ success: false, error: error?.message || 'Candidatura não encontrada' }, 404)
+  }
+
+  console.log(`[KYT] Rejeitada candidatura ${id} (motivo: ${body.reason})`)
 
   return c.json<ApiResponse>({
     success: true,
-    data: { id, status: 'rejected', rejected_at: app.rejected_at, reason: body.reason },
-    message: `Candidatura de ${app.full_name} rejeitada. ${body.allow_reapply !== false ? `Pode candidatar-se novamente após ${body.reapply_after_months || 6} meses.` : 'Nova candidatura não permitida.'}`
+    data,
+    message: `Candidatura de ${data.full_name} rejeitada. ${data.allow_reapply ? `Pode candidatar-se novamente após ${data.reapply_after_months} meses.` : 'Nova candidatura não permitida.'}`
   })
 })
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  POST /api/teacher-verification/applications/:id/request-info  (admin)
-//  Pedir informações adicionais ao candidato
-// ══════════════════════════════════════════════════════════════════════════════
+// ──────────────────────────────────────────────────────────────────────────────
+//  POST /applications/:id/request-info (admin)
+// ──────────────────────────────────────────────────────────────────────────────
 tv.post('/applications/:id/request-info', authMiddleware, requireAdmin, async (c) => {
   const id = c.req.param('id')
-  const idx = mockTeacherApplications.findIndex(a => a.id === id)
-  if (idx === -1) return c.json<ApiResponse>({ success: false, error: 'Candidatura não encontrada' }, 404)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'Database não configurada' }, 500)
 
   const body = await c.req.json() as { message: string; required_documents?: string[] }
   if (!body.message) return c.json<ApiResponse>({ success: false, error: 'Mensagem é obrigatória' }, 400)
 
-  const app = mockTeacherApplications[idx]
-  app.status = 'info_requested'
-  app.info_request_message = body.message
-  app.required_documents = body.required_documents || []
-  app.info_requested_at = new Date().toISOString()
+  const { data, error } = await supabase
+    .from('teacher_applications')
+    .update({
+      status: 'info_requested',
+      info_request_message: body.message,
+      required_documents: body.required_documents || [],
+      info_requested_at: new Date().toISOString()
+    })
+    .eq('id', id)
+    .select('id, status, full_name, email')
+    .maybeSingle()
 
-  return c.json<ApiResponse>({
-    success: true,
-    data: { id, status: 'info_requested' },
-    message: 'Pedido de informação enviado ao candidato por email'
-  })
+  if (error || !data) {
+    return c.json<ApiResponse>({ success: false, error: error?.message || 'Candidatura não encontrada' }, 404)
+  }
+
+  console.log(`[KYT] Pedido de info ${id} para ${data.email}: ${body.message}`)
+
+  return c.json<ApiResponse>({ success: true, data, message: 'Pedido de informação registado' })
 })
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  GET /api/teacher-verification/stats  (admin)
-// ══════════════════════════════════════════════════════════════════════════════
+// ──────────────────────────────────────────────────────────────────────────────
+//  GET /stats (admin) — estatísticas globais
+// ──────────────────────────────────────────────────────────────────────────────
 tv.get('/stats', authMiddleware, requireAdmin, async (c) => {
-  const apps = mockTeacherApplications
-  const byCountry = apps.reduce((acc: any, a) => {
-    acc[a.country_id] = (acc[a.country_id] || 0) + 1
-    return acc
-  }, {})
-  const byDegree = apps.reduce((acc: any, a) => {
-    acc[a.degree] = (acc[a.degree] || 0) + 1
-    return acc
-  }, {})
-  const avgScore = apps.filter(a => a.score).reduce((s, a) => s + a.score, 0) / (apps.filter(a => a.score).length || 1)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'Database não configurada' }, 500)
+
+  const { data: apps } = await supabase
+    .from('teacher_applications')
+    .select('status, country_id, degree, score, flagged')
+
+  const all = apps || []
+  const byCountry = all.reduce((acc: any, a: any) => { acc[a.country_id] = (acc[a.country_id] || 0) + 1; return acc }, {})
+  const byDegree  = all.reduce((acc: any, a: any) => { acc[a.degree]     = (acc[a.degree]     || 0) + 1; return acc }, {})
+  const scored    = all.filter((a: any) => typeof a.score === 'number')
+  const avgScore  = scored.length ? scored.reduce((s: number, a: any) => s + a.score, 0) / scored.length : 0
+  const approved  = all.filter((a: any) => a.status === 'approved').length
 
   return c.json<ApiResponse>({
     success: true,
     data: {
-      total: apps.length,
-      pending:      apps.filter(a => a.status === 'pending').length,
-      under_review: apps.filter(a => a.status === 'under_review').length,
-      approved:     apps.filter(a => a.status === 'approved').length,
-      rejected:     apps.filter(a => a.status === 'rejected').length,
-      info_requested: apps.filter(a => a.status === 'info_requested').length,
-      flagged:      apps.filter(a => a.flagged).length,
-      avg_score:    Math.round(avgScore * 10) / 10,
-      by_country:   byCountry,
-      by_degree:    byDegree,
-      approval_rate: Math.round((apps.filter(a => a.status === 'approved').length / apps.length) * 100)
+      total:          all.length,
+      pending:        all.filter((a: any) => a.status === 'pending').length,
+      under_review:   all.filter((a: any) => a.status === 'under_review').length,
+      approved,
+      rejected:       all.filter((a: any) => a.status === 'rejected').length,
+      info_requested: all.filter((a: any) => a.status === 'info_requested').length,
+      flagged:        all.filter((a: any) => a.flagged).length,
+      avg_score:      Math.round(avgScore * 10) / 10,
+      by_country:     byCountry,
+      by_degree:      byDegree,
+      approval_rate:  all.length ? Math.round((approved / all.length) * 100) : 0
     }
   })
 })
 
-// ── Validação de senha rigorosa ───────────────────────────────────────────────
-function validatePasswordStrict(pwd: string): { valid: boolean; message: string } {
-  if (pwd.length < 8)          return { valid: false, message: 'Senha deve ter pelo menos 8 caracteres' }
-  if (!/[A-Z]/.test(pwd))      return { valid: false, message: 'Senha deve conter pelo menos uma letra maiúscula' }
-  if (!/[a-z]/.test(pwd))      return { valid: false, message: 'Senha deve conter pelo menos uma letra minúscula' }
-  if (!/[0-9]/.test(pwd))      return { valid: false, message: 'Senha deve conter pelo menos um número' }
-  if (!/[^A-Za-z0-9]/.test(pwd)) return { valid: false, message: 'Senha deve conter pelo menos um carácter especial (!@#$%...)' }
-  return { valid: true, message: 'OK' }
-}
+// Re-export para compat com pages que importavam mockTeacherApplications (vazio agora)
+export const mockTeacherApplications: any[] = []
 
 export default tv

@@ -76,6 +76,9 @@
         /* Adjust tab active */
         .adj-tab-active { background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.1); color: #4f46e5; font-weight: 600; }
     </style>
+  <script src="/static/safe-dom.js"></script>
+  <!-- TUS resumable upload client (Bunny.net Stream) -->
+  <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4.1.0/dist/tus.min.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
 
@@ -254,10 +257,13 @@
 
                             <!-- Capítulo -->
                             <div id="wrap-chapter" class="hidden">
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Capítulo <span class="text-red-400">*</span></label>
+                                <div class="flex items-center justify-between mb-1">
+                                    <label class="block text-xs font-medium text-gray-600">Capítulo <span class="text-red-400">*</span></label>
+                                </div>
                                 <select id="field-chapter" onchange="onChapterChange()" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
                                     <option value="">Selecionar capítulo...</option>
                                 </select>
+                                <p id="chapter-empty-hint" class="hidden text-xs text-gray-400 mt-1">Ainda não há capítulos para esta disciplina. Crie capítulos na página <a href="/creator-content.html" class="text-purple-600 font-semibold hover:underline">Conteúdos</a>.</p>
                                 <!-- Badge do trimestre -->
                                 <div id="chapter-term-badge" class="hidden mt-1">
                                     <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-semibold" id="chapter-term-text"></span>
@@ -942,8 +948,8 @@
                                 </div>
                             </div>
 
-                            <!-- Nota Bunny API Key -->
-                            <div class="p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-start gap-2">
+                            <!-- Nota Bunny API Key — só visível em demo mode -->
+                            <div id="bunny-demo-notice" class="hidden p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-start gap-2">
                                 <i class="fas fa-key text-blue-400 mt-0.5 flex-shrink-0 text-xs"></i>
                                 <div class="text-xs text-blue-800">
                                     <span class="font-semibold">Modo demo activo</span> — configure <code class="bg-blue-100 px-1 rounded">BUNNY_API_KEY</code> e <code class="bg-blue-100 px-1 rounded">BUNNY_LIBRARY_ID</code> para uploads reais.
@@ -1292,11 +1298,19 @@
 
         // Dados curriculares carregados via API
         let CURRICULUM_DATA = null;
+        // Capítulos criados pelo professor (vindos de /api/creator/chapters)
+        let CREATOR_CHAPTERS = [];
+        // Mapa subjectId → nome da disciplina (construído a partir do currículo).
+        // Permite agrupar disciplinas iguais com IDs diferentes por classe.
+        let SUBJECT_NAME_BY_ID = {};
 
         // Cache para selects
         let _currCountry = '', _currLevel = '', _currGrade = '', _currSubjectId = '';
 
         // ── Init ─────────────────────────────────────────────────────────
+        const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        let lessonDbId = UUID_RE.test(LESSON_ID) ? LESSON_ID : null;
+
         window.onload = async function() {
             if (LESSON_TITLE_INIT) {
                 document.getElementById('field-title').value = LESSON_TITLE_INIT;
@@ -1304,14 +1318,77 @@
                 updateCharCount('field-title','title-count');
                 lessonData.title = LESSON_TITLE_INIT;
             }
-            // Carregar currículo da API
             await loadCurriculumData();
-            // Iniciar na aba de Upload Directo por defeito
-            setVideoSource('upload');
+            await loadCreatorChapters();
+
+            // Se LESSON_ID for um UUID real, carregar dados da BD
+            if (lessonDbId) {
+                await loadExistingLesson(lessonDbId);
+            }
+
+            setVideoSource(lessonData.videoSource || 'upload');
             renderExercises();
             renderResources();
             updatePublishChecklist();
         };
+
+        async function loadExistingLesson(id) {
+            try {
+                const token = localStorage.getItem('accessToken') || '';
+                const r = await fetch(`/api/creator/lesson/${id}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const d = await r.json();
+                if (!d.success || !d.data) {
+                    VClass.showNotification(d.error || 'Lição não encontrada', 'error');
+                    return;
+                }
+                const l = d.data;
+
+                // Mapear DB → lessonData (nomes de campos do form)
+                lessonData = {
+                    ...lessonData,
+                    dbId:        l.id,
+                    title:       l.title || '',
+                    desc:        l.description || '',
+                    notes:       l.content || '',
+                    duration:    Math.round((l.video_duration || 0) / 60) || 12,
+                    order:       l.display_order || 1,
+                    videoId:     l.video_id || '',
+                    videoUrl:    l.video_url || '',
+                    libraryId:   l.bunny_library_id || '',
+                    thumbnail:   l.thumbnail_url || '',
+                    is_free:     !!l.is_free,
+                    status:      l.status || 'draft',
+                    chapter_id:  l.chapter_id || '',
+                    objectives:  Array.isArray(l.objectives) ? l.objectives : (l.objectives ? JSON.parse(l.objectives) : []),
+                    exercises:   Array.isArray(l.exercises) ? l.exercises : [],
+                    resources:   Array.isArray(l.resources) ? l.resources : []
+                };
+
+                // Popular campos de UI
+                const set = (id, v) => { const el = document.getElementById(id); if (el && v !== undefined && v !== null) el.value = v; };
+                set('field-title',    lessonData.title);
+                set('field-desc',     lessonData.desc);
+                set('field-notes',    lessonData.notes);
+                set('field-duration', lessonData.duration);
+                set('field-order',    lessonData.order);
+                set('field-video-id', lessonData.videoId);
+                set('field-library-id', lessonData.libraryId);
+                set('field-video-url', lessonData.videoUrl);
+
+                document.getElementById('header-title').textContent = lessonData.title || 'Editar Lição';
+                updateCharCount('field-title','title-count');
+                updateCharCount('field-desc','desc-count');
+
+                // Modo de vídeo: se tem video_id (Bunny) → upload; se tem video_url → external
+                if (lessonData.videoId) lessonData.videoSource = 'upload';
+                else if (lessonData.videoUrl) lessonData.videoSource = 'external';
+            } catch (e) {
+                console.error('loadExistingLesson failed:', e);
+                VClass.showNotification('Erro ao carregar lição', 'error');
+            }
+        }
 
         // ── Currículo: carregar dados ────────────────────────────────────
         async function loadCurriculumData() {
@@ -1323,6 +1400,13 @@
                 const json = await res.json();
                 if (json.success) {
                     CURRICULUM_DATA = json.data;
+                    // Construir mapa subjectId → nome para todos os países/níveis/classes
+                    SUBJECT_NAME_BY_ID = {};
+                    CURRICULUM_DATA.forEach(country => country.levels?.forEach(level =>
+                        level.grades?.forEach(grade => grade.subjects?.forEach(s => {
+                            SUBJECT_NAME_BY_ID[s.id] = s.name;
+                        }))
+                    ));
                     populateCountries();
                 }
             } catch(e) {
@@ -1391,9 +1475,16 @@
             const country = CURRICULUM_DATA.find(c => c.id === _currCountry);
             const level   = country?.levels.find(l => l.id === _currLevel);
             const grade   = level?.grades.find(g => g.id === gradeId);
-            if (!grade || !grade.subjects.length) return;
-
             const sel = document.getElementById('field-subject');
+            if (!grade || !grade.subjects.length) {
+                sel.innerHTML = '<option value="">Sem disciplinas configuradas para esta classe</option>';
+                document.getElementById('wrap-subject').classList.remove('hidden');
+                if (typeof VClass !== 'undefined' && VClass.showNotification) {
+                    VClass.showNotification('Esta classe ainda não tem disciplinas no currículo. Escolha outra classe ou contacte o admin.', 'warning');
+                }
+                return;
+            }
+
             sel.innerHTML = '<option value="">Selecionar disciplina...</option>' +
                 grade.subjects.map(s =>
                     `<option value="${s.id}" data-name="${s.name}">
@@ -1406,40 +1497,98 @@
         function onSubjectChange() {
             const subjectId = document.getElementById('field-subject').value;
             _currSubjectId = subjectId;
-            document.getElementById('wrap-chapter').classList.add('hidden');
             document.getElementById('chapter-term-badge').classList.add('hidden');
 
-            if (!subjectId || !CURRICULUM_DATA) return;
-            const country = CURRICULUM_DATA.find(c => c.id === _currCountry);
-            const level   = country?.levels.find(l => l.id === _currLevel);
-            const grade   = level?.grades.find(g => g.id === _currGrade);
-            const subject = grade?.subjects.find(s => s.id === subjectId);
-            if (!subject || !subject.chapters.length) return;
+            if (!subjectId) {
+                document.getElementById('wrap-chapter').classList.add('hidden');
+                return;
+            }
+            document.getElementById('wrap-chapter').classList.remove('hidden');
 
-            // Agrupar por trimestre
-            const terms = [...new Set(subject.chapters.map(c => c.term))].sort();
-            const country_obj = CURRICULUM_DATA.find(c => c.id === _currCountry);
+            // Actualizar lessonData a partir do select de disciplina
+            const opt = document.getElementById('field-subject').options[document.getElementById('field-subject').selectedIndex];
+            lessonData.subject = opt?.dataset?.name || subjectId;
+
+            // Renderizar apenas capítulos criados pelo professor para esta disciplina
+            renderChapterSelectForSubject(subjectId);
+            scheduleAutoSave();
+        }
+
+        // Filtra os capítulos do professor pela disciplina seleccionada e popula o select.
+        // O slug dos capítulos criados começa por `${subjectId}-` (ver createChapter() em creator-content.html).
+        function renderChapterSelectForSubject(subjectId) {
+            const sel = document.getElementById('field-chapter');
+            const hint = document.getElementById('chapter-empty-hint');
+            const country_obj = CURRICULUM_DATA?.find(c => c.id === _currCountry);
             const termLabel = country_obj?.educationTerms === 'bimestres' ? 'Bimestre'
                             : country_obj?.educationTerms === 'semestres'  ? 'Semestre'
                             : 'Trimestre';
 
-            let options = `<option value="">Selecionar capítulo...</option>`;
-            terms.forEach(t => {
-                const termChaps = subject.chapters.filter(c => c.term === t);
-                options += `<optgroup label="── ${termLabel} ${t} ──">`;
-                options += termChaps.map(c =>
-                    `<option value="${c.id}" data-term="${c.term}" data-title="${c.title}">${c.title}</option>`
-                ).join('');
-                options += '</optgroup>';
+            // A página de Conteúdos deduplica disciplinas por nome, portanto
+            // um capítulo de "Matemática" pode ter sido gravado com slug
+            // `mz10-mat-…` mesmo que esta lição seja da 12ª. Por isso o
+            // filtro é por NOME da disciplina e não pelo id exacto:
+            //   slug → encontra subject estático cujo id é prefixo →
+            //          compara o nome desse subject com o nome do subject actual.
+            const selectedName = (SUBJECT_NAME_BY_ID[subjectId] || '').toLowerCase().trim();
+            const subjectIdsByName = {};
+            Object.entries(SUBJECT_NAME_BY_ID).forEach(([sid, sname]) => {
+                const k = (sname || '').toLowerCase().trim();
+                (subjectIdsByName[k] = subjectIdsByName[k] || []).push(sid.toLowerCase());
+            });
+            const candidateIds = subjectIdsByName[selectedName] || [subjectId.toLowerCase()];
+
+            const mine = (CREATOR_CHAPTERS || []).filter(ch => {
+                const slug = (ch.slug || '').toLowerCase();
+                return candidateIds.some(sid => slug.startsWith(sid + '-'));
             });
 
-            document.getElementById('field-chapter').innerHTML = options;
-            document.getElementById('wrap-chapter').classList.remove('hidden');
+            if (!mine.length) {
+                sel.innerHTML = '<option value="">— Sem capítulos para esta disciplina —</option>';
+                hint?.classList.remove('hidden');
+                document.getElementById('chapter-term-badge').classList.add('hidden');
+                return;
+            }
+            hint?.classList.add('hidden');
 
-            // Actualizar lessonData
-            const opt = document.getElementById('field-subject').options[document.getElementById('field-subject').selectedIndex];
-            lessonData.subject = opt?.dataset?.name || subjectId;
-            scheduleAutoSave();
+            // Agrupar por trimestre quando disponível
+            const hasTerms = mine.some(c => c.trimester);
+            let options = `<option value="">Selecionar capítulo...</option>`;
+            if (hasTerms) {
+                const terms = [...new Set(mine.map(c => c.trimester || 0))].sort();
+                terms.forEach(t => {
+                    const group = mine.filter(c => (c.trimester || 0) === t);
+                    options += t ? `<optgroup label="── ${termLabel} ${t} ──">` : `<optgroup label="── Sem período ──">`;
+                    options += group.map(c =>
+                        `<option value="${c.id}" data-term="${c.trimester || ''}" data-title="${(c.title||'').replace(/"/g,'&quot;')}">${c.title}</option>`
+                    ).join('');
+                    options += '</optgroup>';
+                });
+            } else {
+                options += mine.map(c =>
+                    `<option value="${c.id}" data-title="${(c.title||'').replace(/"/g,'&quot;')}">${c.title}</option>`
+                ).join('');
+            }
+            sel.innerHTML = options;
+
+            // Pré-selecionar capítulo se a lição já o tiver
+            if (lessonData.chapter_id) {
+                sel.value = lessonData.chapter_id;
+                if (sel.value) onChapterChange();
+            }
+        }
+
+        async function loadCreatorChapters() {
+            try {
+                const token = localStorage.getItem('accessToken') || '';
+                const r = await fetch('/api/creator/chapters', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const d = await r.json();
+                if (d.success && Array.isArray(d.data)) CREATOR_CHAPTERS = d.data;
+            } catch (e) {
+                console.warn('loadCreatorChapters failed', e);
+            }
         }
 
         function onChapterChange() {
@@ -1898,42 +2047,61 @@
                 });
                 const prep = await prepRes.json();
                 if (!prep.success) throw new Error(prep.error || 'Erro ao preparar upload');
-                const { videoId, uploadUrl, authHeader, demo } = prep.data;
+                const { videoId, upload, demo } = prep.data;
 
-                if (demo || !uploadUrl) {
+                // Mostrar banner demo só quando o backend confirma demo mode
+                const demoNotice = document.getElementById('bunny-demo-notice');
+                if (demoNotice) demoNotice.classList.toggle('hidden', !demo);
+
+                if (demo || !upload) {
                     await simulateDemoUpload(videoId, uploadFile.name);
                 } else {
                     document.getElementById('upload-status-text').textContent = 'A enviar para Bunny.net...';
-                    await doRealUpload(uploadUrl, authHeader, videoId);
+                    await doTusUpload(upload, videoId);
                 }
             } catch (err) {
                 showUploadError(err.message || 'Erro desconhecido durante o upload.');
             }
         }
 
-        // ── Upload real via XHR ──────────────────────────────────────────
-        function doRealUpload(uploadUrl, authHeader, videoId) {
+        // ── Upload TUS resumable assinado (Bunny.net Stream) ───────────────
+        // O servidor já criou o vídeo no Bunny e devolveu uma assinatura HMAC
+        // com escopo (videoId × expiração). A master API key NUNCA é exposta.
+        let currentTusUpload = null;
+        function doTusUpload(uploadCfg, videoId) {
             return new Promise((resolve, reject) => {
-                uploadXHR = new XMLHttpRequest();
-                uploadXHR.open('PUT', uploadUrl, true);
-                uploadXHR.setRequestHeader('AccessKey', authHeader);
-                uploadXHR.setRequestHeader('Content-Type', 'application/octet-stream');
+                if (!window.tus) return reject(new Error('TUS client não carregado.'));
 
-                uploadXHR.upload.onprogress = (e) => {
-                    if (!e.lengthComputable) return;
-                    const pct     = Math.round((e.loaded / e.total) * 100);
-                    const elapsed = (Date.now() - uploadStartTime) / 1000;
-                    const speed   = e.loaded / elapsed;
-                    setUploadProgress(pct, e.loaded, speed, (e.total - e.loaded) / speed);
-                };
-                uploadXHR.onload  = () => {
-                    if (uploadXHR.status >= 200 && uploadXHR.status < 300) { onUploadSuccess(videoId); resolve(); }
-                    else reject(new Error(`Bunny.net: HTTP ${uploadXHR.status}`));
-                };
-                uploadXHR.onerror = () => reject(new Error('Erro de rede durante o upload.'));
-                uploadXHR.onabort = () => reject(new Error('Upload cancelado.'));
-                uploadXHR.send(uploadFile);
+                currentTusUpload = new tus.Upload(uploadFile, {
+                    endpoint: uploadCfg.endpoint,
+                    retryDelays: [0, 3000, 5000, 10000, 20000],
+                    headers: uploadCfg.headers || {},
+                    metadata: uploadCfg.metadata,
+                    onError: (err) => {
+                        currentTusUpload = null;
+                        reject(new Error('Bunny TUS: ' + (err?.message || err)));
+                    },
+                    onProgress: (bytesUploaded, bytesTotal) => {
+                        const pct = Math.round((bytesUploaded / bytesTotal) * 100);
+                        const elapsed = (Date.now() - uploadStartTime) / 1000;
+                        const speed = elapsed > 0 ? bytesUploaded / elapsed : 0;
+                        const eta = speed > 0 ? (bytesTotal - bytesUploaded) / speed : 0;
+                        setUploadProgress(pct, bytesUploaded, speed, eta);
+                    },
+                    onSuccess: () => {
+                        currentTusUpload = null;
+                        onUploadSuccess(videoId);
+                        resolve();
+                    }
+                });
+                currentTusUpload.start();
             });
+        }
+        function cancelTusUpload() {
+            if (currentTusUpload) {
+                try { currentTusUpload.abort(true); } catch {}
+                currentTusUpload = null;
+            }
         }
 
         // ── Upload demo ──────────────────────────────────────────────────
@@ -1991,12 +2159,27 @@
             if (!isDemo) pollVideoStatus(videoId);
         }
 
-        // ── Polling de status ────────────────────────────────────────────
+        // ── Polling de status (até 20 min, 15s entre tentativas) ─────────
         async function pollVideoStatus(videoId) {
             const token = localStorage.getItem('accessToken') || '';
             let attempts = 0;
+            const MAX_ATTEMPTS = 80;     // 80 × 15s = 20 min
+            const labels = {
+                created:     'A receber upload...',
+                uploading:   'A receber upload...',
+                processing:  'A processar...',
+                transcoding: (p) => `A transcodificar... ${p}%`,
+                finishing:   'A finalizar (gerar thumbnails)...',
+                ready:       '✅ Pronto para streaming!',
+                error:       '❌ Erro no processamento'
+            };
+
             const check = async () => {
-                if (attempts++ >= 30) return;
+                if (attempts++ >= MAX_ATTEMPTS) {
+                    const el = document.getElementById('upload-done-status');
+                    if (el) el.textContent = '⏳ Demora mais que o normal — pode continuar a publicar; o vídeo aparecerá quando estiver pronto.';
+                    return;
+                }
                 try {
                     const r = await fetch(`/api/creator/video/${videoId}/status`, {
                         headers: { Authorization: `Bearer ${token}` }
@@ -2004,13 +2187,15 @@
                     const d = await r.json();
                     if (d.success) {
                         const { status, encodeProgress } = d.data;
-                        const labels = { transcoding: `A transcodificar... ${encodeProgress}%`, ready: '✅ Pronto para streaming!', error: '❌ Erro no processamento' };
+                        const labelFn = labels[status];
+                        const text    = typeof labelFn === 'function' ? labelFn(encodeProgress || 0)
+                                       : labelFn || `Estado: ${status}`;
                         const el = document.getElementById('upload-done-status');
-                        if (el) el.textContent = labels[status] || 'A processar...';
+                        if (el) el.textContent = text;
                         if (status === 'ready' || status === 'error') return;
                     }
                 } catch (_) {}
-                setTimeout(check, 10000);
+                setTimeout(check, 15000);
             };
             setTimeout(check, 5000);
         }
@@ -2025,7 +2210,7 @@
 
         // ── Reset ─────────────────────────────────────────────────────────
         function resetUpload() {
-            if (uploadXHR) { try { uploadXHR.abort(); } catch(_){} uploadXHR = null; }
+            cancelTusUpload();
             const v = document.getElementById('preview-video');
             if (v.src) { URL.revokeObjectURL(v.src); v.src = ''; }
             uploadFile = capturedThumbData = null;
@@ -2291,14 +2476,71 @@
             else el.innerHTML = '<i class="fas fa-circle text-gray-300 text-xs"></i> Não salvo';
         }
 
+        // Faz draft local (rápido, optimista)
         function performSave() {
             localStorage.setItem(`vclass_lesson_${LESSON_ID}`, JSON.stringify(lessonData));
         }
 
-        function saveDraft() {
+        // Persiste na BD via API. Devolve o id da lição (gera POST na primeira vez).
+        async function performSaveAPI(targetStatus) {
+            const token = localStorage.getItem('accessToken') || '';
+            const chapterEl  = document.getElementById('field-chapter');
+            // Para lições existentes usa chapter_id da BD; para novas, requer seleção no dropdown
+            const chapter_id = chapterEl?.value || lessonData.chapter_id || null;
+            if (!chapter_id && !lessonData.dbId) {
+                VClass.showNotification('Escolha um capítulo antes de salvar.', 'warning');
+                return null;
+            }
+            const chapterOption = chapterEl?.options?.[chapterEl.selectedIndex];
+            const chapter_title = chapterOption?.dataset?.title || chapterOption?.textContent?.trim() || null;
+
+            const videoIdField  = document.getElementById('field-video-id')?.value?.trim();
+            const videoUrlField = document.getElementById('field-video-url')?.value?.trim();
+            const payload = {
+                title:         lessonData.title || document.getElementById('field-title')?.value || '',
+                description:   lessonData.description || document.getElementById('field-desc')?.value || '',
+                content:       lessonData.notes || '',
+                chapter_id,
+                chapter_title,
+                video_id:      lessonData.videoId || videoIdField || null,
+                video_url:     videoUrlField || null,
+                thumbnail_url: lessonData.thumbnail_url || null,
+                is_free:       !!lessonData.is_free,
+                display_order: lessonData.order || 1,
+                status:        targetStatus || lessonData.status || 'draft'
+            };
+
+            const lessonDbId = lessonData.dbId || null;
+            const url    = lessonDbId ? `/api/creator/lesson/${lessonDbId}` : '/api/creator/lesson';
+            const method = lessonDbId ? 'PUT' : 'POST';
+
+            try {
+                const r = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify(payload)
+                });
+                const d = await r.json();
+                if (!d.success) throw new Error(d.error || 'Erro ao guardar');
+                if (d.data?.id) {
+                    lessonData.dbId = d.data.id;
+                    performSave();   // atualiza localStorage com o id real
+                }
+                return d.data;
+            } catch (e) {
+                console.error('Save lesson API error:', e);
+                VClass.showNotification('Erro ao guardar: ' + e.message, 'error');
+                return null;
+            }
+        }
+
+        async function saveDraft() {
             performSave();
-            setSaveStatus('saved');
-            VClass.showNotification('Rascunho salvo!', 'success');
+            const result = await performSaveAPI('draft');
+            if (result) {
+                setSaveStatus('saved');
+                VClass.showNotification('Rascunho guardado na BD!', 'success');
+            }
         }
 
         function showAutosaveToast() {
@@ -2308,43 +2550,81 @@
             setTimeout(() => { t.classList.add('hidden'); t.classList.remove('flex'); }, 2500);
         }
 
-        function publishLesson() {
+        async function publishLesson() {
             updatePublishChecklist();
-            const hasTitle   = lessonData.title.length >= 5;
-            const hasSubject = !!document.getElementById('field-subject')?.value;
+            const titleVal = lessonData.title || document.getElementById('field-title')?.value || '';
+            const hasTitle   = titleVal.length >= 3;
             const hasVideo   = !!lessonData.videoId
-                            || !!document.getElementById('field-video-id')?.value
-                            || !!document.getElementById('field-video-url')?.value;
-            if (!hasTitle || !hasSubject || !hasVideo) {
-                VClass.showNotification('Preencha todos os campos obrigatórios antes de publicar.', 'warning');
-                switchTab('publish');
+                            || !!document.getElementById('field-video-id')?.value?.trim()
+                            || !!document.getElementById('field-video-url')?.value?.trim();
+            // Para lições novas também exige capítulo selecionado; para existentes já está na BD
+            const hasChapter = !!lessonData.dbId || !!lessonData.chapter_id
+                            || !!document.getElementById('field-chapter')?.value;
+            if (!hasTitle) {
+                VClass.showNotification('Título obrigatório (mín. 3 caracteres).', 'warning');
+                switchTab('info');
+                return;
+            }
+            if (!hasVideo) {
+                VClass.showNotification('Adicione um vídeo antes de publicar.', 'warning');
+                switchTab('video');
+                return;
+            }
+            if (!hasChapter) {
+                VClass.showNotification('Selecione um capítulo antes de publicar.', 'warning');
                 return;
             }
             lessonData.status = 'published';
             performSave();
+
+            const result = await performSaveAPI('published');
+            if (!result) return;  // erro já notificado
+
             document.getElementById('lesson-status-badge').textContent = 'Publicada';
             document.getElementById('lesson-status-badge').className = 'text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700';
-            VClass.showNotification('Lição publicada com sucesso! 🎉', 'success');
-            setTimeout(() => location.href = '/creator-content.html', 2000);
+            VClass.showNotification('Lição publicada! 🎉', 'success');
+            setTimeout(() => location.href = '/creator-content.html', 1500);
         }
 
-        function unpublishLesson() {
+        async function unpublishLesson() {
             lessonData.status = 'draft';
             performSave();
+            const result = await performSaveAPI('draft');
+            if (!result) return;
             document.getElementById('lesson-status-badge').textContent = 'Rascunho';
             document.getElementById('lesson-status-badge').className = 'text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700';
             VClass.showNotification('Lição movida para rascunho.', 'info');
         }
 
-        function deleteLesson() {
+        async function deleteLesson() {
             if (!confirm('Excluir esta lição permanentemente? Esta ação não pode ser desfeita.')) return;
+            const id = lessonData.dbId || lessonDbId;
+            if (id) {
+                try {
+                    const token = localStorage.getItem('accessToken') || '';
+                    const r = await fetch(`/api/creator/lesson/${id}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const d = await r.json();
+                    if (!d.success) throw new Error(d.error);
+                } catch (e) {
+                    VClass.showNotification('Erro ao eliminar: ' + e.message, 'error');
+                    return;
+                }
+            }
             localStorage.removeItem(`vclass_lesson_${LESSON_ID}`);
             VClass.showNotification('Lição excluída.', 'warning');
             setTimeout(() => location.href = '/creator-content.html', 1000);
         }
 
         function previewLesson() {
-            VClass.showNotification('Pré-visualização disponível após salvar a lição.', 'info');
+            const id = lessonData.dbId || lessonDbId;
+            if (id) {
+                window.open(`/lesson.html?id=${id}`, '_blank');
+            } else {
+                VClass.showNotification('Salve a lição primeiro para poder pré-visualizá-la.', 'info');
+            }
         }
 
         // ════════════════════════════════════════════════════════════════

@@ -41,6 +41,7 @@
                     background-size: 200% 100%; animation: shimmer 1.5s infinite; }
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     </style>
+  <script src="/static/safe-dom.js"></script>
 </head>
 <body class="bg-gray-50">
 
@@ -220,7 +221,26 @@
         }
 
         // ── Chapter expand/collapse ───────────────────────────────────────
-        function toggleChapter(id) {
+        // Cache em memória para não rebuscar lições já carregadas
+        const _lessonsCache = {};
+
+        async function loadRealLessons(chapterSlug) {
+            if (_lessonsCache[chapterSlug]) return _lessonsCache[chapterSlug];
+            try {
+                const token = localStorage.getItem('accessToken') || '';
+                const r = await fetch(`/api/content/lessons/${encodeURIComponent(chapterSlug)}`, {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                });
+                const d = await r.json();
+                if (d.success && Array.isArray(d.data)) {
+                    _lessonsCache[chapterSlug] = d.data;
+                    return d.data;
+                }
+            } catch (e) { console.warn('loadRealLessons failed:', e); }
+            return [];
+        }
+
+        async function toggleChapter(id) {
             const panel = document.getElementById(`lessons-${id}`);
             const btn   = document.getElementById(`expand-${id}`);
             if (!panel) return;
@@ -228,6 +248,23 @@
             panel.classList.toggle('expanded', !isOpen);
             panel.classList.toggle('collapsed', isOpen);
             btn.classList.toggle('open', !isOpen);
+
+            // Ao abrir, buscar lições reais da API e re-renderizar se houver
+            if (!isOpen && !panel.dataset.loaded) {
+                panel.dataset.loaded = '1';
+                const ch = (window._allChaptersFlat || []).find(x => x.id === id) || { id, title: id };
+                const realLessons = await loadRealLessons(id);
+                if (realLessons.length > 0) {
+                    panel.innerHTML = renderLessonsList(realLessons, ch);
+                } else if (ch.fromDb) {
+                    // Capítulo do BD ainda sem lições publicadas — não mostrar placeholders
+                    panel.innerHTML = `<div class="px-5 py-6 text-center text-gray-400 text-sm">
+                        <i class="fas fa-inbox text-2xl text-gray-200 mb-2 block"></i>
+                        Ainda não há lições publicadas neste capítulo.
+                    </div>`;
+                }
+                // Capítulos do currículo estático mantêm os placeholders já renderizados.
+            }
         }
 
         // ── Render subject header ─────────────────────────────────────────
@@ -275,6 +312,8 @@
         };
 
         function renderChapters(chapters) {
+            // Memorizar para usar em toggleChapter (ao re-renderizar com lições reais)
+            window._allChaptersFlat = chapters;
             const container = document.getElementById('chapters-container');
             if (chapters.length === 0) {
                 container.innerHTML = `

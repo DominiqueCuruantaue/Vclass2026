@@ -1,5 +1,7 @@
 import { Hono } from 'hono'
 import { logger } from 'hono/logger'
+import type { CloudflareBindings } from './types/bindings'
+import './types/bindings' // augment Hono Env
 import { serveStatic } from 'hono/cloudflare-workers'
 import { corsConfig } from './middleware/cors'
 
@@ -26,7 +28,7 @@ import teacherVerificationRoutes from './routes/teacher-verification'
 import plansRoutes from './routes/plans'
 import pagesRoutes from './routes/pages'
 
-const app = new Hono()
+const app = new Hono<{ Bindings: CloudflareBindings }>()
 
 // Middleware
 app.use('*', logger())

@@ -77,6 +77,7 @@
         /* ── Chart container ─────────────────────────────────────────── */
         .chart-wrapper { position:relative; height:200px; }
     </style>
+  <script src="/static/safe-dom.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
 
@@ -550,26 +551,14 @@
         }
     });
 
-    // ── Mock Data (used when API not available) ────────────────────────────
-    const MOCK_STATS = {
-        total_lessons: 16, published_lessons: 13, draft_lessons: 3,
-        total_chapters: 61, total_students_reached: 1847,
-        avg_approval_rate: 78, weekly_views: 312, weekly_completions: 87, weekly_exercises_done: 143
+    // ── Zero-state defaults (shown when API returns no data yet) ──────────
+    const EMPTY_STATS = {
+        total_lessons: 0, published_lessons: 0, draft_lessons: 0, review_lessons: 0,
+        total_chapters: 0, total_students_reached: 0,
+        avg_approval_rate: 0, weekly_views: 0, weekly_completions: 0,
+        weekly_exercises_done: 0, weekly_by_day: [0,0,0,0,0,0,0],
+        lessons_without_exercises: 0
     };
-
-    const MOCK_SUBJECTS = [
-        { name: 'Física',      color: 'teal',   icon: 'fa-atom',       lessons: 13, pct: 72, key: 'fisica' },
-        { name: 'Matemática',  color: 'indigo',  icon: 'fa-calculator', lessons: 2,  pct: 40, key: 'matematica' },
-        { name: 'Química',     color: 'amber',   icon: 'fa-flask',      lessons: 1,  pct: 10, key: 'quimica' },
-    ];
-
-    const MOCK_LESSONS = [
-        { id:1,  title:'Leis de Newton — Aplicações',         subject:'Física',     chapter:'Dinâmica',   status:'published', views:128, exercises:5, updated:'2 dias atrás' },
-        { id:2,  title:'Cinemática — Movimento Uniforme',      subject:'Física',     chapter:'Cinemática', status:'published', views:96,  exercises:4, updated:'4 dias atrás' },
-        { id:3,  title:'Óptica Geométrica — Reflexão',         subject:'Física',     chapter:'Óptica',     status:'draft',     views:0,   exercises:0, updated:'5 dias atrás' },
-        { id:14, title:'Funções Quadráticas',                  subject:'Matemática', chapter:'Funções',    status:'published', views:54,  exercises:6, updated:'1 sem. atrás' },
-        { id:16, title:'Tabela Periódica — Grupos e Períodos', subject:'Química',    chapter:'Átomos',     status:'draft',     views:0,   exercises:2, updated:'1 sem. atrás' },
-    ];
 
     // ── Animate Number ─────────────────────────────────────────────────────
     function animateNumber(el, target, suffix = '') {
@@ -587,21 +576,37 @@
         requestAnimationFrame(step);
     }
 
+    // ── Holds the API response for use across functions ────────────────────
+    let _dashData = null;
+
     // ── Load Stats ─────────────────────────────────────────────────────────
     async function loadStats() {
-        let stats = MOCK_STATS;
+        let stats = EMPTY_STATS;
+        let subjects = [];
         try {
-            const res = await VClass.api.creator?.dashboard?.() || null;
-            if (res?.success && res.data?.stats) stats = res.data.stats;
+            const res = await VClass.api.creator.dashboard();
+            if (res?.success && res.data?.stats) {
+                stats = { ...EMPTY_STATS, ...res.data.stats };
+                subjects = res.data.subjects || [];
+                _dashData = res.data;
+            }
         } catch (_) {}
 
-        const pubPct = Math.round((stats.published_lessons / Math.max(stats.total_lessons,1)) * 100);
-        const avgPct = stats.avg_approval_rate || 78;
+        const goalLessons = Math.max(stats.total_lessons, 20);
+        const pubPct = Math.round((stats.published_lessons / goalLessons) * 100);
+        const avgPct = stats.avg_approval_rate || 0;
+
+        // Streak badge — hide if no data yet
+        const streakBadgeEl = document.getElementById('streak-badge');
+        if (stats.total_lessons === 0) {
+            streakBadgeEl.classList.add('hidden');
+            document.querySelector('.streak-icon').classList.add('hidden');
+        }
 
         // Animate numbers
         setTimeout(() => {
             animateNumber(document.getElementById('stat-lessons'), stats.published_lessons);
-            animateNumber(document.getElementById('stat-chapters'), stats.total_chapters || 61);
+            animateNumber(document.getElementById('stat-chapters'), stats.total_chapters);
             animateNumber(document.getElementById('stat-students'), stats.total_students_reached);
             animateNumber(document.getElementById('stat-avg'), avgPct);
         }, 200);
@@ -611,30 +616,157 @@
             document.getElementById('stat-lessons-bar').style.width = pubPct + '%';
             document.getElementById('stat-lessons-pct').textContent = pubPct + '% da meta';
             document.getElementById('stat-avg-bar').style.width = avgPct + '%';
-            document.getElementById('stat-avg-label').textContent = avgPct >= 80 ? 'Excelente' : avgPct >= 60 ? 'Bom' : 'A melhorar';
+            document.getElementById('stat-avg-label').textContent = avgPct >= 80 ? 'Excelente' : avgPct >= 60 ? 'Bom' : avgPct > 0 ? 'A melhorar' : '—';
         }, 400);
 
+        // Update delta badges with real chapter count context
+        document.getElementById('stat-lessons-delta').textContent = stats.draft_lessons > 0
+            ? `${stats.draft_lessons} rascunhos` : '0 rascunhos';
+        document.getElementById('stat-students-delta').textContent =
+            stats.total_students_reached > 0 ? `+${stats.total_students_reached}` : '0 alunos';
+        const activeStudentsEl = document.getElementById('stat-students-active');
+        if (activeStudentsEl) activeStudentsEl.textContent =
+            stats.weekly_views > 0 ? `${stats.weekly_views} acessos esta semana` : 'Nenhum acesso esta semana';
+
         // Summary chart totals
-        document.getElementById('summary-views').textContent = stats.weekly_views || 312;
-        document.getElementById('summary-completions').textContent = stats.weekly_completions || 87;
-        document.getElementById('summary-exercises').textContent = stats.weekly_exercises_done || 143;
+        document.getElementById('summary-views').textContent = stats.weekly_views;
+        document.getElementById('summary-completions').textContent = stats.weekly_completions;
+        document.getElementById('summary-exercises').textContent = stats.weekly_exercises_done;
 
         // Ring progress
-        const ringTarget = Math.round(314.16 * (1 - stats.published_lessons / 20));
-        document.getElementById('ring-progress').style.strokeDashoffset = ringTarget;
-        document.getElementById('ring-pct').textContent = pubPct + '%';
+        const ringPct = pubPct;
+        const ringOffset = Math.round(314.16 * (1 - ringPct / 100));
+        document.getElementById('ring-progress').style.strokeDashoffset = ringOffset;
+        document.getElementById('ring-pct').textContent = ringPct + '%';
         document.getElementById('count-pub').textContent = stats.published_lessons;
         document.getElementById('count-draft').textContent = stats.draft_lessons;
+        document.getElementById('count-review').textContent = stats.review_lessons || 0;
+
+        // Update "X de Y lições da meta publicadas" text
+        const ringDesc = document.querySelector('#ring-progress').closest('.relative').nextElementSibling;
+        if (ringDesc) ringDesc.textContent = `${stats.published_lessons} de ${goalLessons} lições da meta publicadas`;
+
+        // Pendências dinâmicas
+        renderPending(stats);
+
+        // Disciplinas
+        if (subjects.length > 0) {
+            renderSubjects(subjects.map(s => ({
+                ...s,
+                color: subjectColor(s.name),
+                icon: subjectIcon(s.name, s.icon),
+                key: s.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '-')
+            })));
+        } else if (stats.total_lessons === 0) {
+            document.getElementById('subjects-list').innerHTML =
+                '<p class="text-sm text-gray-400 text-center py-4">Nenhuma lição criada ainda.</p>';
+        }
+
+        // Chart data — use real weekly_by_day
+        if (stats.weekly_by_day && stats.weekly_by_day.some(v => v > 0)) {
+            CHART_DATA.views.data = stats.weekly_by_day;
+        }
+        // completions by day: approximate as 30% of views per day
+        if (stats.weekly_by_day) {
+            CHART_DATA.completions.data = stats.weekly_by_day.map(v => Math.round(v * 0.3));
+        }
+
+        return stats;
     }
 
-    // ── Load Lessons ───────────────────────────────────────────────────────
-    const SUBJECT_META = {
+    // ── Subject color / icon helpers ────────────────────────────────────────
+    const SUBJECT_PALETTE = {
         'Física':     { color: 'teal',   icon: 'fa-atom' },
         'Matemática': { color: 'indigo', icon: 'fa-calculator' },
         'Química':    { color: 'amber',  icon: 'fa-flask' },
         'Português':  { color: 'pink',   icon: 'fa-book' },
+        'Biologia':   { color: 'green',  icon: 'fa-leaf' },
+        'História':   { color: 'orange', icon: 'fa-landmark' },
+        'Geografia':  { color: 'blue',   icon: 'fa-globe' },
+        'Inglês':     { color: 'sky',    icon: 'fa-language' },
+        'Outros':     { color: 'gray',   icon: 'fa-book-open' },
     };
+    function subjectColor(name) { return (SUBJECT_PALETTE[name] || SUBJECT_PALETTE['Outros']).color; }
+    function subjectIcon(name, apiIcon) {
+        if (apiIcon && apiIcon !== 'fa-book') return apiIcon;
+        return (SUBJECT_PALETTE[name] || SUBJECT_PALETTE['Outros']).icon;
+    }
 
+    // ── Render Pending (dynamic) ────────────────────────────────────────────
+    function renderPending(stats) {
+        const items = [];
+
+        if (stats.draft_lessons > 0) {
+            items.push({
+                bg: 'bg-amber-50', border: 'border-amber-100 hover:border-amber-200',
+                iconBg: 'bg-amber-100', icon: 'fa-file-alt text-amber-600',
+                title: `${stats.draft_lessons} lição${stats.draft_lessons > 1 ? 'ões' : ''} em rascunho`,
+                desc: 'Revise e publique para que os alunos possam aceder.',
+                link: '/creator-content.html?filter=draft', linkLabel: 'Revisar',
+                linkClass: 'text-amber-700 hover:text-amber-900'
+            });
+        }
+
+        if (stats.lessons_without_exercises > 0) {
+            items.push({
+                bg: 'bg-blue-50', border: 'border-blue-100 hover:border-blue-200',
+                iconBg: 'bg-blue-100', icon: 'fa-question-circle text-blue-600',
+                title: `${stats.lessons_without_exercises} lição${stats.lessons_without_exercises > 1 ? 'ões' : ''} sem exercícios`,
+                desc: 'Adicione questões para melhorar o engajamento em 3×',
+                link: '/creator-content.html?filter=no-exercises', linkLabel: 'Adicionar',
+                linkClass: 'text-blue-700 hover:text-blue-900'
+            });
+        }
+
+        if (stats.total_lessons > 0) {
+            const goalLessons = Math.max(stats.total_lessons, 20);
+            const pct = Math.round((stats.published_lessons / goalLessons) * 100);
+            const remaining = goalLessons - stats.published_lessons;
+            items.push({
+                bg: 'bg-green-50', border: 'border-green-100 hover:border-green-200',
+                iconBg: 'bg-green-100', icon: 'fa-bullseye text-green-600',
+                title: `Meta do mês: ${goalLessons} lições`,
+                desc: `Publicadas: ${stats.published_lessons} de ${goalLessons}${remaining > 0 ? ` — faltam apenas ${remaining}!` : ' — meta atingida! 🎉'}`,
+                progress: pct,
+                badge: `${pct}%`, badgeClass: 'text-green-700 bg-green-100'
+            });
+        }
+
+        const pendingCount = document.getElementById('pending-count');
+        pendingCount.textContent = items.length;
+        if (items.length === 0) pendingCount.classList.add('hidden');
+
+        const list = document.getElementById('pending-list');
+        if (items.length === 0) {
+            list.innerHTML = `<div class="text-center py-6 text-sm text-gray-400">
+                <i class="fas fa-check-circle text-green-400 text-2xl mb-2 block"></i>
+                Nenhuma pendência! Continue o bom trabalho.
+            </div>`;
+            return;
+        }
+
+        list.innerHTML = items.map(item => `
+        <div class="flex items-start gap-3 p-3.5 ${item.bg} rounded-xl border ${item.border} transition">
+            <div class="w-9 h-9 ${item.iconBg} rounded-xl flex items-center justify-center flex-shrink-0">
+                <i class="fas ${item.icon} text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-gray-900">${item.title}</p>
+                <p class="text-xs text-gray-500 mt-0.5">${item.desc}</p>
+                ${item.progress !== undefined ? `
+                <div class="mt-2 h-1.5 bg-green-200 rounded-full overflow-hidden">
+                    <div class="h-full bg-green-500 rounded-full" style="width:${item.progress}%"></div>
+                </div>` : ''}
+            </div>
+            ${item.link ? `
+            <a href="${item.link}" class="text-xs font-bold ${item.linkClass} transition whitespace-nowrap flex items-center gap-1">
+                ${item.linkLabel} <i class="fas fa-arrow-right text-xs"></i>
+            </a>` : ''}
+            ${item.badge ? `<span class="text-xs font-bold ${item.badgeClass} px-2 py-1 rounded-full whitespace-nowrap">${item.badge}</span>` : ''}
+        </div>`).join('');
+    }
+
+    // ── Load Lessons ───────────────────────────────────────────────────────
     function statusBadge(s) {
         if (s === 'published') return `<span class="status-badge badge-pub">Publicada</span>`;
         if (s === 'draft')     return `<span class="status-badge badge-draft">Rascunho</span>`;
@@ -644,7 +776,8 @@
     function renderLessons(lessons) {
         const container = document.getElementById('recent-lessons-container');
         container.innerHTML = lessons.map(l => {
-            const meta = SUBJECT_META[l.subject] || { color: 'purple', icon: 'fa-video' };
+            const color = subjectColor(l.subject);
+            const meta = { color, icon: subjectIcon(l.subject, null) };
             return `
             <div class="lesson-row flex items-center gap-4 px-6 py-4 border-b border-gray-50 last:border-b-0">
                 <div class="w-10 h-10 bg-${meta.color}-100 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -792,29 +925,38 @@
 
     // ── Initialize ─────────────────────────────────────────────────────────
     async function init() {
-        // Load stats from API (or use mock)
+        // Load stats, subjects, pending from API
         await loadStats();
 
         // Load lessons
         try {
             const res = await VClass.api.creator.lessons('?limit=5');
             if (res?.success && res.data?.length > 0) {
-                renderLessons(res.data.map(l => ({
-                    ...l,
-                    subject: l.subject || 'Física',
-                    updated: VClass.formatRelativeTime ? VClass.formatRelativeTime(l.updated_at || l.updated) : (l.updated || '—')
-                })));
+                renderLessons(res.data.map(l => {
+                    // Format date relative
+                    let updated = l.updated || l.updated_at || '';
+                    if (updated && updated.length === 10) {
+                        const days = Math.round((Date.now() - new Date(updated).getTime()) / 86400000);
+                        updated = days === 0 ? 'hoje' : days === 1 ? 'ontem' : days < 7 ? `${days} dias atrás` : days < 14 ? '1 sem. atrás' : `${Math.round(days/7)} sem. atrás`;
+                    }
+                    return { ...l, subject: l.subject || '—', updated };
+                }));
             } else {
-                renderLessons(MOCK_LESSONS);
+                document.getElementById('recent-lessons-container').innerHTML =
+                    `<div class="text-center py-10 text-sm text-gray-400">
+                        <i class="fas fa-video-slash text-3xl mb-3 block text-gray-200"></i>
+                        Nenhuma lição criada ainda.<br>
+                        <a href="/creator-lesson-editor.html?new=true" class="mt-3 inline-block text-purple-600 font-semibold hover:underline">
+                            + Criar primeira lição
+                        </a>
+                    </div>`;
             }
         } catch (_) {
-            renderLessons(MOCK_LESSONS);
+            document.getElementById('recent-lessons-container').innerHTML =
+                '<div class="text-center py-8 text-sm text-gray-400">Erro ao carregar lições.</div>';
         }
 
-        // Load subjects
-        renderSubjects(MOCK_SUBJECTS);
-
-        // Build chart
+        // Build chart (data already set by loadStats)
         buildChart('views');
 
         // Render tips

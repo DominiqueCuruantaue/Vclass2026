@@ -316,6 +316,26 @@
         @media (max-width: 768px) {
             #vclass-video { height: 220px; }
         }
+        /* ── Fullscreen: ocupar todo o ecrã ── */
+        #vclass-player-wrap:fullscreen,
+        #vclass-player-wrap:-webkit-full-screen {
+            width: 100vw;
+            height: 100vh;
+            border-radius: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #vclass-player-wrap:fullscreen #vclass-video,
+        #vclass-player-wrap:-webkit-full-screen #vclass-video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        #vclass-player-wrap:fullscreen #vclass-protect-overlay,
+        #vclass-player-wrap:-webkit-full-screen #vclass-protect-overlay {
+            inset: 0;
+        }
         /* Overlay anti-screenshot / watermark */
         #vclass-watermark {
             position: absolute;
@@ -501,6 +521,7 @@
             transform-origin: 50% 50%;
         }
     </style>
+  <script src="/static/safe-dom.js"></script>
 </head>
 <body class="bg-gray-50">
     <!-- Navigation -->
@@ -689,7 +710,7 @@
                                 </button>
                             </div>
                             <!-- Écran de carregamento -->
-                            <div id="vc-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#000;z-index:30">
+                            <div id="vc-loading" class="flex" style="position:absolute;inset:0;align-items:center;justify-content:center;background:#000;z-index:30">
                                 <div style="text-align:center;color:#fff">
                                     <i class="fas fa-shield-alt text-4xl text-indigo-400 mb-3" style="display:block"></i>
                                     <p class="text-sm text-gray-400">A verificar acesso...</p>
@@ -1171,19 +1192,7 @@
 
     <script src="/static/app.js"></script>
     <script>
-        // DEMO MODE: Set fake authentication for testing
-        const isDemoMode = true; // Set to false to require login
-        
-        if (isDemoMode && !VClass.isAuthenticated()) {
-            // Set demo token to bypass auth checks
-            localStorage.setItem('accessToken', 'demo_token');
-            localStorage.setItem('user', JSON.stringify({
-                id: 'demo',
-                email: 'demo@vclass.mz',
-                full_name: 'Demo User',
-                role: 'student'
-            }));
-        } else if (!isDemoMode && !VClass.isAuthenticated()) {
+        if (!VClass.isAuthenticated()) {
             window.location.href = '/login.html';
         }
 
@@ -1192,16 +1201,9 @@
             document.getElementById('user-name').textContent = user.full_name;
         }
 
-        // Get lesson ID from URL
-        // Se vier um ID que não seja de lição (ex: chapter ID), usar lesson-1 como fallback demo
+        // Get lesson ID from URL — aceita UUID real (BD) ou slug demo
         const urlParams = new URLSearchParams(window.location.search);
         let lessonId = urlParams.get('id') || urlParams.get('lesson') || urlParams.get('lesson_id');
-        // Normalizar: se não parece um lesson ID conhecido, usar lesson-1
-        const KNOWN_LESSON_IDS = ['lesson-1','lesson-2','lesson-3','lesson-4','lesson-5','lesson-6','lesson-7','lesson-8'];
-        if (lessonId && !KNOWN_LESSON_IDS.includes(lessonId) && !lessonId.startsWith('lesson-')) {
-            console.info('ID desconhecido, usando lesson-1 como demo:', lessonId);
-            lessonId = 'lesson-1';
-        }
 
         let player = null;
         let lessonData = null;
@@ -1258,7 +1260,7 @@
                     loadFavoriteState();
                     loadRating();
                 } else {
-                    // Lição não existe nos mocks/BD — mostrar erro limpo
+                    // Lição não existe na BD — mostrar erro limpo
                     if (vload) vload.classList.add('hidden');
                     showLessonError(result.error || 'Esta lição ainda não está disponível.');
                     VClass.showNotification(result.error || 'Lição não disponível', 'error');
@@ -1371,7 +1373,8 @@
             // Rich content for left sidebar
             const contentDiv = document.getElementById('lesson-content');
             if (lessonData.content_text) {
-                contentDiv.innerHTML = lessonData.content_text;
+                // Conteúdo de lição é HTML rico criado por professores — sanitizar antes de injectar
+                setSanitizedHtml(contentDiv, lessonData.content_text);
             } else {
                 contentDiv.innerHTML = RICH_CONTENT[lessonId] || DEFAULT_RICH_CONTENT(lessonData.description);
             }
@@ -1385,9 +1388,9 @@
             breadcrumb.innerHTML = `
                 <li><a href="/browse.html" class="text-blue-600 hover:underline">Conteúdo</a></li>
                 <li><span class="text-gray-400 mx-2">/</span></li>
-                <li><a href="/chapters.html?gs=${encodeURIComponent(urlParams.get('gs')||'')}&subject=${encodeURIComponent(subjectFull)}&grade=${encodeURIComponent(gradeParam)}&country=${encodeURIComponent(countryParam)}" class="text-blue-600 hover:underline">${chapterParam}</a></li>
+                <li><a href="/chapters.html?gs=${encodeURIComponent(urlParams.get('gs')||'')}&subject=${encodeURIComponent(subjectFull)}&grade=${encodeURIComponent(gradeParam)}&country=${encodeURIComponent(countryParam)}" class="text-blue-600 hover:underline">${escapeHtml(chapterParam)}</a></li>
                 <li><span class="text-gray-400 mx-2">/</span></li>
-                <li class="text-gray-600 max-w-xs truncate">${lessonData.title}</li>
+                <li class="text-gray-600 max-w-xs truncate">${escapeHtml(lessonData.title)}</li>
             `;
         }
 
@@ -1577,7 +1580,9 @@
             const vload  = document.getElementById('vc-loading');
             const vclass_video = document.getElementById('vclass-video');
 
-            if (!lessonData || !lessonData.video_url) {
+            // Aceitar lições da BD (têm video_id Bunny) e mocks (têm video_url HLS).
+            // Sem qualquer dos dois, não há vídeo para tocar.
+            if (!lessonData || (!lessonData.video_id && !lessonData.video_url)) {
                 if (vload) vload.classList.add('hidden');
                 vcont.classList.add('hidden');
                 verr.classList.remove('hidden');
@@ -1585,16 +1590,23 @@
             }
 
             try {
-                // ── Passo 1: Obter token de acesso seguro ────────────────────
-                let videoUrl = lessonData.video_url;
+                // ── Passo 1: Obter token de acesso seguro + signed stream URL ──
+                // videoUrl pode ser undefined até o /api/video/stream resolver (Bunny signed HLS ou demo)
+                let videoUrl = lessonData.video_url || '';
                 let watermarkLabel = 'VClass';
+                const accessToken = localStorage.getItem('accessToken') || '';
+
+                // Sem Bunny video_id: usar video_url directo (modo teste local)
+                // — pula o fluxo de token/stream para não ser substituído pelo DEMO_HLS.
+                const skipTokenFlow = !lessonData.video_id && !!lessonData.video_url;
 
                 try {
+                    if (skipTokenFlow) throw new Error('skip-token-flow');
                     const tokenRes = await fetch('/api/video/token', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${VClass.getToken()}`
+                            'Authorization': `Bearer ${accessToken}`
                         },
                         body: JSON.stringify({
                             lessonId:  lessonId,
@@ -1606,18 +1618,33 @@
                         if (tokenData.success && tokenData.data) {
                             const wm = tokenData.data.watermark;
                             if (wm) {
-                                // Label principal usa nome do utilizador
                                 watermarkLabel = wm.name || 'VClass';
-                                // Guardar dados para watermark secundário
                                 _wmUser = { email: wm.email || '' };
                             }
-                            // Em produção com Bunny.net o videoUrl viria do stream endpoint:
-                            // videoUrl = await fetchStreamUrl(lessonId, tokenData.data.token);
+                            // Trocar o video token por signed stream URL (Bunny HLS ou demo embed)
+                            const vt = tokenData.data.token;
+                            const streamRes = await fetch(
+                                `/api/video/stream/${encodeURIComponent(lessonId)}?vt=${encodeURIComponent(vt)}`,
+                                { headers: { 'Authorization': `Bearer ${accessToken}` } }
+                            );
+                            if (streamRes.ok) {
+                                const streamData = await streamRes.json();
+                                if (streamData.success && streamData.data?.streamUrl) {
+                                    videoUrl = streamData.data.streamUrl;
+                                }
+                            }
                         }
                     }
                 } catch(e) {
-                    // Continua em modo demo se o token falhar
-                    console.warn('Token fetch failed, using demo mode:', e);
+                    console.warn('Token/stream fetch failed, fallback to lesson.video_url:', e);
+                }
+
+                // Sem URL final, abortar com erro limpo
+                if (!videoUrl) {
+                    if (vload) vload.classList.add('hidden');
+                    vcont.classList.add('hidden');
+                    verr.classList.remove('hidden');
+                    return;
                 }
 
                 // ── Passo 2: Inicializar HLS.js ──────────────────────────────
@@ -1819,7 +1846,7 @@
                         ${formatTime(bookmark.time)}
                     </div>
                     <div class="flex-1 cursor-pointer" onclick="jumpToBookmark(${bookmark.time})">
-                        <p class="text-sm font-semibold text-gray-800">${bookmark.title || 'Marcador'}</p>
+                        <p class="text-sm font-semibold text-gray-800">${escapeHtml(bookmark.title || 'Marcador')}</p>
                     </div>
                     <button onclick="deleteBookmark(${index})" class="text-gray-400 hover:text-red-500 transition">
                         <i class="fas fa-times text-sm"></i>
@@ -2015,6 +2042,13 @@
             document.getElementById('sticky-progress-pct').textContent = pct;
         }
 
+        // Stub: o anel de progresso SVG foi removido no redesign — manter
+        // a função para os call sites antigos não rebentarem.
+        function updateProgressRing(pct) {
+            const el = document.getElementById('progress-ring-pct');
+            if (el) el.textContent = `${pct}%`;
+        }
+
         // ─────────────────────────────────────────
         //  VIDEO SPEED
         // ─────────────────────────────────────────
@@ -2181,7 +2215,7 @@
                 <a href="#" onclick="return false"
                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition group">
                     <span class="w-5 h-5 rounded-full bg-blue-100 text-blue-600 text-xs font-bold flex items-center justify-center flex-shrink-0 group-hover:bg-blue-600 group-hover:text-white transition">${i+1}</span>
-                    ${t}
+                    ${escapeHtml(t)}
                 </a>
             `).join('');
 
@@ -2191,7 +2225,7 @@
                               'bg-green-100 text-green-700','bg-yellow-100 text-yellow-700',
                               'bg-pink-100 text-pink-700','bg-teal-100 text-teal-700'];
             kwContainer.innerHTML = topicData.keywords.map((kw, i) => `
-                <span class="text-xs px-3 py-1 rounded-full font-medium cursor-default ${kwColors[i % kwColors.length]}">${kw}</span>
+                <span class="text-xs px-3 py-1 rounded-full font-medium cursor-default ${kwColors[i % kwColors.length]}">${escapeHtml(kw)}</span>
             `).join('');
 
             // Outras Lições
@@ -2207,8 +2241,8 @@
                             <i class="fas fa-lock text-gray-400 text-xs"></i>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <p class="text-sm font-medium text-gray-500 truncate">${l.title}</p>
-                            <p class="text-xs text-gray-400">${l.duration}</p>
+                            <p class="text-sm font-medium text-gray-500 truncate">${escapeHtml(l.title)}</p>
+                            <p class="text-xs text-gray-400">${escapeHtml(l.duration)}</p>
                         </div>
                     </div>`;
                 return `
@@ -2219,8 +2253,8 @@
                             <i class="fas ${l.done ? 'fa-check' : isCurrent ? 'fa-play' : 'fa-circle'} text-white text-xs"></i>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <p class="text-sm font-semibold truncate ${isCurrent ? 'text-blue-700' : 'text-gray-800'}">${l.title}</p>
-                            <p class="text-xs text-gray-400">${l.duration}</p>
+                            <p class="text-sm font-semibold truncate ${isCurrent ? 'text-blue-700' : 'text-gray-800'}">${escapeHtml(l.title)}</p>
+                            <p class="text-xs text-gray-400">${escapeHtml(l.duration)}</p>
                         </div>
                         ${isCurrent ? '<span class="text-xs bg-blue-100 text-blue-600 font-bold px-2 py-0.5 rounded-full flex-shrink-0">Atual</span>' : ''}
                     </a>`;
@@ -2291,8 +2325,8 @@
                 <button onclick="selectQuizAnswer(${i})"
                     class="quiz-option-btn w-full text-left flex items-center gap-3 p-3 rounded-xl border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition text-sm"
                     data-index="${i}">
-                    <span class="w-7 h-7 rounded-full bg-gray-100 text-gray-600 font-bold text-xs flex items-center justify-center flex-shrink-0">${letters[i]}</span>
-                    ${opt}
+                    <span class="w-7 h-7 rounded-full bg-gray-100 text-gray-600 font-bold text-xs flex items-center justify-center flex-shrink-0">${escapeHtml(letters[i])}</span>
+                    ${escapeHtml(opt)}
                 </button>
             `).join('');
         }
@@ -2324,7 +2358,7 @@
                 fb.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Correcto! Muito bem!';
             } else {
                 fb.className = 'block mt-3 p-3 rounded-xl text-sm font-medium bg-red-100 text-red-800';
-                fb.innerHTML = `<i class="fas fa-times-circle mr-2"></i>Errado. A resposta correta é: <strong>${q.opts[q.correct]}</strong>`;
+                fb.innerHTML = `<i class="fas fa-times-circle mr-2"></i>Errado. A resposta correta é: <strong>${escapeHtml(q.opts[q.correct])}</strong>`;
             }
 
             const nextBtn = document.getElementById('quiz-next-btn');

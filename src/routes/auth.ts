@@ -1,12 +1,13 @@
 // Authentication Routes
 import { Hono } from 'hono'
+import type { CloudflareBindings } from '../types/bindings'
 import { z } from 'zod'
 import { getSupabase } from '../config/supabase'
-import { hashPassword, verifyPassword, validatePassword } from '../utils/password'
+import { hashPassword, verifyPassword, validatePassword, needsRehash } from '../utils/password'
 import { generateAccessToken, generateRefreshToken, verifyToken, verifyRefreshToken } from '../utils/jwt'
 import { storeRefreshToken, isRefreshTokenActive, revokeRefreshToken, revokeAllUserTokens } from '../utils/refreshTokens'
 import { mockUsers, DEMO_PASSWORD } from '../middleware/database'
-import { rateLimitMiddleware } from '../middleware/auth'
+import { authMiddleware, rateLimitMiddleware } from '../middleware/auth'
 
 function requestMeta(c: any) {
   return {
@@ -19,7 +20,7 @@ function requestMeta(c: any) {
 }
 import type { ApiResponse, AuthResponse } from '../types'
 
-const auth = new Hono()
+const auth = new Hono<{ Bindings: CloudflareBindings }>()
 
 // Rate limiting: máx 20 tentativas de login por minuto por IP
 auth.use('/login',    rateLimitMiddleware(20, 60_000))
@@ -121,10 +122,8 @@ auth.post('/register', async (c) => {
       console.error('Registration error:', error)
       return c.json<ApiResponse>({
         success: false,
-        error: 'Failed to create user',
-        // DEBUG TEMPORÁRIO — remover após validar
-        debug: { message: error?.message, code: (error as any)?.code, details: (error as any)?.details, hint: (error as any)?.hint }
-      } as any, 500)
+        error: 'Failed to create user'
+      }, 500)
     }
     
     // Generate tokens
@@ -152,14 +151,12 @@ auth.post('/register', async (c) => {
       message: 'Registration successful'
     }, 201)
     
-  } catch (error: any) {
+  } catch (error) {
     console.error('Register error:', error)
     return c.json<ApiResponse>({
       success: false,
-      error: 'Internal server error',
-      // DEBUG TEMPORÁRIO — remover após validar
-      debug: { message: error?.message, stack: error?.stack?.split('\n').slice(0,3) }
-    } as any, 500)
+      error: 'Internal server error'
+    }, 500)
   }
 })
 
@@ -256,14 +253,28 @@ auth.post('/login', async (c) => {
     
     // Verify password
     const isValid = await verifyPassword(password, user.password_hash)
-    
+
     if (!isValid) {
       return c.json<ApiResponse>({
         success: false,
         error: 'Invalid credentials'
       }, 401)
     }
-    
+
+    // Migração progressiva: se o hash usa cost antigo, re-hash com SALT_ROUNDS actual.
+    // Falha silenciosa — não bloqueia o login se a UPDATE falhar.
+    if (needsRehash(user.password_hash)) {
+      try {
+        const new_hash = await hashPassword(password)
+        await supabase
+          .from('users')
+          .update({ password_hash: new_hash, updated_at: new Date().toISOString() })
+          .eq('id', user.id)
+      } catch (e) {
+        console.warn('Password rehash failed for user', user.id, e)
+      }
+    }
+
     // Generate tokens
     const accessToken = generateAccessToken({
       sub: user.id,
@@ -403,99 +414,52 @@ auth.post('/logout', async (c) => {
  * GET /api/auth/me
  * Get current user info (requires auth)
  */
-auth.get('/me', async (c) => {
+auth.get('/me', authMiddleware, async (c) => {
   try {
-    // Extract token
-    const authHeader = c.req.header('Authorization')
-    const token = authHeader?.split(' ')[1]
-    
-    if (!token) {
-      return c.json<ApiResponse>({
-        success: false,
-        error: 'No token provided'
-      }, 401)
-    }
-    
-    const decoded = verifyToken(token, c.env?.JWT_SECRET)
+    const user = c.get('user')
 
-    if (!decoded) {
-      return c.json<ApiResponse>({
-        success: false,
-        error: 'Invalid token'
-      }, 401)
-    }
-
-    // Check if database is configured
     if (!isDatabaseConfigured(c.env)) {
-      // DEMO MODE: Return mock user
-      const demoUser = mockUsers.find(u => u.id === decoded.sub)
-      
+      const demoUser = mockUsers.find(u => u.id === user.id)
       if (!demoUser) {
-        return c.json<ApiResponse>({
-          success: false,
-          error: 'Utilizador não encontrado'
-        }, 404)
+        return c.json<ApiResponse>({ success: false, error: 'Utilizador não encontrado' }, 404)
       }
-      
       return c.json<ApiResponse>({
         success: true,
-        data: {
-          ...demoUser,
-          name: demoUser.full_name
-        }
+        data: { ...demoUser, name: demoUser.full_name }
       })
     }
-    
-    // PRODUCTION MODE: Use Supabase
+
     const supabase = getSupabase(c.env)
-    
     if (!supabase) {
-      return c.json<ApiResponse>({
-        success: false,
-        error: 'Database configuration error'
-      }, 500)
+      return c.json<ApiResponse>({ success: false, error: 'Database configuration error' }, 500)
     }
-    
-    const { data: user, error } = await supabase
+
+    const { data: dbUser, error } = await supabase
       .from('users')
       .select('id, email, full_name, role, country_id, phone, avatar_url, is_verified, created_at')
-      .eq('id', decoded.sub)
+      .eq('id', user.id)
       .single()
-    
-    if (error || !user) {
-      return c.json<ApiResponse>({
-        success: false,
-        error: 'User not found'
-      }, 404)
+
+    if (error || !dbUser) {
+      return c.json<ApiResponse>({ success: false, error: 'User not found' }, 404)
     }
-    
+
     return c.json<ApiResponse>({
       success: true,
-      data: {
-        ...user,
-        name: user.full_name
-      }
+      data: { ...dbUser, name: dbUser.full_name }
     })
-    
   } catch (error) {
     console.error('Get user error:', error)
-    return c.json<ApiResponse>({
-      success: false,
-      error: 'Internal server error'
-    }, 500)
+    return c.json<ApiResponse>({ success: false, error: 'Internal server error' }, 500)
   }
 })
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PATCH /api/auth/profile — actualizar nome, telefone, país
 // ═══════════════════════════════════════════════════════════════════════════════
-auth.patch('/profile', async (c) => {
+auth.patch('/profile', authMiddleware, async (c) => {
   try {
-    const authHeader = c.req.header('Authorization')
-    const token = authHeader?.replace('Bearer ', '') || ''
-    const decoded = verifyToken(token, c.env?.JWT_SECRET)
-
-    if (!decoded) return c.json<ApiResponse>({ success: false, error: 'Not authenticated' }, 401)
+    const user = c.get('user')
 
     const body = await c.req.json() as { full_name?: string; phone?: string; country_id?: string }
     const { full_name, phone, country_id } = body
@@ -505,11 +469,10 @@ auth.patch('/profile', async (c) => {
     }
 
     if (!isDatabaseConfigured(c.env)) {
-      // Demo mode: devolver dados actualizados sem persistir
       return c.json<ApiResponse>({
         success: true,
         data: {
-          id: decoded.sub,
+          id: user.id,
           full_name: full_name.trim(),
           phone: phone || '',
           country_id: country_id || '',
@@ -529,7 +492,7 @@ auth.patch('/profile', async (c) => {
     const { data, error } = await supabase
       .from('users')
       .update(updates)
-      .eq('id', decoded.sub)
+      .eq('id', user.id)
       .select('id, email, full_name, role, country_id, phone, avatar_url, is_verified, created_at')
       .single()
 
@@ -545,13 +508,9 @@ auth.patch('/profile', async (c) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // POST /api/auth/change-password
 // ═══════════════════════════════════════════════════════════════════════════════
-auth.post('/change-password', async (c) => {
+auth.post('/change-password', authMiddleware, async (c) => {
   try {
-    const authHeader = c.req.header('Authorization')
-    const token = authHeader?.replace('Bearer ', '') || ''
-    const decoded = verifyToken(token, c.env?.JWT_SECRET)
-
-    if (!decoded) return c.json<ApiResponse>({ success: false, error: 'Not authenticated' }, 401)
+    const user = c.get('user')
 
     const body = await c.req.json() as { current_password: string; new_password: string }
     const { current_password, new_password } = body
@@ -580,16 +539,16 @@ auth.post('/change-password', async (c) => {
     if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
 
     // Buscar hash actual
-    const { data: user, error: fetchErr } = await supabase
+    const { data: dbUser, error: fetchErr } = await supabase
       .from('users')
       .select('password_hash')
-      .eq('id', decoded.sub)
+      .eq('id', user.id)
       .single()
 
-    if (fetchErr || !user) return c.json<ApiResponse>({ success: false, error: 'Utilizador não encontrado' }, 404)
+    if (fetchErr || !dbUser) return c.json<ApiResponse>({ success: false, error: 'Utilizador não encontrado' }, 404)
 
     // Verificar senha actual
-    const valid = await verifyPassword(current_password, user.password_hash)
+    const valid = await verifyPassword(current_password, dbUser.password_hash)
     if (!valid) return c.json<ApiResponse>({ success: false, error: 'Senha actual incorrecta' }, 400)
 
     // Actualizar hash
@@ -598,12 +557,12 @@ auth.post('/change-password', async (c) => {
     const { error: updateErr } = await supabase
       .from('users')
       .update({ password_hash: new_hash, updated_at: new Date().toISOString() })
-      .eq('id', decoded.sub)
+      .eq('id', user.id)
 
     if (updateErr) return c.json<ApiResponse>({ success: false, error: updateErr.message }, 500)
 
     // Após mudar password: invalidar todas as sessões existentes (forçar re-login noutros devices)
-    await revokeAllUserTokens(supabase, decoded.sub)
+    await revokeAllUserTokens(supabase, user.id)
 
     return c.json<ApiResponse>({ success: true, message: 'Senha alterada com sucesso. Por segurança, faça login novamente nos outros dispositivos.' })
   } catch (e: any) {

@@ -1,10 +1,11 @@
 // Moderator Routes — /api/moderator/*
 // Moderação de chat, comentários e comunidade
 import { Hono } from 'hono'
+import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware, requireModeratorOrAdmin } from '../middleware/auth'
 import type { ApiResponse } from '../types'
 
-const moderator = new Hono()
+const moderator = new Hono<{ Bindings: CloudflareBindings }>()
 moderator.use('/*', authMiddleware)
 moderator.use('/*', requireModeratorOrAdmin)
 

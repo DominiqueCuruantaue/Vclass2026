@@ -1,10 +1,11 @@
 // Support Routes — /api/support/*
 import { Hono } from 'hono'
+import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware, requireSupportOrAdmin } from '../middleware/auth'
 import { mockUsers } from '../middleware/database'
 import type { ApiResponse } from '../types'
 
-const support = new Hono()
+const support = new Hono<{ Bindings: CloudflareBindings }>()
 
 // Todas as rotas requerem autenticação + role support ou admin
 support.use('/*', authMiddleware)

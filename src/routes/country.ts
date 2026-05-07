@@ -1,10 +1,11 @@
 // Country Manager Routes — /api/country/*
 // Gestão de currículo, utilizadores e conteúdo por país
 import { Hono } from 'hono'
+import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware, requireCountryManagerOrAdmin } from '../middleware/auth'
 import type { ApiResponse } from '../types'
 
-const country = new Hono()
+const country = new Hono<{ Bindings: CloudflareBindings }>()
 country.use('/*', authMiddleware)
 country.use('/*', requireCountryManagerOrAdmin)
 

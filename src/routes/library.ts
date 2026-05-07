@@ -5,10 +5,11 @@
 //  GET /api/library/:id      → material individual
 // ============================================================
 import { Hono } from 'hono'
+import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware } from '../middleware/auth'
 import type { ApiResponse } from '../types'
 
-const library = new Hono()
+const library = new Hono<{ Bindings: CloudflareBindings }>()
 
 // Auth obrigatória — só alunos registados acedem à biblioteca
 library.use('/*', authMiddleware)

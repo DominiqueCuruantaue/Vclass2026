@@ -24,6 +24,7 @@
         .modal-overlay { background:rgba(0,0,0,0.5);backdrop-filter:blur(3px); }
         .activity-dot::before { content:''; width:6px;height:6px;background:#8b5cf6;border-radius:50%;display:inline-block;margin-right:6px; }
     </style>
+  <script src="/static/safe-dom.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
 
@@ -72,39 +73,35 @@
             </div>
         </div>
 
-        <!-- Summary Cards -->
+        <!-- Summary Cards — valores preenchidos via JS (data-stat) -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 fade-in">
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <div class="flex items-center justify-between mb-2">
                     <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center"><i class="fas fa-users text-purple-600"></i></div>
-                    <span class="text-xs text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded-full">+128</span>
                 </div>
-                <p class="text-2xl font-bold text-gray-900">1 847</p>
+                <p class="text-2xl font-bold text-gray-900" data-stat="total">—</p>
                 <p class="text-xs text-gray-500 mt-0.5">Total de alunos</p>
             </div>
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <div class="flex items-center justify-between mb-2">
                     <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center"><i class="fas fa-fire text-green-600"></i></div>
-                    <span class="text-xs text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded-full">↑ 12%</span>
                 </div>
-                <p class="text-2xl font-bold text-gray-900">634</p>
+                <p class="text-2xl font-bold text-gray-900" data-stat="active">—</p>
                 <p class="text-xs text-gray-500 mt-0.5">Ativos esta semana</p>
             </div>
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <div class="flex items-center justify-between mb-2">
                     <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center"><i class="fas fa-chart-line text-blue-600"></i></div>
-                    <span class="text-xs text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full">↑ 3%</span>
                 </div>
-                <p class="text-2xl font-bold text-gray-900">72<span class="text-lg text-gray-400">%</span></p>
+                <p class="text-2xl font-bold text-gray-900"><span data-stat="avg">—</span><span class="text-lg text-gray-400">%</span></p>
                 <p class="text-xs text-gray-500 mt-0.5">Nota média</p>
             </div>
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <div class="flex items-center justify-between mb-2">
                     <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center"><i class="fas fa-graduation-cap text-amber-600"></i></div>
-                    <span class="text-xs text-amber-600 font-semibold bg-amber-50 px-2 py-0.5 rounded-full">Este mês</span>
                 </div>
-                <p class="text-2xl font-bold text-gray-900">89</p>
-                <p class="text-xs text-gray-500 mt-0.5">Lições concluídas hoje</p>
+                <p class="text-2xl font-bold text-gray-900" data-stat="atrisk">—</p>
+                <p class="text-xs text-gray-500 mt-0.5">Precisam atenção</p>
             </div>
         </div>
 
@@ -125,7 +122,7 @@
                             <option value="">Todos</option>
                             <option value="active">Ativos (7d)</option>
                             <option value="inactive">Inativos</option>
-                            <option value="high">Nota ≥ 80%</option>
+                            <option value="high">Nota &ge; 80%</option>
                             <option value="low">Nota &lt; 60%</option>
                         </select>
                         <select id="filter-sort-s" onchange="filterStudents()" class="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400">
@@ -155,13 +152,7 @@
 
                 <!-- Pagination -->
                 <div class="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
-                    <span class="text-xs text-gray-500">Exibindo <span id="student-count-label">20</span> de 1847</span>
-                    <div class="flex gap-1">
-                        <button class="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 text-xs" disabled><i class="fas fa-chevron-left"></i></button>
-                        <button class="w-7 h-7 flex items-center justify-center rounded-lg bg-purple-600 text-white text-xs font-bold">1</button>
-                        <button class="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 text-xs">2</button>
-                        <button class="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 text-xs"><i class="fas fa-chevron-right"></i></button>
-                    </div>
+                    <span class="text-xs text-gray-500">Exibindo <span id="student-count-label">—</span> alunos</span>
                 </div>
             </div>
 
@@ -172,46 +163,25 @@
                     <h3 class="text-sm font-semibold text-gray-900 mb-4">Distribuição de Progresso</h3>
                     <div style="height:160px"><canvas id="progressChart"></canvas></div>
                     <div class="grid grid-cols-3 gap-2 mt-4 text-center text-xs">
-                        <div><p class="font-bold text-green-600">628</p><p class="text-gray-400">Avançados<br>≥70%</p></div>
-                        <div class="border-x border-gray-100"><p class="font-bold text-amber-600">741</p><p class="text-gray-400">Em progresso<br>30–69%</p></div>
-                        <div><p class="font-bold text-red-500">478</p><p class="text-gray-400">Iniciantes<br>&lt;30%</p></div>
+                        <div><p class="font-bold text-green-600" id="dist-advanced">—</p><p class="text-gray-400">Avançados<br>&ge;70%</p></div>
+                        <div class="border-x border-gray-100"><p class="font-bold text-amber-600" id="dist-mid">—</p><p class="text-gray-400">Em progresso<br>30–69%</p></div>
+                        <div><p class="font-bold text-red-500" id="dist-beginner">—</p><p class="text-gray-400">Iniciantes<br>&lt;30%</p></div>
                     </div>
                 </div>
 
                 <!-- Top Performers -->
                 <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 fade-in">
                     <h3 class="text-sm font-semibold text-gray-900 mb-4"><i class="fas fa-trophy text-amber-500 mr-1"></i> Top 5 Alunos</h3>
-                    <div class="space-y-3" id="top-students-list"></div>
+                    <div class="space-y-3" id="top-students-list">
+                        <p class="text-xs text-gray-400 text-center py-2"><i class="fas fa-spinner fa-spin"></i></p>
+                    </div>
                 </div>
 
                 <!-- At-risk students -->
                 <div class="bg-red-50 rounded-2xl p-5 border border-red-100 fade-in">
                     <h3 class="text-sm font-semibold text-red-900 mb-3"><i class="fas fa-exclamation-triangle text-red-500 mr-1"></i> Precisam de Atenção</h3>
                     <div class="space-y-2.5" id="at-risk-list">
-                        <div class="flex items-center gap-2">
-                            <div class="avatar-circle bg-red-400 text-xs">MJ</div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-xs font-semibold text-gray-800 truncate">Manuel João</p>
-                                <p class="text-xs text-red-600">Inativo há 14 dias · 32%</p>
-                            </div>
-                            <button class="text-xs text-red-600 font-semibold hover:underline">Contatar</button>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="avatar-circle bg-orange-400 text-xs">SF</div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-xs font-semibold text-gray-800 truncate">Sara Fernandes</p>
-                                <p class="text-xs text-red-600">Nota 42% · 3 falhas seguidas</p>
-                            </div>
-                            <button class="text-xs text-red-600 font-semibold hover:underline">Contatar</button>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="avatar-circle bg-pink-400 text-xs">TM</div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-xs font-semibold text-gray-800 truncate">Tomás Mabunda</p>
-                                <p class="text-xs text-red-600">Inativo há 21 dias</p>
-                            </div>
-                            <button class="text-xs text-red-600 font-semibold hover:underline">Contatar</button>
-                        </div>
+                        <p class="text-xs text-gray-400 text-center py-2"><i class="fas fa-spinner fa-spin"></i></p>
                     </div>
                 </div>
             </div>
@@ -274,11 +244,11 @@
             <div class="p-6 space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Destinatários</label>
-                    <select class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
-                        <option>Todos os alunos (1 847)</option>
-                        <option>Alunos inativos há +7 dias (213)</option>
-                        <option>Alunos com nota &lt; 60% (478)</option>
-                        <option>Alunos ativos esta semana (634)</option>
+                    <select id="msg-recipients" class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+                        <option value="all">Todos os alunos</option>
+                        <option value="inactive">Alunos inativos &gt; 7 dias</option>
+                        <option value="low">Alunos com nota &lt; 60%</option>
+                        <option value="active">Alunos ativos esta semana</option>
                     </select>
                 </div>
                 <div>
@@ -308,43 +278,66 @@
             document.getElementById('nav-avatar-sm').textContent = initials;
         }
 
-        // ── Mock Students ─────────────────────────────────────────────────
+        // ── Helpers ───────────────────────────────────────────────────────
         const AVATAR_COLORS = ['#8b5cf6','#3b82f6','#10b981','#f59e0b','#ef4444','#ec4899','#14b8a6','#6366f1'];
-        function randomColor(name) { let h=0; for(const c of name) h=(h+c.charCodeAt(0))%AVATAR_COLORS.length; return AVATAR_COLORS[h]; }
+        function randomColor(name) { let h=0; for(const c of (name||'?')) h=(h+c.charCodeAt(0))%AVATAR_COLORS.length; return AVATAR_COLORS[h]; }
+        function apiHeaders() { return { 'Content-Type':'application/json', 'Authorization':'Bearer '+(localStorage.getItem('accessToken')||'') }; }
 
-        const MOCK_STUDENTS = Array.from({length:20},(_,i)=>{
-            const names = ['Ana Clara Sitoe','Bernardo Machava','Catarina Nhantumbo','David Muchanga',
-                'Elisa Mutemba','Frederico Guambe','Graça Chissano','Hélio Mondlane','Ivone Tembe','João Cumbe',
-                'Kátia Moiane','Luís Cuna','Marta Nhavene','Nuno Macuácua','Olga Chimoio','Paulo Zimba',
-                'Rebeca Mussa','Sandro Langa','Tânia Gove','Ulisses Bila'];
-            const name = names[i] || `Aluno ${i+1}`;
-            const prog = Math.floor(Math.random()*90)+10;
-            const score = Math.floor(Math.random()*55)+40;
-            const lessons = Math.floor(prog/10)+Math.floor(Math.random()*3);
-            const daysAgo = Math.floor(Math.random()*14);
-            return { id:i+1, name, email:`${name.split(' ')[0].toLowerCase()}@email.com`, progress:prog, score, lessons, daysAgo };
-        });
+        // Normaliza a shape variável que o backend pode devolver (join aninhado ou plano)
+        function normalizeStudent(raw) {
+            const u = raw.users || {};
+            const name  = u.full_name || raw.full_name || raw.name || ('Utilizador ' + (raw.user_id||raw.id||'?'));
+            const email = u.email || raw.email || '';
+            const prog  = raw.progress_percent != null ? raw.progress_percent : (raw.progress != null ? raw.progress : 0);
+            const score = raw.score != null ? raw.score : 0;
+            const lessons = raw.lessons_done != null ? raw.lessons_done : (raw.lessons != null ? raw.lessons : 0);
+            let daysAgo = 0;
+            if (raw.last_active) { const m = String(raw.last_active).match(/^(\d+)/); daysAgo = m ? parseInt(m[1]) : 0; }
+            return { id: raw.user_id || raw.id || Math.random(), name, email, progress: Math.round(prog), score: Math.round(score), lessons, daysAgo };
+        }
 
-        let filteredStudents = [...MOCK_STUDENTS];
+        // ── State ─────────────────────────────────────────────────────────
+        let ALL_STUDENTS = [];
+        let filteredStudents = [];
+        let progressChart = null;
 
+        // ── Load Data ────────────────────────────────────────────────────
+        async function loadStudents() {
+            try {
+                const r = await fetch('/api/creator/students?limit=100', { headers: apiHeaders() });
+                const d = await r.json();
+                if (d.success && Array.isArray(d.data)) {
+                    ALL_STUDENTS = d.data.map(normalizeStudent);
+                } else {
+                    ALL_STUDENTS = [];
+                }
+            } catch(e) {
+                console.warn('loadStudents failed:', e);
+                ALL_STUDENTS = [];
+            }
+            renderSidebar();
+            filterStudents();
+        }
+
+        // ── Filter & Sort ────────────────────────────────────────────────
         function filterStudents() {
-            const q = document.getElementById('student-search').value.toLowerCase();
-            const act = document.getElementById('filter-activity').value;
+            const q    = document.getElementById('student-search').value.toLowerCase();
+            const act  = document.getElementById('filter-activity').value;
             const sort = document.getElementById('filter-sort-s').value;
 
-            filteredStudents = MOCK_STUDENTS.filter(s => {
-                if (q && !s.name.toLowerCase().includes(q) && !s.email.includes(q)) return false;
-                if (act === 'active' && s.daysAgo > 7) return false;
+            filteredStudents = ALL_STUDENTS.filter(s => {
+                if (q && !s.name.toLowerCase().includes(q) && !s.email.toLowerCase().includes(q)) return false;
+                if (act === 'active'   && s.daysAgo > 7)  return false;
                 if (act === 'inactive' && s.daysAgo <= 7) return false;
-                if (act === 'high' && s.score < 80) return false;
-                if (act === 'low' && s.score >= 60) return false;
+                if (act === 'high'     && s.score < 80)   return false;
+                if (act === 'low'      && s.score >= 60)  return false;
                 return true;
             });
 
-            if (sort === 'recent') filteredStudents.sort((a,b)=>a.daysAgo-b.daysAgo);
-            else if (sort === 'score') filteredStudents.sort((a,b)=>b.score-a.score);
-            else if (sort === 'name') filteredStudents.sort((a,b)=>a.name.localeCompare(b.name));
-            else if (sort === 'progress') filteredStudents.sort((a,b)=>b.progress-a.progress);
+            if      (sort === 'recent')   filteredStudents.sort((a,b) => a.daysAgo - b.daysAgo);
+            else if (sort === 'score')    filteredStudents.sort((a,b) => b.score - a.score);
+            else if (sort === 'name')     filteredStudents.sort((a,b) => a.name.localeCompare(b.name));
+            else if (sort === 'progress') filteredStudents.sort((a,b) => b.progress - a.progress);
 
             renderTable();
         }
@@ -352,22 +345,32 @@
         function renderTable() {
             const c = document.getElementById('students-table');
             document.getElementById('student-count-label').textContent = filteredStudents.length;
+
+            if (ALL_STUDENTS.length === 0) {
+                c.innerHTML = `<div class="text-center py-16 text-gray-400">
+                    <i class="fas fa-users text-3xl text-gray-200 mb-3 block"></i>
+                    <p class="font-medium text-gray-500">Ainda sem alunos</p>
+                    <p class="text-xs mt-1">Os alunos aparecem aqui quando consumirem as suas licoes.</p>
+                </div>`;
+                return;
+            }
             if (filteredStudents.length === 0) {
-                c.innerHTML = '<div class="text-center py-12 text-gray-400"><i class="fas fa-users text-3xl text-gray-200 mb-3 block"></i><p>Nenhum aluno encontrado.</p></div>';
+                c.innerHTML = '<div class="text-center py-12 text-gray-400"><i class="fas fa-search text-2xl text-gray-200 mb-3 block"></i><p>Nenhum aluno encontrado com este filtro.</p></div>';
                 return;
             }
             c.innerHTML = filteredStudents.map(s => {
-                const initials = s.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+                const initials   = s.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
                 const scoreClass = s.score >= 80 ? 'score-high' : s.score >= 60 ? 'score-mid' : 'score-low';
-                const lastActivity = s.daysAgo === 0 ? 'Hoje' : s.daysAgo === 1 ? 'Ontem' : `${s.daysAgo}d atrás`;
-                const isActive = s.daysAgo <= 7;
+                const lastAct    = s.daysAgo === 0 ? 'Hoje' : s.daysAgo === 1 ? 'Ontem' : (s.daysAgo + 'd atras');
+                const isActive   = s.daysAgo <= 7;
+                const sid        = JSON.stringify(String(s.id));
                 return `
-                <div class="student-row grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-50 items-center" onclick="openStudentModal(${s.id})">
+                <div class="student-row grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-50 items-center" onclick="openStudentModal(${sid})">
                     <div class="col-span-4 flex items-center gap-2 min-w-0">
                         <div class="avatar-circle text-xs" style="background:${randomColor(s.name)}">${initials}</div>
                         <div class="min-w-0">
                             <p class="text-sm font-semibold text-gray-900 truncate">${s.name}</p>
-                            <p class="text-xs text-gray-400 truncate">${s.email}</p>
+                            <p class="text-xs text-gray-400 truncate">${s.email || '—'}</p>
                         </div>
                     </div>
                     <div class="col-span-2">
@@ -382,13 +385,15 @@
                         <span class="score-badge ${scoreClass}">${s.score}%</span>
                     </div>
                     <div class="col-span-2 text-center hidden sm:block">
-                        <span class="text-xs ${isActive?'text-green-600 font-medium':'text-gray-400'}">${lastActivity}</span>
+                        <span class="text-xs ${isActive?'text-green-600 font-medium':'text-gray-400'}">${lastAct}</span>
                     </div>
                     <div class="col-span-2 flex items-center justify-center gap-1">
-                        <button class="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition text-xs" title="Ver detalhe" onclick="event.stopPropagation();openStudentModal(${s.id})">
+                        <button class="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition text-xs"
+                            title="Ver detalhe" onclick="event.stopPropagation();openStudentModal(${sid})">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition text-xs" title="Enviar mensagem" onclick="event.stopPropagation()">
+                        <button class="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition text-xs"
+                            title="Enviar mensagem" onclick="event.stopPropagation()">
                             <i class="fas fa-envelope"></i>
                         </button>
                     </div>
@@ -396,64 +401,90 @@
             }).join('');
         }
 
-        // ── Top Performers ────────────────────────────────────────────────
-        const topStudents = [...MOCK_STUDENTS].sort((a,b)=>b.score-a.score).slice(0,5);
-        document.getElementById('top-students-list').innerHTML = topStudents.map((s,i)=>{
-            const initials = s.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
-            const medals = ['🥇','🥈','🥉','4º','5º'];
-            return `
-            <div class="flex items-center gap-2">
-                <span class="text-sm w-6 text-center">${medals[i]}</span>
-                <div class="avatar-circle text-xs" style="background:${randomColor(s.name)};width:28px;height:28px;font-size:0.7rem">${initials}</div>
-                <div class="flex-1 min-w-0">
-                    <p class="text-xs font-semibold text-gray-800 truncate">${s.name}</p>
-                </div>
-                <span class="text-xs font-bold text-green-600">${s.score}%</span>
-            </div>`;
-        }).join('');
+        // ── Sidebar (Top 5 + At-risk + Chart) ────────────────────────────
+        function renderSidebar() {
+            const total   = ALL_STUDENTS.length;
+            const active  = ALL_STUDENTS.filter(s=>s.daysAgo<=7).length;
+            const avg     = total ? Math.round(ALL_STUDENTS.reduce((a,s)=>a+s.score,0)/total) : 0;
+            const atRiskN = ALL_STUDENTS.filter(s=>s.daysAgo>7||s.score<50).length;
 
-        // ── Progress Chart ─────────────────────────────────────────────────
-        new Chart(document.getElementById('progressChart').getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Avançados (≥70%)', 'Em progresso', 'Iniciantes (<30%)'],
-                datasets: [{ data:[628,741,478], backgroundColor:['#10b981','#f59e0b','#ef4444'], borderWidth:0 }]
-            },
-            options: { responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}} }
-        });
+            document.querySelectorAll('[data-stat="total"]').forEach(el=>el.textContent=total.toLocaleString('pt'));
+            document.querySelectorAll('[data-stat="active"]').forEach(el=>el.textContent=active.toLocaleString('pt'));
+            document.querySelectorAll('[data-stat="avg"]').forEach(el=>el.textContent=avg);
+            document.querySelectorAll('[data-stat="atrisk"]').forEach(el=>el.textContent=atRiskN);
+
+            // Distribuição de progresso
+            const advanced   = ALL_STUDENTS.filter(s=>s.progress>=70).length;
+            const inProgress = ALL_STUDENTS.filter(s=>s.progress>=30&&s.progress<70).length;
+            const beginner   = ALL_STUDENTS.filter(s=>s.progress<30).length;
+            document.getElementById('dist-advanced').textContent = advanced;
+            document.getElementById('dist-mid').textContent      = inProgress;
+            document.getElementById('dist-beginner').textContent = beginner;
+
+            if (progressChart) progressChart.destroy();
+            progressChart = new Chart(document.getElementById('progressChart').getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Avancados (>=70%)', 'Em progresso (30-69%)', 'Iniciantes (<30%)'],
+                    datasets: [{ data:[advanced||1, inProgress||0, beginner||0], backgroundColor:['#10b981','#f59e0b','#ef4444'], borderWidth:0 }]
+                },
+                options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
+            });
+
+            // Top 5
+            const medals = ['Ouro','Prata','Bronze','4','5'];
+            const medalEmoji = ['🥇','🥈','🥉','4º','5º'];
+            const top5 = [...ALL_STUDENTS].sort((a,b)=>b.score-a.score).slice(0,5);
+            document.getElementById('top-students-list').innerHTML = top5.length
+                ? top5.map((s,i)=>{
+                    const ini = s.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+                    return `<div class="flex items-center gap-2">
+                        <span class="text-sm w-6 text-center">${medalEmoji[i]}</span>
+                        <div class="avatar-circle text-xs" style="background:${randomColor(s.name)};width:28px;height:28px;font-size:0.7rem">${ini}</div>
+                        <div class="flex-1 min-w-0"><p class="text-xs font-semibold text-gray-800 truncate">${s.name}</p></div>
+                        <span class="text-xs font-bold text-green-600">${s.score}%</span>
+                    </div>`;
+                }).join('')
+                : '<p class="text-xs text-gray-400 text-center py-2">Sem dados ainda.</p>';
+
+            // At-risk
+            const atRisk = ALL_STUDENTS
+                .filter(s => s.daysAgo > 7 || s.score < 50)
+                .sort((a,b) => (b.daysAgo+(100-b.score)/10) - (a.daysAgo+(100-a.score)/10))
+                .slice(0,3);
+            document.getElementById('at-risk-list').innerHTML = atRisk.length
+                ? atRisk.map(s=>{
+                    const ini    = s.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+                    const reason = s.daysAgo > 7 ? ('Inativo ha ' + s.daysAgo + ' dias · ' + s.score + '%') : ('Nota ' + s.score + '% · necessita atencao');
+                    return `<div class="flex items-center gap-2">
+                        <div class="avatar-circle bg-red-400 text-xs">${ini}</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-semibold text-gray-800 truncate">${s.name}</p>
+                            <p class="text-xs text-red-600">${reason}</p>
+                        </div>
+                        <button class="text-xs text-red-600 font-semibold hover:underline">Contatar</button>
+                    </div>`;
+                }).join('')
+                : '<p class="text-xs text-gray-400 text-center py-2">Todos em dia! 🎉</p>';
+        }
 
         // ── Modal ─────────────────────────────────────────────────────────
         function openStudentModal(id) {
-            const s = MOCK_STUDENTS.find(x=>x.id===id);
+            const s = ALL_STUDENTS.find(x=>String(x.id)===String(id));
             if (!s) return;
             const initials = s.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
             document.getElementById('modal-avatar').textContent = initials;
             document.getElementById('modal-avatar').style.background = randomColor(s.name);
             document.getElementById('modal-student-name').textContent = s.name;
-            document.getElementById('modal-student-email').textContent = s.email;
-            document.getElementById('modal-progress').textContent = s.progress+'%';
-            document.getElementById('modal-score').textContent = s.score+'%';
+            document.getElementById('modal-student-email').textContent = s.email || '—';
+            document.getElementById('modal-progress').textContent = s.progress + '%';
+            document.getElementById('modal-score').textContent = s.score + '%';
             document.getElementById('modal-lessons').textContent = s.lessons;
-
-            document.getElementById('modal-subjects').innerHTML = [
-                {name:'Física',prog:s.progress,color:'teal'},
-                {name:'Matemática',prog:Math.max(s.progress-15,0),color:'indigo'},
-                {name:'Química',prog:Math.max(s.progress-30,0),color:'amber'},
-            ].map(sub=>`
-            <div class="flex items-center gap-2 text-xs">
-                <span class="w-20 text-gray-600">${sub.name}</span>
-                <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div class="h-full bg-${sub.color}-500 rounded-full" style="width:${sub.prog}%"></div>
-                </div>
-                <span class="font-medium text-gray-700 w-8 text-right">${sub.prog}%</span>
-            </div>`).join('');
-
-            document.getElementById('modal-activity').innerHTML = [
-                `Completou "Leis de Newton" com ${s.score}%`,
-                `Assistiu "Cinemática — MU" (${Math.floor(s.progress*0.8)}% do vídeo)`,
-                `Fez exercício com ${s.score-5}% de acerto`,
-            ].map(a=>`<p class="activity-dot">${a}</p>`).join('');
-
+            document.getElementById('modal-subjects').innerHTML = '<p class="text-xs text-gray-400">Dados por disciplina nao disponiveis.</p>';
+            const lastTxt = s.daysAgo === 0 ? 'Ativo hoje'
+                : s.daysAgo <= 7 ? ('Ultima atividade ha ' + s.daysAgo + ' dia(s)')
+                : ('Inativo ha ' + s.daysAgo + ' dias');
+            document.getElementById('modal-activity').innerHTML = '<p class="activity-dot">' + lastTxt + '</p>';
             document.getElementById('modal-student').classList.remove('hidden');
         }
 
@@ -461,13 +492,13 @@
         function closeModal(id) { document.getElementById(id)?.classList.add('hidden'); }
         function openMessageModal() { document.getElementById('modal-message').classList.remove('hidden'); }
         function sendMessage() {
-            VClass.showNotification('Mensagem enviada para todos os destinatários!', 'success');
+            VClass.showNotification('Mensagem enviada!', 'success');
             closeModal('modal-message');
         }
 
         function exportCSV() {
-            const header = 'Nome,Email,Progresso,Nota,Lições';
-            const rows = MOCK_STUDENTS.map(s=>`${s.name},${s.email},${s.progress}%,${s.score}%,${s.lessons}`);
+            const header = 'Nome,Email,Progresso,Nota,Licoes';
+            const rows = ALL_STUDENTS.map(s => [s.name, s.email, s.progress+'%', s.score+'%', s.lessons].join(','));
             const csv = [header,...rows].join('\n');
             const a = document.createElement('a');
             a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
@@ -476,12 +507,12 @@
             VClass.showNotification('CSV exportado com sucesso!', 'success');
         }
 
-        // Close modals on overlay click
         ['modal-student','modal-message'].forEach(id=>{
             document.getElementById(id)?.addEventListener('click',function(e){if(e.target===this)closeModal(id);});
         });
 
-        filterStudents();
+        // ── Init ──────────────────────────────────────────────────────────
+        loadStudents();
     </script>
 </body>
 </html>

@@ -1,12 +1,13 @@
 // Notifications Route — VClass
 // Gera notificações baseadas em eventos reais do progresso do estudante
 import { Hono } from 'hono'
+import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware } from '../middleware/auth'
 import { getSupabase } from '../config/supabase'
 import { z } from 'zod'
 import type { ApiResponse } from '../types'
 
-const notifications = new Hono()
+const notifications = new Hono<{ Bindings: CloudflareBindings }>()
 notifications.use('*', authMiddleware)
 
 function isDatabaseConfigured(env?: any): boolean {

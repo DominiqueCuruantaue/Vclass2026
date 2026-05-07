@@ -1,11 +1,12 @@
 // Admin Dashboard Routes — VClass
 // Apenas utilizadores com role 'admin' têm acesso
 import { Hono } from 'hono'
+import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware, requireAdmin } from '../middleware/auth'
 import { getSupabase } from '../config/supabase'
 import type { ApiResponse } from '../types'
 
-const admin = new Hono()
+const admin = new Hono<{ Bindings: CloudflareBindings }>()
 
 // ── Auth guard: apenas admins ─────────────────────────────────────────────────
 admin.use('*', authMiddleware)
@@ -253,6 +254,148 @@ admin.patch('/content/:id', async (c) => {
     return c.json({ success: true, data })
   } catch (e: any) {
     return c.json({ success: false, error: e.message }, 500)
+  }
+})
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CURRICULUM MANAGEMENT — Admin gere disciplinas e vínculos com classes
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// GET /api/admin/curriculum — devolve subjects, grades e grade_subjects
+admin.get('/curriculum', async (c) => {
+  try {
+    const supabase = getSupabase(c.env)
+    if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB não configurada' }, 503)
+
+    const [subjectsRes, gradesRes, gsRes] = await Promise.all([
+      supabase.from('subjects').select('id, name, description, color, icon_url, created_at').order('name'),
+      supabase.from('grades').select('id, name, level, display_order, education_system_id, education_systems(id, name, country_id, countries(id, name, flag))').order('display_order'),
+      supabase.from('grade_subjects').select('id, grade_id, subject_id, is_mandatory, workload_hours'),
+    ])
+
+    if (subjectsRes.error) return c.json<ApiResponse>({ success: false, error: subjectsRes.error.message }, 500)
+
+    return c.json<ApiResponse>({
+      success: true,
+      data: {
+        subjects:        subjectsRes.data || [],
+        grades:          gradesRes.data   || [],
+        grade_subjects:  gsRes.data       || [],
+      },
+    })
+  } catch (e: any) {
+    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+  }
+})
+
+// POST /api/admin/curriculum/subjects — criar nova disciplina
+admin.post('/curriculum/subjects', async (c) => {
+  try {
+    const body = await c.req.json() as { name: string; description?: string; color?: string; icon_url?: string }
+    if (!body.name || !body.name.trim()) {
+      return c.json<ApiResponse>({ success: false, error: 'Nome da disciplina é obrigatório' }, 400)
+    }
+
+    const supabase = getSupabase(c.env)
+    if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB não configurada' }, 503)
+
+    const { data, error } = await supabase
+      .from('subjects')
+      .insert({
+        name:        body.name.trim(),
+        description: body.description?.trim() || null,
+        color:       body.color || '#3B82F6',
+        icon_url:    body.icon_url || null,
+      })
+      .select()
+      .single()
+
+    if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+    return c.json<ApiResponse>({ success: true, data })
+  } catch (e: any) {
+    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+  }
+})
+
+// PATCH /api/admin/curriculum/subjects/:id — editar disciplina
+admin.patch('/curriculum/subjects/:id', async (c) => {
+  try {
+    const id = c.req.param('id')
+    const body = await c.req.json() as { name?: string; description?: string; color?: string; icon_url?: string }
+
+    const supabase = getSupabase(c.env)
+    if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB não configurada' }, 503)
+
+    const updates: any = {}
+    if (body.name !== undefined)        updates.name        = body.name.trim()
+    if (body.description !== undefined) updates.description = body.description?.trim() || null
+    if (body.color !== undefined)       updates.color       = body.color
+    if (body.icon_url !== undefined)    updates.icon_url    = body.icon_url || null
+
+    const { data, error } = await supabase.from('subjects').update(updates).eq('id', id).select().single()
+    if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+    return c.json<ApiResponse>({ success: true, data })
+  } catch (e: any) {
+    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+  }
+})
+
+// DELETE /api/admin/curriculum/subjects/:id — apagar disciplina (cascade em grade_subjects e chapters)
+admin.delete('/curriculum/subjects/:id', async (c) => {
+  try {
+    const id = c.req.param('id')
+    const supabase = getSupabase(c.env)
+    if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB não configurada' }, 503)
+
+    const { error } = await supabase.from('subjects').delete().eq('id', id)
+    if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+    return c.json<ApiResponse>({ success: true })
+  } catch (e: any) {
+    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+  }
+})
+
+// POST /api/admin/curriculum/grade-subjects — vincular disciplina a uma classe
+admin.post('/curriculum/grade-subjects', async (c) => {
+  try {
+    const body = await c.req.json() as { grade_id: string; subject_id: string; is_mandatory?: boolean; workload_hours?: number }
+    if (!body.grade_id || !body.subject_id) {
+      return c.json<ApiResponse>({ success: false, error: 'grade_id e subject_id são obrigatórios' }, 400)
+    }
+
+    const supabase = getSupabase(c.env)
+    if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB não configurada' }, 503)
+
+    const { data, error } = await supabase
+      .from('grade_subjects')
+      .insert({
+        grade_id:       body.grade_id,
+        subject_id:     body.subject_id,
+        is_mandatory:   body.is_mandatory ?? true,
+        workload_hours: body.workload_hours ?? null,
+      })
+      .select()
+      .single()
+
+    if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+    return c.json<ApiResponse>({ success: true, data })
+  } catch (e: any) {
+    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+  }
+})
+
+// DELETE /api/admin/curriculum/grade-subjects/:id — desvincular
+admin.delete('/curriculum/grade-subjects/:id', async (c) => {
+  try {
+    const id = c.req.param('id')
+    const supabase = getSupabase(c.env)
+    if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB não configurada' }, 503)
+
+    const { error } = await supabase.from('grade_subjects').delete().eq('id', id)
+    if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+    return c.json<ApiResponse>({ success: true })
+  } catch (e: any) {
+    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
   }
 })
 

@@ -1,10 +1,11 @@
 // Plans Routes — /api/plans/*
 // Rotas públicas de planos e subscrição
 import { Hono } from 'hono'
+import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware } from '../middleware/auth'
 import type { ApiResponse } from '../types'
 
-const plans = new Hono()
+const plans = new Hono<{ Bindings: CloudflareBindings }>()
 
 // ── Dados dos planos ──────────────────────────────────────────────────────────
 

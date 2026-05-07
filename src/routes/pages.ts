@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
+import type { CloudflareBindings } from '../types/bindings'
 
-const app = new Hono()
+const app = new Hono<{ Bindings: CloudflareBindings }>()
 
 // ── Cache-Control: força o browser a nunca usar cache para páginas HTML ──────
 // Resolve o problema de actualizações não aparecerem sem Ctrl+F5
