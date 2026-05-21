@@ -6,6 +6,8 @@
     <title>Lição - VClass</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- DOMPurify — sanitização de HTML rico de professores (deve carregar antes de safe-dom.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
     <!-- HLS.js para streaming protegido (sem VideoJS) -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
     <style>
@@ -936,79 +938,30 @@
                 </div>
 
                 <!-- ── Exercícios Interativos ── -->
-                <div class="sidebar-card">
+                <div class="sidebar-card" id="exercises-sidebar-card">
                     <div class="flex items-center justify-between mb-3">
                         <h3 class="mb-0"><i class="fas fa-pencil-alt text-blue-500"></i> Exercícios</h3>
-                        <span class="text-xs bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full">5 total</span>
+                        <span id="exercises-count-badge" class="text-xs bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full hidden">0 total</span>
                     </div>
-                    <!-- Score bar -->
-                    <div class="mb-4 p-3 bg-green-50 rounded-xl border border-green-200">
+                    <!-- Score bar (mostrado após carregar) -->
+                    <div id="exercises-score-bar" class="hidden mb-4 p-3 bg-green-50 rounded-xl border border-green-200">
                         <div class="flex justify-between items-center mb-1">
                             <span class="text-xs text-green-700 font-semibold">Pontuação atual</span>
-                            <span class="text-sm font-bold text-green-700">10/50 pts</span>
+                            <span id="exercises-score-label" class="text-sm font-bold text-green-700">0 pts</span>
                         </div>
                         <div class="w-full bg-green-200 rounded-full h-2">
-                            <div class="bg-green-500 h-2 rounded-full" style="width:20%"></div>
+                            <div id="exercises-score-bar-fill" class="bg-green-500 h-2 rounded-full transition-all" style="width:0%"></div>
                         </div>
                     </div>
-                    <div class="space-y-2">
-                        <!-- Quiz concluído -->
-                        <div class="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-xl cursor-pointer hover:shadow-sm transition" onclick="openExercise(1)">
-                            <div class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-check text-xs"></i>
-                            </div>
-                            <div class="flex-1">
-                                <p class="text-sm font-semibold text-gray-800">Quiz 1: Introdução</p>
-                                <p class="text-xs text-gray-500">Concluído • 5 questões</p>
-                            </div>
-                            <span class="text-sm font-bold text-green-600">10/10</span>
-                        </div>
-                        <!-- Quiz em aberto -->
-                        <div class="flex items-center gap-3 p-3 bg-blue-50 border-2 border-blue-400 rounded-xl cursor-pointer hover:shadow-sm transition" onclick="openInlineQuiz()">
-                            <div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center flex-shrink-0 animate-pulse">
-                                <i class="fas fa-star text-xs"></i>
-                            </div>
-                            <div class="flex-1">
-                                <p class="text-sm font-semibold text-gray-800">Quiz 2: Conceitos</p>
-                                <p class="text-xs text-blue-600 font-medium">▶ Disponível agora!</p>
-                            </div>
-                            <i class="fas fa-chevron-right text-blue-500 text-xs"></i>
-                        </div>
-                        <!-- Quiz bloqueado -->
-                        <div class="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-xl opacity-60">
-                            <div class="w-8 h-8 bg-gray-300 text-white rounded-full flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-lock text-xs"></i>
-                            </div>
-                            <div class="flex-1">
-                                <p class="text-sm font-semibold text-gray-600">Quiz 3: Prática</p>
-                                <p class="text-xs text-gray-400">Complete o Quiz 2 primeiro</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-xl opacity-60">
-                            <div class="w-8 h-8 bg-gray-300 text-white rounded-full flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-lock text-xs"></i>
-                            </div>
-                            <div class="flex-1">
-                                <p class="text-sm font-semibold text-gray-600">Quiz 4: Avançado</p>
-                                <p class="text-xs text-gray-400">Bloqueado</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-xl opacity-60">
-                            <div class="w-8 h-8 bg-gray-300 text-white rounded-full flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-lock text-xs"></i>
-                            </div>
-                            <div class="flex-1">
-                                <p class="text-sm font-semibold text-gray-600">Quiz 5: Final</p>
-                                <p class="text-xs text-gray-400">Bloqueado</p>
-                            </div>
-                        </div>
+                    <div id="exercises-list" class="space-y-2">
+                        <p class="text-xs text-gray-400 text-center py-4">A carregar exercícios...</p>
                     </div>
                 </div>
 
                 <!-- ── Mini-Quiz Inline ── -->
                 <div id="inline-quiz-card" class="sidebar-card hidden border-2 border-blue-400">
                     <div class="flex items-center justify-between mb-3">
-                        <h3 class="mb-0 text-blue-700"><i class="fas fa-bolt text-yellow-400"></i> Quiz 2: Conceitos</h3>
+                        <h3 id="inline-quiz-title" class="mb-0 text-blue-700"><i class="fas fa-bolt text-yellow-400"></i> Exercício</h3>
                         <button onclick="closeInlineQuiz()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
                     </div>
                     <div id="quiz-content">
@@ -1275,86 +1228,25 @@
             }
         }
 
-        // Rich lesson content per lesson
-        const RICH_CONTENT = {
-            'lesson-1': `
-                <div class="space-y-4">
-                    <div class="p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-xl">
-                        <p class="text-xs font-bold text-blue-700 mb-1">📌 Definição</p>
-                        <p class="text-xs text-blue-900">Uma <strong>função</strong> é uma relação entre dois conjuntos (Domínio e Contradomínio) onde cada elemento do domínio tem <strong>exatamente uma imagem</strong>.</p>
-                    </div>
-                    <div>
-                        <p class="text-xs font-bold text-gray-700 mb-2">🎯 Objetivos</p>
-                        <ul class="space-y-1">
-                            <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Compreender o conceito de função</li>
-                            <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Identificar domínio e imagem</li>
-                            <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Representar funções graficamente</li>
-                        </ul>
-                    </div>
-                    <div class="p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
-                        <p class="text-xs font-bold text-yellow-700 mb-1">⚡ Fórmula Chave</p>
-                        <code class="text-sm font-mono text-yellow-900">f: A → B  |  f(x) = y</code>
-                    </div>
-                </div>`,
-            'lesson-2': `
-                <div class="space-y-4">
-                    <div class="p-3 bg-purple-50 border-l-4 border-purple-400 rounded-r-xl">
-                        <p class="text-xs font-bold text-purple-700 mb-1">📌 Definição</p>
-                        <p class="text-xs text-purple-900">O <strong>domínio</strong> é o conjunto de entrada (valores de x). O <strong>contradomínio</strong> é o conjunto de saída possível. A <strong>imagem</strong> são os valores efetivamente obtidos.</p>
-                    </div>
-                    <div>
-                        <p class="text-xs font-bold text-gray-700 mb-2">🎯 Objetivos</p>
-                        <ul class="space-y-1">
-                            <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Distinguir domínio e contradomínio</li>
-                            <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Calcular a imagem de uma função</li>
-                            <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Aplicar em problemas reais</li>
-                        </ul>
-                    </div>
-                    <div class="p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
-                        <p class="text-xs font-bold text-yellow-700 mb-1">⚡ Exemplo</p>
-                        <code class="text-xs font-mono text-yellow-900">f(x)=x² → Dom: ℝ, Im: [0,+∞)</code>
-                    </div>
-                </div>`,
-            'lesson-5': `
-                <div class="space-y-4">
-                    <div class="p-3 bg-teal-50 border-l-4 border-teal-400 rounded-r-xl">
-                        <p class="text-xs font-bold text-teal-700 mb-1">📌 Conceito</p>
-                        <p class="text-xs text-teal-900">No <strong>Movimento Uniforme (MU)</strong> a velocidade é constante e a aceleração é nula. O espaço percorrido varia linearmente com o tempo.</p>
-                    </div>
-                    <div>
-                        <p class="text-xs font-bold text-gray-700 mb-2">🎯 Objetivos</p>
-                        <ul class="space-y-1">
-                            <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Calcular velocidade escalar média</li>
-                            <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Construir gráficos espaço-tempo</li>
-                            <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Resolver problemas de cinemática</li>
-                        </ul>
-                    </div>
-                    <div class="p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
-                        <p class="text-xs font-bold text-yellow-700 mb-1">⚡ Fórmulas</p>
-                        <div class="space-y-1 font-mono text-xs text-yellow-900">
-                            <div>s = s₀ + v·t</div>
-                            <div>v = Δs / Δt</div>
-                            <div>a = 0 (constante)</div>
-                        </div>
-                    </div>
+        const DEFAULT_RICH_CONTENT = (desc, objectives) => {
+            const objs = Array.isArray(objectives) ? objectives.filter(o => o && o.trim()) : [];
+            const objectivesHtml = objs.length > 0
+                ? `<div>
+                    <p class="text-xs font-bold text-gray-700 mb-2">🎯 Objetivos</p>
+                    <ul class="space-y-1">
+                        ${objs.map(o => `<li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>${escapeHtml(o)}</li>`).join('')}
+                    </ul>
                 </div>`
-        };
-
-        const DEFAULT_RICH_CONTENT = (desc) => `
+                : '';
+            return `
             <div class="space-y-4">
                 <div class="p-3 bg-blue-50 border-l-4 border-blue-400 rounded-r-xl">
                     <p class="text-xs font-bold text-blue-700 mb-1">📌 Sobre esta Lição</p>
-                    <p class="text-xs text-blue-900">${desc || 'Conteúdo disponível no vídeo.'}</p>
+                    <p class="text-xs text-blue-900">${escapeHtml(desc || 'Conteúdo disponível no vídeo.')}</p>
                 </div>
-                <div>
-                    <p class="text-xs font-bold text-gray-700 mb-2">🎯 Objetivos</p>
-                    <ul class="space-y-1">
-                        <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Compreender os conceitos fundamentais</li>
-                        <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Aplicar o conhecimento em exercícios</li>
-                        <li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>Desenvolver raciocínio crítico</li>
-                    </ul>
-                </div>
+                ${objectivesHtml}
             </div>`;
+        };
 
         function displayLessonInfo() {
             document.getElementById('lesson-title').textContent = lessonData.title;
@@ -1371,12 +1263,25 @@
             if (subjectParam) document.getElementById('lesson-subject-chip').textContent = subjectParam;
 
             // Rich content for left sidebar
+            // O campo da BD chama-se 'content' (alias 'notes' no editor do professor)
             const contentDiv = document.getElementById('lesson-content');
-            if (lessonData.content_text) {
+            const richText = lessonData.content || lessonData.content_text || '';
+            const objectives = Array.isArray(lessonData.objectives)
+                ? lessonData.objectives
+                : (lessonData.objectives ? (() => { try { return JSON.parse(lessonData.objectives); } catch { return []; } })() : []);
+            if (richText) {
                 // Conteúdo de lição é HTML rico criado por professores — sanitizar antes de injectar
-                setSanitizedHtml(contentDiv, lessonData.content_text);
+                setSanitizedHtml(contentDiv, richText);
+                // Appended objectives block if teacher set them and content doesn't already mention them
+                const validObjs = objectives.filter(o => o && o.trim());
+                if (validObjs.length > 0) {
+                    const objBlock = document.createElement('div');
+                    objBlock.className = 'mt-4';
+                    objBlock.innerHTML = `<p class="text-xs font-bold text-gray-700 mb-2">🎯 Objetivos</p><ul class="space-y-1">${validObjs.map(o => `<li class="flex items-start gap-2 text-xs text-gray-600"><i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>${escapeHtml(o)}</li>`).join('')}</ul>`;
+                    contentDiv.appendChild(objBlock);
+                }
             } else {
-                contentDiv.innerHTML = RICH_CONTENT[lessonId] || DEFAULT_RICH_CONTENT(lessonData.description);
+                contentDiv.innerHTML = DEFAULT_RICH_CONTENT(lessonData.description, objectives);
             }
 
             // Breadcrumb
@@ -1754,8 +1659,88 @@
         }
 
         async function loadExercises() {
-            // Exercises are already displayed in sidebar
-            // This would load dynamic exercises from API
+            const listEl = document.getElementById('exercises-list');
+            try {
+                const result = await VClass.api.exercises.getExercises(lessonId);
+                if (!result.success || !result.data?.length) {
+                    listEl.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">Sem exercícios para esta lição.</p>';
+                    return;
+                }
+
+                const exs = result.data;
+
+                // Atualizar badge de contagem
+                const badge = document.getElementById('exercises-count-badge');
+                badge.textContent = `${exs.length} total`;
+                badge.classList.remove('hidden');
+
+                // Construir QUIZ_QUESTIONS para o quiz inline
+                QUIZ_QUESTIONS = exs.map(ex => ({
+                    id: ex.id,
+                    q: ex.question,
+                    explanation: ex.explanation || '',
+                    opts: (ex.options || [])
+                        .sort((a, b) => a.display_order - b.display_order)
+                        .map(o => ({ text: o.option_text, optionId: o.id }))
+                }));
+
+                // Renderizar lista de exercícios no sidebar
+                listEl.innerHTML = '';
+                exs.forEach((ex, i) => {
+                    const item = document.createElement('div');
+                    item.id = `ex-item-${ex.id}`;
+                    item.className = 'flex items-center gap-3 p-3 bg-blue-50 border-2 border-blue-200 rounded-xl cursor-pointer hover:shadow-sm transition';
+                    item.addEventListener('click', () => openInlineQuiz(i));
+                    item.innerHTML = `
+                        <div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold">${i + 1}</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-gray-800 truncate">Questão ${i + 1}</p>
+                            <p class="text-xs text-blue-600 font-medium truncate">${escapeHtml(ex.question.slice(0, 60))}${ex.question.length > 60 ? '…' : ''}</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-blue-400 text-xs flex-shrink-0"></i>`;
+                    listEl.appendChild(item);
+                });
+
+                // Carregar resultados anteriores
+                await loadExerciseResults();
+            } catch(e) {
+                listEl.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">Erro ao carregar exercícios.</p>';
+            }
+        }
+
+        async function loadExerciseResults() {
+            try {
+                const result = await VClass.api.exercises.getResults(lessonId);
+                if (!result.success || !result.data) return;
+
+                const { submissions, summary } = result.data;
+
+                // Mostrar barra de pontuação
+                if (summary && summary.totalExercises > 0) {
+                    const scoreBar = document.getElementById('exercises-score-bar');
+                    const scoreLabel = document.getElementById('exercises-score-label');
+                    const scoreFill = document.getElementById('exercises-score-bar-fill');
+                    scoreBar.classList.remove('hidden');
+                    scoreLabel.textContent = `${summary.totalPoints}/${summary.maxPoints} pts`;
+                    scoreFill.style.width = `${summary.scorePercent}%`;
+                }
+
+                // Marcar exercícios respondidos corretamente
+                if (submissions) {
+                    const doneIds = new Set(submissions.filter(s => s.is_correct).map(s => s.exercise_id));
+                    QUIZ_QUESTIONS.forEach((q, i) => {
+                        const item = document.getElementById(`ex-item-${q.id}`);
+                        if (!item) return;
+                        if (doneIds.has(q.id)) {
+                            item.className = 'flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-xl cursor-pointer hover:shadow-sm transition';
+                            const iconEl = item.querySelector('.w-8');
+                            if (iconEl) { iconEl.className = 'w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center flex-shrink-0'; iconEl.innerHTML = '<i class="fas fa-check text-xs"></i>'; }
+                            const subLabel = item.querySelector('.text-blue-600');
+                            if (subLabel) { subLabel.className = 'text-xs text-green-600 font-medium'; subLabel.textContent = 'Correcto ✓'; }
+                        }
+                    });
+                }
+            } catch(e) { /* silent */ }
         }
 
         async function loadProgress() {
@@ -1790,12 +1775,10 @@
         }
 
         function previousLesson() {
-            // Navigate to prev lesson in OTHER_LESSONS_DATA
-            const idx = OTHER_LESSONS_DATA.findIndex(l => l.id === lessonId);
+            const idx = _chapterLessons.findIndex(l => l.id === lessonId);
             if (idx > 0) {
-                const prev = OTHER_LESSONS_DATA[idx - 1];
                 const p = new URLSearchParams(window.location.search);
-                p.set('id', prev.id);
+                p.set('id', _chapterLessons[idx - 1].id);
                 window.location.search = p.toString();
             } else {
                 VClass.showNotification('Esta é a primeira lição do capítulo', 'info');
@@ -1803,15 +1786,10 @@
         }
 
         function nextLesson() {
-            const idx = OTHER_LESSONS_DATA.findIndex(l => l.id === lessonId);
-            if (idx >= 0 && idx < OTHER_LESSONS_DATA.length - 1) {
-                const next = OTHER_LESSONS_DATA[idx + 1];
-                if (next.locked) {
-                    VClass.showNotification('Complete os quizzes desta lição primeiro!', 'warning');
-                    return;
-                }
+            const idx = _chapterLessons.findIndex(l => l.id === lessonId);
+            if (idx >= 0 && idx < _chapterLessons.length - 1) {
                 const p = new URLSearchParams(window.location.search);
-                p.set('id', next.id);
+                p.set('id', _chapterLessons[idx + 1].id);
                 window.location.search = p.toString();
             } else {
                 VClass.showNotification('Esta é a última lição disponível', 'info');
@@ -2173,92 +2151,94 @@
         // ─────────────────────────────────────────
         //  LEFT SIDEBAR — Sumário & Conceitos-Chave
         // ─────────────────────────────────────────
-        const LESSON_TOPICS = {
-            'lesson-1': {
-                topics: ['Introdução às Funções','Conceito de Função','Domínio e Imagem','Gráficos de Funções'],
-                keywords: ['Função','Domínio','Contradomínio','Imagem','Variável']
-            },
-            'lesson-2': {
-                topics: ['Domínio de uma Função','Contradomínio','Conjunto Imagem','Exemplos Práticos'],
-                keywords: ['Domínio','Contradomínio','Conjunto','Imagem','Mapeamento']
-            },
-            'lesson-3': {
-                topics: ['Equações de 1º Grau','Resolução de Equações','Aplicações Práticas'],
-                keywords: ['Equação','Incógnita','Coeficiente','Solução','Verificação']
-            },
-            'lesson-4': {
-                topics: ['Equações de 2º Grau','Fórmula de Bhaskara','Discriminante (Δ)','Raízes'],
-                keywords: ['Bhaskara','Discriminante','Delta','Raízes','Coeficientes a,b,c']
-            },
-            'lesson-5': {
-                topics: ['Cinemática','Movimento Uniforme','Velocidade Escalar','Gráfico Espaço-Tempo'],
-                keywords: ['Velocidade','MU','Espaço','Tempo','Trajetória']
-            },
-            'lesson-6': {
-                topics: ['Aceleração','MUV','Velocidade Variável','Queda Livre'],
-                keywords: ['Aceleração','MUV','Velocidade','Queda livre','Gravidade']
-            }
-        };
+        let _chapterLessons = [];
 
-        const OTHER_LESSONS_DATA = [
-            { id:'lesson-1', title:'Introdução às Funções', duration:'20min', done:true },
-            { id:'lesson-2', title:'Domínio e Contradomínio', duration:'15min', done:false, current:true },
-            { id:'lesson-3', title:'Equações do 1º Grau', duration:'17min', done:false },
-            { id:'lesson-4', title:'Equações do 2º Grau', duration:'25min', done:false, locked:true },
-        ];
+        // Extrai títulos H2/H3 de uma string HTML para usar como Sumário
+        function extractHeadingsFromHtml(html) {
+            if (!html) return [];
+            const tmp = document.createElement('div');
+            tmp.innerHTML = html;
+            const headings = [];
+            tmp.querySelectorAll('h2, h3').forEach(el => {
+                const text = el.textContent.trim();
+                if (text) headings.push(text);
+            });
+            return headings;
+        }
 
         function buildLeftSidebar() {
-            // Sumário
-            const topicData = LESSON_TOPICS[lessonId] || LESSON_TOPICS['lesson-1'];
+            // ── Sumário: extrair títulos do conteúdo real da lição ──────────
             const summaryNav = document.getElementById('summary-nav');
-            summaryNav.innerHTML = topicData.topics.map((t, i) => `
-                <a href="#" onclick="return false"
-                   class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition group">
-                    <span class="w-5 h-5 rounded-full bg-blue-100 text-blue-600 text-xs font-bold flex items-center justify-center flex-shrink-0 group-hover:bg-blue-600 group-hover:text-white transition">${i+1}</span>
-                    ${escapeHtml(t)}
-                </a>
-            `).join('');
+            const richText = lessonData.content || lessonData.content_text || '';
+            const headings = extractHeadingsFromHtml(richText);
+            if (headings.length > 0) {
+                summaryNav.innerHTML = headings.map((t, i) => `
+                    <a href="#" onclick="return false"
+                       class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition group">
+                        <span class="w-5 h-5 rounded-full bg-blue-100 text-blue-600 text-xs font-bold flex items-center justify-center flex-shrink-0 group-hover:bg-blue-600 group-hover:text-white transition">${i+1}</span>
+                        ${escapeHtml(t)}
+                    </a>
+                `).join('');
+            } else {
+                summaryNav.innerHTML = `<p class="text-xs text-gray-400 px-3 py-2">Sumário não disponível para esta lição.</p>`;
+            }
 
-            // Conceitos-chave
+            // ── Conceitos-chave: extrair da lição ou ocultar ─────────────────
             const kwContainer = document.getElementById('key-concepts');
             const kwColors = ['bg-blue-100 text-blue-700','bg-purple-100 text-purple-700',
                               'bg-green-100 text-green-700','bg-yellow-100 text-yellow-700',
                               'bg-pink-100 text-pink-700','bg-teal-100 text-teal-700'];
-            kwContainer.innerHTML = topicData.keywords.map((kw, i) => `
-                <span class="text-xs px-3 py-1 rounded-full font-medium cursor-default ${kwColors[i % kwColors.length]}">${escapeHtml(kw)}</span>
-            `).join('');
+            let keywords = [];
+            if (Array.isArray(lessonData.key_concepts) && lessonData.key_concepts.length) {
+                keywords = lessonData.key_concepts;
+            } else if (typeof lessonData.key_concepts === 'string' && lessonData.key_concepts.trim()) {
+                try { keywords = JSON.parse(lessonData.key_concepts); } catch { keywords = []; }
+            }
+            if (keywords.length > 0) {
+                kwContainer.innerHTML = keywords.map((kw, i) => `
+                    <span class="text-xs px-3 py-1 rounded-full font-medium cursor-default ${kwColors[i % kwColors.length]}">${escapeHtml(kw)}</span>
+                `).join('');
+            } else {
+                kwContainer.innerHTML = `<p class="text-xs text-gray-400">Sem conceitos-chave definidos.</p>`;
+            }
 
-            // Outras Lições
+            // ── Outras Lições: carregar do capítulo real via API ─────────────
             const container = document.getElementById('other-lessons');
             const chapterId = lessonData?.chapter_id || '';
-            container.innerHTML = OTHER_LESSONS_DATA.map(l => {
-                const isCurrent = l.id === lessonId;
-                const urlParams2 = new URLSearchParams(window.location.search);
-                const href = `/lesson.html?id=${l.id}&chapter=${urlParams2.get('chapter')||''}&subject=${urlParams2.get('subject')||''}&grade=${urlParams2.get('grade')||''}&country=${urlParams2.get('country')||''}`;
-                if (l.locked) return `
-                    <div class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 opacity-50 cursor-not-allowed border border-gray-200">
-                        <div class="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                            <i class="fas fa-lock text-gray-400 text-xs"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-medium text-gray-500 truncate">${escapeHtml(l.title)}</p>
-                            <p class="text-xs text-gray-400">${escapeHtml(l.duration)}</p>
-                        </div>
-                    </div>`;
-                return `
-                    <a href="${l.locked ? '#' : href}" class="flex items-center gap-3 p-3 rounded-xl border transition
-                        ${isCurrent ? 'bg-blue-50 border-blue-300 shadow-sm' : 'bg-white border-gray-200 hover:border-blue-200 hover:bg-blue-50'}">
-                        <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0
-                            ${l.done ? 'bg-green-500' : isCurrent ? 'bg-blue-500' : 'bg-gray-200'}">
-                            <i class="fas ${l.done ? 'fa-check' : isCurrent ? 'fa-play' : 'fa-circle'} text-white text-xs"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-semibold truncate ${isCurrent ? 'text-blue-700' : 'text-gray-800'}">${escapeHtml(l.title)}</p>
-                            <p class="text-xs text-gray-400">${escapeHtml(l.duration)}</p>
-                        </div>
-                        ${isCurrent ? '<span class="text-xs bg-blue-100 text-blue-600 font-bold px-2 py-0.5 rounded-full flex-shrink-0">Atual</span>' : ''}
-                    </a>`;
-            }).join('');
+            if (chapterId) {
+                container.innerHTML = `<p class="text-xs text-gray-400 px-1">A carregar...</p>`;
+                VClass.api.content.getLessons(chapterId).then(res => {
+                    if (!res.success || !Array.isArray(res.data) || res.data.length === 0) {
+                        container.innerHTML = `<p class="text-xs text-gray-400 px-1">Nenhuma outra lição neste capítulo.</p>`;
+                        return;
+                    }
+                    _chapterLessons = res.data;
+                    const urlParams2 = new URLSearchParams(window.location.search);
+                    container.innerHTML = res.data.map(l => {
+                        const isCurrent = l.id === lessonId;
+                        const durationMin = l.duration || Math.round((l.video_duration || 0) / 60);
+                        const durationStr = durationMin ? `${durationMin}min` : '';
+                        const href = `/lesson.html?id=${l.id}&chapter=${urlParams2.get('chapter')||''}&subject=${urlParams2.get('subject')||''}&grade=${urlParams2.get('grade')||''}&country=${urlParams2.get('country')||''}&gs=${urlParams2.get('gs')||''}`;
+                        return `
+                            <a href="${href}" class="flex items-center gap-3 p-3 rounded-xl border transition
+                                ${isCurrent ? 'bg-blue-50 border-blue-300 shadow-sm' : 'bg-white border-gray-200 hover:border-blue-200 hover:bg-blue-50'}">
+                                <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0
+                                    ${isCurrent ? 'bg-blue-500' : 'bg-gray-200'}">
+                                    <i class="fas ${isCurrent ? 'fa-play' : 'fa-circle'} text-white text-xs"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-semibold truncate ${isCurrent ? 'text-blue-700' : 'text-gray-800'}">${escapeHtml(l.title)}</p>
+                                    ${durationStr ? `<p class="text-xs text-gray-400">${durationStr}</p>` : ''}
+                                </div>
+                                ${isCurrent ? '<span class="text-xs bg-blue-100 text-blue-600 font-bold px-2 py-0.5 rounded-full flex-shrink-0">Atual</span>' : ''}
+                            </a>`;
+                    }).join('');
+                }).catch(() => {
+                    container.innerHTML = `<p class="text-xs text-gray-400 px-1">Não foi possível carregar as lições.</p>`;
+                });
+            } else {
+                container.innerHTML = `<p class="text-xs text-gray-400 px-1">Capítulo não identificado.</p>`;
+            }
         }
 
         function toggleContent() {
@@ -2274,34 +2254,24 @@
         }
 
         // ─────────────────────────────────────────
-        //  INLINE QUIZ
+        //  INLINE QUIZ — alimentado pelos exercícios reais do professor
         // ─────────────────────────────────────────
-        const QUIZ_QUESTIONS = [
-            {
-                q: 'O que é o domínio de uma função?',
-                opts: ['Conjunto dos valores de saída','Conjunto dos valores de entrada','A imagem da função','Nenhuma das anteriores'],
-                correct: 1
-            },
-            {
-                q: 'Qual é a imagem de f(x)=2x quando x=3?',
-                opts: ['3','5','6','9'],
-                correct: 2
-            },
-            {
-                q: 'Uma função é dita sobrejetora quando:',
-                opts: ['Todo elemento do domínio tem imagem','Todo elemento do contradomínio é imagem de algum x','f(a)=f(b) ⟹ a=b','Domínio = Contradomínio'],
-                correct: 1
-            }
-        ];
+        let QUIZ_QUESTIONS = [];   // preenchido por loadExercises()
         let quizCurrentQ = 0;
         let quizScore = 0;
         let quizAnswered = false;
+        let quizCurrentExerciseId = null;  // id do exercício na BD
 
-        function openInlineQuiz() {
-            quizCurrentQ = 0; quizScore = 0; quizAnswered = false;
+        function openInlineQuiz(startIndex) {
+            if (!QUIZ_QUESTIONS.length) return;
+            quizCurrentQ = startIndex || 0;
+            quizScore = 0;
+            quizAnswered = false;
             document.getElementById('inline-quiz-card').classList.remove('hidden');
             document.getElementById('quiz-content').classList.remove('hidden');
             document.getElementById('quiz-result').classList.add('hidden');
+            const titleEl = document.getElementById('inline-quiz-title');
+            if (titleEl) titleEl.innerHTML = `<i class="fas fa-bolt text-yellow-400"></i> Exercício ${quizCurrentQ + 1} de ${QUIZ_QUESTIONS.length}`;
             renderQuizQuestion();
             document.getElementById('inline-quiz-card').scrollIntoView({ behavior:'smooth', block:'nearest' });
         }
@@ -2312,6 +2282,8 @@
 
         function renderQuizQuestion() {
             const q = QUIZ_QUESTIONS[quizCurrentQ];
+            if (!q) return;
+            quizCurrentExerciseId = q.id || null;
             document.getElementById('quiz-q-num').textContent = quizCurrentQ + 1;
             document.getElementById('quiz-q-total').textContent = QUIZ_QUESTIONS.length;
             document.getElementById('quiz-progress-bar').style.width = `${((quizCurrentQ+1)/QUIZ_QUESTIONS.length)*100}%`;
@@ -2321,36 +2293,58 @@
             quizAnswered = false;
 
             const letters = ['A','B','C','D'];
-            document.getElementById('quiz-options').innerHTML = q.opts.map((opt, i) => `
-                <button onclick="selectQuizAnswer(${i})"
-                    class="quiz-option-btn w-full text-left flex items-center gap-3 p-3 rounded-xl border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition text-sm"
-                    data-index="${i}">
-                    <span class="w-7 h-7 rounded-full bg-gray-100 text-gray-600 font-bold text-xs flex items-center justify-center flex-shrink-0">${escapeHtml(letters[i])}</span>
-                    ${escapeHtml(opt)}
-                </button>
-            `).join('');
+            const container = document.getElementById('quiz-options');
+            container.innerHTML = '';
+            q.opts.forEach((opt, i) => {
+                const btn = document.createElement('button');
+                btn.className = 'quiz-option-btn w-full text-left flex items-center gap-3 p-3 rounded-xl border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition text-sm';
+                btn.dataset.index = i;
+                btn.dataset.optionId = opt.optionId || '';
+                btn.addEventListener('click', () => selectQuizAnswer(i, btn));
+                const badge = document.createElement('span');
+                badge.className = 'w-7 h-7 rounded-full bg-gray-100 text-gray-600 font-bold text-xs flex items-center justify-center flex-shrink-0';
+                badge.textContent = letters[i];
+                const label = document.createElement('span');
+                label.textContent = opt.text || opt;
+                btn.appendChild(badge);
+                btn.appendChild(label);
+                container.appendChild(btn);
+            });
         }
 
-        function selectQuizAnswer(idx) {
+        async function selectQuizAnswer(idx, btnEl) {
             if (quizAnswered) return;
             quizAnswered = true;
             const q = QUIZ_QUESTIONS[quizCurrentQ];
-            const isCorrect = idx === q.correct;
+            const optionId = btnEl?.dataset?.optionId || '';
+
+            let isCorrect = false;
+            let correctOptionId = null;
+            let explanation = q.explanation || '';
+            try {
+                const res = await VClass.api.exercises.submitExercise({ exercise_id: quizCurrentExerciseId, selected_option_id: optionId });
+                if (res.success) {
+                    isCorrect = res.data?.is_correct || false;
+                    correctOptionId = res.data?.correctAnswer?.id || null;
+                    loadExerciseResults();
+                }
+            } catch(e) { /* silent — feedback still shown */ }
+
             if (isCorrect) quizScore++;
 
-            // Style buttons
-            document.querySelectorAll('.quiz-option-btn').forEach((btn, i) => {
+            document.querySelectorAll('.quiz-option-btn').forEach(btn => {
                 btn.disabled = true;
-                if (i === q.correct) {
+                const isCorrectBtn = correctOptionId ? btn.dataset.optionId === correctOptionId : false;
+                const isChosenWrong = btn === btnEl && !isCorrect;
+                if (isCorrectBtn) {
                     btn.classList.add('border-green-500','bg-green-50');
                     btn.querySelector('span').classList.add('bg-green-500','text-white');
-                } else if (i === idx && !isCorrect) {
+                } else if (isChosenWrong) {
                     btn.classList.add('border-red-400','bg-red-50');
                     btn.querySelector('span').classList.add('bg-red-400','text-white');
                 }
             });
 
-            // Feedback
             const fb = document.getElementById('quiz-feedback');
             fb.classList.remove('hidden');
             if (isCorrect) {
@@ -2358,7 +2352,13 @@
                 fb.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Correcto! Muito bem!';
             } else {
                 fb.className = 'block mt-3 p-3 rounded-xl text-sm font-medium bg-red-100 text-red-800';
-                fb.innerHTML = `<i class="fas fa-times-circle mr-2"></i>Errado. A resposta correta é: <strong>${escapeHtml(q.opts[q.correct])}</strong>`;
+                fb.textContent = 'Errado. ';
+                if (explanation) {
+                    const p = document.createElement('p');
+                    p.className = 'mt-2 text-xs opacity-80';
+                    p.textContent = explanation;
+                    fb.appendChild(p);
+                }
             }
 
             const nextBtn = document.getElementById('quiz-next-btn');
@@ -2383,7 +2383,7 @@
             document.getElementById('quiz-result-emoji').textContent = pct >= 70 ? '🎉' : pct >= 40 ? '👍' : '💪';
             document.getElementById('quiz-result-text').textContent = pct >= 70 ? 'Excelente resultado!' : pct >= 40 ? 'Bom esforço!' : 'Continue praticando!';
             document.getElementById('quiz-result-score').textContent = `${quizScore}/${QUIZ_QUESTIONS.length} corretas (${pct}%)`;
-            if (pct >= 70) VClass.showNotification(`Quiz concluído! ${quizScore}/${QUIZ_QUESTIONS.length} corretas 🎉`, 'success');
+            if (pct >= 70) VClass.showNotification(`Exercícios concluídos! ${quizScore}/${QUIZ_QUESTIONS.length} corretas 🎉`, 'success');
         }
 
         // Load saved notes

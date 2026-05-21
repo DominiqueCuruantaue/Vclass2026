@@ -1,5 +1,6 @@
 // Authentication Routes
 import { Hono } from 'hono'
+import { getCookie, setCookie } from 'hono/cookie'
 import type { CloudflareBindings } from '../types/bindings'
 import { z } from 'zod'
 import { getSupabase } from '../config/supabase'
@@ -8,6 +9,29 @@ import { generateAccessToken, generateRefreshToken, verifyToken, verifyRefreshTo
 import { storeRefreshToken, isRefreshTokenActive, revokeRefreshToken, revokeAllUserTokens } from '../utils/refreshTokens'
 import { mockUsers, DEMO_PASSWORD } from '../middleware/database'
 import { authMiddleware, rateLimitMiddleware } from '../middleware/auth'
+
+const REFRESH_COOKIE = 'vclass_rt'
+const REFRESH_MAX_AGE = 30 * 24 * 3600 // 30 dias em segundos
+
+function setRefreshCookie(c: any, token: string) {
+  setCookie(c, REFRESH_COOKIE, token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'Strict',
+    path: '/',
+    maxAge: REFRESH_MAX_AGE
+  })
+}
+
+function clearRefreshCookie(c: any) {
+  setCookie(c, REFRESH_COOKIE, '', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'Strict',
+    path: '/',
+    maxAge: 0
+  })
+}
 
 function requestMeta(c: any) {
   return {
@@ -140,14 +164,14 @@ auth.post('/register', async (c) => {
     }, c.env?.JWT_SECRET)
 
     await storeRefreshToken(supabase, user.id, refreshToken, requestMeta(c))
+    setRefreshCookie(c, refreshToken)
 
     return c.json<ApiResponse<AuthResponse>>({
       success: true,
       data: {
         user,
-        accessToken,
-        refreshToken
-      },
+        accessToken
+      } as any,
       message: 'Registration successful'
     }, 201)
     
@@ -205,6 +229,7 @@ auth.post('/login', async (c) => {
         name: demoUser.full_name
       }, c.env?.JWT_SECRET)
       
+      setRefreshCookie(c, refreshToken)
       return c.json<ApiResponse<AuthResponse>>({
         success: true,
         data: {
@@ -212,9 +237,8 @@ auth.post('/login', async (c) => {
             ...demoUser,
             name: demoUser.full_name
           },
-          accessToken,
-          refreshToken
-        },
+          accessToken
+        } as any,
         message: 'Login realizado com sucesso (Modo Demo)'
       })
     }
@@ -289,10 +313,11 @@ auth.post('/login', async (c) => {
     }, c.env?.JWT_SECRET)
 
     await storeRefreshToken(supabase, user.id, refreshToken, requestMeta(c))
+    setRefreshCookie(c, refreshToken)
 
     // Remove password_hash from response
     const { password_hash, ...userWithoutPassword } = user
-    
+
     return c.json<ApiResponse<AuthResponse>>({
       success: true,
       data: {
@@ -300,9 +325,8 @@ auth.post('/login', async (c) => {
           ...userWithoutPassword,
           name: user.full_name
         },
-        accessToken,
-        refreshToken
-      },
+        accessToken
+      } as any,
       message: 'Login successful'
     })
     
@@ -316,20 +340,21 @@ auth.post('/login', async (c) => {
 })
 auth.post('/refresh', async (c) => {
   try {
-    const body = await c.req.json()
-    const { refreshToken } = body
-    
+    // Ler refresh token do cookie HttpOnly (obrigatório)
+    const refreshToken = getCookie(c, REFRESH_COOKIE)
+
     if (!refreshToken) {
       return c.json<ApiResponse>({
         success: false,
         error: 'Refresh token required'
       }, 400)
     }
-    
+
     // Verify refresh token (must have type: 'refresh' claim)
     const decoded = verifyRefreshToken(refreshToken, c.env?.JWT_SECRET)
 
     if (!decoded) {
+      clearRefreshCookie(c)
       return c.json<ApiResponse>({
         success: false,
         error: 'Invalid or expired refresh token'
@@ -341,6 +366,7 @@ auth.post('/refresh', async (c) => {
     if (supabase) {
       const active = await isRefreshTokenActive(supabase, refreshToken)
       if (!active) {
+        clearRefreshCookie(c)
         return c.json<ApiResponse>({
           success: false,
           error: 'Refresh token revoked or unknown'
@@ -366,9 +392,11 @@ auth.post('/refresh', async (c) => {
       await storeRefreshToken(supabase, decoded.sub, newRefreshToken, requestMeta(c))
     }
 
-    return c.json<ApiResponse<{ accessToken: string; refreshToken: string }>>({
+    setRefreshCookie(c, newRefreshToken)
+
+    return c.json<ApiResponse<{ accessToken: string }>>({
       success: true,
-      data: { accessToken, refreshToken: newRefreshToken },
+      data: { accessToken },
       message: 'Token refreshed successfully'
     })
     
@@ -388,21 +416,22 @@ auth.post('/refresh', async (c) => {
  */
 auth.post('/logout', async (c) => {
   try {
-    const body = await c.req.json().catch(() => ({})) as { refreshToken?: string; allDevices?: boolean }
+    const body = await c.req.json().catch(() => ({})) as { allDevices?: boolean }
+    const refreshToken = getCookie(c, REFRESH_COOKIE)
     const supabase = isDatabaseConfigured(c.env) ? getSupabase(c.env) : null
 
     if (supabase) {
       if (body.allDevices) {
-        // Revogar todos os tokens do utilizador — exige access token válido
         const authHeader = c.req.header('Authorization')
         const token = authHeader?.replace('Bearer ', '') || ''
         const decoded = verifyToken(token, c.env?.JWT_SECRET)
         if (decoded) await revokeAllUserTokens(supabase, decoded.sub)
-      } else if (body.refreshToken) {
-        await revokeRefreshToken(supabase, body.refreshToken)
+      } else if (refreshToken) {
+        await revokeRefreshToken(supabase, refreshToken)
       }
     }
 
+    clearRefreshCookie(c)
     return c.json<ApiResponse>({ success: true, message: 'Logged out successfully' })
   } catch (e) {
     console.error('Logout error:', e)

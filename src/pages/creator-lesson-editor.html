@@ -1324,6 +1324,7 @@
             // Se LESSON_ID for um UUID real, carregar dados da BD
             if (lessonDbId) {
                 await loadExistingLesson(lessonDbId);
+                await restoreCurriculumSelects();
             }
 
             setVideoSource(lessonData.videoSource || 'upload');
@@ -1345,49 +1346,165 @@
                 }
                 const l = d.data;
 
-                // Mapear DB → lessonData (nomes de campos do form)
-                lessonData = {
-                    ...lessonData,
-                    dbId:        l.id,
-                    title:       l.title || '',
-                    desc:        l.description || '',
-                    notes:       l.content || '',
-                    duration:    Math.round((l.video_duration || 0) / 60) || 12,
-                    order:       l.display_order || 1,
-                    videoId:     l.video_id || '',
-                    videoUrl:    l.video_url || '',
-                    libraryId:   l.bunny_library_id || '',
-                    thumbnail:   l.thumbnail_url || '',
-                    is_free:     !!l.is_free,
-                    status:      l.status || 'draft',
-                    chapter_id:  l.chapter_id || '',
-                    objectives:  Array.isArray(l.objectives) ? l.objectives : (l.objectives ? JSON.parse(l.objectives) : []),
-                    exercises:   Array.isArray(l.exercises) ? l.exercises : [],
-                    resources:   Array.isArray(l.resources) ? l.resources : []
+                // Normalizar exercícios do formato BD → formato frontend
+                // BD (exercise_options): { option_text, is_correct, display_order }
+                // Frontend: { options:['str',...], correct: índice numérico }
+                const normalizeExercises = (exs) => {
+                    if (!Array.isArray(exs)) return [];
+                    return exs.map((ex) => {
+                        // O campo de opções pode vir como 'exercise_options' (da nova query) ou 'options' (legado)
+                        const rawOpts = Array.isArray(ex.exercise_options) ? ex.exercise_options
+                                      : Array.isArray(ex.options) ? ex.options
+                                      : [];
+                        const isObjectFormat = rawOpts.length > 0 && typeof rawOpts[0] === 'object';
+                        const sorted = isObjectFormat
+                            ? [...rawOpts].sort((a, b) => (a.display_order || a.order || 0) - (b.display_order || b.order || 0))
+                            : rawOpts;
+                        const optStrings = isObjectFormat
+                            ? sorted.map(o => o.option_text || o.text || '')
+                            : sorted;
+                        const correctIdx = isObjectFormat
+                            ? sorted.findIndex(o => o.is_correct)
+                            : (typeof ex.correct === 'number' ? ex.correct : 0);
+                        return {
+                            id:          ex.id || (exerciseIdCounter++),
+                            question:    ex.question || '',
+                            explanation: ex.explanation || '',
+                            correct:     correctIdx >= 0 ? correctIdx : 0,
+                            options:     optStrings.length === 4 ? optStrings : ['','','',''],
+                            points:      ex.points || 10
+                        };
+                    });
                 };
 
-                // Popular campos de UI
-                const set = (id, v) => { const el = document.getElementById(id); if (el && v !== undefined && v !== null) el.value = v; };
-                set('field-title',    lessonData.title);
-                set('field-desc',     lessonData.desc);
-                set('field-notes',    lessonData.notes);
-                set('field-duration', lessonData.duration);
-                set('field-order',    lessonData.order);
-                set('field-video-id', lessonData.videoId);
-                set('field-library-id', lessonData.libraryId);
-                set('field-video-url', lessonData.videoUrl);
+                // Mapear DB → lessonData (campos completos)
+                lessonData = {
+                    ...lessonData,
+                    dbId:            l.id,
+                    title:           l.title || '',
+                    desc:            l.description || '',
+                    notes:           l.content || '',
+                    duration:        Math.round((l.video_duration || 0) / 60) || 12,
+                    order:           l.display_order || 1,
+                    difficulty:      l.difficulty || 'medium',
+                    requireSequence: !!l.require_sequence,
+                    videoId:         l.video_id || '',
+                    videoUrl:        l.video_url || '',
+                    libraryId:       l.bunny_library_id || '',
+                    thumbnail:       l.thumbnail_url || '',
+                    thumbnail_url:   l.thumbnail_url || '',
+                    is_free:         l.is_free !== undefined ? !!l.is_free : true,
+                    status:          l.status || 'draft',
+                    chapter_id:      l.chapter_id || '',
+                    objectives:      Array.isArray(l.objectives)
+                                        ? l.objectives
+                                        : (l.objectives ? (() => { try { return JSON.parse(l.objectives); } catch { return []; } })() : []),
+                    exercises:       normalizeExercises(l.exercises),
+                    resources:       Array.isArray(l.resources) ? l.resources : []
+                };
 
+                // ── Popular campos de texto simples ───────────────────────────
+                const setVal = (elId, v) => { const el = document.getElementById(elId); if (el && v !== undefined && v !== null) el.value = v; };
+                setVal('field-title',      lessonData.title);
+                setVal('field-desc',       lessonData.desc);
+                setVal('field-notes',      lessonData.notes);
+                setVal('field-duration',   lessonData.duration);
+                setVal('field-order',      lessonData.order);
+                setVal('field-video-id',   lessonData.videoId);
+                setVal('field-library-id', lessonData.libraryId);
+                setVal('field-video-url',  lessonData.videoUrl);
+
+                // ── Dificuldade ───────────────────────────────────────────────
+                setDifficulty(lessonData.difficulty);
+
+                // ── Toggles (Acesso gratuito / Sequência) ────────────────────
+                const toggleFree = document.getElementById('toggle-free');
+                if (toggleFree) toggleFree.checked = lessonData.is_free;
+                const toggleSeq = document.getElementById('toggle-sequence');
+                if (toggleSeq) toggleSeq.checked = lessonData.requireSequence;
+
+                // ── Thumbnail prévia ──────────────────────────────────────────
+                if (lessonData.thumbnail) {
+                    const img = document.getElementById('thumb-preview');
+                    const placeholder = document.getElementById('thumb-placeholder');
+                    if (img) { img.src = lessonData.thumbnail; img.classList.remove('hidden'); }
+                    if (placeholder) placeholder.classList.add('hidden');
+                }
+
+                // ── Status badge no header ────────────────────────────────────
+                const badge = document.getElementById('lesson-status-badge');
+                if (badge) {
+                    const statusMap = {
+                        published: { label: 'Publicada',  cls: 'bg-green-100 text-green-700' },
+                        draft:     { label: 'Rascunho',   cls: 'bg-amber-100 text-amber-700' },
+                        review:    { label: 'Em Revisão', cls: 'bg-blue-100 text-blue-700'   }
+                    };
+                    const s = statusMap[lessonData.status] || statusMap.draft;
+                    badge.textContent = s.label;
+                    badge.className = `text-xs font-semibold px-2 py-0.5 rounded-full ${s.cls}`;
+                }
+
+                // ── Contadores de caracteres ──────────────────────────────────
                 document.getElementById('header-title').textContent = lessonData.title || 'Editar Lição';
-                updateCharCount('field-title','title-count');
-                updateCharCount('field-desc','desc-count');
+                updateCharCount('field-title', 'title-count');
+                updateCharCount('field-desc',  'desc-count');
 
-                // Modo de vídeo: se tem video_id (Bunny) → upload; se tem video_url → external
-                if (lessonData.videoId) lessonData.videoSource = 'upload';
+                // ── Modo de vídeo ─────────────────────────────────────────────
+                if (lessonData.videoId)  lessonData.videoSource = 'upload';
                 else if (lessonData.videoUrl) lessonData.videoSource = 'external';
+
+                // ── Objetivos ─────────────────────────────────────────────────
+                renderObjectives();
+
             } catch (e) {
                 console.error('loadExistingLesson failed:', e);
                 VClass.showNotification('Erro ao carregar lição', 'error');
             }
+        }
+
+        // ── Restaurar dropdowns de currículo para lição existente ──────
+        // Percorre CURRICULUM_DATA para encontrar o país/nível/classe/disciplina
+        // correspondente ao chapter_id guardado em lessonData e seleciona os
+        // selects em cascata, permitindo que o professor veja e altere os campos.
+        async function restoreCurriculumSelects() {
+            if (!lessonData.chapter_id || !CURRICULUM_DATA || !CREATOR_CHAPTERS) return;
+
+            // Encontrar o chapter nos capítulos do professor para obter grade_subject_id
+            const chapter = CREATOR_CHAPTERS.find(c => c.id === lessonData.chapter_id);
+            const gsId = chapter?.grade_subject_id;
+            if (!gsId) return;
+
+            // Percorrer o currículo para encontrar o país/nível/classe que tem este grade_subject_id
+            let foundCountryId = null, foundLevelId = null, foundGradeId = null, foundSubjectId = null;
+            outer: for (const country of CURRICULUM_DATA) {
+                for (const level of (country.levels || [])) {
+                    for (const grade of (level.grades || [])) {
+                        const subj = (grade.subjects || []).find(s => s.id === gsId);
+                        if (subj) {
+                            foundCountryId  = country.id;
+                            foundLevelId    = level.id;
+                            foundGradeId    = grade.id;
+                            foundSubjectId  = subj.id;
+                            break outer;
+                        }
+                    }
+                }
+            }
+            if (!foundCountryId) return;
+
+            // Selecionar país e disparar cascata
+            const selCountry = document.getElementById('field-country');
+            if (selCountry) { selCountry.value = foundCountryId; _currCountry = foundCountryId; onCountryChange(); }
+
+            const selLevel = document.getElementById('field-level');
+            if (selLevel) { selLevel.value = foundLevelId; _currLevel = foundLevelId; onLevelChange(); }
+
+            const selGrade = document.getElementById('field-grade');
+            if (selGrade) { selGrade.value = foundGradeId; _currGrade = foundGradeId; onGradeChange(); }
+
+            const selSubject = document.getElementById('field-subject');
+            if (selSubject) { selSubject.value = foundSubjectId; _currSubjectId = foundSubjectId; onSubjectChange(); }
+            // onSubjectChange → renderChapterSelectForSubject → pré-seleciona chapter via lessonData.chapter_id
         }
 
         // ── Currículo: carregar dados ────────────────────────────────────
@@ -2507,7 +2624,8 @@
                 thumbnail_url: lessonData.thumbnail_url || null,
                 is_free:       !!lessonData.is_free,
                 display_order: lessonData.order || 1,
-                status:        targetStatus || lessonData.status || 'draft'
+                status:        targetStatus || lessonData.status || 'draft',
+                objectives:    Array.isArray(lessonData.objectives) ? lessonData.objectives.filter(o => o && o.trim()) : []
             };
 
             const lessonDbId = lessonData.dbId || null;
@@ -2526,6 +2644,32 @@
                     lessonData.dbId = d.data.id;
                     performSave();   // atualiza localStorage com o id real
                 }
+
+                // Guardar exercícios na BD (endpoint separado)
+                const savedId = d.data?.id || lessonData.dbId;
+                if (savedId && Array.isArray(lessonData.exercises) && lessonData.exercises.length > 0) {
+                    const validExercises = lessonData.exercises.filter(ex => ex.question && ex.question.trim().length >= 5);
+                    if (validExercises.length > 0) {
+                        try {
+                            await fetch(`/api/creator/lesson/${savedId}/exercises`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                body: JSON.stringify({
+                                    exercises: validExercises.map(ex => ({
+                                        question:    ex.question.trim(),
+                                        explanation: ex.explanation || '',
+                                        options:     Array.isArray(ex.options) ? ex.options : ['','','',''],
+                                        correct:     typeof ex.correct === 'number' ? ex.correct : 0,
+                                        points:      ex.points || 10
+                                    }))
+                                })
+                            });
+                        } catch (exErr) {
+                            console.warn('Exercises save warning:', exErr);
+                        }
+                    }
+                }
+
                 return d.data;
             } catch (e) {
                 console.error('Save lesson API error:', e);

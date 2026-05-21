@@ -188,7 +188,7 @@ creator.get('/lessons', async (c) => {
       .from('lessons')
       // Schema real: chapters.title (não .name). Join é nullable porque chapters
       // criados via slug podem não ter grade_subject_id.
-      .select('id, title, description, video_id, video_url, video_duration, status, views_count, display_order, is_free, thumbnail_url, created_at, updated_at, chapter_id, chapters(title, grade_subjects(subjects(name)))', { count: 'exact' })
+      .select('id, title, description, video_id, video_url, video_duration, status, views_count, display_order, is_free, thumbnail_url, created_at, updated_at, chapter_id, chapters(title, slug, grade_subjects(subjects(name)))', { count: 'exact' })
       .eq('created_by', user.id)
       .order('created_at', { ascending: false })
       .range((page - 1) * limit, page * limit - 1)
@@ -207,6 +207,7 @@ creator.get('/lessons', async (c) => {
       subject: l.chapters?.grade_subjects?.subjects?.name || '—',
       chapter: l.chapters?.title || '—',
       chapter_id: l.chapter_id,
+      chapter_slug: l.chapters?.slug || '',
       video_id: l.video_id,
       video_url: l.video_url,
       duration: Math.round((l.video_duration || 0) / 60),
@@ -254,9 +255,9 @@ creator.get('/lesson/:id', async (c) => {
     try {
       const { data: exs } = await supabase
         .from('exercises')
-        .select('*, options(*)')
+        .select('id, question, explanation, display_order, points, exercise_options(id, option_text, is_correct, display_order)')
         .eq('lesson_id', id)
-        .order('order', { ascending: true })
+        .order('display_order', { ascending: true })
       exercises = exs || []
     } catch (e: any) {
       console.warn('exercises fetch failed:', e?.message)
@@ -329,8 +330,10 @@ async function getSubjectShortMap(supabase: any): Promise<Record<string, string>
  * Devolve null se o padrão não bater ou a relação não existir na BD.
  */
 async function resolveGradeSubjectFromSlug(supabase: any, slug: string): Promise<string | null> {
-  // Padrão: 2 letras (país) + 2 dígitos (classe) + 3+ letras (subject) + "-" + resto
-  const m = slug.match(/^([a-z]{2})(\d{2})([a-z]{3,4})-/i)
+  // Padrão aceita AMBOS:
+  //   - "mz12bio-..." (sem hífen — formato do creator antigo)
+  //   - "mz12-bio-..." (com hífen — id estático "mz{N}-{abrev}" da curriculum.ts)
+  const m = slug.match(/^([a-z]{2})(\d{1,2})-?([a-z]{3,5})-/i)
   if (!m) return null
   const [, , gradeNum, subjShort] = m
   const shortMap = await getSubjectShortMap(supabase)
@@ -415,7 +418,8 @@ creator.post('/lesson', async (c) => {
     thumbnail_url,
     is_free = false,
     display_order = body.order || 1,
-    status = 'draft'
+    status = 'draft',
+    objectives
   } = body
 
   if (!title || title.length < 3) {
@@ -446,7 +450,8 @@ creator.post('/lesson', async (c) => {
         is_free,
         display_order,
         status,
-        created_by: user.id
+        created_by: user.id,
+        objectives: Array.isArray(objectives) ? objectives : []
       })
       .select()
       .single()
@@ -483,7 +488,8 @@ creator.put('/lesson/:id', async (c) => {
       thumbnail_url,
       is_free,
       display_order = body.order,
-      status
+      status,
+      objectives
     } = body
 
     // Validações de publicação
@@ -504,6 +510,7 @@ creator.put('/lesson/:id', async (c) => {
     if (is_free        !== undefined) patch.is_free        = is_free
     if (display_order  !== undefined) patch.display_order  = display_order
     if (status         !== undefined) patch.status         = status
+    if (objectives     !== undefined) patch.objectives     = Array.isArray(objectives) ? objectives : []
 
     const { data, error } = await supabase
       .from('lessons')
@@ -582,11 +589,11 @@ creator.post('/lesson/:id/exercises', async (c) => {
 
     // Inserir novos
     const exInserts = exercises.map((ex, i) => ({
-      lesson_id:   lessonId,
-      question:    ex.question.trim(),
-      explanation: ex.explanation || '',
-      order:       i + 1,
-      points:      ex.points || 10
+      lesson_id:     lessonId,
+      question:      ex.question.trim(),
+      explanation:   ex.explanation || '',
+      display_order: i + 1,
+      points:        ex.points || 10
     }))
 
     const { data: insertedEx, error: exError } = await supabase
@@ -599,15 +606,15 @@ creator.post('/lesson/:id/exercises', async (c) => {
     // Inserir opções
     const optInserts = (insertedEx ?? []).flatMap((ex: any, i: number) =>
       exercises[i].options.map((opt: string, oi: number) => ({
-        exercise_id: ex.id,
-        text:        opt.trim(),
-        is_correct:  oi === exercises[i].correct,
-        order:       oi + 1
+        exercise_id:   ex.id,
+        option_text:   opt.trim(),
+        is_correct:    oi === exercises[i].correct,
+        display_order: oi + 1
       }))
     )
 
     if (optInserts.length > 0) {
-      const { error: optError } = await supabase.from('options').insert(optInserts)
+      const { error: optError } = await supabase.from('exercise_options').insert(optInserts)
       if (optError) throw optError
     }
 
@@ -688,7 +695,8 @@ creator.get('/students', async (c) => {
       .eq('is_active', true)
 
     if (search) {
-      usersQuery = usersQuery.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`)
+      const safeSearch = search.replace(/[%,()]/g, '')
+      if (safeSearch) usersQuery = usersQuery.or(`full_name.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%`)
     }
 
     const { data: studentsRaw, count } = await usersQuery
@@ -826,22 +834,11 @@ creator.get('/chapters', async (c) => {
   const supabase = createSupabaseClient(c.env)
 
   try {
-    // Try with created_by filter (requires migration 010).
-    // Fall back to unfiltered if column missing.
-    let { data, error } = await supabase
+    const { data, error } = await supabase
       .from('chapters')
       .select('id, title, slug, description, display_order, grade_subject_id, trimester, created_at')
       .eq('created_by', user.id)
       .order('created_at', { ascending: false })
-
-    if (error?.message?.includes('created_by') || error?.message?.includes('trimester')) {
-      const res = await supabase
-        .from('chapters')
-        .select('id, title, slug, description, display_order, grade_subject_id, created_at')
-        .order('created_at', { ascending: false })
-      data  = res.data
-      error = res.error
-    }
 
     if (error) throw error
     return c.json({ success: true, data: data ?? [] })
@@ -866,14 +863,8 @@ creator.put('/chapter/:id', async (c) => {
   if (body.display_order !== undefined) patch.display_order = body.display_order
 
   try {
-    let { data, error } = await supabase
+    const { data, error } = await supabase
       .from('chapters').update(patch).eq('id', id).eq('created_by', user.id).select().maybeSingle()
-
-    if (error?.message?.includes('created_by')) {
-      const res = await supabase.from('chapters').update(patch).eq('id', id).select().maybeSingle()
-      data  = res.data
-      error = res.error
-    }
 
     if (error) throw error
     if (!data) return c.json({ success: false, error: 'Capítulo não encontrado' }, 404)
@@ -900,11 +891,7 @@ creator.delete('/chapter/:id', async (c) => {
       return c.json({ success: false, error: 'Capítulo tem lições. Elimine-as primeiro.' }, 409)
     }
 
-    let { error } = await supabase.from('chapters').delete().eq('id', id).eq('created_by', user.id)
-    if (error?.message?.includes('created_by')) {
-      const res = await supabase.from('chapters').delete().eq('id', id)
-      error = res.error
-    }
+    const { error } = await supabase.from('chapters').delete().eq('id', id).eq('created_by', user.id)
     if (error) throw error
     return c.json({ success: true, message: 'Capítulo eliminado' })
   } catch (error: any) {
@@ -1159,6 +1146,277 @@ creator.post('/earnings/withdraw', async (c) => {
       requested_at: new Date().toISOString(),
     }
   })
+})
+
+// ═════════════════════════════════════════════════════════════════════════════
+// BIBLIOTECA DIGITAL — Endpoints do Professor
+//
+//  GET  /api/creator/library              → lista os materiais do professor
+//  POST /api/creator/library              → submeter apostila/exercício
+//  GET  /api/creator/library/:id          → detalhe para edição
+//  PUT  /api/creator/library/:id          → actualizar rascunho
+//  DELETE /api/creator/library/:id        → apagar rascunho
+//  POST /api/creator/library/:id/submit   → enviar para revisão
+// ═════════════════════════════════════════════════════════════════════════════
+
+const LIBRARY_SELECT = `
+  id, title, description, author, category,
+  subject_id, grade_id, file_url, file_size_kb, pages, cover_url,
+  downloads_count, is_featured, status, rejection_reason,
+  created_at, updated_at,
+  subjects:subject_id ( id, name, color ),
+  grades:grade_id     ( id, name, level )
+`
+
+// GET /api/creator/library
+creator.get('/library', async (c) => {
+  const user     = c.get('user') as any
+  const supabase = createSupabaseClient(c.env)
+  const status   = c.req.query('status') || ''
+  const category = c.req.query('category') || ''
+  const page  = Math.max(1, parseInt(c.req.query('page')  || '1'))
+  const limit = Math.min(50, Math.max(1, parseInt(c.req.query('limit') || '20')))
+  const from  = (page - 1) * limit
+
+  let query = supabase
+    .from('library_items')
+    .select(LIBRARY_SELECT, { count: 'exact' })
+    .eq('created_by', user.id)
+    .order('created_at', { ascending: false })
+    .range(from, from + limit - 1)
+
+  if (status)   query = query.eq('status', status)
+  if (category) query = query.eq('category', category)
+
+  const { data, error, count } = await query
+  if (error) return c.json({ success: false, error: error.message }, 500)
+
+  return c.json({
+    success: true,
+    data: {
+      items: data || [],
+      pagination: { page, limit, total: count ?? 0, totalPages: Math.ceil((count ?? 0) / limit) }
+    }
+  })
+})
+
+// POST /api/creator/library — criar rascunho
+creator.post('/library', async (c) => {
+  const user     = c.get('user') as any
+  const supabase = createSupabaseClient(c.env)
+  const body     = await c.req.json().catch(() => ({}))
+
+  const { title, description, category, subject_id, grade_id,
+          file_url, file_size_kb, pages, cover_url } = body
+
+  if (!title?.trim())    return c.json({ success: false, error: 'Título obrigatório' }, 400)
+  if (!category)         return c.json({ success: false, error: 'Categoria obrigatória (books|handouts|exercises)' }, 400)
+  if (!['handouts', 'exercises'].includes(category))
+    return c.json({ success: false, error: 'Professores só podem criar apostilas ou exercícios' }, 403)
+
+  const { data, error } = await supabase
+    .from('library_items')
+    .insert({
+      title: title.trim(),
+      description: description?.trim() || null,
+      author: user.full_name || user.email,
+      category,
+      subject_id:    subject_id    || null,
+      grade_id:      grade_id      || null,
+      file_url:      file_url      || null,
+      file_size_kb:  file_size_kb  || null,
+      pages:         pages         || null,
+      cover_url:     cover_url     || null,
+      status:        'draft',
+      created_by:    user.id,
+    })
+    .select(LIBRARY_SELECT)
+    .single()
+
+  if (error) return c.json({ success: false, error: error.message }, 500)
+
+  return c.json({ success: true, data }, 201)
+})
+
+// GET /api/creator/library/:id
+creator.get('/library/:id', async (c) => {
+  const user     = c.get('user') as any
+  const supabase = createSupabaseClient(c.env)
+  const id       = c.req.param('id')
+
+  const { data, error } = await supabase
+    .from('library_items')
+    .select(LIBRARY_SELECT)
+    .eq('id', id)
+    .eq('created_by', user.id)
+    .single()
+
+  if (error || !data) return c.json({ success: false, error: 'Material não encontrado' }, 404)
+
+  return c.json({ success: true, data })
+})
+
+// PUT /api/creator/library/:id — actualizar (só em draft ou rejected)
+creator.put('/library/:id', async (c) => {
+  const user     = c.get('user') as any
+  const supabase = createSupabaseClient(c.env)
+  const id       = c.req.param('id')
+  const body     = await c.req.json().catch(() => ({}))
+
+  const { data: existing } = await supabase
+    .from('library_items')
+    .select('id, status, created_by')
+    .eq('id', id)
+    .eq('created_by', user.id)
+    .single()
+
+  if (!existing) return c.json({ success: false, error: 'Material não encontrado' }, 404)
+  if (!['draft', 'rejected'].includes(existing.status))
+    return c.json({ success: false, error: 'Só é possível editar rascunhos ou materiais rejeitados' }, 400)
+
+  const allowed = ['title','description','category','subject_id','grade_id',
+                   'file_url','file_size_kb','pages','cover_url']
+  const updates: Record<string, any> = {}
+  for (const key of allowed) {
+    if (body[key] !== undefined) updates[key] = body[key]
+  }
+
+  if (existing.status === 'rejected') updates.status = 'draft'
+  updates.rejection_reason = null
+
+  const { data, error } = await supabase
+    .from('library_items')
+    .update(updates)
+    .eq('id', id)
+    .select(LIBRARY_SELECT)
+    .single()
+
+  if (error) return c.json({ success: false, error: error.message }, 500)
+
+  return c.json({ success: true, data })
+})
+
+// DELETE /api/creator/library/:id — rascunhos e materiais rejeitados
+creator.delete('/library/:id', async (c) => {
+  const user     = c.get('user') as any
+  const supabase = createSupabaseClient(c.env)
+  const id       = c.req.param('id')
+
+  const { data: existing } = await supabase
+    .from('library_items')
+    .select('id, status, created_by')
+    .eq('id', id)
+    .eq('created_by', user.id)
+    .single()
+
+  if (!existing) return c.json({ success: false, error: 'Material não encontrado' }, 404)
+  if (!['draft', 'rejected'].includes(existing.status))
+    return c.json({ success: false, error: 'Só é possível eliminar rascunhos ou materiais rejeitados' }, 400)
+
+  const { error } = await supabase
+    .from('library_items')
+    .delete()
+    .eq('id', id)
+
+  if (error) return c.json({ success: false, error: error.message }, 500)
+
+  return c.json({ success: true, data: null })
+})
+
+// POST /api/creator/library/upload — upload de PDF para Supabase Storage
+creator.post('/library/upload', async (c) => {
+  const user     = c.get('user') as any
+  const supabase = createSupabaseClient(c.env)
+
+  let formData: FormData
+  try {
+    formData = await c.req.formData()
+  } catch {
+    return c.json({ success: false, error: 'Corpo inválido — envie multipart/form-data' }, 400)
+  }
+
+  const file = formData.get('file') as File | null
+  if (!file || !file.name) return c.json({ success: false, error: 'Ficheiro não encontrado no pedido' }, 400)
+
+  const allowed = ['application/pdf', 'application/msword',
+                   'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+  if (!allowed.includes(file.type) && !file.name.match(/\.(pdf|doc|docx)$/i))
+    return c.json({ success: false, error: 'Apenas PDF ou Word são aceites' }, 400)
+
+  const MAX_MB = 100
+  if (file.size > MAX_MB * 1024 * 1024)
+    return c.json({ success: false, error: `Ficheiro demasiado grande (máx ${MAX_MB} MB)` }, 400)
+
+  const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_').replace(/_{2,}/g, '_')
+  const path     = `library/teachers/${user.id}/${Date.now()}_${safeName}`
+
+  const buffer = await file.arrayBuffer()
+  const { error: upErr } = await supabase.storage
+    .from('vclass-library')
+    .upload(path, buffer, { contentType: file.type || 'application/pdf', upsert: false })
+
+  if (upErr) return c.json({ success: false, error: upErr.message }, 500)
+
+  const { data: urlData } = supabase.storage.from('vclass-library').getPublicUrl(path)
+
+  return c.json({
+    success: true,
+    data: {
+      url:           urlData.publicUrl,
+      path,
+      size_kb:       Math.round(file.size / 1024),
+      original_name: file.name,
+    }
+  }, 201)
+})
+
+// GET /api/creator/curriculum — disciplinas e classes (para selectors nos modals)
+creator.get('/curriculum', async (c) => {
+  const supabase = createSupabaseClient(c.env)
+  const [subjectsRes, gradesRes] = await Promise.all([
+    supabase.from('subjects').select('id, name, color').order('name'),
+    supabase.from('grades').select('id, name, level, display_order').order('display_order'),
+  ])
+  return c.json({
+    success: true,
+    data: {
+      subjects: subjectsRes.data || [],
+      grades:   gradesRes.data   || [],
+    },
+  })
+})
+
+// POST /api/creator/library/:id/submit — enviar para revisão
+creator.post('/library/:id/submit', async (c) => {
+  const user     = c.get('user') as any
+  const supabase = createSupabaseClient(c.env)
+  const id       = c.req.param('id')
+
+  const { data: existing } = await supabase
+    .from('library_items')
+    .select('id, title, file_url, status, created_by')
+    .eq('id', id)
+    .eq('created_by', user.id)
+    .single()
+
+  if (!existing) return c.json({ success: false, error: 'Material não encontrado' }, 404)
+  if (!['draft', 'rejected'].includes(existing.status))
+    return c.json({ success: false, error: 'Apenas rascunhos podem ser submetidos' }, 400)
+  if (!existing.title?.trim())
+    return c.json({ success: false, error: 'Título obrigatório antes de submeter' }, 400)
+  if (!existing.file_url)
+    return c.json({ success: false, error: 'É necessário carregar o ficheiro antes de submeter' }, 400)
+
+  const { data, error } = await supabase
+    .from('library_items')
+    .update({ status: 'pending_review', rejection_reason: null })
+    .eq('id', id)
+    .select(LIBRARY_SELECT)
+    .single()
+
+  if (error) return c.json({ success: false, error: error.message }, 500)
+
+  return c.json({ success: true, data })
 })
 
 export default creator

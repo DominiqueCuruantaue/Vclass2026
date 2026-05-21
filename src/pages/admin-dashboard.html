@@ -114,6 +114,8 @@
         .btn-danger:hover { background:#fecaca; }
         .btn-success { background:#dcfce7; color:#166534; }
         .btn-success:hover { background:#bbf7d0; }
+        .btn-warning { background:#fef3c7; color:#92400e; }
+        .btn-warning:hover { background:#fde68a; }
 
         /* ── Progress mini bar ───────────────────────────────────────── */
         .mini-bar { height:4px; border-radius:2px; background:#e2e8f0; overflow:hidden; }
@@ -173,6 +175,10 @@
             <div class="nav-item" onclick="showTab('teachers')" id="nav-teachers">
                 <i class="fas fa-user-check"></i> Professores
                 <span id="badge-teachers" class="ml-auto bg-amber-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full hidden"></span>
+            </div>
+            <div class="nav-item" onclick="showTab('library')" id="nav-library">
+                <i class="fas fa-book-open"></i> Biblioteca
+                <span id="badge-library" class="ml-auto bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full hidden"></span>
             </div>
 
             <div class="nav-section">Sistema</div>
@@ -679,6 +685,194 @@
                 </div>
             </div>
 
+            <!-- ══ BIBLIOTECA TAB ══════════════════════════════════ -->
+            <div id="tab-library" class="hidden space-y-5">
+
+                <!-- Sub-tabs: Livros | Fila de Revisão -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <div class="section-title"><i class="fas fa-book-open text-purple-500"></i> Biblioteca Digital</div>
+                        <div class="flex gap-2">
+                            <button class="tab-btn active" id="lib-tab-books-btn" onclick="switchLibTab('books')">
+                                <i class="fas fa-book mr-1"></i> Livros
+                            </button>
+                            <button class="tab-btn" id="lib-tab-queue-btn" onclick="switchLibTab('queue')">
+                                <i class="fas fa-clock mr-1"></i> Fila de Revisão
+                                <span id="lib-queue-count" class="ml-1 text-xs bg-orange-500 text-white px-1.5 py-0.5 rounded-full hidden">0</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ── LIVROS (admin upload) ── -->
+                    <div id="lib-panel-books">
+                        <div class="p-4 flex flex-wrap gap-3 items-center border-b border-gray-100">
+                            <button onclick="openLibBookModal()" class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700 transition">
+                                <i class="fas fa-plus"></i> Novo Livro Oficial
+                            </button>
+                            <div class="relative flex-1 min-w-48">
+                                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                                <input type="text" id="lib-search" placeholder="Pesquisar título, autor..." oninput="filterLibBooks()"
+                                    class="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400">
+                            </div>
+                            <select id="lib-filter-cat" onchange="filterLibBooks()" class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400">
+                                <option value="">Todas as categorias</option>
+                                <option value="books">Livros</option>
+                                <option value="handouts">Apostilas</option>
+                                <option value="exercises">Exercícios</option>
+                            </select>
+                            <select id="lib-filter-status" onchange="filterLibBooks()" class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400">
+                                <option value="">Todos os estados</option>
+                                <option value="published">Publicados</option>
+                                <option value="draft">Rascunho</option>
+                                <option value="pending_review">Em Revisão</option>
+                                <option value="rejected">Rejeitados</option>
+                            </select>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="data-table">
+                                <thead><tr>
+                                    <th>Título</th><th>Categoria</th><th>Autor</th>
+                                    <th>Disciplina</th><th>Estado</th><th>Downloads</th><th>Destaque</th><th>Ações</th>
+                                </tr></thead>
+                                <tbody id="lib-books-tbody">
+                                    <tr><td colspan="8" class="text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin mr-2"></i>A carregar...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ── FILA DE REVISÃO ── -->
+                    <div id="lib-panel-queue" class="hidden">
+                        <div class="p-4 border-b border-gray-100">
+                            <p class="text-sm text-gray-500">Apostilas e exercícios submetidos por professores aguardam aprovação.</p>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="data-table">
+                                <thead><tr>
+                                    <th>Título</th><th>Categoria</th><th>Professor</th>
+                                    <th>Disciplina</th><th>Classe</th><th>Submetido</th><th>Ações</th>
+                                </tr></thead>
+                                <tbody id="lib-queue-tbody">
+                                    <tr><td colspan="7" class="text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin mr-2"></i>A carregar...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal: Novo Livro Oficial -->
+            <div id="lib-book-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 hidden">
+                <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+                    <div class="flex items-center justify-between p-6 border-b border-gray-100">
+                        <h2 class="text-lg font-bold text-gray-900" id="lib-modal-title">Novo Livro Oficial</h2>
+                        <button onclick="closeLibBookModal()" class="text-gray-400 hover:text-gray-600 transition">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <input type="hidden" id="lib-edit-id">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">Título <span class="text-red-500">*</span></label>
+                            <input id="lib-f-title" type="text" placeholder="Ex: Matemática 12ª Classe"
+                                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">Autor <span class="text-red-500">*</span></label>
+                            <input id="lib-f-author" type="text" placeholder="Ex: Ministério da Educação"
+                                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">Descrição</label>
+                            <textarea id="lib-f-desc" rows="2" placeholder="Breve descrição..."
+                                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400 resize-none"></textarea>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">Categoria</label>
+                                <select id="lib-f-cat" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400">
+                                    <option value="books">Livro</option>
+                                    <option value="handouts">Apostila</option>
+                                    <option value="exercises">Exercícios</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">Nº de páginas</label>
+                                <input id="lib-f-pages" type="number" min="1" placeholder="Ex: 240"
+                                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">Disciplina</label>
+                                <select id="lib-f-subject" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400">
+                                    <option value="">— Todas —</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">Classe</label>
+                                <select id="lib-f-grade" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400">
+                                    <option value="">— Todas —</option>
+                                </select>
+                            </div>
+                        </div>
+                        <!-- Upload de ficheiro -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">Ficheiro PDF <span class="text-red-500">*</span></label>
+                            <!-- Zona de drop -->
+                            <div id="lib-drop-zone"
+                                class="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition"
+                                onclick="document.getElementById('lib-file-input').click()"
+                                ondragover="event.preventDefault();this.classList.add('border-purple-400','bg-purple-50')"
+                                ondragleave="this.classList.remove('border-purple-400','bg-purple-50')"
+                                ondrop="libHandleDrop(event)">
+                                <i class="fas fa-cloud-upload-alt text-2xl text-gray-300 mb-1"></i>
+                                <p class="text-xs text-gray-500">Clique ou arraste o PDF aqui</p>
+                                <p class="text-xs text-gray-400">Máx. 100 MB</p>
+                            </div>
+                            <input type="file" id="lib-file-input" accept=".pdf,.doc,.docx" class="hidden" onchange="libUploadFile(this.files[0])">
+                            <!-- Barra de progresso -->
+                            <div id="lib-upload-progress" class="hidden mt-2">
+                                <div class="flex items-center gap-2 text-xs text-gray-600 mb-1">
+                                    <i class="fas fa-spinner fa-spin text-purple-500"></i>
+                                    <span id="lib-upload-label">A enviar...</span>
+                                </div>
+                                <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div id="lib-upload-bar" class="h-full bg-purple-500 rounded-full transition-all duration-300" style="width:0%"></div>
+                                </div>
+                            </div>
+                            <!-- Ficheiro carregado -->
+                            <div id="lib-file-done" class="hidden mt-2 flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                                <i class="fas fa-check-circle"></i>
+                                <span id="lib-file-done-name" class="flex-1 truncate"></span>
+                                <button type="button" onclick="libClearFile()" class="text-gray-400 hover:text-red-500 ml-1"><i class="fas fa-times"></i></button>
+                            </div>
+                            <!-- URL manual (alternativa) -->
+                            <div class="mt-2">
+                                <p class="text-xs text-gray-400 mb-1">Ou cole uma URL directamente:</p>
+                                <input id="lib-f-url" type="url" placeholder="https://..."
+                                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">URL da capa (imagem)</label>
+                            <input id="lib-f-cover" type="url" placeholder="https://..."
+                                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400">
+                        </div>
+                        <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                            <input type="checkbox" id="lib-f-featured" class="rounded accent-purple-600">
+                            Marcar como destaque
+                        </label>
+                    </div>
+                    <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-100">
+                        <button onclick="closeLibBookModal()" class="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition">Cancelar</button>
+                        <button onclick="saveLibBook()" class="px-5 py-2 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 transition">
+                            <i class="fas fa-save mr-1"></i> Guardar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- ══ ALERTS TAB ══════════════════════════════════════ -->
             <div id="tab-alerts" class="hidden">
                 <div class="section-card">
@@ -784,6 +978,9 @@ async function loadData() {
             document.getElementById('badge-alerts').classList.remove('hidden');
             document.getElementById('topbar-alert-badge').classList.remove('hidden');
         }
+
+        // biblioteca — carregar badge de fila em background
+        loadLibQueueBadge();
 
         // users strip
         document.getElementById('us-students').textContent = (DATA.stats?.total_students || 0).toLocaleString('pt');
@@ -1252,8 +1449,8 @@ function renderTopLessonsAnalytics(lessons) {
 // ═══════════════════════════════════════════════════════════════════
 // TAB NAVIGATION
 // ═══════════════════════════════════════════════════════════════════
-const TABS = ['overview','users','content','countries','curriculum','analytics','alerts','teachers'];
-const BREADCRUMBS = { overview:'Visão Geral', users:'Utilizadores', content:'Conteúdo', countries:'Países', curriculum:'Currículo', analytics:'Analytics', alerts:'Alertas', teachers:'Verificação de Professores' };
+const TABS = ['overview','users','content','countries','curriculum','analytics','alerts','teachers','library'];
+const BREADCRUMBS = { overview:'Visão Geral', users:'Utilizadores', content:'Conteúdo', countries:'Países', curriculum:'Currículo', analytics:'Analytics', alerts:'Alertas', teachers:'Verificação de Professores', library:'Biblioteca Digital' };
 
 function showTab(tab) {
     TABS.forEach(t => {
@@ -1266,6 +1463,7 @@ function showTab(tab) {
     if (tab === 'analytics' && DATA) renderAnalytics();
     if (tab === 'teachers') loadTeacherApplications();
     if (tab === 'curriculum') loadCurriculum();
+    if (tab === 'library') { loadLibCurriculumSelects(); loadLibBooks(); loadLibQueueBadge(); }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1293,11 +1491,14 @@ async function loadCurriculum() {
     renderCurriculum();
 }
 
+// Mapeamento simples de código de país → emoji (a tabela `countries` guarda flag_url, não emoji)
+const COUNTRY_FLAGS = { MOZ:'🇲🇿', BRA:'🇧🇷', AGO:'🇦🇴', PRT:'🇵🇹', CPV:'🇨🇻' };
 function gradeLabel(g) {
     const sys = g.education_systems;
     const country = sys?.countries;
-    const flag = country?.flag || '';
-    return `${flag} ${g.name}${sys?.name ? ' — ' + sys.name : ''}`;
+    const flag = COUNTRY_FLAGS[country?.code] || '';
+    const countryName = country?.name ? ` (${country.name})` : '';
+    return `${flag} ${g.name}${countryName}`;
 }
 
 function renderCurriculum() {
@@ -1747,14 +1948,371 @@ async function quickReject(id) {
 (function() {
     const style = document.createElement('style');
     style.textContent = `
-        .pill-pending   { background:#fffbeb; color:#92400e; border:1px solid #fcd34d; }
-        .pill-review    { background:#eff6ff; color:#1e40af; border:1px solid #93c5fd; }
-        .pill-info      { background:#fdf4ff; color:#7c3aed; border:1px solid #d8b4fe; }
-        .pill-approved  { background:#f0fdf4; color:#065f46; border:1px solid #6ee7b7; }
-        .pill-rejected  { background:#fef2f2; color:#991b1b; border:1px solid #fca5a5; }
+        .pill-pending        { background:#fffbeb; color:#92400e; border:1px solid #fcd34d; }
+        .pill-review         { background:#eff6ff; color:#1e40af; border:1px solid #93c5fd; }
+        .pill-info           { background:#fdf4ff; color:#7c3aed; border:1px solid #d8b4fe; }
+        .pill-approved       { background:#f0fdf4; color:#065f46; border:1px solid #6ee7b7; }
+        .pill-rejected       { background:#fef2f2; color:#991b1b; border:1px solid #fca5a5; }
+        .pill-pending_review { background:#fff7ed; color:#9a3412; border:1px solid #fdba74; }
     `;
     document.head.appendChild(style);
 })();
+
+// ═══════════════════════════════════════════════════════════════════
+// BIBLIOTECA DIGITAL — Admin
+// ═══════════════════════════════════════════════════════════════════
+let ALL_LIB_BOOKS = [];
+let CURRENT_LIB_TAB = 'books';
+let LIB_SUBJECTS = [];
+let LIB_GRADES   = [];
+
+async function loadLibCurriculumSelects() {
+    try {
+        const token = localStorage.getItem('accessToken') || '';
+        const res   = await fetch('/api/admin/curriculum', { headers: { Authorization: `Bearer ${token}` } });
+        const data  = await res.json();
+        if (!data.success) return;
+        LIB_SUBJECTS = data.data?.subjects || [];
+        LIB_GRADES   = data.data?.grades   || [];
+        const subjectSel = document.getElementById('lib-f-subject');
+        const gradeSel   = document.getElementById('lib-f-grade');
+        const curSubject = subjectSel?.value || '';
+        const curGrade   = gradeSel?.value   || '';
+        if (subjectSel) {
+            subjectSel.innerHTML = '<option value="">— Todas as Disciplinas —</option>' +
+                LIB_SUBJECTS
+                    .sort((a, b) => a.name.localeCompare(b.name, 'pt'))
+                    .map(s => `<option value="${s.id}"${s.id === curSubject ? ' selected' : ''}>${escapeHtml(s.name)}</option>`).join('');
+        }
+        if (gradeSel) {
+            gradeSel.innerHTML = '<option value="">— Todas as Classes —</option>' +
+                LIB_GRADES
+                    .sort((a, b) => (a.display_order||0) - (b.display_order||0))
+                    .map(g => `<option value="${g.id}"${g.id === curGrade ? ' selected' : ''}>${escapeHtml(g.name)}</option>`).join('');
+        }
+    } catch (e) { console.warn('loadLibCurriculumSelects failed:', e); }
+}
+
+function switchLibTab(tab) {
+    CURRENT_LIB_TAB = tab;
+    document.getElementById('lib-panel-books').classList.toggle('hidden', tab !== 'books');
+    document.getElementById('lib-panel-queue').classList.toggle('hidden', tab !== 'queue');
+    document.getElementById('lib-tab-books-btn').classList.toggle('active', tab === 'books');
+    document.getElementById('lib-tab-queue-btn').classList.toggle('active', tab === 'queue');
+    if (tab === 'queue') loadLibQueue();
+    else loadLibBooks();
+}
+
+async function loadLibBooks() {
+    const token = localStorage.getItem('accessToken') || '';
+    const cat    = document.getElementById('lib-filter-cat')?.value || '';
+    const status = document.getElementById('lib-filter-status')?.value || '';
+    let url = '/api/admin/library?limit=50';
+    if (cat)    url += '&category=' + cat;
+    if (status) url += '&status='   + status;
+    try {
+        const res  = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+        ALL_LIB_BOOKS = data.data?.items || [];
+        filterLibBooks();
+    } catch (e) {
+        document.getElementById('lib-books-tbody').innerHTML =
+            `<tr><td colspan="8" class="text-center py-8 text-red-400">Erro: ${escapeHtml(e.message)}</td></tr>`;
+    }
+}
+
+function filterLibBooks() {
+    const q = (document.getElementById('lib-search')?.value || '').toLowerCase();
+    const rows = q ? ALL_LIB_BOOKS.filter(b =>
+        (b.title||'').toLowerCase().includes(q) ||
+        (b.author||'').toLowerCase().includes(q)
+    ) : ALL_LIB_BOOKS;
+    renderLibBooks(rows);
+}
+
+const LIB_CAT_LABEL = { books:'Livro', handouts:'Apostila', exercises:'Exercícios' };
+const LIB_STATUS_LABEL = { published:'Publicado', draft:'Rascunho', pending_review:'Em Revisão', rejected:'Rejeitado' };
+const LIB_STATUS_PILL  = { published:'pill-published', draft:'pill-draft', pending_review:'pill-pending_review', rejected:'pill-rejected' };
+
+function renderLibBooks(items) {
+    const tbody = document.getElementById('lib-books-tbody');
+    if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-10 text-gray-400">Nenhum material encontrado</td></tr>';
+        return;
+    }
+    tbody.innerHTML = items.map(b => `
+        <tr>
+            <td class="font-medium max-w-xs"><div class="truncate" title="${escapeAttr(b.title)}">${escapeHtml(b.title)}</div></td>
+            <td><span class="text-xs font-medium text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full">${escapeHtml(LIB_CAT_LABEL[b.category]||b.category)}</span></td>
+            <td class="text-gray-500 text-xs">${escapeHtml(b.author||'—')}</td>
+            <td class="text-gray-500 text-xs">${escapeHtml(b.subjects?.name||'—')}</td>
+            <td><span class="pill ${LIB_STATUS_PILL[b.status]||'pill-draft'}">${escapeHtml(LIB_STATUS_LABEL[b.status]||b.status)}</span></td>
+            <td class="text-gray-600 text-xs">${(b.downloads_count||0).toLocaleString('pt')}</td>
+            <td class="text-center">
+                <button onclick="toggleLibFeature('${b.id}',${!b.is_featured})" title="${b.is_featured?'Remover destaque':'Marcar como destaque'}"
+                    class="${b.is_featured?'text-amber-500':'text-gray-300'} hover:text-amber-400 transition">
+                    <i class="fas fa-star"></i>
+                </button>
+            </td>
+            <td>
+                <div class="flex gap-1">
+                    <button onclick="openLibBookModal('${b.id}')" class="btn-sm btn-ghost" title="Editar"><i class="fas fa-pen"></i></button>
+                    <button onclick="deleteLibBook('${b.id}')" class="btn-sm btn-danger" title="Apagar"><i class="fas fa-trash"></i></button>
+                </div>
+            </td>
+        </tr>`).join('');
+}
+
+async function loadLibQueue() {
+    const token = localStorage.getItem('accessToken') || '';
+    try {
+        const res  = await fetch('/api/admin/library/queue', { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+        const items = data.data || [];
+        const badge = document.getElementById('lib-queue-count');
+        if (items.length > 0) { badge.textContent = items.length; badge.classList.remove('hidden'); }
+        else badge.classList.add('hidden');
+        renderLibQueue(items);
+    } catch (e) {
+        document.getElementById('lib-queue-tbody').innerHTML =
+            `<tr><td colspan="7" class="text-center py-8 text-red-400"><i class="fas fa-exclamation-circle mr-2"></i>Erro: ${escapeHtml(e.message)}</td></tr>`;
+    }
+}
+
+function renderLibQueue(items) {
+    const tbody = document.getElementById('lib-queue-tbody');
+    if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-gray-400"><i class="fas fa-check-circle text-green-400 mr-2"></i>Sem materiais a aguardar revisão.<br><span class="text-xs mt-1 block">Os professores devem criar e submeter materiais em "Conteúdos → Materiais".</span></td></tr>';
+        return;
+    }
+    tbody.innerHTML = items.map(b => `
+        <tr>
+            <td class="font-medium max-w-xs">
+                <div class="truncate" title="${escapeAttr(b.title)}">${escapeHtml(b.title)}</div>
+                ${b.file_url ? `<a href="${escapeAttr(b.file_url)}" target="_blank" class="text-xs text-purple-600 hover:underline"><i class="fas fa-file-pdf mr-1"></i>Ver ficheiro</a>` : '<span class="text-xs text-orange-400"><i class="fas fa-exclamation-triangle mr-1"></i>Sem ficheiro</span>'}
+            </td>
+            <td><span class="text-xs font-medium text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full">${escapeHtml(LIB_CAT_LABEL[b.category]||b.category)}</span></td>
+            <td class="text-gray-500 text-xs">
+                <div>${escapeHtml(b.creator?.full_name||b.author||'—')}</div>
+                <div class="text-gray-400">${escapeHtml(b.creator?.email||'')}</div>
+            </td>
+            <td class="text-gray-500 text-xs">${escapeHtml(b.subjects?.name||'—')}</td>
+            <td class="text-gray-500 text-xs">${escapeHtml(b.grades?.name||'—')}</td>
+            <td class="text-gray-400 text-xs">${VClass.formatRelativeTime(b.created_at)}</td>
+            <td>
+                <div class="flex gap-2">
+                    <button onclick="approveLibItem('${b.id}')" class="btn-sm btn-success"><i class="fas fa-check mr-1"></i>Aprovar</button>
+                    <button onclick="rejectLibItem('${b.id}')" class="btn-sm btn-warning"><i class="fas fa-times mr-1"></i>Rejeitar</button>
+                    <button onclick="deleteLibBook('${b.id}', true)" class="btn-sm btn-danger" title="Eliminar permanentemente"><i class="fas fa-trash"></i></button>
+                </div>
+            </td>
+        </tr>`).join('');
+}
+
+async function approveLibItem(id) {
+    if (!confirm('Aprovar este material e publicar na biblioteca?')) return;
+    const token = localStorage.getItem('accessToken') || '';
+    try {
+        const res  = await fetch(`/api/admin/library/${id}/approve`, { method:'POST', headers:{ Authorization:`Bearer ${token}` } });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+        showToast('Material aprovado e publicado!', 'success');
+        loadLibQueue();
+        // Atualizar badge da sidebar
+        const badge = document.getElementById('badge-library');
+        const cur = parseInt(badge.textContent||'0');
+        if (cur <= 1) badge.classList.add('hidden'); else badge.textContent = cur - 1;
+    } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+
+async function rejectLibItem(id) {
+    const reason = prompt('Motivo de rejeição (será visível ao professor):');
+    if (!reason?.trim()) return;
+    const token = localStorage.getItem('accessToken') || '';
+    try {
+        const res  = await fetch(`/api/admin/library/${id}/reject`, {
+            method:'POST',
+            headers:{ Authorization:`Bearer ${token}`, 'Content-Type':'application/json' },
+            body: JSON.stringify({ reason: reason.trim() })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+        showToast('Material rejeitado', 'info');
+        loadLibQueue();
+    } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+
+async function toggleLibFeature(id, featured) {
+    const token = localStorage.getItem('accessToken') || '';
+    try {
+        const res  = await fetch(`/api/admin/library/${id}/feature`, { method:'PATCH', headers:{ Authorization:`Bearer ${token}` } });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+        showToast(featured ? 'Marcado como destaque' : 'Destaque removido', 'success');
+        loadLibBooks();
+    } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+
+async function deleteLibBook(id, fromQueue = false) {
+    if (!confirm('Eliminar este material permanentemente? Esta acção não pode ser desfeita.')) return;
+    const token = localStorage.getItem('accessToken') || '';
+    try {
+        const res  = await fetch(`/api/admin/library/${id}`, { method:'DELETE', headers:{ Authorization:`Bearer ${token}` } });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+        showToast('Material eliminado', 'success');
+        if (fromQueue) loadLibQueue(); else loadLibBooks();
+    } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+
+// ── Upload de ficheiro (admin) ────────────────────────────────────────────────
+function libHandleDrop(e) {
+    e.preventDefault();
+    document.getElementById('lib-drop-zone').classList.remove('border-purple-400','bg-purple-50');
+    const file = e.dataTransfer?.files?.[0];
+    if (file) libUploadFile(file);
+}
+
+async function libUploadFile(file) {
+    if (!file) return;
+    const token = localStorage.getItem('accessToken') || '';
+    const zone  = document.getElementById('lib-drop-zone');
+    const prog  = document.getElementById('lib-upload-progress');
+    const bar   = document.getElementById('lib-upload-bar');
+    const label = document.getElementById('lib-upload-label');
+    const done  = document.getElementById('lib-file-done');
+    const doneName = document.getElementById('lib-file-done-name');
+
+    zone.classList.add('hidden');
+    prog.classList.remove('hidden');
+    done.classList.add('hidden');
+    label.textContent = `A enviar "${file.name}"...`;
+    bar.style.width = '10%';
+
+    try {
+        const fd = new FormData();
+        fd.append('file', file);
+
+        // Simula progresso enquanto faz fetch (fetch não suporta progresso real)
+        let pct = 10;
+        const tick = setInterval(() => { pct = Math.min(pct + 8, 85); bar.style.width = pct + '%'; }, 300);
+
+        const res  = await fetch('/api/admin/library/upload', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: fd
+        });
+        clearInterval(tick);
+        bar.style.width = '100%';
+
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+
+        // Preencher campos automaticamente
+        document.getElementById('lib-f-url').value = data.data.url;
+        const kb = data.data.size_kb;
+        // preencher tamanho se houver campo
+        setTimeout(() => {
+            prog.classList.add('hidden');
+            done.classList.remove('hidden');
+            doneName.textContent = `${file.name} (${kb >= 1024 ? (kb/1024).toFixed(1)+'MB' : kb+'KB'})`;
+        }, 400);
+    } catch (e) {
+        clearInterval?.();
+        prog.classList.add('hidden');
+        zone.classList.remove('hidden');
+        bar.style.width = '0%';
+        showToast('Erro no upload: ' + e.message, 'error');
+    }
+}
+
+function libClearFile() {
+    document.getElementById('lib-file-input').value = '';
+    document.getElementById('lib-f-url').value = '';
+    document.getElementById('lib-file-done').classList.add('hidden');
+    document.getElementById('lib-drop-zone').classList.remove('hidden');
+    document.getElementById('lib-upload-bar').style.width = '0%';
+}
+
+async function openLibBookModal(id) {
+    const book = id ? ALL_LIB_BOOKS.find(b => b.id === id) : null;
+    document.getElementById('lib-edit-id').value          = book?.id || '';
+    document.getElementById('lib-f-title').value          = book?.title || '';
+    document.getElementById('lib-f-author').value         = book?.author || '';
+    document.getElementById('lib-f-desc').value           = book?.description || '';
+    document.getElementById('lib-f-cat').value            = book?.category || 'books';
+    document.getElementById('lib-f-pages').value          = book?.pages || '';
+    document.getElementById('lib-f-url').value            = book?.file_url || '';
+    document.getElementById('lib-f-cover').value          = book?.cover_url || '';
+    document.getElementById('lib-f-featured').checked    = book?.is_featured || false;
+    document.getElementById('lib-modal-title').textContent = book ? 'Editar Material' : 'Novo Livro Oficial';
+    // Reset estado de upload
+    document.getElementById('lib-upload-progress').classList.add('hidden');
+    document.getElementById('lib-drop-zone').classList.remove('hidden');
+    document.getElementById('lib-upload-bar').style.width = '0%';
+    if (book?.file_url) {
+        document.getElementById('lib-file-done').classList.remove('hidden');
+        document.getElementById('lib-file-done-name').textContent = 'Ficheiro existente (pode substituir abaixo)';
+    } else {
+        document.getElementById('lib-file-done').classList.add('hidden');
+    }
+    document.getElementById('lib-book-modal').classList.remove('hidden');
+    // Recarregar disciplinas (aguardar para definir valores correctamente)
+    await loadLibCurriculumSelects();
+    document.getElementById('lib-f-subject').value = book?.subject_id || '';
+    document.getElementById('lib-f-grade').value   = book?.grade_id   || '';
+}
+function closeLibBookModal() { document.getElementById('lib-book-modal').classList.add('hidden'); }
+
+async function saveLibBook() {
+    const id = document.getElementById('lib-edit-id').value;
+    const body = {
+        title:       document.getElementById('lib-f-title').value.trim(),
+        author:      document.getElementById('lib-f-author').value.trim(),
+        description: document.getElementById('lib-f-desc').value.trim() || null,
+        category:    document.getElementById('lib-f-cat').value,
+        pages:       parseInt(document.getElementById('lib-f-pages').value) || null,
+        file_url:    document.getElementById('lib-f-url').value.trim() || null,
+        cover_url:   document.getElementById('lib-f-cover').value.trim() || null,
+        is_featured: document.getElementById('lib-f-featured').checked,
+        subject_id:  document.getElementById('lib-f-subject').value || null,
+        grade_id:    document.getElementById('lib-f-grade').value || null,
+    };
+    if (!body.title)  { showToast('Título obrigatório', 'error'); return; }
+    if (!body.author) { showToast('Autor obrigatório', 'error'); return; }
+
+    const token = localStorage.getItem('accessToken') || '';
+    try {
+        const res  = await fetch(id ? `/api/admin/library/${id}` : '/api/admin/library', {
+            method:  id ? 'PUT' : 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+        showToast(id ? 'Material actualizado' : 'Livro criado e publicado!', 'success');
+        closeLibBookModal();
+        loadLibBooks();
+    } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+
+// Carregar badge de fila quando entra no tab
+async function loadLibQueueBadge() {
+    const token = localStorage.getItem('accessToken') || '';
+    try {
+        const res  = await fetch('/api/admin/library/queue', { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        const n    = (data.data || []).length;
+        const badge = document.getElementById('badge-library');
+        const qBadge = document.getElementById('lib-queue-count');
+        if (n > 0) {
+            badge.textContent = n; badge.classList.remove('hidden');
+            qBadge.textContent = n; qBadge.classList.remove('hidden');
+        }
+    } catch {}
+}
 </script>
 </body>
 </html>

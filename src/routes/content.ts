@@ -144,6 +144,30 @@ content.get('/chapters/:grade_subject_id', async (c) => {
 })
 
 /**
+ * GET /api/content/recent-lessons?limit=6
+ * Retorna as lições publicadas mais recentes criadas por professores.
+ */
+content.get('/recent-lessons', async (c) => {
+  const { supabase, error } = requireSupabase(c)
+  if (error) return error
+  const limit = Math.min(parseInt(c.req.query('limit') || '6', 10), 20)
+
+  const { data, error: dbError } = await supabase!
+    .from('lessons')
+    .select('id, title, description, thumbnail_url, video_duration, views_count, created_at, chapter_id, chapters(title, slug, grade_subjects(subjects(name, color, icon_name), grades(name)))')
+    .eq('status', 'published')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (dbError) {
+    console.error('Get recent lessons error:', dbError)
+    return c.json<ApiResponse>({ success: false, error: 'Failed to fetch recent lessons' }, 500)
+  }
+
+  return c.json<ApiResponse>({ success: true, data: data || [] })
+})
+
+/**
  * GET /api/content/lessons/:chapter_id
  * Aceita slug ou UUID do capítulo. Estudantes só veem 'published'.
  */

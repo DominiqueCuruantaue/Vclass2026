@@ -19,7 +19,8 @@ const api = {
     getSubjects: async (gradeId) => apiRequest(`/content/subjects/${gradeId}`, 'GET'),
     getChapters: async (gradeSubjectId) => apiRequest(`/content/chapters/${gradeSubjectId}`, 'GET'),
     getLessons: async (chapterId) => apiRequest(`/content/lessons/${chapterId}`, 'GET'),
-    getLesson: async (lessonId) => apiRequest(`/content/lesson/${lessonId}`, 'GET')
+    getLesson: async (lessonId) => apiRequest(`/content/lesson/${lessonId}`, 'GET'),
+    getRecentLessons: async (limit = 6) => apiRequest(`/content/recent-lessons?limit=${limit}`, 'GET')
   },
   video: {
     getToken: async (lessonId) => apiRequest(`/video/${lessonId}/token`, 'GET'),
@@ -46,6 +47,7 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
   const token = localStorage.getItem('accessToken');
   const config = {
     method,
+    credentials: 'include', // envia o cookie HttpOnly do refresh token automaticamente
     headers: { 'Content-Type': 'application/json' }
   };
   if (token) config.headers['Authorization'] = `Bearer ${token}`;
@@ -55,11 +57,8 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
     const response = await fetch(API_BASE_URL + endpoint, config);
     const result = await response.json();
 
-    // Token expired → try to refresh once
+    // Token expirado → tentar refresh uma vez via cookie HttpOnly
     if (response.status === 401 && token) {
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (!refreshToken) { _doLogout(); return { success: false, error: 'Session expired' }; }
-
       // Queue parallel requests while refreshing
       if (_refreshingToken) {
         return new Promise(resolve => _refreshQueue.push({ resolve, endpoint, method, data }));
@@ -68,15 +67,14 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
 
       const refreshResp = await fetch(API_BASE_URL + '/auth/refresh', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken })
+        credentials: 'include', // o cookie HttpOnly é enviado automaticamente
+        headers: { 'Content-Type': 'application/json' }
       });
 
       _refreshingToken = false;
       if (refreshResp.ok) {
         const { data: rd } = await refreshResp.json();
         localStorage.setItem('accessToken', rd.accessToken);
-        if (rd.refreshToken) localStorage.setItem('refreshToken', rd.refreshToken);
         // Retry queued requests
         _refreshQueue.forEach(q => q.resolve(apiRequest(q.endpoint, q.method, q.data)));
         _refreshQueue = [];
@@ -98,17 +96,15 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
 // ─── Auth Helpers ─────────────────────────────────────────────────────────────
 function saveAuth(authData) {
   localStorage.setItem('accessToken', authData.accessToken);
-  localStorage.setItem('refreshToken', authData.refreshToken);
+  // refreshToken é gerido pelo servidor via cookie HttpOnly — não armazenar aqui
   localStorage.setItem('user', JSON.stringify(authData.user));
   localStorage.setItem('authTime', Date.now().toString());
 }
 
 function _doLogout() {
   localStorage.removeItem('accessToken');
-  localStorage.removeItem('refreshToken');
   localStorage.removeItem('user');
   localStorage.removeItem('authTime');
-  // Limpar qualquer outro dado de sessão
   ['vclass_token','vclass_user','vclass_auth'].forEach(k => localStorage.removeItem(k));
   window.location.replace('/login.html');
 }
@@ -116,7 +112,6 @@ function _doLogout() {
 function logout() {
   // 1. Limpar dados locais IMEDIATAMENTE (não depender do fetch)
   localStorage.removeItem('accessToken');
-  localStorage.removeItem('refreshToken');
   localStorage.removeItem('user');
   localStorage.removeItem('authTime');
   ['vclass_token','vclass_user','vclass_auth'].forEach(k => localStorage.removeItem(k));
@@ -136,13 +131,9 @@ function isAuthenticated() {
   const token = localStorage.getItem('accessToken');
   if (!token) return false;
   // Decode JWT and check exp client-side
+  // Se expirado, o próximo apiRequest tentará refresh via cookie HttpOnly
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    if (payload.exp && payload.exp * 1000 < Date.now()) {
-      // Expired but we still have it — refresh will be triggered by next API call
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (!refreshToken) { _doLogout(); return false; }
-    }
+    JSON.parse(atob(token.split('.')[1]));
     return true;
   } catch { return !!token; }
 }

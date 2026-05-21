@@ -256,14 +256,12 @@
                 const realLessons = await loadRealLessons(id);
                 if (realLessons.length > 0) {
                     panel.innerHTML = renderLessonsList(realLessons, ch);
-                } else if (ch.fromDb) {
-                    // Capítulo do BD ainda sem lições publicadas — não mostrar placeholders
+                } else {
                     panel.innerHTML = `<div class="px-5 py-6 text-center text-gray-400 text-sm">
                         <i class="fas fa-inbox text-2xl text-gray-200 mb-2 block"></i>
                         Ainda não há lições publicadas neste capítulo.
                     </div>`;
                 }
-                // Capítulos do currículo estático mantêm os placeholders já renderizados.
             }
         }
 
@@ -376,7 +374,7 @@
 
                             <!-- Lessons Panel -->
                             <div id="lessons-${ch.id}" class="lessons-panel collapsed border-t border-gray-100">
-                                ${lessons.length > 0 ? renderLessonsList(lessons, ch) : renderNoLessons(ch)}
+                                ${lessons.length > 0 ? renderLessonsList(lessons, ch) : renderNoLessons()}
                             </div>
                         </div>`;
                     }).join('')}
@@ -408,30 +406,11 @@
             </div>`;
         }
 
-        function renderNoLessons(ch) {
-            // Create synthetic lessons from chapter data for curriculum-only mode
-            const syntheticLessons = [
-                { title: ch.title + ' — Introdução' },
-                { title: ch.title + ' — Desenvolvimento' },
-                { title: ch.title + ' — Exercícios Práticos' },
-            ];
-            return `<div class="divide-y divide-gray-50">
-                ${syntheticLessons.map((l, i) => `
-                <a href="/lesson.html?id=${ch.id}-l${i+1}&chapter=${encodeURIComponent(ch.title)}&subject=${encodeURIComponent(subjectMeta.name||subjectName)}&grade=${encodeURIComponent(gradeName)}&country=${encodeURIComponent(countryCode)}"
-                   class="lesson-item flex items-center gap-4 px-5 py-4 group">
-                    <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-gray-100 group-hover:bg-purple-100 transition">
-                        <i class="fas fa-play text-gray-400 group-hover:text-purple-600 text-xs transition"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-1.5 mb-0.5">
-                            <span class="text-xs font-semibold text-gray-400">Lição ${i+1}</span>
-                            
-                        </div>
-                        <h4 class="text-sm font-semibold text-gray-800 group-hover:text-purple-700 transition truncate">${l.title}</h4>
-                    </div>
-                    <i class="fas fa-chevron-right text-gray-200 group-hover:text-purple-400 text-xs flex-shrink-0 transition"></i>
-                </a>`).join('')}
-            </div>`;
+        function renderNoLessons() {
+            return `<div class="px-5 py-6 text-center text-gray-400 text-sm">
+                        <i class="fas fa-inbox text-2xl text-gray-200 mb-2 block"></i>
+                        Ainda não há lições publicadas neste capítulo.
+                    </div>`;
         }
 
         // ── Load from curriculum API ──────────────────────────────────────
@@ -485,7 +464,7 @@
                 document.getElementById('stats-bar').classList.remove('hidden');
                 document.getElementById('stat-chapters').textContent = foundChapters.length;
                 const totalLessons = foundChapters.reduce((s, ch) => s + (ch.lessons?.length || 0), 0);
-                document.getElementById('stat-lessons').textContent  = totalLessons || foundChapters.length * 3 + '+';
+                document.getElementById('stat-lessons').textContent  = totalLessons || '—';
 
                 renderSubjectHeader(foundSubject, foundChapters);
                 renderChapters(foundChapters);

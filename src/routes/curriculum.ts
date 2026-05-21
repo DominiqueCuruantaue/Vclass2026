@@ -130,12 +130,11 @@ async function mergeDbChaptersIntoTree(env: any, tree: any[]) {
       const slug = String(ch.slug || '').toLowerCase()
       if (!slug) continue
 
-      // 1) Encontrar a disciplina cujo id é prefixo do slug
+      // Encontrar a disciplina cujo id estático é prefixo do slug.
+      // Aplicar APENAS a essa disciplina (classe específica) — broadcast por nome
+      // causava que uma lição de "Biologia 12ª" aparecesse em todas as classes.
       const seed = allSubjects.find(s => slug.startsWith(String(s.id).toLowerCase() + '-'))
-      // 2) Aplicar a TODAS as disciplinas com o mesmo nome
-      const targets = seed
-        ? (subjectsByName[String(seed.name || '').toLowerCase().trim()] || [seed])
-        : []
+      const targets = seed ? [seed] : []
 
       if (!targets.length) continue
 
@@ -172,29 +171,29 @@ curriculum.get('/countries', (c) => {
   return c.json({ success: true, data: getCountries() })
 })
 
+function clearStaticChapters(levels: any[]) {
+  levels.flatMap((l: any) => l.grades || [])
+        .flatMap((g: any) => g.subjects || [])
+        .forEach((s: any) => { s.chapters = [] })
+}
+
+async function buildCountryTree(env: any, country: any) {
+  const levels = getCurriculumTree(country.id)
+  await mergeDbSubjectsIntoTree(env, [{ name: country.name, levels }])
+  clearStaticChapters(levels)
+  await mergeDbChaptersIntoTree(env, levels)
+  return levels
+}
+
 // GET /api/curriculum/full — JSON completo de todos os currículos (para browse.html)
 curriculum.get('/full', async (c) => {
-  const tree = COUNTRIES
-    .filter(ct => ct.is_active)
-    .map(country => ({
+  const countries = COUNTRIES.filter(ct => ct.is_active)
+  const tree = await Promise.all(
+    countries.map(async country => ({
       ...country,
-      levels: getLevelsByCountry(country.id).map(level => ({
-        ...level,
-        grades: getGradesByLevel(level.id).map(grade => ({
-          ...grade,
-          subjects: getSubjectsByGrade(grade.id).map(subject => ({
-            ...subject,
-            chapters: getChaptersBySubject(subject.id),
-          })),
-        })),
-      })),
+      levels: await buildCountryTree(c.env, country),
     }))
-  // 1) Injetar disciplinas criadas via admin (BD) na árvore estática
-  await mergeDbSubjectsIntoTree(c.env, tree)
-  // 2) Mesclar capítulos do DB em cada país
-  for (const country of tree) {
-    await mergeDbChaptersIntoTree(c.env, country.levels)
-  }
+  )
   return c.json({ success: true, data: tree })
 })
 
@@ -203,11 +202,8 @@ curriculum.get('/tree/:countryId', async (c) => {
   const { countryId } = c.req.param()
   const country = COUNTRIES.find(ct => ct.id === countryId)
   if (!country) return c.json({ success: false, error: 'País não encontrado' }, 404)
-  const staticTree = getCurriculumTree(countryId)
-  // mergeDbSubjectsIntoTree espera árvore por país; embrulhar para reutilizar
-  await mergeDbSubjectsIntoTree(c.env, [{ name: country.name, levels: staticTree }])
-  const tree = await mergeDbChaptersIntoTree(c.env, staticTree)
-  return c.json({ success: true, data: { country, curriculum: tree } })
+  const curriculum = await buildCountryTree(c.env, country)
+  return c.json({ success: true, data: { country, curriculum } })
 })
 
 // GET /api/curriculum/search?q=newton&countryId=mz (público)

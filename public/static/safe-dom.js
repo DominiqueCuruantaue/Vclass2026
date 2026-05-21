@@ -42,10 +42,8 @@
   }
 
   /**
-   * Sanitização mínima de HTML — remove tags perigosas e atributos `on*`,
-   * `javascript:` URLs e <script>/<iframe>/<object>/<embed>/<style>.
-   * NÃO substitui DOMPurify para conteúdos complexos. Para HTML rico vindo
-   * do utilizador, integrar DOMPurify.
+   * Sanitiza HTML rico usando DOMPurify (quando disponível no browser).
+   * Fallback de último recurso apenas para contextos sem DOMPurify.
    */
   var FORBIDDEN_TAGS = /<\s*(script|iframe|object|embed|style|link|meta|base|form)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>|<\s*(script|iframe|object|embed|style|link|meta|base|form)[^>]*\/?>/gi;
   var FORBIDDEN_ATTRS = /\s+on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi;
@@ -53,7 +51,13 @@
 
   function sanitizeHtml(html) {
     if (html === null || html === undefined) return '';
-    return String(html)
+    var raw = String(html);
+    if (typeof DOMPurify !== 'undefined') {
+      return DOMPurify.sanitize(raw, { USE_PROFILES: { html: true } });
+    }
+    // Fallback: nunca deve ser atingido em produção — DOMPurify deve estar carregado.
+    console.warn('DOMPurify não encontrado; usando sanitizador de fallback.');
+    return raw
       .replace(FORBIDDEN_TAGS, '')
       .replace(FORBIDDEN_ATTRS, '')
       .replace(JS_URLS, '$1=$2#$2');

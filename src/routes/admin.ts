@@ -5,6 +5,7 @@ import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware, requireAdmin } from '../middleware/auth'
 import { getSupabase } from '../config/supabase'
 import type { ApiResponse } from '../types'
+import { revokeAllUserTokens } from '../utils/refreshTokens'
 
 const admin = new Hono<{ Bindings: CloudflareBindings }>()
 
@@ -202,6 +203,12 @@ admin.patch('/users/:id', async (c) => {
     const { data, error } = await supabase.from('users').update(updates).eq('id', id).select().single()
     if (error) return c.json({ success: false, error: error.message }, 500)
 
+    // Revogar todos os refresh tokens do utilizador quando o role é alterado,
+    // para que a nova role seja forçada no próximo login.
+    if (body.role) {
+      await revokeAllUserTokens(supabase, id)
+    }
+
     return c.json({ success: true, data })
   } catch (e: any) {
     return c.json({ success: false, error: e.message }, 500)
@@ -269,7 +276,7 @@ admin.get('/curriculum', async (c) => {
 
     const [subjectsRes, gradesRes, gsRes] = await Promise.all([
       supabase.from('subjects').select('id, name, description, color, icon_url, created_at').order('name'),
-      supabase.from('grades').select('id, name, level, display_order, education_system_id, education_systems(id, name, country_id, countries(id, name, flag))').order('display_order'),
+      supabase.from('grades').select('id, name, level, display_order, education_system_id, education_systems(id, name, country_id, countries(id, name, code, flag_url))').order('display_order'),
       supabase.from('grade_subjects').select('id, grade_id, subject_id, is_mandatory, workload_hours'),
     ])
 
@@ -413,6 +420,315 @@ admin.get('/stats/overview', async (c) => {
   } catch (e: any) {
     return c.json({ success: false, error: e.message }, 500)
   }
+})
+
+// ═════════════════════════════════════════════════════════════════════════════
+// BIBLIOTECA DIGITAL — Endpoints de Admin
+//
+//  Livros oficiais (só admin pode criar/editar/apagar):
+//    GET    /api/admin/library                  → lista todos (qualquer status)
+//    POST   /api/admin/library                  → criar livro
+//    PUT    /api/admin/library/:id              → editar qualquer item
+//    DELETE /api/admin/library/:id              → apagar qualquer item
+//    PATCH  /api/admin/library/:id/feature      → toggle destaque
+//
+//  Fila de revisão (apostilas/exercícios de professores):
+//    GET    /api/admin/library/queue            → itens em pending_review
+//    POST   /api/admin/library/:id/approve      → aprovar e publicar
+//    POST   /api/admin/library/:id/reject       → rejeitar com motivo
+// ═════════════════════════════════════════════════════════════════════════════
+
+const ADMIN_LIB_SELECT = `
+  id, title, description, author, category,
+  subject_id, grade_id, file_url, file_size_kb, pages, cover_url,
+  downloads_count, is_featured, status, rejection_reason,
+  created_by, approved_by, approved_at, created_at, updated_at,
+  subjects:subject_id ( id, name, color ),
+  grades:grade_id     ( id, name, level ),
+  creator:created_by  ( id, full_name, email )
+`
+
+function getSupabaseAdmin(env?: any) {
+  return getSupabase(env)
+}
+
+// POST /api/admin/library/upload — upload de PDF para Supabase Storage
+admin.post('/library/upload', async (c) => {
+  const supabase = getSupabaseAdmin(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'BD não configurada' }, 503)
+
+  let formData: FormData
+  try {
+    formData = await c.req.formData()
+  } catch {
+    return c.json<ApiResponse>({ success: false, error: 'Corpo inválido — envie multipart/form-data' }, 400)
+  }
+
+  const file = formData.get('file') as File | null
+  if (!file || !file.name) return c.json<ApiResponse>({ success: false, error: 'Ficheiro não encontrado no pedido' }, 400)
+
+  const allowed = ['application/pdf', 'application/msword',
+                   'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+  if (!allowed.includes(file.type) && !file.name.match(/\.(pdf|doc|docx)$/i))
+    return c.json<ApiResponse>({ success: false, error: 'Apenas PDF ou Word são aceites' }, 400)
+
+  const MAX_MB = 100
+  if (file.size > MAX_MB * 1024 * 1024)
+    return c.json<ApiResponse>({ success: false, error: `Ficheiro demasiado grande (máx ${MAX_MB} MB)` }, 400)
+
+  const ext      = file.name.split('.').pop()?.toLowerCase() || 'pdf'
+  const safeName = file.name
+    .replace(/\.\./g, '_')
+    .replace(/[^a-zA-Z0-9.\-_]/g, '_')
+    .replace(/_{2,}/g, '_')
+  const path     = `library/${Date.now()}_${safeName}`
+
+  const buffer = await file.arrayBuffer()
+  const { error: upErr } = await supabase.storage
+    .from('vclass-library')
+    .upload(path, buffer, { contentType: file.type || 'application/pdf', upsert: false })
+
+  if (upErr) return c.json<ApiResponse>({ success: false, error: upErr.message }, 500)
+
+  const { data: urlData } = supabase.storage.from('vclass-library').getPublicUrl(path)
+
+  return c.json<ApiResponse>({
+    success: true,
+    data: {
+      url:         urlData.publicUrl,
+      path,
+      size_kb:     Math.round(file.size / 1024),
+      original_name: file.name,
+    }
+  }, 201)
+})
+
+// GET /api/admin/library
+admin.get('/library', async (c) => {
+  const supabase = getSupabaseAdmin(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'BD não configurada' }, 503)
+
+  const status   = c.req.query('status')   || ''
+  const category = c.req.query('category') || ''
+  const page  = Math.max(1, parseInt(c.req.query('page')  || '1'))
+  const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '20')))
+  const from  = (page - 1) * limit
+
+  let query = supabase
+    .from('library_items')
+    .select(ADMIN_LIB_SELECT, { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(from, from + limit - 1)
+
+  if (status)   query = query.eq('status', status)
+  if (category) query = query.eq('category', category)
+
+  const { data, error, count } = await query
+  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+
+  return c.json<ApiResponse>({
+    success: true,
+    data: {
+      items: data || [],
+      pagination: { page, limit, total: count ?? 0, totalPages: Math.ceil((count ?? 0) / limit) }
+    }
+  })
+})
+
+// GET /api/admin/library/queue — apostilas/exercícios a aguardar aprovação
+admin.get('/library/queue', async (c) => {
+  const supabase = getSupabaseAdmin(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'BD não configurada' }, 503)
+
+  const { data, error } = await supabase
+    .from('library_items')
+    .select(ADMIN_LIB_SELECT)
+    .eq('status', 'pending_review')
+    .order('created_at', { ascending: true })
+
+  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+
+  return c.json<ApiResponse>({ success: true, data: data || [] })
+})
+
+// POST /api/admin/library — criar livro oficial
+admin.post('/library', async (c) => {
+  const user     = c.get('user') as any
+  const supabase = getSupabaseAdmin(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'BD não configurada' }, 503)
+
+  const body = await c.req.json().catch(() => ({}))
+  const { title, description, author, category, subject_id, grade_id,
+          file_url, file_size_kb, pages, cover_url, is_featured } = body
+
+  if (!title?.trim())  return c.json<ApiResponse>({ success: false, error: 'Título obrigatório' }, 400)
+  if (!author?.trim()) return c.json<ApiResponse>({ success: false, error: 'Autor obrigatório' }, 400)
+  if (!category)       return c.json<ApiResponse>({ success: false, error: 'Categoria obrigatória' }, 400)
+
+  // Admin pode publicar directamente
+  const { data, error } = await supabase
+    .from('library_items')
+    .insert({
+      title: title.trim(),
+      description: description?.trim() || null,
+      author: author.trim(),
+      category,
+      subject_id:   subject_id   || null,
+      grade_id:     grade_id     || null,
+      file_url:     file_url     || null,
+      file_size_kb: file_size_kb || null,
+      pages:        pages        || null,
+      cover_url:    cover_url    || null,
+      is_featured:  !!is_featured,
+      status:       'published',
+      created_by:   user.id,
+      approved_by:  user.id,
+      approved_at:  new Date().toISOString(),
+    })
+    .select(ADMIN_LIB_SELECT)
+    .single()
+
+  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+
+  return c.json<ApiResponse>({ success: true, data }, 201)
+})
+
+// PUT /api/admin/library/:id — editar qualquer item
+admin.put('/library/:id', async (c) => {
+  const supabase = getSupabaseAdmin(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'BD não configurada' }, 503)
+
+  const id   = c.req.param('id')
+  const body = await c.req.json().catch(() => ({}))
+
+  const allowed = ['title','description','author','category','subject_id','grade_id',
+                   'file_url','file_size_kb','pages','cover_url','is_featured','status']
+  const updates: Record<string, any> = {}
+  for (const key of allowed) {
+    if (body[key] !== undefined) updates[key] = body[key]
+  }
+
+  const { data, error } = await supabase
+    .from('library_items')
+    .update(updates)
+    .eq('id', id)
+    .select(ADMIN_LIB_SELECT)
+    .single()
+
+  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+
+  return c.json<ApiResponse>({ success: true, data })
+})
+
+// DELETE /api/admin/library/:id
+admin.delete('/library/:id', async (c) => {
+  const supabase = getSupabaseAdmin(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'BD não configurada' }, 503)
+
+  const id = c.req.param('id')
+  const { error } = await supabase.from('library_items').delete().eq('id', id)
+  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+
+  return c.json<ApiResponse>({ success: true, data: null })
+})
+
+// PATCH /api/admin/library/:id/feature — toggle destaque
+admin.patch('/library/:id/feature', async (c) => {
+  const supabase = getSupabaseAdmin(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'BD não configurada' }, 503)
+
+  const id = c.req.param('id')
+  const { data: existing } = await supabase
+    .from('library_items')
+    .select('id, is_featured')
+    .eq('id', id)
+    .single()
+
+  if (!existing) return c.json<ApiResponse>({ success: false, error: 'Material não encontrado' }, 404)
+
+  const { data, error } = await supabase
+    .from('library_items')
+    .update({ is_featured: !existing.is_featured })
+    .eq('id', id)
+    .select('id, is_featured')
+    .single()
+
+  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+
+  return c.json<ApiResponse>({ success: true, data })
+})
+
+// POST /api/admin/library/:id/approve — aprovar e publicar apostila/exercício
+admin.post('/library/:id/approve', async (c) => {
+  const user     = c.get('user') as any
+  const supabase = getSupabaseAdmin(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'BD não configurada' }, 503)
+
+  const id = c.req.param('id')
+
+  const { data: existing } = await supabase
+    .from('library_items')
+    .select('id, status')
+    .eq('id', id)
+    .single()
+
+  if (!existing) return c.json<ApiResponse>({ success: false, error: 'Material não encontrado' }, 404)
+  if (existing.status !== 'pending_review')
+    return c.json<ApiResponse>({ success: false, error: 'Só itens em revisão podem ser aprovados' }, 400)
+
+  const { data, error } = await supabase
+    .from('library_items')
+    .update({
+      status:          'published',
+      approved_by:     user.id,
+      approved_at:     new Date().toISOString(),
+      rejection_reason: null,
+    })
+    .eq('id', id)
+    .select(ADMIN_LIB_SELECT)
+    .single()
+
+  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+
+  return c.json<ApiResponse>({ success: true, data })
+})
+
+// POST /api/admin/library/:id/reject — rejeitar com motivo
+admin.post('/library/:id/reject', async (c) => {
+  const user     = c.get('user') as any
+  const supabase = getSupabaseAdmin(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'BD não configurada' }, 503)
+
+  const id   = c.req.param('id')
+  const body = await c.req.json().catch(() => ({}))
+
+  if (!body.reason?.trim())
+    return c.json<ApiResponse>({ success: false, error: 'Motivo de rejeição obrigatório' }, 400)
+
+  const { data: existing } = await supabase
+    .from('library_items')
+    .select('id, status')
+    .eq('id', id)
+    .single()
+
+  if (!existing) return c.json<ApiResponse>({ success: false, error: 'Material não encontrado' }, 404)
+  if (existing.status !== 'pending_review')
+    return c.json<ApiResponse>({ success: false, error: 'Só itens em revisão podem ser rejeitados' }, 400)
+
+  const { data, error } = await supabase
+    .from('library_items')
+    .update({
+      status:           'rejected',
+      rejection_reason: body.reason.trim(),
+      approved_by:      user.id,
+    })
+    .eq('id', id)
+    .select(ADMIN_LIB_SELECT)
+    .single()
+
+  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+
+  return c.json<ApiResponse>({ success: true, data })
 })
 
 export default admin

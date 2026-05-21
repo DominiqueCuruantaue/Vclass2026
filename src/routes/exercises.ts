@@ -2,7 +2,7 @@
 import { Hono } from 'hono'
 import type { CloudflareBindings } from '../types/bindings'
 import { z } from 'zod'
-import { initSupabase } from '../config/supabase'
+import { getSupabase } from '../config/supabase'
 import { authMiddleware, requireStudent } from '../middleware/auth'
 import type { ApiResponse } from '../types'
 
@@ -26,18 +26,11 @@ exercises.get('/:lesson_id', async (c) => {
   try {
     const lesson_id = c.req.param('lesson_id')
     
-    const supabaseUrl = c.env?.SUPABASE_URL
-    const supabaseKey = c.env?.SUPABASE_ANON_KEY
-    
-    if (!supabaseUrl || !supabaseKey) {
-      return c.json<ApiResponse>({
-        success: false,
-        error: 'Database configuration missing'
-      }, 500)
+    const supabase = getSupabase(c.env)
+    if (!supabase) {
+      return c.json<ApiResponse>({ success: false, error: 'Database configuration missing' }, 500)
     }
-    
-    const supabase = initSupabase(supabaseUrl, supabaseKey)
-    
+
     // Get exercises with options
     const { data: exercisesData, error } = await supabase
       .from('exercises')
@@ -109,18 +102,11 @@ exercises.post('/submit', requireStudent, async (c) => {
     
     const { exercise_id, selected_option_id, answer_text } = validation.data
     
-    const supabaseUrl = c.env?.SUPABASE_URL
-    const supabaseKey = c.env?.SUPABASE_ANON_KEY
-    
-    if (!supabaseUrl || !supabaseKey) {
-      return c.json<ApiResponse>({
-        success: false,
-        error: 'Database configuration missing'
-      }, 500)
+    const supabase = getSupabase(c.env)
+    if (!supabase) {
+      return c.json<ApiResponse>({ success: false, error: 'Database configuration missing' }, 500)
     }
-    
-    const supabase = initSupabase(supabaseUrl, supabaseKey)
-    
+
     // Get exercise details
     const { data: exercise, error: exError } = await supabase
       .from('exercises')
@@ -223,18 +209,11 @@ exercises.get('/results/:lesson_id', requireStudent, async (c) => {
     const lesson_id = c.req.param('lesson_id')
     const user = c.get('user')
     
-    const supabaseUrl = c.env?.SUPABASE_URL
-    const supabaseKey = c.env?.SUPABASE_ANON_KEY
-    
-    if (!supabaseUrl || !supabaseKey) {
-      return c.json<ApiResponse>({
-        success: false,
-        error: 'Database configuration missing'
-      }, 500)
+    const supabase = getSupabase(c.env)
+    if (!supabase) {
+      return c.json<ApiResponse>({ success: false, error: 'Database configuration missing' }, 500)
     }
-    
-    const supabase = initSupabase(supabaseUrl, supabaseKey)
-    
+
     // Get submissions with exercise details
     const { data, error } = await supabase
       .from('exercise_submissions')

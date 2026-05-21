@@ -515,102 +515,53 @@ function renderStats(s) {
 async function loadSuggestedLessons() {
     const cont = document.getElementById('continue-watching');
     try {
-        const u       = VClass.getCurrentUser();
-        const country = u?.country_id?.includes('ao') ? 'ao' : 'mz';
-        const r       = await fetch(`/api/curriculum/tree/${country}`);
-        const d       = await r.json();
+        const d = await VClass.api.content.getRecentLessons(4);
         if (!d.success) throw new Error('no data');
 
-        const suggestions = [];
-        for (const level of (d.data.curriculum || [])) {
-            for (const grade of (level.grades || [])) {
-                for (const subject of (grade.subjects || [])) {
-                    for (const ch of (subject.chapters || []).slice(0, 1)) {
-                        suggestions.push({ ch, subject, grade, level });
-                        if (suggestions.length >= 4) break;
-                    }
-                    if (suggestions.length >= 4) break;
-                }
-                if (suggestions.length >= 4) break;
-            }
-            if (suggestions.length >= 4) break;
-        }
-
-        // Demo fallback if no real content
-        if (suggestions.length === 0) {
-            cont.innerHTML = _demoLessons();
+        const lessons = d.data || [];
+        if (lessons.length === 0) {
+            cont.innerHTML = `<p class="text-center text-gray-400 text-sm py-6"><i class="fas fa-book-open text-3xl mb-2 block"></i>Ainda não há lições disponíveis.<br>Consulte a <a href="/browse.html" class="text-purple-600 hover:underline font-medium">biblioteca de conteúdos</a>.</p>`;
             return;
         }
 
-        cont.innerHTML = suggestions.map(({ ch, subject, grade, level }) => {
-            const pct = Math.floor(Math.random() * 60); // placeholder
-            const bg  = (subject.color || '#7c3aed') + '22';
+        cont.innerHTML = lessons.map(lesson => {
+            const ch      = lesson.chapters || {};
+            const gs      = ch.grade_subjects || {};
+            const subj    = gs.subjects || {};
+            const grade   = gs.grades || {};
+            const color   = subj.color || '#7c3aed';
+            const bg      = color + '22';
+            const icon    = subj.icon_name ? `fa-${subj.icon_name}` : 'fa-book';
+            const subjName = subj.name || 'Disciplina';
+            const gradeName = grade.name || '';
             return `
-            <a href="/browse.html" class="lesson-row flex items-center gap-4 px-3 py-3 rounded-xl transition group cursor-pointer">
+            <a href="/lesson.html?id=${lesson.id}" class="lesson-row flex items-center gap-4 px-3 py-3 rounded-xl transition group cursor-pointer">
                 <div class="lesson-thumb" style="background:${bg}">
-                    <i class="fas ${subject.icon || 'fa-book'} text-sm" style="color:${subject.color || '#7c3aed'}"></i>
+                    <i class="fas ${icon} text-sm" style="color:${color}"></i>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-bold text-gray-900 truncate group-hover:text-purple-700 transition">${ch.title}</p>
+                    <p class="text-sm font-bold text-gray-900 truncate group-hover:text-purple-700 transition">${lesson.title}</p>
                     <div class="flex items-center gap-2 mt-0.5">
-                        <span class="subj-pill" style="background:${bg};color:${subject.color || '#7c3aed'}">${subject.name}</span>
-                        <span class="text-[11px] text-gray-400">${grade.name}</span>
-                    </div>
-                    <div class="flex items-center gap-2 mt-1.5">
-                        <div class="flex-1 bg-gray-100 rounded-full h-1.5">
-                            <div class="bg-purple-500 h-1.5 rounded-full" style="width:${pct}%"></div>
-                        </div>
-                        <span class="text-[10px] text-gray-400 flex-shrink-0">${pct}%</span>
+                        <span class="subj-pill" style="background:${bg};color:${color}">${subjName}</span>
+                        ${gradeName ? `<span class="text-[11px] text-gray-400">${gradeName}</span>` : ''}
                     </div>
                 </div>
                 <i class="fas fa-play-circle text-purple-300 group-hover:text-purple-500 transition text-lg flex-shrink-0"></i>
             </a>`;
         }).join('');
     } catch {
-        cont.innerHTML = _demoLessons();
+        cont.innerHTML = `<p class="text-center text-gray-400 text-sm py-6"><i class="fas fa-wifi-slash text-2xl mb-2 block"></i>Não foi possível carregar as lições.</p>`;
     }
-}
-
-function _demoLessons() {
-    const demos = [
-        { title: 'Leis de Newton — Aplicações', subj: 'Física', grade: '10ª Classe', icon: 'fa-atom', color: '#10b981', pct: 72 },
-        { title: 'Funções Quadráticas', subj: 'Matemática', grade: '10ª Classe', icon: 'fa-square-root-alt', color: '#8b5cf6', pct: 45 },
-        { title: 'Tabela Periódica', subj: 'Química', grade: '10ª Classe', icon: 'fa-flask', color: '#f59e0b', pct: 30 },
-    ];
-    return demos.map(d => `
-        <a href="/browse.html" class="lesson-row flex items-center gap-4 px-3 py-3 rounded-xl transition group cursor-pointer">
-            <div class="lesson-thumb" style="background:${d.color}22">
-                <i class="fas ${d.icon} text-sm" style="color:${d.color}"></i>
-            </div>
-            <div class="flex-1 min-w-0">
-                <p class="text-sm font-bold text-gray-900 truncate group-hover:text-purple-700 transition">${d.title}</p>
-                <div class="flex items-center gap-2 mt-0.5">
-                    <span class="subj-pill" style="background:${d.color}22;color:${d.color}">${d.subj}</span>
-                    <span class="text-[11px] text-gray-400">${d.grade}</span>
-                </div>
-                <div class="flex items-center gap-2 mt-1.5">
-                    <div class="flex-1 bg-gray-100 rounded-full h-1.5">
-                        <div class="bg-purple-500 h-1.5 rounded-full" style="width:${d.pct}%"></div>
-                    </div>
-                    <span class="text-[10px] text-gray-400 flex-shrink-0">${d.pct}%</span>
-                </div>
-            </div>
-            <i class="fas fa-play-circle text-purple-300 group-hover:text-purple-500 transition text-lg flex-shrink-0"></i>
-        </a>`).join('');
 }
 
 // ── Subject scroll cards ─────────────────────────────────────────────────────
 function renderSubjectScroll(subjects) {
     const wrap = document.getElementById('subject-scroll');
-    const mock = [
-        { subject_name: 'Física',     progress_percent: 72, subject_color: '#10b981', icon: 'fa-atom' },
-        { subject_name: 'Matemática', progress_percent: 58, subject_color: '#8b5cf6', icon: 'fa-square-root-alt' },
-        { subject_name: 'Química',    progress_percent: 33, subject_color: '#f59e0b', icon: 'fa-flask' },
-        { subject_name: 'Português',  progress_percent: 17, subject_color: '#3b82f6', icon: 'fa-pen-fancy' },
-        { subject_name: 'Biologia',   progress_percent: 50, subject_color: '#ef4444', icon: 'fa-dna' },
-    ];
-    const data = (subjects && subjects.length > 0) ? subjects : mock;
-    wrap.innerHTML = data.slice(0, 6).map(s => {
+    if (!subjects || subjects.length === 0) {
+        wrap.innerHTML = `<p class="text-xs text-gray-400 px-2 py-3">Sem disciplinas para mostrar.</p>`;
+        return;
+    }
+    wrap.innerHTML = subjects.slice(0, 6).map(s => {
         const pct   = s.progress_percent || 0;
         const color = s.subject_color || '#7c3aed';
         const icon  = s.icon || 'fa-book';
@@ -639,14 +590,11 @@ function renderSubjectScroll(subjects) {
 // ── Subject progress (sidebar compact) ─────────────────────────────────────
 function renderSubjectProgress(subjects) {
     const cont = document.getElementById('subject-progress');
-    const mock = [
-        { subject_name: 'Física',     progress_percent: 72, completed_lessons: 9,  total_lessons: 12, subject_color: '#10b981' },
-        { subject_name: 'Matemática', progress_percent: 58, completed_lessons: 7,  total_lessons: 12, subject_color: '#8b5cf6' },
-        { subject_name: 'Química',    progress_percent: 33, completed_lessons: 4,  total_lessons: 12, subject_color: '#f59e0b' },
-        { subject_name: 'Português',  progress_percent: 17, completed_lessons: 2,  total_lessons: 12, subject_color: '#3b82f6' },
-    ];
-    const data = (subjects && subjects.length > 0) ? subjects : mock;
-    cont.innerHTML = data.slice(0, 4).map(s => {
+    if (!subjects || subjects.length === 0) {
+        cont.innerHTML = `<p class="text-xs text-gray-400 text-center py-3">Sem progresso registado ainda.</p>`;
+        return;
+    }
+    cont.innerHTML = subjects.slice(0, 4).map(s => {
         const pct   = s.progress_percent || 0;
         const color = s.subject_color || '#7c3aed';
         const done  = s.completed_lessons || 0;
@@ -671,23 +619,16 @@ function renderSubjectProgress(subjects) {
 // ── Recent activity ─────────────────────────────────────────────────────────
 function buildActivityFeed() {
     const raw = localStorage.getItem('vclass_activity_log');
-    let log = raw ? JSON.parse(raw) : [];
-    if (log.length === 0) {
-        const now = Date.now();
-        log = [
-            { type: 'lesson_completed',  title: 'Leis de Newton — Aplicações', subject: 'Física',      icon: 'fa-check-circle', bg: 'bg-green-100',  color: 'text-green-600',  ts: now - 7200000 },
-            { type: 'exercise_submitted',title: 'Exercício: Cinemática',        subject: 'Física',      icon: 'fa-tasks',        bg: 'bg-blue-100',   color: 'text-blue-600',   ts: now - 18000000, score: 88 },
-            { type: 'video_watched',     title: 'Funções e Gráficos',           subject: 'Matemática',  icon: 'fa-play-circle',  bg: 'bg-purple-100', color: 'text-purple-600', ts: now - 86400000 },
-            { type: 'lesson_completed',  title: 'Tabela Periódica',             subject: 'Química',     icon: 'fa-check-circle', bg: 'bg-green-100',  color: 'text-green-600',  ts: now - 172800000 },
-            { type: 'exercise_submitted',title: 'Exercício: Álgebra',           subject: 'Matemática',  icon: 'fa-tasks',        bg: 'bg-blue-100',   color: 'text-blue-600',   ts: now - 259200000, score: 72 },
-        ];
-    }
-    return log;
+    return raw ? JSON.parse(raw) : [];
 }
 
 function renderRecentActivity() {
     const cont = document.getElementById('recent-activity');
     const feed = buildActivityFeed();
+    if (feed.length === 0) {
+        cont.innerHTML = `<p class="text-xs text-gray-400 text-center py-4"><i class="fas fa-history text-2xl mb-2 block"></i>Ainda sem actividade registada.</p>`;
+        return;
+    }
     function timeAgo(ts) {
         const m = Math.floor((Date.now() - ts) / 60000);
         if (m < 1) return 'agora mesmo';
@@ -810,7 +751,6 @@ async function loadDashboard() {
         renderSubjectScroll([]);
     }
     renderRecentActivity();
-    loadSuggestedLessons();
     const streak = getStreak();
     animateCounter(document.getElementById('streak-count'), streak, ' dias');
 }
@@ -819,9 +759,8 @@ async function loadDashboard() {
 setupUserInfo();
 setGreeting();
 createChart();
-loadDashboard();
+Promise.all([loadDashboard(), loadSuggestedLessons(), loadPlanBanner()]);
 updateNotifBadge();
-loadPlanBanner();
 </script>
 </body>
 </html>

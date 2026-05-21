@@ -132,23 +132,9 @@
             <div class="flex gap-2 ml-auto flex-wrap">
                 <select id="subject-filter" class="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-purple-500 focus:outline-none" onchange="applyFilters()">
                     <option value="">Todas as Disciplinas</option>
-                    <option value="Matemática">Matemática</option>
-                    <option value="Física">Física</option>
-                    <option value="Química">Química</option>
-                    <option value="Biologia">Biologia</option>
-                    <option value="Português">Português</option>
-                    <option value="História">História</option>
-                    <option value="Geografia">Geografia</option>
-                    <option value="Inglês">Inglês</option>
                 </select>
                 <select id="grade-filter" class="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-purple-500 focus:outline-none" onchange="applyFilters()">
                     <option value="">Todas as Classes</option>
-                    <option value="7">7ª Classe</option>
-                    <option value="8">8ª Classe</option>
-                    <option value="9">9ª Classe</option>
-                    <option value="10">10ª Classe</option>
-                    <option value="11">11ª Classe</option>
-                    <option value="12">12ª Classe</option>
                 </select>
             </div>
         </div>
@@ -208,167 +194,157 @@
 
     <script src="/static/app.js"></script>
     <script>
-        // ── Auth & Navbar ──────────────────────────────────────────
         if (!VClass.isAuthenticated()) window.location.href = '/login.html';
         VClass.initNavbar('library');
 
         // ── Gradientes por disciplina ──────────────────────────────
         const SUBJECT_STYLES = {
-            'Matemática': { grad: 'from-purple-600 to-indigo-700',   icon: 'fa-calculator',    bg: '#7c3aed' },
-            'Física':     { grad: 'from-blue-600 to-cyan-700',       icon: 'fa-atom',          bg: '#2563eb' },
-            'Química':    { grad: 'from-green-500 to-emerald-700',   icon: 'fa-flask',         bg: '#059669' },
-            'Biologia':   { grad: 'from-lime-500 to-green-600',      icon: 'fa-leaf',          bg: '#16a34a' },
-            'Português':  { grad: 'from-red-500 to-rose-700',        icon: 'fa-book-open',     bg: '#dc2626' },
-            'História':   { grad: 'from-orange-500 to-amber-600',    icon: 'fa-landmark',      bg: '#d97706' },
-            'Geografia':  { grad: 'from-sky-500 to-blue-600',        icon: 'fa-globe-africa',  bg: '#0284c7' },
-            'Inglês':     { grad: 'from-violet-500 to-purple-700',   icon: 'fa-language',      bg: '#7c3aed' },
+            'Matemática': { grad:'from-purple-600 to-indigo-700', icon:'fa-calculator',   bg:'#7c3aed' },
+            'Física':     { grad:'from-blue-600 to-cyan-700',     icon:'fa-atom',         bg:'#2563eb' },
+            'Química':    { grad:'from-green-500 to-emerald-700', icon:'fa-flask',        bg:'#059669' },
+            'Biologia':   { grad:'from-lime-500 to-green-600',    icon:'fa-leaf',         bg:'#16a34a' },
+            'Português':  { grad:'from-red-500 to-rose-700',      icon:'fa-book-open',    bg:'#dc2626' },
+            'História':   { grad:'from-orange-500 to-amber-600',  icon:'fa-landmark',     bg:'#d97706' },
+            'Geografia':  { grad:'from-sky-500 to-blue-600',      icon:'fa-globe-africa', bg:'#0284c7' },
+            'Inglês':     { grad:'from-violet-500 to-purple-700', icon:'fa-language',     bg:'#7c3aed' },
         };
-        function subStyle(subject) {
-            return SUBJECT_STYLES[subject] || { grad:'from-gray-500 to-gray-700', icon:'fa-file-alt', bg:'#6b7280' };
+        function subStyle(name) {
+            return SUBJECT_STYLES[name] || { grad:'from-gray-500 to-gray-700', icon:'fa-file-alt', bg:'#6b7280' };
         }
 
-        // ── Dados da biblioteca ────────────────────────────────────
-        const BOOKS = [
-            // ── Livros em destaque ─────────────────────────────────
-            { id:1, title:'Matemática — 12ª Classe', author:'Ministério da Educação', subject:'Matemática', grade:12, category:'books', pages:320, downloads:2456, rating:4.8, size:'12.5 MB', featured:true, desc:'Livro oficial de Matemática para a 12ª Classe — Funções, Trigonometria, Geometria Analítica e Probabilidades.' },
-            { id:2, title:'Física — 11ª Classe',     author:'Ministério da Educação', subject:'Física',     grade:11, category:'books', pages:280, downloads:1892, rating:4.7, size:'10.8 MB', featured:true, desc:'Manual de Física para a 11ª Classe — Mecânica, Termodinâmica, Electricidade e Magnetismo.' },
-            { id:3, title:'Química — 10ª Classe',    author:'Ministério da Educação', subject:'Química',    grade:10, category:'books', pages:260, downloads:1654, rating:4.6, size:'9.2 MB',  featured:true, desc:'Química Geral e Inorgânica para a 10ª Classe — Tabela periódica, ligações e reacções.' },
-
-            // ── Livros ─────────────────────────────────────────────
-            { id:4,  title:'Biologia — 12ª Classe',   author:'MINED', subject:'Biologia',   grade:12, category:'books',     pages:298, downloads:1341, rating:4.5, size:'11.3 MB', featured:false, desc:'Genética, Evolução, Ecologia e Fisiologia humana.' },
-            { id:5,  title:'Português — 11ª Classe',  author:'MINED', subject:'Português',  grade:11, category:'books',     pages:240, downloads:1120, rating:4.4, size:'8.7 MB',  featured:false, desc:'Literatura, gramática avançada e produção textual.' },
-            { id:6,  title:'História — 10ª Classe',   author:'MINED', subject:'História',   grade:10, category:'books',     pages:210, downloads:980,  rating:4.3, size:'7.5 MB',  featured:false, desc:'História de África e do Mundo contemporâneo.' },
-            { id:7,  title:'Geografia — 11ª Classe',  author:'MINED', subject:'Geografia',  grade:11, category:'books',     pages:225, downloads:876, rating:4.2, size:'8.1 MB',   featured:false, desc:'Cartografia, clima, recursos naturais e globalização.' },
-            { id:8,  title:'Inglês — 12ª Classe',     author:'MINED', subject:'Inglês',     grade:12, category:'books',     pages:200, downloads:740, rating:4.1, size:'6.9 MB',   featured:false, desc:'Gramática avançada, leitura e comunicação em inglês.' },
-            { id:9,  title:'Matemática — 10ª Classe', author:'MINED', subject:'Matemática', grade:10, category:'books',     pages:290, downloads:2100, rating:4.7, size:'11.0 MB', featured:false, desc:'Funções, equações, matrizes e determinantes.' },
-            { id:10, title:'Biologia — 10ª Classe',   author:'MINED', subject:'Biologia',   grade:10, category:'books',     pages:275, downloads:1230, rating:4.5, size:'10.2 MB', featured:false, desc:'Citologia, genética básica e ecossistemas.' },
-
-            // ── Apostilas ──────────────────────────────────────────
-            { id:11, title:'Apostila: Funções Quadráticas',       author:'Prof. Maria Santos',   subject:'Matemática', grade:10, category:'handouts',  pages:48,  downloads:3210, rating:4.9, size:'2.1 MB', featured:false, desc:'Resumo completo com teoria, exemplos resolvidos e exercícios de funções do 2º grau.' },
-            { id:12, title:'Apostila: Cinemática e Dinâmica',     author:'Prof. João Ferreira',  subject:'Física',     grade:11, category:'handouts',  pages:56,  downloads:2876, rating:4.8, size:'2.8 MB', featured:false, desc:'Leis de Newton, MRU, MRUV e energia cinética — resumo prático.' },
-            { id:13, title:'Apostila: Reacções Químicas',         author:'Prof. Ana Lima',       subject:'Química',    grade:10, category:'handouts',  pages:42,  downloads:2340, rating:4.7, size:'1.9 MB', featured:false, desc:'Tipos de reacções, balanceamento e estequiometria.' },
-            { id:14, title:'Apostila: Genética Mendeliana',       author:'Prof. Carlos Neto',    subject:'Biologia',   grade:12, category:'handouts',  pages:38,  downloads:1980, rating:4.6, size:'1.7 MB', featured:false, desc:'Leis de Mendel, heredograma e probabilidade genética.' },
-            { id:15, title:'Apostila: Gramática Portuguesa',      author:'Prof. Sofia Pinto',    subject:'Português',  grade:11, category:'handouts',  pages:64,  downloads:1720, rating:4.5, size:'3.2 MB', featured:false, desc:'Morfologia, sintaxe e análise de texto — guia completo.' },
-            { id:16, title:'Apostila: Trigonometria',             author:'Prof. Rui Mendes',     subject:'Matemática', grade:11, category:'handouts',  pages:52,  downloads:2650, rating:4.8, size:'2.4 MB', featured:false, desc:'Seno, cosseno, tangente e aplicações em triângulos.' },
-            { id:17, title:'Apostila: Electricidade e Circuitos', author:'Prof. Luís Carvalho',  subject:'Física',     grade:12, category:'handouts',  pages:60,  downloads:2100, rating:4.7, size:'2.9 MB', featured:false, desc:'Lei de Ohm, circuitos em série e paralelo, potência eléctrica.' },
-            { id:18, title:'Apostila: Solubilidade e pH',         author:'Prof. Beatriz Cruz',   subject:'Química',    grade:11, category:'handouts',  pages:36,  downloads:1560, rating:4.4, size:'1.6 MB', featured:false, desc:'Ácidos, bases, sais e indicadores de pH.' },
-
-            // ── Exercícios / Provas ────────────────────────────────
-            { id:19, title:'Provas Nacionais: Matemática 2019–2025', author:'MINED / VClass',    subject:'Matemática', grade:12, category:'exercises', pages:120, downloads:5432, rating:4.9, size:'4.8 MB', featured:false, desc:'Colecção de 7 provas nacionais com resolução passo a passo.' },
-            { id:20, title:'Provas Nacionais: Física 2019–2025',     author:'MINED / VClass',    subject:'Física',     grade:12, category:'exercises', pages:96,  downloads:4210, rating:4.8, size:'3.9 MB', featured:false, desc:'7 provas nacionais de Física com critérios de classificação.' },
-            { id:21, title:'Provas Nacionais: Química 2019–2025',    author:'MINED / VClass',    subject:'Química',    grade:12, category:'exercises', pages:88,  downloads:3870, rating:4.7, size:'3.5 MB', featured:false, desc:'Provas completas de Química com resoluções detalhadas.' },
-            { id:22, title:'Simulados: 10ª Classe — Matemática',     author:'Equipa VClass',      subject:'Matemática', grade:10, category:'exercises', pages:64,  downloads:3120, rating:4.8, size:'2.6 MB', featured:false, desc:'10 simulados completos no formato da prova nacional.' },
-            { id:23, title:'Simulados: 12ª Classe — Física',         author:'Equipa VClass',      subject:'Física',     grade:12, category:'exercises', pages:72,  downloads:2890, rating:4.7, size:'3.0 MB', featured:false, desc:'Simulados com questões de múltipla escolha e resposta aberta.' },
-            { id:24, title:'Banco de Questões: Biologia',            author:'Equipa VClass',      subject:'Biologia',   grade:11, category:'exercises', pages:80,  downloads:2340, rating:4.6, size:'3.2 MB', featured:false, desc:'500+ questões de Biologia organizadas por tema e nível.' },
-            { id:25, title:'Simulados: 11ª Classe — Português',      author:'Equipa VClass',      subject:'Português',  grade:11, category:'exercises', pages:56,  downloads:1980, rating:4.5, size:'2.2 MB', featured:false, desc:'Testes de compreensão leitora, gramática e redacção.' },
-        ];
-
+        // ── Estado global ──────────────────────────────────────────
+        let ALL_BOOKS      = [];   // dados da API
         let currentCategory = 'all';
-        let activeBook = null;
+        let activeBook      = null;
+        const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
 
-        // ── Computed stats ─────────────────────────────────────────
-        function computeStats() {
-            document.getElementById('stat-books').textContent     = BOOKS.filter(b => b.category === 'books').length;
-            document.getElementById('stat-handouts').textContent  = BOOKS.filter(b => b.category === 'handouts').length;
-            document.getElementById('stat-exercises').textContent = BOOKS.filter(b => b.category === 'exercises').length;
-            const total = BOOKS.reduce((s, b) => s + b.downloads, 0);
-            document.getElementById('stat-downloads').textContent = (total / 1000).toFixed(1) + 'k';
+        // ── Helpers ────────────────────────────────────────────────
+        function bookSubject(b) { return b.subjects?.name || b.subject || ''; }
+        function bookGrade(b)   { return b.grades?.name   || (b.grade ? b.grade + 'ª Classe' : ''); }
+        function bookGradeId(b) { return b.grade_id || ''; }
+        function bookSubjectId(b) { return b.subject_id || ''; }
+        function bookDownloads(b) { return b.downloads_count ?? b.downloads ?? 0; }
+        function bookPages(b)   { return b.pages || '—'; }
+        function bookSize(b) {
+            if (b.file_size_kb) {
+                return b.file_size_kb >= 1024
+                    ? (b.file_size_kb / 1024).toFixed(1) + ' MB'
+                    : b.file_size_kb + ' KB';
+            }
+            return b.size || '—';
+        }
+        function fmtDownloads(n) {
+            return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n);
         }
 
-        // ── Rendering ──────────────────────────────────────────────
-        function starHtml(rating) {
-            const full = Math.floor(rating), half = (rating % 1) >= 0.5;
-            return Array.from({length: full}, () => '<i class="fas fa-star"></i>').join('') +
-                   (half ? '<i class="fas fa-star-half-alt"></i>' : '');
+        // ── Stats ──────────────────────────────────────────────────
+        function updateStats(books) {
+            document.getElementById('stat-books').textContent     = books.filter(b => b.category === 'books').length;
+            document.getElementById('stat-handouts').textContent  = books.filter(b => b.category === 'handouts').length;
+            document.getElementById('stat-exercises').textContent = books.filter(b => b.category === 'exercises').length;
+            const total = books.reduce((s, b) => s + bookDownloads(b), 0);
+            document.getElementById('stat-downloads').textContent = fmtDownloads(total);
         }
 
-        function coverHtml(book, tall = false) {
-            const s = subStyle(book.subject);
-            const h = tall ? 'h-72' : 'h-48';
+        // ── Capa do livro ──────────────────────────────────────────
+        function coverHtml(b, tall = false) {
+            const subj = bookSubject(b);
+            const s    = subStyle(subj);
+            const h    = tall ? 'h-72' : 'h-48';
+            const escapedId = String(b.id).replace(/'/g, "\\'");
             return `<div class="book-cover ${h} bg-gradient-to-br ${s.grad} flex flex-col items-center justify-center relative">
-                <i class="fas ${s.icon} text-5xl text-white/80 mb-2"></i>
-                <p class="text-white font-bold text-sm text-center px-4 line-clamp-2">${book.title}</p>
-                <div class="book-actions">
-                    <button class="px-3 py-2 bg-white text-purple-700 rounded-lg text-sm font-semibold hover:bg-purple-50 transition">
+                ${b.cover_url
+                    ? `<img src="${b.cover_url}" alt="" class="absolute inset-0 w-full h-full object-cover opacity-40">`
+                    : ''}
+                <i class="fas ${s.icon} text-5xl text-white/80 mb-2 relative z-10"></i>
+                <p class="text-white font-bold text-sm text-center px-4 line-clamp-2 relative z-10">${b.title}</p>
+                <div class="book-actions z-10">
+                    <button onclick="event.stopPropagation();viewBook('${escapedId}')"
+                        class="px-3 py-2 bg-white text-purple-700 rounded-lg text-sm font-semibold hover:bg-purple-50 transition">
                         <i class="fas fa-eye mr-1"></i>Ver
                     </button>
-                    <button class="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition">
+                    <button onclick="event.stopPropagation();downloadBook('${escapedId}')"
+                        class="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition">
                         <i class="fas fa-download mr-1"></i>Baixar
                     </button>
                 </div>
-                ${book.featured ? `<div class="featured-badge"><span class="px-2 py-1 bg-yellow-400 text-yellow-900 text-xs font-bold rounded-full shadow"><i class="fas fa-star mr-1"></i>DESTAQUE</span></div>` : ''}
+                ${b.is_featured || b.featured ? `<div class="featured-badge"><span class="px-2 py-1 bg-yellow-400 text-yellow-900 text-xs font-bold rounded-full shadow"><i class="fas fa-star mr-1"></i>DESTAQUE</span></div>` : ''}
             </div>`;
         }
 
+        // ── Render destaque ────────────────────────────────────────
         function renderFeatured(list) {
-            const feat = list.filter(b => b.featured);
-            const sec = document.getElementById('featured-section');
+            const feat = list.filter(b => b.is_featured || b.featured);
+            const sec  = document.getElementById('featured-section');
             const grid = document.getElementById('featured-grid');
             if (!feat.length) { sec.classList.add('hidden'); return; }
             sec.classList.remove('hidden');
             grid.innerHTML = feat.map(b => {
-                const s = subStyle(b.subject);
-                return `<div class="book-card bg-white rounded-2xl shadow overflow-hidden" onclick="openModal(${b.id})">
+                const subj = bookSubject(b);
+                const s    = subStyle(subj);
+                return `<div class="book-card bg-white rounded-2xl shadow overflow-hidden" onclick="openModal('${b.id}')">
                     ${coverHtml(b, true)}
                     <div class="p-5">
                         <div class="flex items-center justify-between mb-2">
-                            <span class="px-2 py-1 text-xs font-semibold rounded-full text-white" style="background:${s.bg}">${b.subject}</span>
-                            <span class="text-xs text-gray-400">${b.grade}ª Classe</span>
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full text-white" style="background:${s.bg}">${subj || '—'}</span>
+                            <span class="text-xs text-gray-400">${bookGrade(b)}</span>
                         </div>
                         <h3 class="font-bold text-gray-900 mb-1 line-clamp-1">${b.title}</h3>
                         <p class="text-xs text-gray-500 mb-2">${b.author}</p>
                         <div class="flex items-center justify-between text-xs text-gray-400">
-                            <span class="star-rating">${starHtml(b.rating)} ${b.rating}</span>
-                            <span><i class="fas fa-download mr-1"></i>${(b.downloads/1000).toFixed(1)}k</span>
+                            <span>${bookPages(b)} páginas</span>
+                            <span><i class="fas fa-download mr-1"></i>${fmtDownloads(bookDownloads(b))}</span>
                         </div>
                     </div>
                 </div>`;
             }).join('');
         }
 
+        // ── Render grelha principal ────────────────────────────────
         function renderBooks(list) {
-            const nonFeat = list.filter(b => !b.featured);
-            const grid = document.getElementById('books-grid');
-            const empty = document.getElementById('empty-state');
-            document.getElementById('books-count').textContent = `${list.length} materiais`;
+            const nonFeat = list.filter(b => !(b.is_featured || b.featured));
+            const grid    = document.getElementById('books-grid');
+            const empty   = document.getElementById('empty-state');
+            document.getElementById('books-count').textContent = `${list.length} material${list.length !== 1 ? 'is' : ''}`;
 
-            if (list.length === 0) {
-                grid.innerHTML = '';
-                empty.classList.remove('hidden');
-                return;
-            }
+            if (!list.length) { grid.innerHTML = ''; empty.classList.remove('hidden'); return; }
             empty.classList.add('hidden');
+
             grid.innerHTML = nonFeat.map(b => {
-                const s = subStyle(b.subject);
-                return `<div class="book-card bg-white rounded-2xl shadow-sm overflow-hidden" onclick="openModal(${b.id})">
+                const subj = bookSubject(b);
+                const s    = subStyle(subj);
+                const catLabel = { books:'Livro', handouts:'Apostila', exercises:'Exercícios' }[b.category] || b.category;
+                return `<div class="book-card bg-white rounded-2xl shadow-sm overflow-hidden" onclick="openModal('${b.id}')">
                     ${coverHtml(b)}
                     <div class="p-4">
                         <div class="flex items-center justify-between mb-1.5">
-                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full text-white" style="background:${s.bg}">${b.subject}</span>
-                            <span class="text-xs text-gray-400">${b.grade}ª Cl.</span>
+                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full text-white" style="background:${s.bg}">${subj || catLabel}</span>
+                            <span class="text-xs text-gray-400">${bookGrade(b)}</span>
                         </div>
                         <h3 class="font-bold text-gray-900 text-sm mb-0.5 line-clamp-2">${b.title}</h3>
-                        <p class="text-xs text-gray-500 mb-2">${b.author}</p>
+                        <p class="text-xs text-gray-500 mb-2 line-clamp-1">${b.author}</p>
                         <div class="flex items-center justify-between text-xs text-gray-400">
-                            <span class="star-rating">${starHtml(b.rating)}</span>
-                            <span><i class="fas fa-file-alt mr-0.5"></i>${b.pages}p</span>
+                            <span><i class="fas fa-file-alt mr-0.5"></i>${bookPages(b)}p</span>
+                            <span><i class="fas fa-download mr-0.5"></i>${fmtDownloads(bookDownloads(b))}</span>
                         </div>
                     </div>
                 </div>`;
             }).join('');
         }
 
-        // ── Filters ────────────────────────────────────────────────
+        // ── Filtros ────────────────────────────────────────────────
         function getFiltered() {
-            const q       = (document.getElementById('search-input').value || '').toLowerCase();
-            const subject = document.getElementById('subject-filter').value;
-            const grade   = document.getElementById('grade-filter').value;
-            return BOOKS.filter(b => {
-                const matchCat   = currentCategory === 'all' || b.category === currentCategory;
-                const matchSubj  = !subject || b.subject === subject;
-                const matchGrade = !grade   || b.grade === parseInt(grade);
-                const matchQ     = !q || b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q) || b.subject.toLowerCase().includes(q);
-                return matchCat && matchSubj && matchGrade && matchQ;
+            const q         = (document.getElementById('search-input').value || '').toLowerCase();
+            const subjectId = document.getElementById('subject-filter').value;
+            const gradeId   = document.getElementById('grade-filter').value;
+            return ALL_BOOKS.filter(b => {
+                const matchCat  = currentCategory === 'all' || b.category === currentCategory;
+                const matchSubj = !subjectId || bookSubjectId(b) === subjectId;
+                const matchGrad = !gradeId   || bookGradeId(b)   === gradeId;
+                const matchQ    = !q || b.title.toLowerCase().includes(q)
+                                     || (b.author||'').toLowerCase().includes(q)
+                                     || bookSubject(b).toLowerCase().includes(q);
+                return matchCat && matchSubj && matchGrad && matchQ;
             });
         }
 
@@ -389,27 +365,30 @@
             applyFilters();
         }
 
-        // ── Modal ──────────────────────────────────────────────────
+        // ── Modal de detalhes ──────────────────────────────────────
         function openModal(id) {
-            activeBook = BOOKS.find(b => b.id === id);
+            activeBook = ALL_BOOKS.find(b => b.id === id);
             if (!activeBook) return;
-            const b = activeBook;
-            const s = subStyle(b.subject);
+            const b    = activeBook;
+            const subj = bookSubject(b);
+            const s    = subStyle(subj);
+            const catLabels = { books:'Livro', handouts:'Apostila', exercises:'Exercícios' };
 
-            document.getElementById('modal-cover').className = `h-40 bg-gradient-to-br ${s.grad} flex items-center justify-center relative`;
-            document.getElementById('modal-cover-icon').innerHTML = `<i class="fas ${s.icon} text-5xl text-white/80"></i>`;
-            document.getElementById('modal-title').textContent = b.title;
+            document.getElementById('modal-cover').className =
+                `h-40 bg-gradient-to-br ${s.grad} flex items-center justify-center relative`;
+            document.getElementById('modal-cover-icon').innerHTML =
+                `<i class="fas ${s.icon} text-5xl text-white/80"></i>`;
+            document.getElementById('modal-title').textContent  = b.title;
             document.getElementById('modal-author').textContent = `Autor: ${b.author}`;
-            document.getElementById('modal-desc').textContent = b.desc;
-            document.getElementById('modal-pages').textContent = b.pages;
-            document.getElementById('modal-size').textContent = b.size;
-            document.getElementById('modal-downloads').textContent = b.downloads >= 1000 ? (b.downloads/1000).toFixed(1)+'k' : b.downloads;
+            document.getElementById('modal-desc').textContent   = b.description || b.desc || '';
+            document.getElementById('modal-pages').textContent  = bookPages(b);
+            document.getElementById('modal-size').textContent   = bookSize(b);
+            document.getElementById('modal-downloads').textContent = fmtDownloads(bookDownloads(b));
 
-            const catLabels = { books:'Livro', handouts:'Apostila', exercises:'Exercício' };
             document.getElementById('modal-badges').innerHTML =
-                `<span class="px-2 py-1 text-xs font-semibold rounded-full text-white" style="background:${s.bg}">${b.subject}</span>
-                 <span class="px-2 py-1 text-xs font-semibold bg-gray-100 text-gray-600 rounded-full">${b.grade}ª Classe</span>
-                 <span class="px-2 py-1 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full">${catLabels[b.category]}</span>`;
+                `${subj ? `<span class="px-2 py-1 text-xs font-semibold rounded-full text-white" style="background:${s.bg}">${subj}</span>` : ''}
+                 ${bookGrade(b) ? `<span class="px-2 py-1 text-xs font-semibold bg-gray-100 text-gray-600 rounded-full">${bookGrade(b)}</span>` : ''}
+                 <span class="px-2 py-1 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full">${catLabels[b.category] || b.category}</span>`;
 
             document.getElementById('book-modal').classList.add('open');
         }
@@ -419,16 +398,44 @@
             activeBook = null;
         }
 
-        function viewBook() {
-            if (!activeBook) return;
-            VClass.showNotification(`A abrir "${activeBook.title}" no visualizador de PDF...`, 'info');
-            setTimeout(() => VClass.showNotification('Visualizador de PDF será disponibilizado em breve', 'warning'), 1500);
+        // ── Visualizar PDF ─────────────────────────────────────────
+        function viewBook(id) {
+            const b = id ? ALL_BOOKS.find(x => x.id === id) : activeBook;
+            if (!b) return;
+            if (b.file_url) {
+                window.open(b.file_url, '_blank', 'noopener');
+            } else {
+                VClass.showNotification('Ficheiro ainda não disponível', 'warning');
+            }
         }
 
-        function downloadBook() {
-            if (!activeBook) return;
-            VClass.showNotification(`A preparar download de "${activeBook.title}"...`, 'info');
-            setTimeout(() => VClass.showNotification('Download disponível em breve. Os livros são protegidos contra pirataria.', 'warning'), 1500);
+        // ── Descarregar PDF ────────────────────────────────────────
+        async function downloadBook(id) {
+            const b = id ? ALL_BOOKS.find(x => x.id === id) : activeBook;
+            if (!b) return;
+            if (!b.file_url) {
+                VClass.showNotification('Ficheiro ainda não disponível para download', 'warning');
+                return;
+            }
+            // Incrementar contador (fire-and-forget)
+            fetch(`/api/library/${b.id}/download`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` }
+            }).then(() => {
+                const idx = ALL_BOOKS.findIndex(x => x.id === b.id);
+                if (idx !== -1) ALL_BOOKS[idx].downloads_count = (ALL_BOOKS[idx].downloads_count || 0) + 1;
+            }).catch(() => {});
+
+            // Criar link de download
+            const a = document.createElement('a');
+            a.href     = b.file_url;
+            a.download = b.title + '.pdf';
+            a.target   = '_blank';
+            a.rel      = 'noopener';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            VClass.showNotification(`A descarregar "${b.title}"...`, 'success');
         }
 
         // Fechar modal clicando fora
@@ -436,39 +443,64 @@
             if (e.target === this) closeModal();
         });
 
-        // ── Carregar dados da API ──────────────────────────────
-        async function loadFromAPI() {
+        // ── Carregar filtros (disciplinas e classes) da API ────────
+        async function loadFilterOptions() {
             try {
-                const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
-                const res = await fetch('/api/library?limit=50', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                // Carregar subjects a partir dos livros já na memória
+                const subjects = {};
+                const grades   = {};
+                ALL_BOOKS.forEach(b => {
+                    if (b.subjects?.id) subjects[b.subjects.id] = b.subjects.name;
+                    if (b.grades?.id)   grades[b.grades.id]     = b.grades.name;
                 });
-                if (!res.ok) throw new Error('API error');
-                const json = await res.json();
-                if (json.success && json.data.books && json.data.books.length) {
-                    // Substituir dados estáticos pelos da API
-                    BOOKS.length = 0;
-                    json.data.books.forEach(b => BOOKS.push(b));
-                    // Actualizar stats com dados da API
-                    if (json.data.stats) {
-                        const s = json.data.stats;
-                        document.getElementById('stat-books').textContent     = s.totalBooks;
-                        document.getElementById('stat-handouts').textContent  = s.totalHandouts;
-                        document.getElementById('stat-exercises').textContent = s.totalExercises;
-                        document.getElementById('stat-downloads').textContent = (s.totalDownloads / 1000).toFixed(1) + 'k';
-                    }
-                    applyFilters();
+
+                const subSel = document.getElementById('subject-filter');
+                const grdSel = document.getElementById('grade-filter');
+
+                if (Object.keys(subjects).length) {
+                    subSel.innerHTML = '<option value="">Todas as Disciplinas</option>' +
+                        Object.entries(subjects)
+                            .sort((a, b) => a[1].localeCompare(b[1]))
+                            .map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
                 }
-            } catch(e) {
-                // fallback silencioso para dados estáticos
-                console.warn('Library API unavailable, using static data');
+                if (Object.keys(grades).length) {
+                    grdSel.innerHTML = '<option value="">Todas as Classes</option>' +
+                        Object.entries(grades)
+                            .sort((a, b) => a[1].localeCompare(b[1], 'pt', { numeric: true }))
+                            .map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
+                }
+            } catch (e) { console.warn('loadFilterOptions:', e); }
+        }
+
+        // ── Carregar livros da API ─────────────────────────────────
+        async function loadLibrary() {
+            // Mostrar skeleton
+            document.getElementById('books-grid').innerHTML =
+                Array(8).fill('<div class="bg-white rounded-2xl shadow-sm overflow-hidden"><div class="h-48 bg-gray-200 animate-pulse"></div><div class="p-4 space-y-2"><div class="h-3 bg-gray-200 rounded animate-pulse"></div><div class="h-3 bg-gray-200 rounded animate-pulse w-3/4"></div></div></div>').join('');
+
+            try {
+                const res  = await fetch('/api/library?limit=100', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const json = await res.json();
+
+                if (!json.success) throw new Error(json.error || 'Erro na API');
+
+                ALL_BOOKS = json.data?.books || [];
+                updateStats(ALL_BOOKS);
+                await loadFilterOptions();
+                applyFilters();
+            } catch (e) {
+                console.warn('Library API error:', e);
+                document.getElementById('books-grid').innerHTML = '';
+                document.getElementById('empty-state').classList.remove('hidden');
+                document.getElementById('empty-state').querySelector('p').textContent =
+                    'Não foi possível carregar a biblioteca. Tenta mais tarde.';
             }
         }
 
         // ── Init ───────────────────────────────────────────────────
-        computeStats();
-        applyFilters();
-        loadFromAPI(); // enriquecer com dados reais do servidor
+        loadLibrary();
     </script>
 </body>
 </html>

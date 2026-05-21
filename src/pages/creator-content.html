@@ -97,7 +97,7 @@
     </div>
 
     <!-- Tabs + Filters -->
-    <div class="max-w-7xl mx-auto px-4">
+    <div class="max-w-7xl mx-auto px-4" id="section-lessons">
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden fade-in">
             <!-- Tab bar -->
             <div class="flex items-center border-b border-gray-100 px-6 overflow-x-auto gap-1">
@@ -112,6 +112,11 @@
                 </button>
                 <button onclick="switchTab('no-exercises')" id="tab-no-exercises" class="tab-btn whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-500 hover:text-gray-700">
                     Sem Exercícios <span class="ml-1 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full" id="count-no-exercises">0</span>
+                </button>
+                <div class="flex-1"></div>
+                <button onclick="switchMainSection('materials')" id="tab-materials" class="tab-btn whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-500 hover:text-gray-700 border-l border-gray-100">
+                    <i class="fas fa-file-alt mr-1 text-purple-400"></i> Materiais
+                    <span class="ml-1 text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full hidden" id="count-pending-review">!</span>
                 </button>
             </div>
 
@@ -194,6 +199,180 @@
                         <i class="fas fa-chevron-right text-xs"></i>
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- PAINEL DE MATERIAIS (apostilas / exercícios)                   -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div id="section-materials" class="hidden max-w-7xl mx-auto px-4 mt-0 pb-8">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden fade-in">
+
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-6 py-5 border-b border-gray-100">
+                <div>
+                    <h2 class="text-base font-bold text-gray-900">Meus Materiais</h2>
+                    <p class="text-xs text-gray-400 mt-0.5">Apostilas e exercícios que criou. Submeta para revisão antes de publicar.</p>
+                </div>
+                <button onclick="openMaterialModal()" class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700 transition shadow-sm">
+                    <i class="fas fa-plus"></i> Novo Material
+                </button>
+            </div>
+
+            <!-- Filtros rápidos -->
+            <div class="flex items-center gap-2 px-6 py-3 border-b border-gray-50 bg-gray-50 flex-wrap">
+                <button onclick="filterMaterials('all')" id="mat-f-all" class="mat-filter-btn active px-3 py-1.5 text-xs font-semibold rounded-lg bg-purple-600 text-white transition">Todos</button>
+                <button onclick="filterMaterials('draft')" id="mat-f-draft" class="mat-filter-btn px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition">Rascunho</button>
+                <button onclick="filterMaterials('pending_review')" id="mat-f-pending_review" class="mat-filter-btn px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition">Em Revisão</button>
+                <button onclick="filterMaterials('published')" id="mat-f-published" class="mat-filter-btn px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition">Publicados</button>
+                <button onclick="filterMaterials('rejected')" id="mat-f-rejected" class="mat-filter-btn px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition">Rejeitados</button>
+            </div>
+
+            <!-- Tabela -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-xs text-gray-500 font-semibold border-b border-gray-100 bg-gray-50">
+                            <th class="px-6 py-3">Título</th>
+                            <th class="px-4 py-3">Tipo</th>
+                            <th class="px-4 py-3">Disciplina</th>
+                            <th class="px-4 py-3">Classe</th>
+                            <th class="px-4 py-3">Estado</th>
+                            <th class="px-4 py-3">Motivo de rejeição</th>
+                            <th class="px-4 py-3">Data</th>
+                            <th class="px-4 py-3 text-right">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="materials-tbody">
+                        <tr><td colspan="8" class="text-center py-10 text-gray-400"><i class="fas fa-spinner fa-spin mr-2"></i>A carregar...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty state -->
+            <div id="materials-empty" class="hidden flex flex-col items-center justify-center py-16 px-4 text-center">
+                <div class="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center mb-4">
+                    <i class="fas fa-file-alt text-2xl text-purple-300"></i>
+                </div>
+                <h3 class="text-base font-semibold text-gray-700 mb-1">Nenhum material encontrado</h3>
+                <p class="text-sm text-gray-400 mb-5">Crie apostilas e exercícios para partilhar com os alunos.</p>
+                <button onclick="openMaterialModal()" class="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700 transition">
+                    <i class="fas fa-plus"></i> Criar primeiro material
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Novo/Editar Material -->
+    <div id="modal-material" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg modal-card overflow-hidden max-h-[90vh] overflow-y-auto">
+            <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-purple-50 to-indigo-50">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900" id="mat-modal-title">Novo Material</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">Apostilas e exercícios passam por revisão antes de serem publicados</p>
+                </div>
+                <button onclick="closeMaterialModal()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500 transition">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="px-6 py-5 space-y-4">
+                <input type="hidden" id="mat-edit-id">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Título <span class="text-red-500">*</span></label>
+                    <input id="mat-f-title" type="text" placeholder="Ex: Exercícios de Funções Quadráticas"
+                        class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Tipo <span class="text-red-500">*</span></label>
+                    <select id="mat-f-cat" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400">
+                        <option value="handouts">Apostila</option>
+                        <option value="exercises">Exercícios</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Descrição</label>
+                    <textarea id="mat-f-desc" rows="2" placeholder="Breve descrição do conteúdo..."
+                        class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"></textarea>
+                </div>
+                <!-- Upload de ficheiro -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Ficheiro PDF</label>
+                    <div id="mat-drop-zone"
+                        class="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition"
+                        onclick="document.getElementById('mat-file-input').click()"
+                        ondragover="event.preventDefault();this.classList.add('border-purple-400','bg-purple-50')"
+                        ondragleave="this.classList.remove('border-purple-400','bg-purple-50')"
+                        ondrop="matHandleDrop(event)">
+                        <i class="fas fa-cloud-upload-alt text-2xl text-gray-300 mb-1"></i>
+                        <p class="text-xs text-gray-500">Clique ou arraste o PDF aqui</p>
+                        <p class="text-xs text-gray-400">Máx. 100 MB</p>
+                    </div>
+                    <input type="file" id="mat-file-input" accept=".pdf,.doc,.docx" class="hidden" onchange="matUploadFile(this.files[0])">
+                    <!-- Progresso -->
+                    <div id="mat-upload-progress" class="hidden mt-2">
+                        <div class="flex items-center gap-2 text-xs text-gray-600 mb-1">
+                            <i class="fas fa-spinner fa-spin text-purple-500"></i>
+                            <span id="mat-upload-label">A enviar...</span>
+                        </div>
+                        <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div id="mat-upload-bar" class="h-full bg-purple-500 rounded-full transition-all duration-300" style="width:0%"></div>
+                        </div>
+                    </div>
+                    <!-- Ficheiro carregado -->
+                    <div id="mat-file-done" class="hidden mt-2 flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                        <i class="fas fa-check-circle"></i>
+                        <span id="mat-file-done-name" class="flex-1 truncate"></span>
+                        <button type="button" onclick="matClearFile()" class="text-gray-400 hover:text-red-500"><i class="fas fa-times"></i></button>
+                    </div>
+                    <!-- URL manual (alternativa) -->
+                    <div class="mt-2">
+                        <p class="text-xs text-gray-400 mb-1">Ou cole uma URL directamente:</p>
+                        <input id="mat-f-url" type="url" placeholder="https://..."
+                            class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Disciplina</label>
+                        <select id="mat-f-subject" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400">
+                            <option value="">— Seleccionar —</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Classe</label>
+                        <select id="mat-f-grade" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400">
+                            <option value="">— Seleccionar —</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Nº de páginas</label>
+                        <input id="mat-f-pages" type="number" min="1" placeholder="Ex: 12"
+                            class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Tamanho (KB)</label>
+                        <input id="mat-f-size" type="number" min="1" placeholder="Ex: 2048"
+                            class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400">
+                    </div>
+                </div>
+                <!-- Alerta de estado: exibido quando material foi rejeitado -->
+                <div id="mat-rejection-info" class="hidden bg-red-50 border border-red-200 rounded-xl p-3">
+                    <p class="text-xs font-semibold text-red-700 mb-1"><i class="fas fa-exclamation-circle mr-1"></i>Material rejeitado</p>
+                    <p class="text-xs text-red-600" id="mat-rejection-reason"></p>
+                    <p class="text-xs text-gray-500 mt-1">Corrija os problemas e submeta novamente.</p>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50">
+                <button onclick="closeMaterialModal()" class="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition">Cancelar</button>
+                <button onclick="saveMaterial(false)" class="px-4 py-2 border border-purple-300 text-purple-700 rounded-xl text-sm font-semibold hover:bg-purple-50 transition">
+                    <i class="fas fa-save mr-1"></i> Guardar rascunho
+                </button>
+                <button onclick="saveMaterial(true)" class="px-5 py-2 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 transition">
+                    <i class="fas fa-paper-plane mr-1"></i> Submeter
+                </button>
             </div>
         </div>
     </div>
@@ -372,6 +551,10 @@
         // ── Tabs ─────────────────────────────────────────────────────────
         function switchTab(tab) {
             currentTab = tab;
+            // Garantir que o painel de materiais está fechado
+            document.getElementById('section-materials')?.classList.add('hidden');
+            document.getElementById('section-lessons')?.classList.remove('hidden');
+            document.getElementById('tab-materials')?.classList.remove('active');
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(`tab-${tab}`)?.classList.add('active');
             renderLessons();
@@ -536,14 +719,14 @@
                             <i class="fas fa-play-circle text-${meta.color}-600 text-sm"></i>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <p class="text-sm font-semibold text-gray-900 truncate">${l.title}</p>
-                            <p class="text-xs text-gray-400 mt-0.5">${l.duration} min · ${l.access === 'premium' ? '🔒 Premium' : '🆓 Gratuito'} · ${l.updated}</p>
+                            <p class="text-sm font-semibold text-gray-900 truncate">${escapeHtml(l.title)}</p>
+                            <p class="text-xs text-gray-400 mt-0.5">${escapeHtml(String(l.duration))} min · ${l.access === 'premium' ? '🔒 Premium' : '🆓 Gratuito'} · ${escapeHtml(l.updated)}</p>
                         </div>
                         <div class="hidden md:flex items-center gap-5 text-xs text-gray-500">
-                            <span title="Visualizações" class="flex items-center gap-1"><i class="fas fa-eye text-gray-300"></i> ${l.views}</span>
+                            <span title="Visualizações" class="flex items-center gap-1"><i class="fas fa-eye text-gray-300"></i> ${escapeHtml(String(l.views))}</span>
                             <span title="Exercícios" class="flex items-center gap-1">
                                 <i class="fas fa-question-circle ${l.exercises > 0 ? 'text-blue-400' : 'text-gray-200'}"></i>
-                                ${l.exercises > 0 ? l.exercises : '<span class="text-red-400">0</span>'}
+                                ${l.exercises > 0 ? escapeHtml(String(l.exercises)) : '<span class="text-red-400">0</span>'}
                             </span>
                         </div>
                         ${statusBadge(l.status)}
@@ -569,8 +752,8 @@
                 <div class="chapter-group ml-0 transition">
                     <div class="flex items-center gap-3 px-6 py-3 bg-gray-50 border-b border-gray-100">
                         <i class="fas fa-folder text-${meta.color}-500 text-sm"></i>
-                        <span class="text-sm font-semibold text-gray-700">${g.chapter}</span>
-                        <span class="text-xs bg-${meta.color}-100 text-${meta.color}-700 px-2 py-0.5 rounded-full font-medium">${SUBJECT_META[g.subject]?.label || g.subject}</span>
+                        <span class="text-sm font-semibold text-gray-700">${escapeHtml(g.chapter)}</span>
+                        <span class="text-xs bg-${meta.color}-100 text-${meta.color}-700 px-2 py-0.5 rounded-full font-medium">${escapeHtml(SUBJECT_META[g.subject]?.label || g.subject)}</span>
                         <span class="text-xs text-gray-400 ml-auto">${g.lessons.length} lição(ões)</span>
                         <button onclick="openNewLessonModal('${g.subject}','${g.chapter}')" class="text-xs text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1">
                             <i class="fas fa-plus text-xs"></i> Adicionar
@@ -598,11 +781,11 @@
                                 </div>
                                 ${statusBadge(l.status)}
                             </div>
-                            <h3 class="text-sm font-semibold text-gray-900 mb-1 line-clamp-2">${l.title}</h3>
-                            <p class="text-xs text-gray-400 mb-3">${l.chapter} · ${l.duration} min</p>
+                            <h3 class="text-sm font-semibold text-gray-900 mb-1 line-clamp-2">${escapeHtml(l.title)}</h3>
+                            <p class="text-xs text-gray-400 mb-3">${escapeHtml(l.chapter)} · ${escapeHtml(String(l.duration))} min</p>
                             <div class="flex items-center gap-3 text-xs text-gray-500 mb-4">
-                                <span><i class="fas fa-eye mr-1 text-gray-300"></i>${l.views}</span>
-                                <span><i class="fas fa-question-circle mr-1 ${l.exercises>0?'text-blue-300':'text-gray-200'}"></i>${l.exercises}</span>
+                                <span><i class="fas fa-eye mr-1 text-gray-300"></i>${escapeHtml(String(l.views))}</span>
+                                <span><i class="fas fa-question-circle mr-1 ${l.exercises>0?'text-blue-300':'text-gray-200'}"></i>${escapeHtml(String(l.exercises))}</span>
                                 <span class="ml-auto">${l.access === 'premium' ? '🔒' : '🆓'}</span>
                             </div>
                             <div class="flex items-center gap-2">
@@ -901,22 +1084,24 @@
 
                 SUBJECT_META = {};
                 CHAPTERS_BY_SUBJECT = {};
-                // Desduplicar por nome de disciplina (várias classes podem ter
-                // a mesma disciplina com IDs diferentes, ex: mz10mat / mz11mat).
-                const seenByName = new Map(); // nome lowercase → key escolhida
+                // Manter cada (classe × disciplina) como entrada separada, para que
+                // o professor possa escolher "Biologia — 12ª Classe" especificamente.
+                // Sem isto, todas as classes colapsavam num só item e o id da PRIMEIRA
+                // classe vista era enviado para o backend, gerando lições na classe errada.
                 if (CURRENT_COUNTRY) {
                     CURRENT_COUNTRY.levels.forEach(level => {
                         level.grades.forEach(grade => {
                             grade.subjects.forEach(subj => {
-                                const nameKey = (subj.name || '').toLowerCase().trim();
-                                let key = seenByName.get(nameKey);
-                                if (!key) {
-                                    key = subj.id;
-                                    seenByName.set(nameKey, key);
-                                    SUBJECT_META[key] = { label: subj.name, color: getColorForSubject(subj.name), icon: subj.icon || 'fa-book' };
+                                const key = subj.id;
+                                if (!SUBJECT_META[key]) {
+                                    SUBJECT_META[key] = {
+                                        label: `${subj.name} — ${grade.name}`,
+                                        color: getColorForSubject(subj.name),
+                                        icon: subj.icon || 'fa-book'
+                                    };
                                     CHAPTERS_BY_SUBJECT[key] = [];
                                 }
-                                subj.chapters.forEach(ch => {
+                                (subj.chapters || []).forEach(ch => {
                                     if (!CHAPTERS_BY_SUBJECT[key].find(x => x.title === ch.title)) {
                                         CHAPTERS_BY_SUBJECT[key].push({ title: ch.title, term: ch.term });
                                     }
@@ -1004,13 +1189,22 @@
                 const d = await r.json();
                 if (!d.success || !Array.isArray(d.data)) return;
 
-                // Mapear formato API → formato esperado pelo render
+                // Mapear formato API → formato esperado pelo render.
+                // A chave de subject deve casar com as chaves de SUBJECT_META
+                // (que são os IDs estáticos tipo "mz12-bio"). Derivamos do slug
+                // do chapter, que codifica país+classe+disciplina. Heurística por
+                // nome só como último recurso (estourava "Funções" → matemática).
+                const subjectKeys = Object.keys(SUBJECT_META || {});
+                const subjectFromSlug = (slug) => {
+                    const s = (slug || '').toLowerCase();
+                    if (!s) return '';
+                    return subjectKeys.find(k => s.startsWith(k.toLowerCase() + '-')) || '';
+                };
                 const apiLessons = d.data.map(l => ({
                     id:        l.id,
                     title:     l.title,
-                    // Determinar disciplina a partir do nome do capítulo (heurística);
-                    // se não conseguir, fica 'outra' (ainda visível com filtro "Todas").
-                    subject:   guessSubjectFromText((l.chapter || '') + ' ' + (l.title || '')),
+                    subject:   subjectFromSlug(l.chapter_slug)
+                                 || guessSubjectFromText((l.chapter || '') + ' ' + (l.title || '')),
                     chapter:   l.chapter || '—',
                     chapter_id: l.chapter_id,
                     status:    l.status || 'draft',
@@ -1043,9 +1237,339 @@
         }
 
         // ── Init ───────────────────────────────────────────────────────
-        loadCurriculumForContent();
-        loadCreatorChapters();
-        loadRealLessons();
+        (async () => {
+            await loadCurriculumForContent();
+            await loadCreatorChapters();
+            await loadRealLessons();
+        })();
+
+        // ═══════════════════════════════════════════════════════════════
+        // SECÇÃO DE MATERIAIS (apostilas / exercícios)
+        // ═══════════════════════════════════════════════════════════════
+        let ALL_MATERIALS   = [];
+        let MAT_FILTER      = 'all';
+        let MAT_SUBJECTS    = [];
+        let MAT_GRADES      = [];
+
+        async function loadMatCurriculumSelects() {
+            if (MAT_SUBJECTS.length && MAT_GRADES.length) return;
+            try {
+                const token = localStorage.getItem('accessToken') || '';
+                const res   = await fetch('/api/creator/curriculum', { headers: { Authorization: `Bearer ${token}` } });
+                const data  = await res.json();
+                if (!data.success) return;
+                MAT_SUBJECTS = data.data?.subjects || [];
+                MAT_GRADES   = data.data?.grades   || [];
+                const subSel = document.getElementById('mat-f-subject');
+                const grdSel = document.getElementById('mat-f-grade');
+                if (subSel && MAT_SUBJECTS.length) {
+                    subSel.innerHTML = '<option value="">— Seleccionar —</option>' +
+                        MAT_SUBJECTS.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+                }
+                if (grdSel && MAT_GRADES.length) {
+                    grdSel.innerHTML = '<option value="">— Seleccionar —</option>' +
+                        MAT_GRADES.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+                }
+            } catch (e) { console.warn('loadMatCurriculumSelects:', e); }
+        }
+
+        // Alterna entre o painel de lições e o de materiais
+        function switchMainSection(section) {
+            const isMaterials = section === 'materials';
+            document.getElementById('section-lessons').classList.toggle('hidden', isMaterials);
+            document.getElementById('section-materials').classList.toggle('hidden', !isMaterials);
+            document.getElementById('tab-materials').classList.toggle('active', isMaterials);
+            if (!isMaterials) {
+                // restaurar tab de lições activo
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.getElementById(`tab-${currentTab||'all'}`)?.classList.add('active');
+            }
+            if (isMaterials) { loadMatCurriculumSelects(); loadMaterials(); }
+        }
+
+        async function loadMaterials() {
+            const token  = localStorage.getItem('accessToken') || '';
+            let url = '/api/creator/library?limit=100';
+            if (MAT_FILTER !== 'all') url += '&status=' + MAT_FILTER;
+            try {
+                const res  = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+                ALL_MATERIALS = data.data?.items || [];
+                renderMaterials(ALL_MATERIALS);
+                // Badge de rejeitados
+                const rejected = ALL_MATERIALS.filter(m => m.status === 'rejected').length;
+                const badge = document.getElementById('count-pending-review');
+                if (rejected > 0) { badge.textContent = rejected; badge.classList.remove('hidden'); }
+                else badge.classList.add('hidden');
+            } catch (e) {
+                document.getElementById('materials-tbody').innerHTML =
+                    `<tr><td colspan="8" class="text-center py-10 text-red-400">Erro: ${e.message}</td></tr>`;
+            }
+        }
+
+        function filterMaterials(status) {
+            MAT_FILTER = status;
+            document.querySelectorAll('.mat-filter-btn').forEach(b => {
+                const isActive = b.id === `mat-f-${status}`;
+                b.classList.toggle('active', isActive);
+                b.classList.toggle('bg-purple-600', isActive);
+                b.classList.toggle('text-white', isActive);
+                b.classList.toggle('bg-gray-100', !isActive);
+                b.classList.toggle('text-gray-600', !isActive);
+            });
+            loadMaterials();
+        }
+
+        const MAT_CAT_LABEL    = { handouts:'Apostila', exercises:'Exercícios' };
+        const MAT_STATUS_LABEL = { draft:'Rascunho', pending_review:'Em Revisão', published:'Publicado', rejected:'Rejeitado' };
+        const MAT_STATUS_CLS   = {
+            draft:'bg-amber-100 text-amber-700', pending_review:'bg-blue-100 text-blue-700',
+            published:'bg-green-100 text-green-700', rejected:'bg-red-100 text-red-700'
+        };
+
+        function renderMaterials(items) {
+            const tbody = document.getElementById('materials-tbody');
+            const empty = document.getElementById('materials-empty');
+            if (!items.length) {
+                tbody.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+            empty.classList.add('hidden');
+            tbody.innerHTML = items.map(m => {
+                const canEdit   = ['draft','rejected'].includes(m.status);
+                const canSubmit = m.status === 'draft' && m.file_url;
+                const canDelete = ['draft','rejected'].includes(m.status);
+                return `<tr class="border-b border-gray-50 hover:bg-gray-50 transition">
+                    <td class="px-6 py-4">
+                        <div class="font-medium text-gray-900 truncate max-w-xs" title="${(m.title||'').replace(/"/g,'&quot;')}">${escapeHtml(m.title)}</div>
+                        ${m.file_url ? `<a href="${m.file_url}" target="_blank" class="text-xs text-purple-600 hover:underline"><i class="fas fa-file-pdf mr-1"></i>Ver ficheiro</a>` : '<span class="text-xs text-gray-400">Sem ficheiro</span>'}
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap">
+                        <span class="text-xs font-medium text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full">${MAT_CAT_LABEL[m.category]||m.category}</span>
+                    </td>
+                    <td class="px-4 py-4 text-xs text-gray-500 whitespace-nowrap">${escapeHtml(m.subjects?.name||'—')}</td>
+                    <td class="px-4 py-4 text-xs text-gray-500 whitespace-nowrap">${escapeHtml(m.grades?.name||'—')}</td>
+                    <td class="px-4 py-4 whitespace-nowrap">
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${MAT_STATUS_CLS[m.status]||'bg-gray-100 text-gray-600'}">${MAT_STATUS_LABEL[m.status]||m.status}</span>
+                    </td>
+                    <td class="px-4 py-4 max-w-xs">
+                        ${m.rejection_reason ? `<p class="text-xs text-red-600 truncate" title="${escapeHtml(m.rejection_reason)}">${escapeHtml(m.rejection_reason)}</p>` : '<span class="text-gray-300 text-xs">—</span>'}
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-xs text-gray-400">
+                        ${m.created_at ? new Date(m.created_at).toLocaleDateString('pt') : '—'}
+                    </td>
+                    <td class="px-4 py-4 text-right whitespace-nowrap">
+                        <div class="flex items-center justify-end gap-1">
+                            ${canEdit ? `<button onclick="openMaterialModal('${m.id}')" class="px-2.5 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition"><i class="fas fa-pen"></i></button>` : ''}
+                            ${canSubmit ? `<button onclick="submitMaterial('${m.id}')" class="px-2.5 py-1.5 text-xs font-medium text-purple-700 bg-purple-100 hover:bg-purple-200 rounded-lg transition"><i class="fas fa-paper-plane mr-1"></i>Submeter</button>` : ''}
+                            ${canDelete ? `<button onclick="deleteMaterial('${m.id}')" class="px-2.5 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition"><i class="fas fa-trash"></i></button>` : ''}
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        // ── Upload de ficheiro (professor) ────────────────────────────────────
+        function matHandleDrop(e) {
+            e.preventDefault();
+            document.getElementById('mat-drop-zone').classList.remove('border-purple-400','bg-purple-50');
+            const file = e.dataTransfer?.files?.[0];
+            if (file) matUploadFile(file);
+        }
+
+        async function matUploadFile(file) {
+            if (!file) return;
+            const token = localStorage.getItem('accessToken') || '';
+            const zone  = document.getElementById('mat-drop-zone');
+            const prog  = document.getElementById('mat-upload-progress');
+            const bar   = document.getElementById('mat-upload-bar');
+            const label = document.getElementById('mat-upload-label');
+            const done  = document.getElementById('mat-file-done');
+            const doneName = document.getElementById('mat-file-done-name');
+
+            zone.classList.add('hidden');
+            prog.classList.remove('hidden');
+            done.classList.add('hidden');
+            label.textContent = `A enviar "${file.name}"...`;
+            bar.style.width = '10%';
+
+            try {
+                const fd = new FormData();
+                fd.append('file', file);
+
+                let pct = 10;
+                const tick = setInterval(() => { pct = Math.min(pct + 8, 85); bar.style.width = pct + '%'; }, 300);
+
+                const res  = await fetch('/api/creator/library/upload', {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}` },
+                    body: fd
+                });
+                clearInterval(tick);
+                bar.style.width = '100%';
+
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+
+                document.getElementById('mat-f-url').value = data.data.url;
+                const kb = data.data.size_kb;
+                document.getElementById('mat-f-size').value = kb;
+
+                setTimeout(() => {
+                    prog.classList.add('hidden');
+                    done.classList.remove('hidden');
+                    doneName.textContent = `${file.name} (${kb >= 1024 ? (kb/1024).toFixed(1)+'MB' : kb+'KB'})`;
+                }, 400);
+            } catch (e) {
+                prog.classList.add('hidden');
+                zone.classList.remove('hidden');
+                bar.style.width = '0%';
+                showToast('Erro no upload: ' + e.message, 'error');
+            }
+        }
+
+        function matClearFile() {
+            document.getElementById('mat-file-input').value = '';
+            document.getElementById('mat-f-url').value = '';
+            document.getElementById('mat-f-size').value = '';
+            document.getElementById('mat-file-done').classList.add('hidden');
+            document.getElementById('mat-drop-zone').classList.remove('hidden');
+            document.getElementById('mat-upload-bar').style.width = '0%';
+        }
+
+        function openMaterialModal(id) {
+            loadMatCurriculumSelects(); // garante selectors preenchidos
+            const m = id ? ALL_MATERIALS.find(x => x.id === id) : null;
+            document.getElementById('mat-edit-id').value      = m?.id || '';
+            document.getElementById('mat-f-title').value      = m?.title || '';
+            document.getElementById('mat-f-cat').value        = m?.category || 'handouts';
+            document.getElementById('mat-f-desc').value       = m?.description || '';
+            document.getElementById('mat-f-url').value        = m?.file_url || '';
+            document.getElementById('mat-f-pages').value      = m?.pages || '';
+            document.getElementById('mat-f-size').value       = m?.file_size_kb || '';
+            document.getElementById('mat-f-subject').value    = m?.subject_id || '';
+            document.getElementById('mat-f-grade').value      = m?.grade_id || '';
+            document.getElementById('mat-modal-title').textContent = m ? 'Editar Material' : 'Novo Material';
+            // Reset estado de upload
+            document.getElementById('mat-upload-progress').classList.add('hidden');
+            document.getElementById('mat-drop-zone').classList.remove('hidden');
+            document.getElementById('mat-upload-bar').style.width = '0%';
+            if (m?.file_url) {
+                document.getElementById('mat-file-done').classList.remove('hidden');
+                document.getElementById('mat-file-done-name').textContent = 'Ficheiro existente';
+            } else {
+                document.getElementById('mat-file-done').classList.add('hidden');
+            }
+            const rejInfo = document.getElementById('mat-rejection-info');
+            const rejReason = document.getElementById('mat-rejection-reason');
+            if (m?.status === 'rejected' && m.rejection_reason) {
+                rejInfo.classList.remove('hidden');
+                rejReason.textContent = m.rejection_reason;
+            } else {
+                rejInfo.classList.add('hidden');
+            }
+            document.getElementById('modal-material').classList.remove('hidden');
+        }
+
+        function closeMaterialModal() { document.getElementById('modal-material').classList.add('hidden'); }
+
+        async function saveMaterial(submitForReview) {
+            const id    = document.getElementById('mat-edit-id').value;
+            const title = document.getElementById('mat-f-title').value.trim();
+            if (!title) { alert('Título obrigatório'); return; }
+
+            const body = {
+                title,
+                category:    document.getElementById('mat-f-cat').value,
+                description: document.getElementById('mat-f-desc').value.trim() || null,
+                file_url:    document.getElementById('mat-f-url').value.trim() || null,
+                pages:       parseInt(document.getElementById('mat-f-pages').value) || null,
+                file_size_kb:parseInt(document.getElementById('mat-f-size').value) || null,
+                subject_id:  document.getElementById('mat-f-subject').value || null,
+                grade_id:    document.getElementById('mat-f-grade').value || null,
+            };
+
+            if (submitForReview && !body.file_url) {
+                alert('É necessário fornecer o URL do ficheiro antes de submeter para revisão.');
+                return;
+            }
+
+            const token = localStorage.getItem('accessToken') || '';
+            try {
+                // Criar ou actualizar rascunho
+                const res  = await fetch(id ? `/api/creator/library/${id}` : '/api/creator/library', {
+                    method:  id ? 'PUT' : 'POST',
+                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+
+                const savedId = data.data?.id || id;
+
+                // Submeter para revisão se pedido
+                if (submitForReview && savedId) {
+                    const sres  = await fetch(`/api/creator/library/${savedId}/submit`, {
+                        method: 'POST', headers: { Authorization: `Bearer ${token}` }
+                    });
+                    const sdata = await sres.json();
+                    if (!sdata.success) throw new Error(sdata.error);
+                    showToast('Material submetido para revisão!', 'success');
+                } else {
+                    showToast(id ? 'Material actualizado' : 'Rascunho criado', 'success');
+                }
+
+                closeMaterialModal();
+                loadMaterials();
+            } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+        }
+
+        async function submitMaterial(id) {
+            if (!confirm('Submeter este material para revisão?')) return;
+            const token = localStorage.getItem('accessToken') || '';
+            try {
+                const res  = await fetch(`/api/creator/library/${id}/submit`, {
+                    method: 'POST', headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+                showToast('Submetido para revisão!', 'success');
+                loadMaterials();
+            } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+        }
+
+        async function deleteMaterial(id) {
+            if (!confirm('Apagar este rascunho?')) return;
+            const token = localStorage.getItem('accessToken') || '';
+            try {
+                const res  = await fetch(`/api/creator/library/${id}`, {
+                    method: 'DELETE', headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+                showToast('Rascunho apagado', 'success');
+                loadMaterials();
+            } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+        }
+
+        // Função auxiliar escapeHtml (pode já existir via safe-dom.js)
+        function escapeHtml(s) {
+            return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        // Toast notifications
+        if (typeof showToast === 'undefined') {
+            window.showToast = function(msg, type='info') {
+                const colors = { success:'#16a34a', error:'#dc2626', info:'#7c3aed', warning:'#d97706' };
+                const t = document.createElement('div');
+                t.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:9999;background:${colors[type]||colors.info};color:#fff;padding:12px 20px;border-radius:12px;font-size:.85rem;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.18);transition:opacity .3s;`;
+                t.textContent = msg;
+                document.body.appendChild(t);
+                setTimeout(() => { t.style.opacity='0'; setTimeout(() => t.remove(), 300); }, 3000);
+            };
+        }
     </script>
 </body>
 </html>
