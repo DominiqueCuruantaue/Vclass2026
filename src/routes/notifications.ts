@@ -6,6 +6,7 @@ import { authMiddleware } from '../middleware/auth'
 import { getSupabase } from '../config/supabase'
 import { z } from 'zod'
 import type { ApiResponse } from '../types'
+import { isLessonVideoReady } from '../utils/bunny'
 
 const notifications = new Hono<{ Bindings: CloudflareBindings }>()
 notifications.use('*', authMiddleware)
@@ -136,6 +137,34 @@ async function generateRealNotifications(supabase: any, userId: string) {
         }
       }
     }
+
+    // 3) Sessões online (Google Meet) marcadas para o aluno
+    const { data: sessionRows } = await supabase
+      .from('live_session_recipients')
+      .select('id, read_at, created_at, session:live_sessions(id, title, scheduled_at, status, creator:users(full_name))')
+      .eq('student_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(5)
+
+    if (sessionRows) {
+      for (const r of sessionRows as any[]) {
+        const s = r.session
+        if (!s || s.status !== 'scheduled') continue
+        const ageHours = (now.getTime() - new Date(r.created_at).getTime()) / 3600000
+        if (ageHours < 168) {
+          const when = new Date(s.scheduled_at).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+          notifs.push({
+            id: `session-${s.id}`,
+            type: 'session',
+            title: '📅 Sessão Online Agendada',
+            message: `${s.creator?.full_name || 'O professor'} marcou "${s.title}" para ${when} via Google Meet.`,
+            read: !!r.read_at,
+            created_at: r.created_at,
+            action_url: '/dashboard.html#sessions'
+          })
+        }
+      }
+    }
   } catch (e) {
     console.error('Error generating real notifications:', e)
   }
@@ -147,6 +176,49 @@ async function generateRealNotifications(supabase: any, userId: string) {
   }
 
   return notifs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+}
+
+// ── Notificações para o admin: lições na fila de aprovação ────────────────────
+// Cada professor que clica "Publicar" só envia a lição para 'pending_review';
+// o admin precisa de ser avisado para rever e aprovar (ver src/routes/creator.ts).
+async function generateAdminNotifications(supabase: any, env?: any) {
+  try {
+    const { data: pendingRaw } = await supabase
+      .from('lessons')
+      .select('id, title, updated_at, created_by, video_id, video_url')
+      .eq('status', 'pending_review')
+      .order('updated_at', { ascending: false })
+      .limit(20)
+
+    if (!pendingRaw || pendingRaw.length === 0) return []
+
+    // Só notifica depois do vídeo estar mesmo pronto no Bunny — evita o admin ser
+    // avisado (e tentado a aprovar) uma lição cujo vídeo ainda está a processar.
+    const readyFlags = await Promise.all(pendingRaw.map((l: any) => isLessonVideoReady(env, l)))
+    const pending = pendingRaw.filter((_: any, i: number) => readyFlags[i])
+    if (pending.length === 0) return []
+
+    // Nomes dos professores (consulta separada — evita depender de embeds/FK hints)
+    const creatorIds = [...new Set(pending.map((l: any) => l.created_by).filter(Boolean))]
+    const namesById: Record<string, string> = {}
+    if (creatorIds.length > 0) {
+      const { data: creators } = await supabase.from('users').select('id, full_name').in('id', creatorIds)
+      ;(creators || []).forEach((u: any) => { namesById[u.id] = u.full_name })
+    }
+
+    return pending.map((l: any) => ({
+      id: `lesson-review-${l.id}`,
+      type: 'review',
+      title: '📚 Lição aguarda aprovação',
+      message: `"${l.title}" foi enviada por ${namesById[l.created_by] || 'um professor'} e aguarda a sua revisão.`,
+      read: false,
+      created_at: l.updated_at,
+      action_url: `/admin-dashboard.html?tab=content&status=pending_review&lesson=${l.id}`
+    }))
+  } catch (e) {
+    console.error('Error generating admin notifications:', e)
+    return []
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -170,7 +242,9 @@ notifications.get('/', async (c) => {
     const supabase = getSupabase(c.env)
     if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
 
-    let data = await generateRealNotifications(supabase, user.id)
+    let data = user.role === 'admin'
+      ? await generateAdminNotifications(supabase, c.env)
+      : await generateRealNotifications(supabase, user.id)
     if (unreadOnly) data = data.filter((n: any) => !n.read)
 
     return c.json<ApiResponse>({ success: true, data })
@@ -195,7 +269,9 @@ notifications.get('/unread-count', async (c) => {
     const supabase = getSupabase(c.env)
     if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
 
-    const data = await generateRealNotifications(supabase, user.id)
+    const data = user.role === 'admin'
+      ? await generateAdminNotifications(supabase, c.env)
+      : await generateRealNotifications(supabase, user.id)
     const count = data.filter((n: any) => !n.read).length
     return c.json<ApiResponse>({ success: true, data: { count } })
   } catch (e: any) {
@@ -207,8 +283,29 @@ notifications.get('/unread-count', async (c) => {
 // PATCH /api/notifications/:id/read — marcar como lida
 // ═══════════════════════════════════════════════════════════════════════════════
 notifications.patch('/:id/read', async (c) => {
-  // Em demo mode, o frontend gere estado no localStorage
-  return c.json<ApiResponse>({ success: true, data: { id: c.req.param('id'), read: true } })
+  const id = c.req.param('id')
+
+  // Notificações de sessão têm estado real na BD (live_session_recipients) —
+  // sincroniza para que a secção "Sessões" do dashboard reflita a leitura.
+  if (id.startsWith('session-') && isDatabaseConfigured(c.env)) {
+    const sessionId = id.slice('session-'.length)
+    const supabase = getSupabase(c.env)
+    if (supabase) {
+      try {
+        const user = c.get('user')
+        await supabase
+          .from('live_session_recipients')
+          .update({ read_at: new Date().toISOString() })
+          .eq('session_id', sessionId)
+          .eq('student_id', user.id)
+      } catch (e) {
+        console.error('Error marking session notification as read:', e)
+      }
+    }
+  }
+
+  // Demais tipos: sintéticos — o frontend gere estado no localStorage
+  return c.json<ApiResponse>({ success: true, data: { id, read: true } })
 })
 
 // ═══════════════════════════════════════════════════════════════════════════════

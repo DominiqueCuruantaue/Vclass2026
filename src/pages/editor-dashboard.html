@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Painel do Editor — VClass</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
   <style>
     .sidebar { width: 240px; min-height: 100vh; }
@@ -16,7 +17,8 @@
     .stat-card:hover { transform: translateY(-2px); }
     .diff-add { background:#d1fae5; }
     .diff-rem { background:#fee2e2; }
-    .tab-btn.active { border-bottom: 3px solid #7c3aed; color:#7c3aed; font-weight:700; }
+    .tab-btn { border-bottom: 3px solid transparent; transition: all .15s; }
+    .tab-btn.active { border-bottom-color: #7c3aed; color:#7c3aed; }
     #overlay { background:rgba(0,0,0,.5); }
   </style>
   <script src="/static/safe-dom.js"></script>
@@ -136,12 +138,6 @@
   <section id="tab-content-queue" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
     <div class="flex items-center justify-between mb-4">
       <div class="flex gap-2">
-        <select id="filter-priority" onchange="applyFilters()" class="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-300">
-          <option value="all">Todas prioridades</option>
-          <option value="high">Alta prioridade</option>
-          <option value="medium">Média prioridade</option>
-          <option value="low">Baixa prioridade</option>
-        </select>
         <select id="filter-subject" onchange="applyFilters()" class="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-300">
           <option value="all">Todas disciplinas</option>
           <option value="Matemática">Matemática</option>
@@ -156,6 +152,7 @@
           <option value="Angola">Angola</option>
           <option value="Portugal">Portugal</option>
           <option value="Brasil">Brasil</option>
+          <option value="Cabo Verde">Cabo Verde</option>
         </select>
       </div>
       <span class="text-sm text-gray-500"><span id="queue-count">0</span> lições na fila</span>
@@ -186,11 +183,7 @@
       </div>
       <div class="bg-gray-50 rounded-2xl p-5 col-span-2">
         <h3 class="font-semibold text-gray-800 mb-4"><i class="fas fa-clock mr-2 text-green-500"></i>Tempo Médio de Revisão</h3>
-        <div class="grid grid-cols-3 gap-4 text-center">
-          <div><div class="text-3xl font-bold text-green-600">1.8h</div><div class="text-sm text-gray-500">Revisão rápida</div></div>
-          <div><div class="text-3xl font-bold text-blue-600">4.2h</div><div class="text-sm text-gray-500">Revisão completa</div></div>
-          <div><div class="text-3xl font-bold text-purple-600">12h</div><div class="text-sm text-gray-500">SLA máximo</div></div>
-        </div>
+        <p class="text-sm text-gray-400 text-center py-4">Ainda sem dados suficientes — este cálculo precisa de histórico de revisões, que ainda não é registado.</p>
       </div>
     </div>
   </section>
@@ -272,39 +265,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 })
 
 // ── Data ─────────────────────────────────────────────────────────────────────
-let allLessons = []
+let allLessons = []       // fila pendente (dados reais de /api/editor/queue)
+let approvedLessons = []
+let rejectedLessons = []
+let editorStats = null
 
-const MOCK_QUEUE = [
-  { id:'les-p01', title:'Derivadas — Regra da Cadeia', subject:'Matemática', chapter:'Cálculo Diferencial', grade:'12ª Classe', country:'Moçambique', country_flag:'🇲🇿', creator:'Prof. Carlos Machava', duration_min:18, exercises_count:5, difficulty:'hard', status:'pending_review', submitted_at: new Date(Date.now()-3600000).toISOString(), priority:'high', description:'Introdução à regra da cadeia para derivadas de funções compostas.', video_url:'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' },
-  { id:'les-p02', title:'Tabela Periódica — Metais de Transição', subject:'Química', chapter:'Química Inorgânica', grade:'11ª Classe', country:'Angola', country_flag:'🇦🇴', creator:'Beatriz Nhamposse', duration_min:14, exercises_count:4, difficulty:'medium', status:'pending_review', submitted_at: new Date(Date.now()-7200000).toISOString(), priority:'medium', description:'Propriedades dos metais de transição e aplicações industriais.', video_url:'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' },
-  { id:'les-p03', title:'Leis de Mendel — Genética', subject:'Biologia', chapter:'Hereditariedade', grade:'11ª Classe', country:'Moçambique', country_flag:'🇲🇿', creator:'Prof. Carlos Machava', duration_min:22, exercises_count:6, difficulty:'medium', status:'pending_review', submitted_at: new Date(Date.now()-14400000).toISOString(), priority:'high', description:'Primeira e segunda leis de Mendel com problemas resolvidos.', video_url:'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' },
-  { id:'les-p04', title:'Análise Sintáctica — Sujeito e Predicado', subject:'Português', chapter:'Gramática', grade:'10ª Classe', country:'Angola', country_flag:'🇦🇴', creator:'Beatriz Nhamposse', duration_min:16, exercises_count:8, difficulty:'easy', status:'pending_review', submitted_at: new Date(Date.now()-21600000).toISOString(), priority:'low', description:'Identificação e análise de sujeito e predicado em frases complexas.', video_url:'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' },
-  { id:'les-p05', title:'Óptica Geométrica — Reflexão', subject:'Física', chapter:'Óptica', grade:'10ª Classe', country:'Portugal', country_flag:'🇵🇹', creator:'Prof. Carlos Machava', duration_min:19, exercises_count:5, difficulty:'medium', status:'pending_review', submitted_at: new Date(Date.now()-28800000).toISOString(), priority:'medium', description:'Leis da reflexão e espelhos planos.', video_url:'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' },
-  { id:'les-a01', title:'Cinemática — MRU', subject:'Física', chapter:'Cinemática', grade:'10ª Classe', country:'Moçambique', country_flag:'🇲🇿', creator:'Prof. Carlos Machava', duration_min:20, exercises_count:6, difficulty:'easy', status:'approved', submitted_at: new Date(Date.now()-86400000*3).toISOString(), priority:'medium', description:'Movimento rectilíneo uniforme — conceitos e exercícios.' },
-  { id:'les-a02', title:'Funções Quadráticas', subject:'Matemática', chapter:'Funções', grade:'11ª Classe', country:'Moçambique', country_flag:'🇲🇿', creator:'Beatriz Nhamposse', duration_min:25, exercises_count:7, difficulty:'hard', status:'approved', submitted_at: new Date(Date.now()-86400000*5).toISOString(), priority:'high', description:'Estudo completo das funções do 2º grau.' },
-  { id:'les-r01', title:'Energias Renováveis', subject:'Física', chapter:'Energia', grade:'12ª Classe', country:'Angola', country_flag:'🇦🇴', creator:'Beatriz Nhamposse', duration_min:12, exercises_count:2, difficulty:'easy', status:'rejected', submitted_at: new Date(Date.now()-86400000*2).toISOString(), priority:'low', description:'Conteúdo incompleto — rejeitado.', rejection_reason:'Exercícios insuficientes e vídeo com qualidade baixa (360p).' },
-]
-
-const STATS_COUNTRY = [
-  { name:'🇲🇿 Moçambique', pending:3, approved:180, rejected:12 },
-  { name:'🇦🇴 Angola',     pending:2, approved:98,  rejected:10 },
-  { name:'🇵🇹 Portugal',   pending:1, approved:24,  rejected:4 },
-  { name:'🇧🇷 Brasil',     pending:1, approved:10,  rejected:2 },
-]
-const STATS_SUBJECT = [
-  { name:'Matemática', count:98,  avg_time:'3.2h' },
-  { name:'Física',     count:84,  avg_time:'2.8h' },
-  { name:'Química',    count:56,  avg_time:'4.1h' },
-  { name:'Biologia',   count:42,  avg_time:'3.7h' },
-  { name:'Português',  count:32,  avg_time:'1.9h' },
-]
+async function authFetch(url, options = {}) {
+  const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || ''
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}), 'Authorization': `Bearer ${token}` }
+  const res = await fetch(url, { ...options, headers })
+  return res.json()
+}
 
 async function loadEditorData() {
-  allLessons = MOCK_QUEUE
-  const pending = allLessons.filter(l => l.status === 'pending_review').length
+  const statsJson = await authFetch('/api/editor/stats')
+  editorStats = statsJson.success ? statsJson.data : null
+  const pending = editorStats?.pending || 0
   document.getElementById('kpi-pending').textContent = pending
   document.getElementById('queue-badge').textContent = pending
   document.getElementById('queue-count').textContent = pending
+  document.getElementById('kpi-approved').textContent = editorStats?.approved_total ?? 0
+  document.getElementById('kpi-rejected').textContent = editorStats?.rejected_total ?? 0
+  document.getElementById('kpi-rate').textContent = (editorStats?.approval_rate ?? 0) + '%'
   renderStatsCountry()
   renderStatsSubject()
 }
@@ -325,16 +307,6 @@ function showTab(name) {
 }
 
 // ── Render helpers ────────────────────────────────────────────────────────────
-function priorityBadge(p) {
-  const map = { high:'bg-red-100 text-red-700', medium:'bg-yellow-100 text-yellow-700', low:'bg-gray-100 text-gray-600' }
-  const label = { high:'Alta', medium:'Média', low:'Baixa' }
-  return `<span class="text-xs px-2 py-0.5 rounded-full font-medium ${map[p]}">${label[p]}</span>`
-}
-function difficultyBadge(d) {
-  const map = { easy:'bg-green-100 text-green-700', medium:'bg-blue-100 text-blue-700', hard:'bg-purple-100 text-purple-700' }
-  const label = { easy:'Fácil', medium:'Médio', hard:'Difícil' }
-  return `<span class="text-xs px-2 py-0.5 rounded-full ${map[d]}">${label[d]}</span>`
-}
 function timeAgo(iso) {
   const diff = Date.now() - new Date(iso).getTime()
   const h = Math.floor(diff/3600000)
@@ -345,20 +317,19 @@ function timeAgo(iso) {
 }
 
 function applyFilters() {
-  const pri  = document.getElementById('filter-priority').value
   const subj = document.getElementById('filter-subject').value
   const cou  = document.getElementById('filter-country').value
-  let items  = allLessons.filter(l => l.status === 'pending_review')
-  if (pri  !== 'all') items = items.filter(l => l.priority === pri)
-  if (subj !== 'all') items = items.filter(l => l.subject  === subj)
-  if (cou  !== 'all') items = items.filter(l => l.country  === cou)
+  let items  = allLessons
+  if (subj !== 'all') items = items.filter(l => l.subject === subj)
+  if (cou  !== 'all') items = items.filter(l => l.country === cou)
   renderQueueItems(items)
 }
 
-function renderQueue() {
-  const items = allLessons.filter(l => l.status === 'pending_review')
-  renderQueueItems(items)
-  document.getElementById('queue-count').textContent = items.length
+async function renderQueue() {
+  const json = await authFetch('/api/editor/queue')
+  allLessons = json.success ? (json.data.lessons || []) : []
+  renderQueueItems(allLessons)
+  document.getElementById('queue-count').textContent = allLessons.length
 }
 
 function renderQueueItems(items) {
@@ -369,12 +340,11 @@ function renderQueueItems(items) {
       <div class="flex items-start justify-between gap-4">
         <div class="flex-1">
           <div class="flex items-center gap-2 mb-1">
-            ${priorityBadge(l.priority)} ${difficultyBadge(l.difficulty)}
-            <span class="text-xs text-gray-400">${l.country_flag} ${l.country}</span>
+            <span class="text-xs text-gray-400">${l.country_flag||''} ${l.country||'—'}</span>
           </div>
           <h3 class="font-semibold text-gray-900 text-base">${l.title}</h3>
-          <p class="text-sm text-gray-500 mt-1">${l.subject} · ${l.chapter} · ${l.grade}</p>
-          <p class="text-xs text-gray-400 mt-1">Por <strong>${l.creator}</strong> · ${timeAgo(l.submitted_at)}</p>
+          <p class="text-sm text-gray-500 mt-1">${l.subject||'—'} · ${l.chapter||'—'} · ${l.grade||'—'}</p>
+          <p class="text-xs text-gray-400 mt-1">Por <strong>${l.creator||'—'}</strong> · ${timeAgo(l.submitted_at)}</p>
         </div>
         <div class="text-right flex-shrink-0">
           <div class="text-sm text-gray-600"><i class="fas fa-play-circle mr-1 text-purple-400"></i>${l.duration_min} min</div>
@@ -385,52 +355,64 @@ function renderQueueItems(items) {
     </div>`).join('')
 }
 
-function renderApproved() {
-  const items = allLessons.filter(l => l.status === 'approved')
+async function renderApproved() {
+  const json = await authFetch('/api/editor/approved')
+  approvedLessons = json.success ? (json.data.lessons || []) : []
   const el = document.getElementById('approved-list')
-  el.innerHTML = items.map(l => `
+  if (!approvedLessons.length) { el.innerHTML = '<div class="text-center py-12 text-gray-400"><i class="fas fa-check-circle text-4xl mb-3"></i><p>Nenhuma lição aprovada ainda</p></div>'; return }
+  el.innerHTML = approvedLessons.map(l => `
     <div class="flex items-center gap-4 border border-green-100 bg-green-50/50 rounded-xl p-4">
       <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center"><i class="fas fa-check text-green-600"></i></div>
       <div class="flex-1">
         <div class="font-semibold text-gray-900 text-sm">${l.title}</div>
-        <div class="text-xs text-gray-500">${l.country_flag} ${l.country} · ${l.subject} · ${l.grade} · ${timeAgo(l.submitted_at)}</div>
+        <div class="text-xs text-gray-500">${l.country_flag||''} ${l.country||'—'} · ${l.subject||'—'} · ${l.grade||'—'} · ${timeAgo(l.submitted_at)}</div>
       </div>
       <span class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-medium">Aprovado</span>
     </div>`).join('')
 }
 
-function renderRejected() {
-  const items = allLessons.filter(l => l.status === 'rejected')
+async function renderRejected() {
+  const json = await authFetch('/api/editor/rejected')
+  rejectedLessons = json.success ? (json.data.lessons || []) : []
   const el = document.getElementById('rejected-list')
-  el.innerHTML = items.map(l => `
+  if (!rejectedLessons.length) { el.innerHTML = '<div class="text-center py-12 text-gray-400"><i class="fas fa-times-circle text-4xl mb-3"></i><p>Nenhuma lição rejeitada</p></div>'; return }
+  el.innerHTML = rejectedLessons.map(l => `
     <div class="flex items-center gap-4 border border-red-100 bg-red-50/50 rounded-xl p-4">
       <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center"><i class="fas fa-times text-red-600"></i></div>
       <div class="flex-1">
         <div class="font-semibold text-gray-900 text-sm">${l.title}</div>
-        <div class="text-xs text-gray-500">${l.country_flag} ${l.country} · ${l.subject} · ${l.grade}</div>
-        ${l.rejection_reason ? `<div class="text-xs text-red-600 mt-1"><i class="fas fa-info-circle mr-1"></i>${l.rejection_reason}</div>` : ''}
+        <div class="text-xs text-gray-500">${l.country_flag||''} ${l.country||'—'} · ${l.subject||'—'} · ${l.grade||'—'}</div>
+        ${l.review_feedback ? `<div class="text-xs text-red-600 mt-1"><i class="fas fa-info-circle mr-1"></i>${l.review_feedback}</div>` : ''}
       </div>
       <span class="text-xs bg-red-100 text-red-700 px-3 py-1 rounded-full font-medium">Rejeitado</span>
     </div>`).join('')
 }
 
 function renderStatsCountry() {
-  document.getElementById('stats-country').innerHTML = STATS_COUNTRY.map(c => `
+  const list = editorStats?.by_country || []
+  const el = document.getElementById('stats-country')
+  if (!list.length) { el.innerHTML = '<p class="text-sm text-gray-400">Sem lições pendentes de momento</p>'; return }
+  const max = Math.max(...list.map(c => c.count), 1)
+  el.innerHTML = list.map(c => `
     <div class="flex items-center gap-3">
-      <span class="text-sm text-gray-700 w-32">${c.name}</span>
+      <span class="text-sm text-gray-700 w-32">${c.flag} ${c.country}</span>
       <div class="flex-1 bg-gray-200 rounded-full h-2">
-        <div class="bg-purple-500 h-2 rounded-full" style="width:${Math.min(100, c.approved/3.5)}%"></div>
+        <div class="bg-purple-500 h-2 rounded-full" style="width:${Math.round((c.count/max)*100)}%"></div>
       </div>
-      <span class="text-xs text-gray-500 w-8">${c.approved}</span>
+      <span class="text-xs text-gray-500 w-8">${c.count}</span>
     </div>`).join('')
 }
 
 function renderStatsSubject() {
-  document.getElementById('stats-subject').innerHTML = STATS_SUBJECT.map(s => `
+  const list = editorStats?.by_subject || []
+  const el = document.getElementById('stats-subject')
+  if (!list.length) { el.innerHTML = '<p class="text-sm text-gray-400">Sem lições pendentes de momento</p>'; return }
+  const max = Math.max(...list.map(s => s.count), 1)
+  el.innerHTML = list.map(s => `
     <div class="flex items-center gap-3">
-      <span class="text-sm text-gray-700 w-24">${s.name}</span>
+      <span class="text-sm text-gray-700 w-24">${s.subject}</span>
       <div class="flex-1 bg-gray-200 rounded-full h-2">
-        <div class="bg-blue-500 h-2 rounded-full" style="width:${Math.min(100, s.count)}%"></div>
+        <div class="bg-blue-500 h-2 rounded-full" style="width:${Math.round((s.count/max)*100)}%"></div>
       </div>
       <span class="text-xs text-gray-500 w-8">${s.count}</span>
     </div>`).join('')
@@ -443,19 +425,21 @@ function openModal(id) {
   document.getElementById('modal-title').textContent = `Revisão: ${lesson.title}`
   document.getElementById('modal-body').innerHTML = `
     <div class="space-y-5">
+      <div id="review-video-wrap" class="bg-black rounded-xl overflow-hidden flex items-center justify-center" style="min-height:220px">
+        <div class="text-center py-8 text-gray-400 text-sm"><i class="fas fa-spinner fa-spin text-2xl mb-2"></i><p>A carregar vídeo…</p></div>
+      </div>
       <div class="grid grid-cols-2 gap-4 text-sm">
-        <div><span class="text-gray-500">Disciplina:</span> <strong>${lesson.subject}</strong></div>
-        <div><span class="text-gray-500">Capítulo:</span> <strong>${lesson.chapter}</strong></div>
-        <div><span class="text-gray-500">Classe:</span> <strong>${lesson.grade}</strong></div>
-        <div><span class="text-gray-500">País:</span> <strong>${lesson.country_flag} ${lesson.country}</strong></div>
-        <div><span class="text-gray-500">Criador:</span> <strong>${lesson.creator}</strong></div>
+        <div><span class="text-gray-500">Disciplina:</span> <strong>${lesson.subject||'—'}</strong></div>
+        <div><span class="text-gray-500">Capítulo:</span> <strong>${lesson.chapter||'—'}</strong></div>
+        <div><span class="text-gray-500">Classe:</span> <strong>${lesson.grade||'—'}</strong></div>
+        <div><span class="text-gray-500">País:</span> <strong>${lesson.country_flag||''} ${lesson.country||'—'}</strong></div>
+        <div><span class="text-gray-500">Criador:</span> <strong>${lesson.creator||'—'}</strong></div>
         <div><span class="text-gray-500">Duração:</span> <strong>${lesson.duration_min} min</strong></div>
         <div><span class="text-gray-500">Exercícios:</span> <strong>${lesson.exercises_count}</strong></div>
-        <div><span class="text-gray-500">Dificuldade:</span> ${difficultyBadge(lesson.difficulty)}</div>
       </div>
       <div class="bg-gray-50 rounded-xl p-4">
         <div class="text-sm font-medium text-gray-700 mb-1">Descrição</div>
-        <p class="text-sm text-gray-600">${lesson.description}</p>
+        <p class="text-sm text-gray-600">${lesson.description || 'Sem descrição.'}</p>
       </div>
       <div class="bg-gray-50 rounded-xl p-4">
         <div class="text-sm font-medium text-gray-700 mb-2">Checklist de Revisão</div>
@@ -479,22 +463,74 @@ function openModal(id) {
     <button onclick="submitReview('${id}','approved')" class="px-4 py-2 bg-green-500 text-white rounded-xl text-sm hover:bg-green-600 transition"><i class="fas fa-check mr-1"></i>Aprovar</button>`
   document.getElementById('overlay').classList.remove('hidden')
   document.getElementById('overlay').classList.add('flex')
+  loadReviewVideo(lesson)
+}
+
+let reviewHls = null
+
+async function loadReviewVideo(lesson) {
+  const wrap = document.getElementById('review-video-wrap')
+  if (!lesson.video_url && !lesson.video_id) {
+    wrap.innerHTML = '<div class="text-center py-8 text-gray-400 text-sm"><i class="fas fa-video-slash text-2xl mb-2"></i><p>Sem vídeo associado a esta lição.</p></div>'
+    return
+  }
+  wrap.innerHTML = '<video id="review-video" controls class="w-full" style="max-height:400px"></video>'
+  const videoEl = document.getElementById('review-video')
+  try {
+    let src = lesson.video_url
+    if (!src && lesson.video_id) {
+      const tokenJson = await authFetch('/api/video/token', {
+        method: 'POST',
+        body: JSON.stringify({ lessonId: lesson.id, videoId: lesson.video_id })
+      })
+      if (!tokenJson.success) throw new Error(tokenJson.error || 'Falha ao gerar token de vídeo')
+      const vt = tokenJson.data.token
+      const streamJson = await authFetch(`/api/video/stream/${encodeURIComponent(lesson.id)}?vt=${encodeURIComponent(vt)}`)
+      if (!streamJson.success) throw new Error(streamJson.error || 'Falha ao obter stream do vídeo')
+      src = streamJson.data.streamUrl
+    }
+    if (src.includes('.m3u8')) {
+      if (window.Hls && Hls.isSupported()) {
+        reviewHls = new Hls()
+        reviewHls.loadSource(src)
+        reviewHls.attachMedia(videoEl)
+      } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+        videoEl.src = src
+      } else {
+        throw new Error('Este navegador não suporta reprodução HLS.')
+      }
+    } else {
+      videoEl.src = src
+    }
+  } catch (err) {
+    wrap.innerHTML = `<div class="text-center py-8 text-red-400 text-sm"><i class="fas fa-exclamation-triangle text-2xl mb-2"></i><p>${err.message || 'Erro ao carregar vídeo'}</p></div>`
+  }
 }
 
 function closeModal() {
   document.getElementById('overlay').classList.add('hidden')
   document.getElementById('overlay').classList.remove('flex')
+  if (reviewHls) { reviewHls.destroy(); reviewHls = null }
 }
 
-function submitReview(id, action) {
-  const feedback = document.getElementById('modal-feedback')?.value || ''
-  const lesson = allLessons.find(l => l.id === id)
-  if (lesson) lesson.status = action
+async function submitReview(id, action) {
+  const feedback = document.getElementById('modal-feedback')?.value.trim() || ''
+  if ((action === 'rejected' || action === 'revision') && !feedback) {
+    showToast('⚠️ Escreva um feedback antes de rejeitar ou pedir alterações.')
+    return
+  }
+  const endpoint = action === 'approved' ? 'approve' : action === 'rejected' ? 'reject' : 'request-changes'
+  const json = await authFetch(`/api/editor/queue/${id}/${endpoint}`, {
+    method: 'POST',
+    body: JSON.stringify({ feedback })
+  })
+  if (!json.success) { showToast('❌ ' + (json.error || 'Erro ao processar')); return }
+
   closeModal()
-  const msgs = { approved:'✅ Lição aprovada com sucesso!', rejected:'❌ Lição rejeitada.', revision:'📝 Revisão solicitada ao criador.' }
+  const msgs = { approved:'✅ Lição aprovada e publicada!', rejected:'❌ Lição rejeitada.', revision:'📝 Revisão solicitada ao criador.' }
   showToast(msgs[action] || 'Actualizado')
+  await loadEditorData()
   renderQueue()
-  document.getElementById('kpi-pending').textContent = allLessons.filter(l => l.status === 'pending_review').length
 }
 
 function showToast(msg) {

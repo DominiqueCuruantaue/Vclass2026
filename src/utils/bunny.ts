@@ -126,6 +126,31 @@ export async function getBunnyVideoStatus(
 }
 
 /**
+ * Confirma se o vídeo de uma lição já está pronto para streaming — usado para
+ * não notificar/deixar o admin aprovar uma lição cujo vídeo ainda está a
+ * processar no Bunny (ver src/routes/admin.ts e src/routes/notifications.ts).
+ */
+export async function isLessonVideoReady(
+  env: { BUNNY_API_KEY?: string; BUNNY_LIBRARY_ID?: string } | undefined,
+  lesson: { video_id?: string | null; video_url?: string | null }
+): Promise<boolean> {
+  // Vídeo directo (MP4/HLS, sem Bunny) — sempre considerado pronto.
+  if (lesson.video_url) return true
+  if (!lesson.video_id) return false
+
+  const apiKey    = env?.BUNNY_API_KEY
+  const libraryId = env?.BUNNY_LIBRARY_ID
+  if (!apiKey || !libraryId) return true // Bunny não configurado (demo/dev) — não bloquear
+
+  try {
+    const status = await getBunnyVideoStatus(apiKey, libraryId, lesson.video_id)
+    return status?.status === 'ready'
+  } catch {
+    return false
+  }
+}
+
+/**
  * SHA-256 base64-URL-safe (sem padding) — usado pelo CDN Token Authentication.
  */
 async function sha256Base64Url(input: string): Promise<string> {

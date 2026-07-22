@@ -20,12 +20,17 @@ import notificationsRoutes from './routes/notifications'
 import newsRoutes from './routes/news'
 import libraryRoutes from './routes/library'
 import supportRoutes from './routes/support'
+import ticketsRoutes from './routes/tickets'
 import editorRoutes from './routes/editor'
 import countryRoutes from './routes/country'
 import financeRoutes from './routes/finance'
 import moderatorRoutes from './routes/moderator'
 import teacherVerificationRoutes from './routes/teacher-verification'
 import plansRoutes from './routes/plans'
+import favoritesRoutes from './routes/favorites'
+import bookmarksRoutes from './routes/bookmarks'
+import commentsRoutes from './routes/comments'
+import sessionsRoutes from './routes/sessions'
 import pagesRoutes from './routes/pages'
 
 const app = new Hono<{ Bindings: CloudflareBindings }>()
@@ -52,6 +57,7 @@ app.use('*', async (c, next) => {
       "img-src 'self' data: blob: https:",
       "media-src 'self' blob: https:",
       "connect-src 'self' https: wss:",
+      "worker-src 'self' blob: https://cdn.jsdelivr.net",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'"
@@ -101,12 +107,17 @@ app.route('/api/notifications', notificationsRoutes)
 app.route('/api/news', newsRoutes)
 app.route('/api/library', libraryRoutes)
 app.route('/api/support', supportRoutes)
+app.route('/api/tickets', ticketsRoutes)
 app.route('/api/editor', editorRoutes)
 app.route('/api/country', countryRoutes)
 app.route('/api/finance', financeRoutes)
 app.route('/api/moderator', moderatorRoutes)
 app.route('/api/teacher-verification', teacherVerificationRoutes)
 app.route('/api/plans', plansRoutes)
+app.route('/api/favorites', favoritesRoutes)
+app.route('/api/bookmarks', bookmarksRoutes)
+app.route('/api/comments', commentsRoutes)
+app.route('/api/sessions', sessionsRoutes)
 
 // Health check
 app.get('/api/health', (c) => {

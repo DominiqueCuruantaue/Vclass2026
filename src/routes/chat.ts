@@ -3,12 +3,20 @@
 // Fallback inteligente para base de conhecimento local quando sem chave API
 import { Hono } from 'hono'
 import type { CloudflareBindings } from '../types/bindings'
-import { authMiddleware } from '../middleware/auth'
+import { authMiddleware, rateLimitMiddleware } from '../middleware/auth'
+import { getSupabase } from '../config/supabase'
+import { getUserPlan } from '../utils/subscription'
+import { checkChatQuota } from '../utils/chatQuota'
 import { z } from 'zod'
 import type { ApiResponse } from '../types'
 
 const chat = new Hono<{ Bindings: CloudflareBindings }>()
 chat.use('*', authMiddleware)
+// Protege o custo por token da API da OpenAI contra abuso (20 msgs/min por IP)
+chat.use('/', rateLimitMiddleware(20, 60_000))
+
+// Chat com IA é exclusivo dos planos pagos — ver src/routes/plans.ts (/compare)
+const BASIC_DAILY_MSG_LIMIT = 30
 
 // ── Knowledge base local (fallback sem API key) ───────────────────────────────
 const LOCAL_KB = [
@@ -218,6 +226,31 @@ chat.post('/', async (c) => {
     }
 
     const { message, subject, history } = validation.data
+
+    // ── Restrição por plano (Free não tem acesso; Basic tem cota diária) ──────
+    const authUser = c.get('user') as any
+    const supabase = getSupabase(c.env)
+    const plan = await getUserPlan(supabase, authUser.id, authUser.role)
+
+    if (plan === 'free') {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'O Chat IA é exclusivo dos planos Basic e Premium.',
+        data: { upgrade_required: true }
+      }, 403)
+    }
+
+    if (plan === 'basic') {
+      const quota = await checkChatQuota(c.env, authUser.id, BASIC_DAILY_MSG_LIMIT)
+      if (!quota.allowed) {
+        return c.json<ApiResponse>({
+          success: false,
+          error: `Atingiu o limite diário de ${BASIC_DAILY_MSG_LIMIT} mensagens do plano Basic. Faça upgrade para Premium para conversas ilimitadas.`,
+          data: { upgrade_required: true, quota_exceeded: true }
+        }, 429)
+      }
+    }
+    // plan === 'premium', ou null (professor/admin/staff) → sem restrição
 
     // ── Verificar se há API key configurada ───────────────────────────────────
     const apiKey  = c.env?.OPENAI_API_KEY  || process.env.OPENAI_API_KEY  || ''

@@ -45,7 +45,7 @@
 <body class="bg-gray-50 min-h-screen">
 
     <!-- Navbar placeholder (filled by JS) -->
-    <div id="navbar-placeholder"></div>
+    <div id="navbar-placeholder" style="min-height:64px"></div>
 
     <!-- Main Content -->
     <main class="container mx-auto px-4 py-8 max-w-7xl">
@@ -119,13 +119,38 @@
         loadCountries();
 
         // ─── Load Countries ──────────────────────────────────────────────────────
+        // Estudantes que já indicaram país + classe no registo veem directamente
+        // o currículo deles (sem poder navegar para outros países/classes).
+        function getRestrictedProfile() {
+            const user = VClass.getCurrentUser();
+            if (!user || user.role !== 'student') return null;
+            if (!user.country_code || !user.grade_id) return null;
+            return { countryCode: user.country_code, gradeId: user.grade_id };
+        }
+
+        function renderRestrictedView(country, grade) {
+            nav.current = 'subjects';
+            nav.countryId = country.id;
+            nav.countryName = country.name;
+            nav.gradeId = grade.id;
+            nav.gradeName = grade.name;
+
+            setHeader(`${grade.name} — Disciplinas`, `Conteúdo do seu currículo em ${country.name}`);
+            updateBreadcrumb([
+                { label: country.name, icon: 'flag' },
+                { label: grade.name, icon: 'layer-group' }
+            ]);
+            document.getElementById('back-btn').classList.add('hidden');
+            document.getElementById('back-btn').classList.remove('flex');
+            document.getElementById('search-bar').classList.remove('hidden');
+
+            window._allSubjects = grade.subjects || [];
+            renderSubjects(window._allSubjects);
+        }
+
         async function loadCountries() {
             nav.current = 'countries';
             nav.history = [];
-            setHeader('Explorar Conteúdo', 'Selecione o país do sistema educacional');
-            updateBreadcrumb([]);
-            document.getElementById('back-btn').classList.add('hidden');
-            document.getElementById('back-btn').classList.remove('flex');
             document.getElementById('search-bar').classList.add('hidden');
             showSkeleton(3);
             try {
@@ -135,6 +160,22 @@
                     if (!json.success) throw new Error('API error');
                     _curriculum = json.data;
                 }
+
+                const restricted = getRestrictedProfile();
+                if (restricted) {
+                    const country = _curriculum.find(c => c.id === restricted.countryCode);
+                    let grade = null;
+                    country?.levels?.forEach(l => { const g = l.grades.find(g => g.id === restricted.gradeId); if (g) grade = g; });
+                    if (country && grade) {
+                        renderRestrictedView(country, grade);
+                        return;
+                    }
+                }
+
+                setHeader('Explorar Conteúdo', 'Selecione o país do sistema educacional');
+                updateBreadcrumb([]);
+                document.getElementById('back-btn').classList.add('hidden');
+                document.getElementById('back-btn').classList.remove('flex');
                 renderCountries(_curriculum);
             } catch(e) { showError('Erro ao carregar países: ' + e.message); }
         }

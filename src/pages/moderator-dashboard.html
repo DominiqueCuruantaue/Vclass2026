@@ -10,7 +10,8 @@
     .sidebar { width:240px; min-height:100vh; }
     .stat-card { transition:transform .15s; }
     .stat-card:hover { transform:translateY(-2px); }
-    .tab-btn.active { border-bottom:3px solid #be185d; color:#be185d; font-weight:700; }
+    .tab-btn { border-bottom:3px solid transparent; transition: all .15s; }
+    .tab-btn.active { border-bottom-color:#be185d; color:#be185d; }
     #overlay { background:rgba(0,0,0,.5); }
     .badge-pending  { background:#fef3c7; color:#92400e; }
     .badge-in_review{ background:#dbeafe; color:#1e3a8a; }

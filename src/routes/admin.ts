@@ -6,6 +6,9 @@ import { authMiddleware, requireAdmin } from '../middleware/auth'
 import { getSupabase } from '../config/supabase'
 import type { ApiResponse } from '../types'
 import { revokeAllUserTokens } from '../utils/refreshTokens'
+import { isLessonVideoReady } from '../utils/bunny'
+import { hashPassword, validatePassword } from '../utils/password'
+import { extractPageCount } from '../utils/documentMeta'
 
 const admin = new Hono<{ Bindings: CloudflareBindings }>()
 
@@ -17,6 +20,8 @@ function isDatabaseConfigured(env?: any): boolean {
   return !!(env?.SUPABASE_URL || process.env.SUPABASE_URL) &&
          !!(env?.SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY)
 }
+
+const VALID_ROLES = ['student', 'teacher', 'admin', 'support', 'editor', 'finance', 'moderator', 'country_manager']
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 function getMockAdminData() {
@@ -92,6 +97,129 @@ function getMockAdminData() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// Helpers partilhados — dados reais do dashboard (usados por /dashboard e /stats/overview)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Stats agregadas a partir de arrays já obtidos (sem tocar na BD) — mantém
+// /dashboard e /stats/overview sempre consistentes entre si.
+function buildStats(users: any[], lessons: any[], submissions: any[], countries: any[]) {
+  const today   = new Date(); today.setHours(0,0,0,0)
+  const weekAgo = new Date(Date.now() - 7*86400000)
+  const correctCount = submissions.filter((s: any) => s.is_correct).length
+
+  return {
+    total_users:          users.length,
+    active_users_today:   users.filter((u: any) => u.is_active && new Date(u.created_at) >= today).length,
+    new_users_week:       users.filter((u: any) => new Date(u.created_at) >= weekAgo).length,
+    total_students:       users.filter((u: any) => u.role === 'student').length,
+    total_teachers:       users.filter((u: any) => u.role === 'teacher').length,
+    total_admins:         users.filter((u: any) => u.role === 'admin').length,
+    total_lessons:        lessons.length,
+    published_lessons:    lessons.filter((l: any) => l.status === 'published').length,
+    draft_lessons:        lessons.filter((l: any) => l.status === 'draft').length,
+    pending_lessons:      lessons.filter((l: any) => l.status === 'pending_review').length,
+    total_views:          lessons.reduce((s: number, l: any) => s + (l.views_count || 0), 0),
+    views_today:          0, // sem histórico de vistas com data — só existe um contador total (views_count)
+    total_exercises_done: submissions.length,
+    avg_score:            submissions.length ? Math.round((correctCount / submissions.length) * 100) : 0,
+    total_countries:      countries.length,
+    active_countries:     countries.filter((c: any) => c.is_active).length,
+  }
+}
+
+// Lições + disciplina (via chapters→grade_subjects→subjects) + nome do professor.
+// Mesmo join já usado em GET /content — reaproveitado aqui para recent_lessons/top_lessons.
+async function fetchLessonsWithDetails(
+  supabase: any,
+  opts: { statusIn?: string[]; orderBy?: string; ascending?: boolean; limit?: number } = {}
+) {
+  let q = supabase.from('lessons').select(
+    'id, title, status, views_count, created_at, created_by, chapter:chapters(title, grade_subject:grade_subjects(subject:subjects(name)))'
+  )
+  if (opts.statusIn) q = q.in('status', opts.statusIn)
+  q = q.order(opts.orderBy || 'created_at', { ascending: opts.ascending ?? false })
+  if (opts.limit) q = q.limit(opts.limit)
+
+  const { data, error } = await q
+  if (error) { console.error('fetchLessonsWithDetails error:', error); return [] }
+  const rows = data || []
+
+  const teacherIds = [...new Set(rows.map((l: any) => l.created_by).filter(Boolean))]
+  const teacherNames: Record<string, string> = {}
+  if (teacherIds.length > 0) {
+    const { data: teachers } = await supabase.from('users').select('id, full_name').in('id', teacherIds)
+    ;(teachers || []).forEach((u: any) => { teacherNames[u.id] = u.full_name })
+  }
+
+  return rows.map((l: any) => ({
+    id:      l.id,
+    title:   l.title,
+    status:  l.status,
+    views:   l.views_count,
+    created: l.created_at,
+    subject: l.chapter?.grade_subject?.subject?.name || null,
+    teacher: teacherNames[l.created_by] || null
+  }))
+}
+
+// Score médio real por lição (% de respostas correctas nas submissões dos seus exercícios).
+// Devolve {} para lições sem nenhuma submissão — o chamador trata como "sem dados".
+async function fetchLessonScores(supabase: any, lessonIds: string[]): Promise<Record<string, number>> {
+  if (lessonIds.length === 0) return {}
+  const { data: exercises } = await supabase.from('exercises').select('id, lesson_id').in('lesson_id', lessonIds)
+  const exerciseRows = exercises || []
+  const exerciseIds = exerciseRows.map((e: any) => e.id)
+  if (exerciseIds.length === 0) return {}
+
+  const { data: subs } = await supabase.from('exercise_submissions').select('exercise_id, is_correct').in('exercise_id', exerciseIds)
+  const exerciseToLesson: Record<string, string> = {}
+  exerciseRows.forEach((e: any) => { exerciseToLesson[e.id] = e.lesson_id })
+
+  const tally: Record<string, { correct: number; total: number }> = {}
+  ;(subs || []).forEach((s: any) => {
+    const lid = exerciseToLesson[s.exercise_id]
+    if (!lid) return
+    tally[lid] = tally[lid] || { correct: 0, total: 0 }
+    tally[lid].total++
+    if (s.is_correct) tally[lid].correct++
+  })
+
+  const scores: Record<string, number> = {}
+  Object.entries(tally).forEach(([lid, t]) => { scores[lid] = Math.round((t.correct / t.total) * 100) })
+  return scores
+}
+
+// Contagem de datas ISO agrupadas nos últimos N dias (labels = dia da semana abreviado)
+function bucketByDay(dates: string[], days: number) {
+  const now = new Date()
+  const labels: string[] = []
+  const counts: number[] = []
+  for (let i = days - 1; i >= 0; i--) {
+    const day = new Date(now); day.setDate(now.getDate() - i); day.setHours(0, 0, 0, 0)
+    const next = new Date(day); next.setDate(day.getDate() + 1)
+    labels.push(day.toLocaleDateString('pt-PT', { weekday: 'short' }))
+    counts.push(dates.filter(d => { const t = new Date(d).getTime(); return t >= day.getTime() && t < next.getTime() }).length)
+  }
+  return { labels, counts }
+}
+
+// Contagem de datas ISO agrupadas nas últimas N semanas (labels = "Sem 1".."Sem N")
+function bucketByWeek(dates: string[], weeks: number) {
+  const now = new Date()
+  const labels: string[] = []
+  const counts: number[] = []
+  for (let i = weeks - 1; i >= 0; i--) {
+    const start = new Date(now); start.setDate(now.getDate() - (i + 1) * 7); start.setHours(0, 0, 0, 0)
+    const end   = new Date(now); end.setDate(now.getDate() - i * 7); end.setHours(0, 0, 0, 0)
+    labels.push(`Sem ${weeks - i}`)
+    counts.push(dates.filter(d => { const t = new Date(d).getTime(); return t >= start.getTime() && t < end.getTime() }).length)
+  }
+  return { labels, counts }
+}
+
+const COUNTRY_FLAG_EMOJI: Record<string, string> = { mz: '🇲🇿', ao: '🇦🇴', pt: '🇵🇹', br: '🇧🇷', cv: '🇨🇻' }
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // GET /api/admin/dashboard
 // ═══════════════════════════════════════════════════════════════════════════════
 admin.get('/dashboard', async (c) => {
@@ -104,38 +232,131 @@ admin.get('/dashboard', async (c) => {
     if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
 
     // Parallel queries
-    const [usersRes, lessonsRes, progressRes] = await Promise.all([
-      supabase.from('users').select('id, role, country_id, created_at, is_active'),
-      supabase.from('lessons').select('id, status, views_count, created_at'),
-      supabase.from('student_progress').select('id, status, points_earned, updated_at'),
+    const [usersRes, lessonsRes, submissionsRes, countriesRes] = await Promise.all([
+      supabase.from('users').select('id, full_name, email, role, country_id, country_code, created_at, is_active'),
+      supabase.from('lessons').select('id, status, views_count, created_at, title, updated_at, created_by, video_id, video_url'),
+      supabase.from('exercise_submissions').select('id, is_correct, submitted_at'),
+      supabase.from('countries').select('id, name, code, flag_url, is_active').order('name'),
     ])
 
-    const users    = usersRes.data    || []
-    const lessons  = lessonsRes.data  || []
-    const progress = progressRes.data || []
+    const users       = usersRes.data       || []
+    const lessons     = lessonsRes.data     || []
+    const submissions = submissionsRes.data || []
+    const countriesRaw = countriesRes.data  || []
 
-    const today    = new Date(); today.setHours(0,0,0,0)
-    const weekAgo  = new Date(Date.now() - 7*86400000)
+    const stats = buildStats(users, lessons, submissions, countriesRaw)
 
-    const stats = {
-      total_users:         users.length,
-      active_users_today:  users.filter((u:any) => u.is_active && new Date(u.created_at) >= today).length,
-      new_users_week:      users.filter((u:any) => new Date(u.created_at) >= weekAgo).length,
-      total_students:      users.filter((u:any) => u.role === 'student').length,
-      total_teachers:      users.filter((u:any) => u.role === 'teacher').length,
-      total_admins:        users.filter((u:any) => u.role === 'admin').length,
-      total_lessons:       lessons.length,
-      published_lessons:   lessons.filter((l:any) => l.status === 'published').length,
-      draft_lessons:       lessons.filter((l:any) => l.status === 'draft').length,
-      total_views:         lessons.reduce((s:number, l:any) => s + (l.views_count||0), 0),
-      views_today:         0,
-      total_exercises_done:progress.length,
-      avg_score:           0,
-      total_countries:     5,
-      active_countries:    3,
+    // Alertas reais: uma lição por professor na fila de aprovação, com hora real de entrada
+    // (updated_at é actualizado no momento em que o professor a envia — ver src/routes/creator.ts)
+    // Só entra no alerta depois do vídeo estar mesmo pronto no Bunny — evita o admin ser
+    // avisado (e tentado a aprovar) uma lição cujo vídeo ainda está a processar.
+    const pendingLessonsRaw = lessons.filter((l: any) => l.status === 'pending_review')
+    const readyFlags = await Promise.all(pendingLessonsRaw.map((l: any) => isLessonVideoReady(c.env as any, l)))
+    const pendingLessons = pendingLessonsRaw.filter((_: any, i: number) => readyFlags[i])
+
+    let creatorNames: Record<string, string> = {}
+    if (pendingLessons.length > 0) {
+      const creatorIds = [...new Set(pendingLessons.map((l: any) => l.created_by).filter(Boolean))]
+      const { data: creators } = await supabase.from('users').select('id, full_name').in('id', creatorIds)
+      ;(creators || []).forEach((u: any) => { creatorNames[u.id] = u.full_name })
+    }
+    const pendingAlerts = pendingLessons
+      .sort((a: any, b: any) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime())
+      .map((l: any) => ({
+        level: 'warning',
+        type: 'lesson_review',
+        msg: `Nova lição na fila: "${l.title}" — ${creatorNames[l.created_by] || 'professor'} aguarda aprovação (vídeo pronto)`,
+        time: l.updated_at || l.created_at,
+        action_url: `/admin-dashboard.html?tab=content&status=pending_review&lesson=${l.id}`
+      }))
+
+    // Alertas de candidaturas de professor (nova candidatura, em análise, ou à
+    // espera de resposta do candidato) — mesma fila que a aba "Professores".
+    const { data: pendingAppsRaw } = await supabase
+      .from('teacher_applications')
+      .select('id, full_name, status, submitted_at')
+      .in('status', ['pending', 'under_review', 'info_requested'])
+      .order('submitted_at', { ascending: false })
+      .limit(20)
+    const appStatusLabel: Record<string, string> = {
+      pending: 'nova candidatura de professor',
+      under_review: 'candidatura de professor em análise',
+      info_requested: 'candidatura de professor aguarda info. do candidato'
+    }
+    const teacherAlerts = (pendingAppsRaw || []).map((a: any) => ({
+      level: 'warning',
+      type: 'teacher_application',
+      msg: `👩‍🏫 ${a.full_name} — ${appStatusLabel[a.status] || a.status}`,
+      time: a.submitted_at,
+      action_url: `/admin-dashboard.html?tab=teachers&status=${a.status}`
+    }))
+
+    // Estatística agregada de novos utilizadores da semana
+    const newUsersAlerts = stats.new_users_week > 0 ? [{
+      level: 'info',
+      type: 'new_users',
+      msg: `${stats.new_users_week} novos utilizadores esta semana`,
+      time: new Date().toISOString(),
+      action_url: '/admin-dashboard.html?tab=users'
+    }] : []
+
+    const system_alerts = [...teacherAlerts, ...pendingAlerts, ...newUsersAlerts]
+      .sort((a: any, b: any) => new Date(b.time).getTime() - new Date(a.time).getTime())
+
+    // Países reais (tabela countries) — nº de estudantes activos por país via
+    // users.country_code. `lessons` por país fica null (placeholder): o schema
+    // não modela uma relação directa país→lição.
+    const countries = countriesRaw.map((cRow: any) => {
+      const inCountry = users.filter((u: any) => u.country_code === cRow.code)
+      return {
+        name:     cRow.name,
+        code:     cRow.code,
+        flag:     COUNTRY_FLAG_EMOJI[cRow.code] || '🏳️',
+        students: inCountry.filter((u: any) => u.role === 'student').length,
+        lessons:  null,
+        active:   cRow.is_active
+      }
+    })
+
+    // Utilizadores recentes (Overview) — reais, mais recentes primeiro
+    const recent_users = [...users]
+      .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 8)
+      .map((u: any) => ({ id: u.id, name: u.full_name, email: u.email, role: u.role, country: u.country_code, joined: u.created_at, active: u.is_active }))
+
+    // Lições recentes + mais vistas (Overview) — reais, mesmo join de GET /content
+    const recent_lessons  = await fetchLessonsWithDetails(supabase, { orderBy: 'created_at', ascending: false, limit: 8 })
+    const topLessonsRaw   = await fetchLessonsWithDetails(supabase, { orderBy: 'views_count', ascending: false, limit: 8 })
+    const lessonScores    = await fetchLessonScores(supabase, topLessonsRaw.map((l: any) => l.id))
+    const top_lessons     = topLessonsRaw.map((l: any) => ({ ...l, score: lessonScores[l.id] ?? null }))
+
+    // Gráfico de actividade — new_users/exercises reais (timestamps existem);
+    // lesson_views fica placeholder (zeros): views_count é só um contador total,
+    // sem histórico de quando cada vista aconteceu.
+    const userDates       = users.map((u: any) => u.created_at)
+    const exerciseDates   = submissions.map((s: any) => s.submitted_at)
+    const weekUsers      = bucketByDay(userDates, 7)
+    const weekExercises  = bucketByDay(exerciseDates, 7)
+    const monthUsers     = bucketByWeek(userDates, 4)
+    const monthExercises = bucketByWeek(exerciseDates, 4)
+
+    const chart_week = {
+      labels: weekUsers.labels,
+      new_users: weekUsers.counts,
+      exercises: weekExercises.counts,
+      lesson_views: new Array(7).fill(0)
+    }
+    const chart_month = {
+      labels: monthUsers.labels,
+      new_users: monthUsers.counts,
+      exercises: monthExercises.counts,
+      lesson_views: new Array(4).fill(0)
     }
 
-    return c.json<ApiResponse>({ success: true, data: { stats, ...getMockAdminData() } })
+    return c.json<ApiResponse>({
+      success: true,
+      data: { stats, chart_week, chart_month, countries, recent_users, recent_lessons, top_lessons, system_alerts }
+    })
   } catch (e: any) {
     console.error('Admin dashboard error:', e)
     return c.json<ApiResponse>({ success: false, error: e.message }, 500)
@@ -165,7 +386,7 @@ admin.get('/users', async (c) => {
 
     let query = supabase
       .from('users')
-      .select('id, full_name, email, role, country_id, is_active, created_at', { count: 'exact' })
+      .select('id, full_name, email, role, country_code, is_active, created_at', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range((page-1)*limit, page*limit - 1)
 
@@ -182,12 +403,79 @@ admin.get('/users', async (c) => {
 })
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// POST /api/admin/users — criar conta directamente com um papel (staff: support,
+// editor, finance, moderator, country_manager, ou mesmo admin/teacher/student).
+// Usado quando não se quer depender do auto-registo (que só cria estudantes) +
+// promoção manual — dá acesso imediato ao papel certo.
+// ═══════════════════════════════════════════════════════════════════════════════
+admin.post('/users', async (c) => {
+  try {
+    const body = await c.req.json() as { email?: string; password?: string; full_name?: string; role?: string; phone?: string; country_id?: string }
+    const { email, password, full_name, role, phone, country_id } = body
+
+    if (!email || !password || !full_name || !role) {
+      return c.json({ success: false, error: 'email, password, full_name e role são obrigatórios' }, 400)
+    }
+    if (!VALID_ROLES.includes(role)) {
+      return c.json({ success: false, error: 'Papel inválido' }, 400)
+    }
+    const passwordCheck = validatePassword(password)
+    if (!passwordCheck.valid) {
+      return c.json({ success: false, error: passwordCheck.message }, 400)
+    }
+
+    if (!isDatabaseConfigured(c.env)) {
+      return c.json({ success: true, data: { id: 'demo-' + Date.now(), email, full_name, role }, message: 'Demo: conta simulada' }, 201)
+    }
+
+    const supabase = getSupabase(c.env)
+    if (!supabase) return c.json({ success: false, error: 'DB error' }, 500)
+
+    const { data: existing } = await supabase.from('users').select('id').eq('email', email).maybeSingle()
+    if (existing) {
+      return c.json({ success: false, error: 'Já existe uma conta com este email' }, 409)
+    }
+
+    const password_hash = await hashPassword(password)
+    const { data, error } = await supabase
+      .from('users')
+      .insert({
+        email, password_hash, full_name, role,
+        phone: phone || null,
+        country_id: country_id || null,
+        is_active: true,
+        is_verified: true
+      })
+      .select('id, email, full_name, role, phone, country_id, is_active, created_at')
+      .single()
+
+    if (error || !data) {
+      console.error('Admin create user error:', error)
+      return c.json({ success: false, error: error?.message || 'Falha ao criar conta' }, 500)
+    }
+
+    return c.json({ success: true, data, message: `Conta de ${roleLabelPt(role)} criada para ${full_name}` }, 201)
+  } catch (e: any) {
+    console.error('Admin create user error:', e)
+    return c.json({ success: false, error: e.message }, 500)
+  }
+})
+
+function roleLabelPt(r: string): string {
+  return ({ student:'estudante', teacher:'professor', admin:'admin', support:'suporte', editor:'editor', finance:'financeiro', moderator:'moderador', country_manager:'gestor de país' } as Record<string,string>)[r] || r
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // PATCH /api/admin/users/:id — toggle active / change role
 // ═══════════════════════════════════════════════════════════════════════════════
 admin.patch('/users/:id', async (c) => {
   try {
     const id = c.req.param('id')
-    const body = await c.req.json() as { is_active?: boolean; role?: string }
+    const body = await c.req.json() as { is_active?: boolean; role?: string; full_name?: string }
+
+    if (body.role && !VALID_ROLES.includes(body.role)) {
+      return c.json({ success: false, error: 'Papel inválido' }, 400)
+    }
 
     if (!isDatabaseConfigured(c.env)) {
       return c.json({ success: true, data: { id, ...body }, message: 'Demo: alteração simulada' })
@@ -199,8 +487,14 @@ admin.patch('/users/:id', async (c) => {
     const updates: any = { updated_at: new Date().toISOString() }
     if (body.is_active !== undefined) updates.is_active = body.is_active
     if (body.role)                    updates.role      = body.role
+    if (body.full_name)               updates.full_name = body.full_name
 
-    const { data, error } = await supabase.from('users').update(updates).eq('id', id).select().single()
+    const { data, error } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', id)
+      .select('id, email, full_name, role, phone, country_id, country_code, avatar_url, is_active, is_verified, created_at, updated_at')
+      .single()
     if (error) return c.json({ success: false, error: error.message }, 500)
 
     // Revogar todos os refresh tokens do utilizador quando o role é alterado,
@@ -227,14 +521,8 @@ admin.get('/content', async (c) => {
     const supabase = getSupabase(c.env)
     if (!supabase) return c.json({ success: false, error: 'DB error' }, 500)
 
-    const { data, error } = await supabase
-      .from('lessons')
-      .select('id, title, status, views_count, created_at, created_by, chapter:chapters(title, grade_subject:grade_subjects(subject:subjects(name)))')
-      .order('created_at', { ascending: false })
-      .limit(50)
-
-    if (error) return c.json({ success: false, error: error.message }, 500)
-    return c.json({ success: true, data: data || [] })
+    const flattened = await fetchLessonsWithDetails(supabase, { orderBy: 'created_at', ascending: false, limit: 50 })
+    return c.json({ success: true, data: flattened })
   } catch (e: any) {
     return c.json({ success: false, error: e.message }, 500)
   }
@@ -254,6 +542,16 @@ admin.patch('/content/:id', async (c) => {
 
     const supabase = getSupabase(c.env)
     if (!supabase) return c.json({ success: false, error: 'DB error' }, 500)
+
+    // Trava de segurança: não deixa aprovar/publicar se o vídeo ainda não está
+    // pronto no Bunny — evita publicar uma aula cujo vídeo ainda está a processar.
+    if (status === 'published') {
+      const { data: lesson } = await supabase.from('lessons').select('video_id, video_url').eq('id', id).single()
+      const ready = lesson ? await isLessonVideoReady(c.env as any, lesson) : false
+      if (!ready) {
+        return c.json({ success: false, error: 'O vídeo desta lição ainda está a processar no Bunny.net. Aguarde terminar antes de aprovar.' }, 409)
+      }
+    }
 
     const { data, error } = await supabase.from('lessons').update({ status, updated_at: new Date().toISOString() }).eq('id', id).select().single()
     if (error) return c.json({ success: false, error: error.message }, 500)
@@ -415,8 +713,19 @@ admin.get('/stats/overview', async (c) => {
       const d = getMockAdminData()
       return c.json({ success: true, data: d.stats })
     }
-    // (produção: mesmo que /dashboard mas só stats)
-    return c.json({ success: true, data: getMockAdminData().stats })
+
+    const supabase = getSupabase(c.env)
+    if (!supabase) return c.json({ success: false, error: 'DB error' }, 500)
+
+    const [usersRes, lessonsRes, submissionsRes, countriesRes] = await Promise.all([
+      supabase.from('users').select('id, role, created_at, is_active'),
+      supabase.from('lessons').select('id, status, views_count'),
+      supabase.from('exercise_submissions').select('id, is_correct'),
+      supabase.from('countries').select('id, is_active'),
+    ])
+
+    const stats = buildStats(usersRes.data || [], lessonsRes.data || [], submissionsRes.data || [], countriesRes.data || [])
+    return c.json({ success: true, data: stats })
   } catch (e: any) {
     return c.json({ success: false, error: e.message }, 500)
   }
@@ -468,11 +777,18 @@ admin.post('/library/upload', async (c) => {
   if (!file || !file.name) return c.json<ApiResponse>({ success: false, error: 'Ficheiro não encontrado no pedido' }, 400)
 
   const allowed = ['application/pdf', 'application/msword',
-                   'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
-  if (!allowed.includes(file.type) && !file.name.match(/\.(pdf|doc|docx)$/i))
-    return c.json<ApiResponse>({ success: false, error: 'Apenas PDF ou Word são aceites' }, 400)
+                   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                   'application/vnd.ms-excel',
+                   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                   'application/vnd.ms-powerpoint',
+                   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                   'image/jpeg', 'image/png',
+                   'application/zip', 'application/x-zip-compressed']
+  if (!allowed.includes(file.type) && !file.name.match(/\.(pdf|docx?|xlsx?|pptx?|jpe?g|png|zip)$/i))
+    return c.json<ApiResponse>({ success: false, error: 'Tipo de ficheiro não suportado' }, 400)
 
-  const MAX_MB = 100
+  // Tecto do bucket 'vclass-library' no Supabase (limite global de upload do projecto) — manter em sincronia
+  const MAX_MB = 50
   if (file.size > MAX_MB * 1024 * 1024)
     return c.json<ApiResponse>({ success: false, error: `Ficheiro demasiado grande (máx ${MAX_MB} MB)` }, 400)
 
@@ -484,6 +800,10 @@ admin.post('/library/upload', async (c) => {
   const path     = `library/${Date.now()}_${safeName}`
 
   const buffer = await file.arrayBuffer()
+
+  // Nº de páginas real, extraído do ficheiro (não confiar em input manual do utilizador)
+  const pages = await extractPageCount(buffer, file.type, file.name)
+
   const { error: upErr } = await supabase.storage
     .from('vclass-library')
     .upload(path, buffer, { contentType: file.type || 'application/pdf', upsert: false })
@@ -498,6 +818,7 @@ admin.post('/library/upload', async (c) => {
       url:         urlData.publicUrl,
       path,
       size_kb:     Math.round(file.size / 1024),
+      pages,
       original_name: file.name,
     }
   }, 201)

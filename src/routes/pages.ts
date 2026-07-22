@@ -46,6 +46,8 @@ import moderatorDashboardHtml from '../pages/moderator-dashboard.html?raw'
 import registerTeacherHtml from '../pages/register-teacher.html?raw'
 import teacherVerificationHtml from '../pages/teacher-verification.html?raw'
 import plansHtml from '../pages/plans.html?raw'
+import bookmarksHtml from '../pages/bookmarks.html?raw'
+import transfersHtml from '../pages/transfers.html?raw'
 import creatorEarningsHtml from '../pages/creator-earnings.html?raw'
 
 // Serve HTML pages
@@ -60,6 +62,8 @@ app.get('/lesson.html', (c) => c.html(lessonHtml))
 app.get('/progress.html', (c) => c.html(progressHtml))
 app.get('/profile.html', (c) => c.html(profileHtml))
 app.get('/library.html', (c) => c.html(libraryHtml))
+app.get('/bookmarks.html', (c) => c.html(bookmarksHtml))
+app.get('/transfers.html', (c) => c.html(transfersHtml))
 app.get('/help.html',    (c) => c.html(helpHtml))
 app.get('/support.html', (c) => c.html(helpHtml))   // alias
 app.get('/notifications.html', (c) => c.html(notificationsHtml))

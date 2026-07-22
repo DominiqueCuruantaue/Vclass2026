@@ -21,7 +21,7 @@
 -- ════════════════════════════════════════════════════════════════════════════
 
 -- Descomente este bloco para ver o que será alterado:
-
+/*
 WITH parsed AS (
   SELECT
     c.id AS chapter_id,

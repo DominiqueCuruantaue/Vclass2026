@@ -67,7 +67,7 @@
 </head>
 <body class="bg-gray-50 min-h-screen">
 
-    <div id="navbar-placeholder"></div>
+    <div id="navbar-placeholder" style="min-height:64px"></div>
 
     <!-- Header -->
     <div class="bg-gradient-to-r from-purple-700 to-indigo-600 text-white py-10">
@@ -188,11 +188,16 @@
                         <i class="fas fa-download mr-2"></i>Descarregar
                     </button>
                 </div>
+                <button id="modal-offline-btn" onclick="saveOffline()"
+                    class="w-full mt-3 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold text-sm transition">
+                    <i class="fas fa-box-archive mr-2"></i>Guardar offline (para acesso sem internet)
+                </button>
             </div>
         </div>
     </div>
 
     <script src="/static/app.js"></script>
+    <script src="/static/offline.js"></script>
     <script>
         if (!VClass.isAuthenticated()) window.location.href = '/login.html';
         VClass.initNavbar('library');
@@ -391,6 +396,61 @@
                  <span class="px-2 py-1 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full">${catLabels[b.category] || b.category}</span>`;
 
             document.getElementById('book-modal').classList.add('open');
+            refreshOfflineButton(b.id);
+        }
+
+        // ── Guardar offline (IndexedDB, para a aba Transferências) ──
+        async function refreshOfflineButton(id) {
+            const btn = document.getElementById('modal-offline-btn');
+            const saved = await VClassOffline.isSaved(id);
+            btn.innerHTML = saved
+                ? `<i class="fas fa-check-circle mr-2 text-green-600"></i>Guardado offline`
+                : `<i class="fas fa-box-archive mr-2"></i>Guardar offline (para acesso sem internet)`;
+            btn.classList.toggle('bg-green-50', saved);
+            btn.classList.toggle('text-green-700', saved);
+            btn.classList.toggle('bg-gray-100', !saved);
+            btn.classList.toggle('text-gray-700', !saved);
+        }
+
+        // Guarda o blob do ficheiro no IndexedDB (partilhado por "Guardar offline" e "Descarregar").
+        // Não faz nada se já estiver guardado.
+        async function _ensureSavedOffline(b) {
+            if (await VClassOffline.isSaved(b.id)) return;
+            if (!b.file_url) throw new Error('Ficheiro ainda não disponível para download');
+            await VClassOffline.saveItem({
+                id: b.id,
+                type: 'book',
+                title: b.title,
+                cover_url: b.cover_url || null,
+                file_url: b.file_url,
+                file_size_kb: b.file_size_kb
+            });
+        }
+
+        function fileExt(url) {
+            const m = /\.([a-z0-9]+)(?:\?.*)?$/i.exec(url || '');
+            return m ? m[1] : 'pdf';
+        }
+
+        async function saveOffline() {
+            const b = activeBook;
+            if (!b) return;
+            if (await VClassOffline.isSaved(b.id)) {
+                VClass.showNotification('Este material já está guardado offline', 'info');
+                return;
+            }
+            const btn = document.getElementById('modal-offline-btn');
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i>A guardar...`;
+            try {
+                await _ensureSavedOffline(b);
+                VClass.showNotification('Guardado! Disponível em Transferências.', 'success');
+            } catch (e) {
+                VClass.showNotification(e.message || 'Erro ao guardar offline', 'error');
+            } finally {
+                btn.disabled = false;
+                refreshOfflineButton(b.id);
+            }
         }
 
         function closeModal() {
@@ -409,7 +469,10 @@
             }
         }
 
-        // ── Descarregar PDF ────────────────────────────────────────
+        // ── Descarregar ──────────────────────────────────────────────
+        // Guarda o ficheiro em Transferências (IndexedDB) e entrega-o ao SO a partir
+        // de um blob: URL — file_url aponta para o Supabase Storage (outra origem), e
+        // o browser ignora silenciosamente o atributo "download" em links cross-origin.
         async function downloadBook(id) {
             const b = id ? ALL_BOOKS.find(x => x.id === id) : activeBook;
             if (!b) return;
@@ -417,6 +480,7 @@
                 VClass.showNotification('Ficheiro ainda não disponível para download', 'warning');
                 return;
             }
+
             // Incrementar contador (fire-and-forget)
             fetch(`/api/library/${b.id}/download`, {
                 method: 'POST',
@@ -426,16 +490,24 @@
                 if (idx !== -1) ALL_BOOKS[idx].downloads_count = (ALL_BOOKS[idx].downloads_count || 0) + 1;
             }).catch(() => {});
 
-            // Criar link de download
-            const a = document.createElement('a');
-            a.href     = b.file_url;
-            a.download = b.title + '.pdf';
-            a.target   = '_blank';
-            a.rel      = 'noopener';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            VClass.showNotification(`A descarregar "${b.title}"...`, 'success');
+            VClass.showNotification(`A descarregar "${b.title}"...`, 'info');
+            try {
+                await _ensureSavedOffline(b);
+                const blobUrl = await VClassOffline.getBlobUrl(b.id);
+                const a = document.createElement('a');
+                a.href     = blobUrl;
+                a.download = `${b.title}.${fileExt(b.file_url)}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+                VClass.showNotification(`"${b.title}" guardado em Transferências.`, 'success');
+                if (activeBook && activeBook.id === b.id) refreshOfflineButton(b.id);
+            } catch (e) {
+                // Falha a guardar offline (ex: CORS no storage) — pelo menos abre o ficheiro
+                window.open(b.file_url, '_blank', 'noopener');
+                VClass.showNotification('Não foi possível guardar offline — a abrir o ficheiro.', 'warning');
+            }
         }
 
         // Fechar modal clicando fora

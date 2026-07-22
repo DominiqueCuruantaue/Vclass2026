@@ -1,211 +1,328 @@
 // Editor Routes — /api/editor/*
-// Revisão e aprovação pedagógica de conteúdo
+// Revisão e aprovação pedagógica de conteúdo — dados reais do Supabase.
+// Aprovar publica a lição a valer (status → 'published'); rejeitar/pedir
+// alterações devolve-a a rascunho com o feedback do editor gravado
+// (colunas review_feedback/review_action, ver migration 021).
 import { Hono } from 'hono'
 import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware, requireEditorOrAdmin } from '../middleware/auth'
+import { getSupabase } from '../config/supabase'
+import { isLessonVideoReady } from '../utils/bunny'
 import type { ApiResponse } from '../types'
 
 const editor = new Hono<{ Bindings: CloudflareBindings }>()
 editor.use('/*', authMiddleware)
 editor.use('/*', requireEditorOrAdmin)
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-const now = () => Date.now()
+function isDatabaseConfigured(env?: any): boolean {
+  return !!(env?.SUPABASE_URL || process.env.SUPABASE_URL) &&
+         !!(env?.SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY)
+}
 
-const MOCK_LESSONS_PENDING = [
-  {
-    id: 'les-p01', title: 'Derivadas — Regra da Cadeia', subject: 'Matemática', chapter: 'Cálculo Diferencial',
-    grade: '12ª Classe', country: 'Moçambique', country_flag: '🇲🇿',
-    creator: 'Prof. Carlos Machava', creator_id: '33333333-3333-3333-3333-333333333333',
-    duration_min: 18, exercises_count: 5, difficulty: 'hard',
-    status: 'pending_review', submitted_at: new Date(now() - 3600000).toISOString(),
-    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-    description: 'Introdução à regra da cadeia para derivadas de funções compostas.',
-    notes: 'Inclui exemplos resolvidos e exercícios com correcção detalhada.',
-    priority: 'high'
-  },
-  {
-    id: 'les-p02', title: 'Tabela Periódica — Metais de Transição', subject: 'Química', chapter: 'Química Inorgânica',
-    grade: '11ª Classe', country: 'Angola', country_flag: '🇦🇴',
-    creator: 'Beatriz Nhamposse', creator_id: '55555555-5555-5555-5555-555555555555',
-    duration_min: 14, exercises_count: 4, difficulty: 'medium',
-    status: 'pending_review', submitted_at: new Date(now() - 7200000).toISOString(),
-    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-    description: 'Propriedades dos metais de transição e aplicações industriais.',
-    notes: 'Requer validação das configurações electrónicas.',
-    priority: 'medium'
-  },
-  {
-    id: 'les-p03', title: 'Óptica Geométrica — Reflexão e Refracção', subject: 'Física', chapter: 'Óptica',
-    grade: '10ª Classe', country: 'Moçambique', country_flag: '🇲🇿',
-    creator: 'Prof. Carlos Machava', creator_id: '33333333-3333-3333-3333-333333333333',
-    duration_min: 22, exercises_count: 6, difficulty: 'medium',
-    status: 'pending_review', submitted_at: new Date(now() - 10800000).toISOString(),
-    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-    description: 'Leis da reflexão e refracção da luz. Espelhos e lentes.',
-    notes: 'Inclui animações dos raios de luz.',
-    priority: 'medium'
-  },
-  {
-    id: 'les-p04', title: 'Literatura Moçambicana — Mia Couto', subject: 'Português', chapter: 'Literatura Contemporânea',
-    grade: '12ª Classe', country: 'Moçambique', country_flag: '🇲🇿',
-    creator: 'Beatriz Nhamposse', creator_id: '55555555-5555-5555-5555-555555555555',
-    duration_min: 16, exercises_count: 3, difficulty: 'easy',
-    status: 'pending_review', submitted_at: new Date(now() - 18000000).toISOString(),
-    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-    description: 'Análise de obras de Mia Couto e contexto histórico-cultural.',
-    notes: 'Verificar alinhamento com programa do MINED.',
-    priority: 'low'
-  },
-  {
-    id: 'les-p05', title: 'Genética Molecular — DNA Recombinante', subject: 'Biologia', chapter: 'Genética',
-    grade: '12ª Classe', country: 'Angola', country_flag: '🇦🇴',
-    creator: 'Prof. Carlos Machava', creator_id: '33333333-3333-3333-3333-333333333333',
-    duration_min: 20, exercises_count: 7, difficulty: 'hard',
-    status: 'pending_review', submitted_at: new Date(now() - 25200000).toISOString(),
-    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-    description: 'Técnicas de DNA recombinante e engenharia genética.',
-    notes: '',
-    priority: 'high'
-  },
-  {
-    id: 'les-p06', title: 'Equações Diferenciais — Introdução', subject: 'Matemática', chapter: 'Cálculo',
-    grade: '12ª Classe', country: 'Moçambique', country_flag: '🇲🇿',
-    creator: 'Beatriz Nhamposse', creator_id: '55555555-5555-5555-5555-555555555555',
-    duration_min: 25, exercises_count: 8, difficulty: 'hard',
-    status: 'pending_review', submitted_at: new Date(now() - 32400000).toISOString(),
-    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-    description: 'Conceitos básicos de equações diferenciais ordinárias.',
-    notes: 'Conteúdo avançado — verificar nível da classe.',
-    priority: 'medium'
-  },
-  {
-    id: 'les-p07', title: 'Termodinâmica — 2ª Lei e Entropia', subject: 'Física', chapter: 'Termodinâmica',
-    grade: '11ª Classe', country: 'Angola', country_flag: '🇦🇴',
-    creator: 'Prof. Carlos Machava', creator_id: '33333333-3333-3333-3333-333333333333',
-    duration_min: 19, exercises_count: 5, difficulty: 'hard',
-    status: 'pending_review', submitted_at: new Date(now() - 43200000).toISOString(),
-    video_url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-    description: 'Segunda lei da termodinâmica e conceito de entropia.',
-    notes: '',
-    priority: 'medium'
+const COUNTRY_FLAG_EMOJI: Record<string, string> = { mz: '🇲🇿', ao: '🇦🇴', pt: '🇵🇹', br: '🇧🇷', cv: '🇨🇻' }
+const COUNTRY_NAME: Record<string, string> = { mz: 'Moçambique', ao: 'Angola', pt: 'Portugal', br: 'Brasil', cv: 'Cabo Verde' }
+
+// ── Mock mínimo — só usado quando a BD não está configurada (dev local) ────
+function mockQueue() {
+  return [{
+    id: 'demo-1', title: 'Lição de demonstração', description: 'Sem base de dados configurada.',
+    subject: 'Matemática', chapter: '—', grade: '—', country: 'Moçambique', country_flag: '🇲🇿',
+    creator: 'Professor Demo', duration_min: 10, exercises_count: 0, status: 'pending_review',
+    review_feedback: null, review_action: null, submitted_at: new Date().toISOString(), video_url: null, video_id: null
+  }]
+}
+
+// ── Lições + disciplina/capítulo/classe (join chapters→grade_subjects→subjects/grades)
+//    + nome e país do professor + nº real de exercícios. ─────────────────────
+async function fetchReviewLessons(supabase: any, statusIn: string[], opts: { orderBy?: string; ascending?: boolean } = {}) {
+  let q = supabase.from('lessons').select(
+    `id, title, description, status, video_id, video_url, video_duration, created_at, updated_at, created_by,
+     review_feedback, review_action,
+     chapter:chapters(title, grade_subject:grade_subjects(subject:subjects(name), grade:grades(name)))`
+  ).in('status', statusIn)
+  q = q.order(opts.orderBy || 'updated_at', { ascending: opts.ascending ?? false })
+
+  const { data, error } = await q
+  if (error) { console.error('fetchReviewLessons error:', error); return [] }
+  const rows = data || []
+
+  const creatorIds = [...new Set(rows.map((l: any) => l.created_by).filter(Boolean))]
+  const creators: Record<string, { full_name: string; country_code: string | null }> = {}
+  if (creatorIds.length > 0) {
+    const { data: users } = await supabase.from('users').select('id, full_name, country_code').in('id', creatorIds)
+    ;(users || []).forEach((u: any) => { creators[u.id] = u })
   }
-]
 
-const MOCK_HISTORY = [
-  { id: 'h01', lesson_title: 'Funções Quadráticas — Gráficos', action: 'approved', editor: 'Isabel Guambe', date: new Date(now()-86400000).toISOString(), subject: 'Matemática', creator: 'Prof. Carlos Machava' },
-  { id: 'h02', lesson_title: 'Leis de Newton — Dinâmica', action: 'approved', editor: 'Isabel Guambe', date: new Date(now()-172800000).toISOString(), subject: 'Física', creator: 'Beatriz Nhamposse' },
-  { id: 'h03', lesson_title: 'Análise Sintática Avançada', action: 'rejected', editor: 'Isabel Guambe', date: new Date(now()-259200000).toISOString(), subject: 'Português', creator: 'Prof. Carlos Machava', feedback: 'Conteúdo não alinhado com o currículo da 10ª Classe. Rever capítulo 3.' },
-  { id: 'h04', lesson_title: 'Respiração Celular — ATP', action: 'approved', editor: 'Isabel Guambe', date: new Date(now()-345600000).toISOString(), subject: 'Biologia', creator: 'Beatriz Nhamposse' },
-  { id: 'h05', lesson_title: 'Isomeria Óptica', action: 'changes_requested', editor: 'Isabel Guambe', date: new Date(now()-432000000).toISOString(), subject: 'Química', creator: 'Prof. Carlos Machava', feedback: 'Adicionar mais exemplos práticos. Os exercícios 4 e 5 têm erros nas respostas.' },
-]
+  const lessonIds = rows.map((l: any) => l.id)
+  const exCounts: Record<string, number> = {}
+  if (lessonIds.length > 0) {
+    const { data: exercises } = await supabase.from('exercises').select('id, lesson_id').in('lesson_id', lessonIds)
+    ;(exercises || []).forEach((e: any) => { exCounts[e.lesson_id] = (exCounts[e.lesson_id] || 0) + 1 })
+  }
 
+  return rows.map((l: any) => {
+    const creator = creators[l.created_by]
+    const cc = creator?.country_code || null
+    return {
+      id: l.id,
+      title: l.title,
+      description: l.description,
+      subject: l.chapter?.grade_subject?.subject?.name || null,
+      chapter: l.chapter?.title || null,
+      grade: l.chapter?.grade_subject?.grade?.name || null,
+      country: cc ? (COUNTRY_NAME[cc] || cc) : null,
+      country_flag: cc ? (COUNTRY_FLAG_EMOJI[cc] || '🏳️') : null,
+      creator: creator?.full_name || null,
+      duration_min: Math.round((l.video_duration || 0) / 60),
+      exercises_count: exCounts[l.id] || 0,
+      status: l.status,
+      review_feedback: l.review_feedback,
+      review_action: l.review_action,
+      submitted_at: l.updated_at || l.created_at,
+      video_url: l.video_url,
+      video_id: l.video_id
+    }
+  })
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // GET /api/editor/stats
+// ═══════════════════════════════════════════════════════════════════════════
 editor.get('/stats', async (c) => {
+  if (!isDatabaseConfigured(c.env)) {
+    return c.json<ApiResponse>({ success: true, data: { pending: 1, approved_week: 0, rejected_week: 0, changes_requested_week: 0, approved_total: 0, rejected_total: 0, approval_rate: 0, avg_review_hours: null, by_subject: [], by_country: [] } })
+  }
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'Database não configurada' }, 500)
+
+  const { data: lessonsRaw } = await supabase
+    .from('lessons')
+    .select('id, status, review_action, updated_at, created_by, video_id, video_url, chapter:chapters(grade_subject:grade_subjects(subject:subjects(name)))')
+  const lessons = lessonsRaw || []
+
+  const pendingRaw = lessons.filter((l: any) => l.status === 'pending_review')
+  const readyFlags = await Promise.all(pendingRaw.map((l: any) => isLessonVideoReady(c.env as any, l)))
+  const pending = pendingRaw.filter((_: any, i: number) => readyFlags[i])
+
+  const weekAgo = new Date(Date.now() - 7 * 86400000)
+  const approved_week           = lessons.filter((l: any) => l.status === 'published' && new Date(l.updated_at) >= weekAgo).length
+  const rejected_week           = lessons.filter((l: any) => l.status === 'draft' && l.review_action === 'rejected'         && new Date(l.updated_at) >= weekAgo).length
+  const changes_requested_week  = lessons.filter((l: any) => l.status === 'draft' && l.review_action === 'changes_requested' && new Date(l.updated_at) >= weekAgo).length
+
+  const approved_total = lessons.filter((l: any) => l.status === 'published').length
+  const rejected_total = lessons.filter((l: any) => l.status === 'draft' && l.review_action === 'rejected').length
+  const approval_rate  = (approved_total + rejected_total) > 0 ? Math.round((approved_total / (approved_total + rejected_total)) * 100) : 0
+
+  const bySubject: Record<string, number> = {}
+  pending.forEach((l: any) => {
+    const s = l.chapter?.grade_subject?.subject?.name || 'Outra'
+    bySubject[s] = (bySubject[s] || 0) + 1
+  })
+
+  const byCountry: Record<string, number> = {}
+  const creatorIds = [...new Set(pending.map((l: any) => l.created_by).filter(Boolean))]
+  if (creatorIds.length > 0) {
+    const { data: creatorsRows } = await supabase.from('users').select('id, country_code').in('id', creatorIds)
+    const ccById: Record<string, string> = {}
+    ;(creatorsRows || []).forEach((u: any) => { ccById[u.id] = u.country_code })
+    pending.forEach((l: any) => {
+      const cc = ccById[l.created_by] || 'outro'
+      byCountry[cc] = (byCountry[cc] || 0) + 1
+    })
+  }
+
   return c.json<ApiResponse>({
     success: true,
     data: {
-      pending:           MOCK_LESSONS_PENDING.length,
-      approved_week:     12,
-      rejected_week:     2,
-      changes_requested: 3,
-      avg_review_hours:  4.2,
-      by_subject: [
-        { subject: 'Matemática', pending: 2, approved: 48 },
-        { subject: 'Física',     pending: 2, approved: 41 },
-        { subject: 'Química',    pending: 1, approved: 35 },
-        { subject: 'Biologia',   pending: 1, approved: 29 },
-        { subject: 'Português',  pending: 1, approved: 24 },
-      ],
-      by_country: [
-        { country: 'Moçambique', flag: '🇲🇿', pending: 4, total: 198 },
-        { country: 'Angola',     flag: '🇦🇴', pending: 3, total: 114 },
-      ]
+      pending: pending.length,
+      approved_week,
+      rejected_week,
+      changes_requested_week,
+      approved_total,
+      rejected_total,
+      approval_rate,
+      avg_review_hours: null, // sem timestamp de entrada/saída da fila — sem histórico, sem forma honesta de calcular
+      by_subject: Object.entries(bySubject).map(([subject, count]) => ({ subject, count })),
+      by_country: Object.entries(byCountry).map(([code, count]) => ({
+        code, country: COUNTRY_NAME[code] || code, flag: COUNTRY_FLAG_EMOJI[code] || '🏳️', count
+      }))
     }
   })
 })
 
+// ═══════════════════════════════════════════════════════════════════════════
 // GET /api/editor/queue — fila de revisão
+// ═══════════════════════════════════════════════════════════════════════════
 editor.get('/queue', async (c) => {
-  const subject  = c.req.query('subject')  || 'all'
-  const priority = c.req.query('priority') || 'all'
-  const country  = c.req.query('country')  || 'all'
-  const search   = c.req.query('search')   || ''
-
-  let lessons = [...MOCK_LESSONS_PENDING]
-  if (subject  !== 'all') lessons = lessons.filter(l => l.subject === subject)
-  if (priority !== 'all') lessons = lessons.filter(l => l.priority === priority)
-  if (country  !== 'all') lessons = lessons.filter(l => l.country_flag === country)
-  if (search) {
-    const q = search.toLowerCase()
-    lessons = lessons.filter(l => l.title.toLowerCase().includes(q) || l.creator.toLowerCase().includes(q))
+  if (!isDatabaseConfigured(c.env)) {
+    return c.json<ApiResponse>({ success: true, data: { lessons: mockQueue(), total: 1 } })
   }
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'Database não configurada' }, 500)
 
-  return c.json<ApiResponse>({
-    success: true,
-    data: { lessons, total: lessons.length }
-  })
+  const subject = c.req.query('subject') || 'all'
+  const country = c.req.query('country') || 'all'
+  const search  = (c.req.query('search') || '').toLowerCase()
+
+  let lessons = await fetchReviewLessons(supabase, ['pending_review'])
+
+  // Só entra na fila do editor depois do vídeo estar mesmo pronto no Bunny —
+  // evita rever/aprovar uma lição cujo vídeo ainda está a processar.
+  const readyFlags = await Promise.all(lessons.map((l: any) => isLessonVideoReady(c.env as any, { video_id: l.video_id, video_url: l.video_url })))
+  lessons = lessons.filter((_: any, i: number) => readyFlags[i])
+
+  if (subject !== 'all') lessons = lessons.filter((l: any) => l.subject === subject)
+  if (country !== 'all') lessons = lessons.filter((l: any) => l.country === country)
+  if (search) lessons = lessons.filter((l: any) => l.title.toLowerCase().includes(search) || (l.creator || '').toLowerCase().includes(search))
+
+  return c.json<ApiResponse>({ success: true, data: { lessons, total: lessons.length } })
 })
 
+// ═══════════════════════════════════════════════════════════════════════════
 // GET /api/editor/queue/:id
+// ═══════════════════════════════════════════════════════════════════════════
 editor.get('/queue/:id', async (c) => {
-  const lesson = MOCK_LESSONS_PENDING.find(l => l.id === c.req.param('id'))
-  if (!lesson) return c.json<ApiResponse>({ success: false, error: 'Lição não encontrada' }, 404)
-  return c.json<ApiResponse>({ success: true, data: lesson })
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'Database não configurada' }, 500)
+
+  const id = c.req.param('id')
+  const { data: l, error } = await supabase.from('lessons').select(
+    `id, title, description, status, video_id, video_url, video_duration, created_at, updated_at, created_by,
+     review_feedback, review_action,
+     chapter:chapters(title, grade_subject:grade_subjects(subject:subjects(name), grade:grades(name)))`
+  ).eq('id', id).maybeSingle()
+
+  if (error || !l) return c.json<ApiResponse>({ success: false, error: 'Lição não encontrada' }, 404)
+
+  let creator: any = null
+  if (l.created_by) {
+    const { data: u } = await supabase.from('users').select('full_name, country_code').eq('id', l.created_by).maybeSingle()
+    creator = u
+  }
+  const { count: exCount } = await supabase.from('exercises').select('id', { count: 'exact', head: true }).eq('lesson_id', id)
+  const cc = creator?.country_code || null
+
+  return c.json<ApiResponse>({
+    success: true,
+    data: {
+      id: l.id, title: l.title, description: l.description, status: l.status,
+      subject: l.chapter?.grade_subject?.subject?.name || null,
+      chapter: l.chapter?.title || null,
+      grade: l.chapter?.grade_subject?.grade?.name || null,
+      country: cc ? (COUNTRY_NAME[cc] || cc) : null,
+      country_flag: cc ? (COUNTRY_FLAG_EMOJI[cc] || '🏳️') : null,
+      creator: creator?.full_name || null,
+      duration_min: Math.round((l.video_duration || 0) / 60),
+      exercises_count: exCount || 0,
+      review_feedback: l.review_feedback,
+      review_action: l.review_action,
+      submitted_at: l.updated_at || l.created_at,
+      video_url: l.video_url,
+      video_id: l.video_id
+    }
+  })
 })
 
-// POST /api/editor/queue/:id/approve
+// ═══════════════════════════════════════════════════════════════════════════
+// POST /api/editor/queue/:id/approve — publica a lição a valer
+// ═══════════════════════════════════════════════════════════════════════════
 editor.post('/queue/:id/approve', async (c) => {
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'Database não configurada' }, 500)
+
   const id = c.req.param('id')
-  const body = await c.req.json().catch(() => ({}))
-  const agent = c.get('user')
-  return c.json<ApiResponse>({
-    success: true,
-    data: { id, status: 'published', reviewed_by: agent?.full_name || 'Editor', notes: body.notes || '', reviewed_at: new Date().toISOString() },
-    message: 'Lição aprovada e publicada (modo demo)'
-  })
+  const { data: lesson } = await supabase.from('lessons').select('video_id, video_url').eq('id', id).maybeSingle()
+  if (!lesson) return c.json<ApiResponse>({ success: false, error: 'Lição não encontrada' }, 404)
+
+  const ready = await isLessonVideoReady(c.env as any, lesson)
+  if (!ready) return c.json<ApiResponse>({ success: false, error: 'O vídeo desta lição ainda está a processar no Bunny.net. Aguarde terminar antes de aprovar.' }, 409)
+
+  const { data, error } = await supabase
+    .from('lessons')
+    .update({ status: 'published', review_feedback: null, review_action: null, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('id, status')
+    .maybeSingle()
+
+  if (error || !data) return c.json<ApiResponse>({ success: false, error: error?.message || 'Falha ao aprovar' }, 500)
+  return c.json<ApiResponse>({ success: true, data, message: 'Lição aprovada e publicada' })
 })
 
-// POST /api/editor/queue/:id/reject
+// ═══════════════════════════════════════════════════════════════════════════
+// POST /api/editor/queue/:id/reject — devolve a rascunho com o motivo
+// ═══════════════════════════════════════════════════════════════════════════
 editor.post('/queue/:id/reject', async (c) => {
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'Database não configurada' }, 500)
+
   const id = c.req.param('id')
-  const body = await c.req.json().catch(() => ({}))
-  const agent = c.get('user')
+  const body = await c.req.json().catch(() => ({})) as { feedback?: string }
   if (!body.feedback) return c.json<ApiResponse>({ success: false, error: 'Feedback obrigatório ao rejeitar' }, 400)
-  return c.json<ApiResponse>({
-    success: true,
-    data: { id, status: 'rejected', reviewed_by: agent?.full_name || 'Editor', feedback: body.feedback, reviewed_at: new Date().toISOString() },
-    message: 'Lição rejeitada — criador notificado (modo demo)'
-  })
+
+  const { data, error } = await supabase
+    .from('lessons')
+    .update({ status: 'draft', review_feedback: body.feedback, review_action: 'rejected', updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('id, status')
+    .maybeSingle()
+
+  if (error || !data) return c.json<ApiResponse>({ success: false, error: error?.message || 'Lição não encontrada' }, 404)
+  return c.json<ApiResponse>({ success: true, data, message: 'Lição rejeitada — devolvida ao professor com o feedback' })
 })
 
+// ═══════════════════════════════════════════════════════════════════════════
 // POST /api/editor/queue/:id/request-changes
+// ═══════════════════════════════════════════════════════════════════════════
 editor.post('/queue/:id/request-changes', async (c) => {
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'Database não configurada' }, 500)
+
   const id = c.req.param('id')
-  const body = await c.req.json().catch(() => ({}))
-  const agent = c.get('user')
-  return c.json<ApiResponse>({
-    success: true,
-    data: { id, status: 'changes_requested', reviewed_by: agent?.full_name || 'Editor', feedback: body.feedback, reviewed_at: new Date().toISOString() },
-    message: 'Pedido de alterações enviado ao criador (modo demo)'
-  })
+  const body = await c.req.json().catch(() => ({})) as { feedback?: string }
+  if (!body.feedback) return c.json<ApiResponse>({ success: false, error: 'Feedback obrigatório ao pedir alterações' }, 400)
+
+  const { data, error } = await supabase
+    .from('lessons')
+    .update({ status: 'draft', review_feedback: body.feedback, review_action: 'changes_requested', updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('id, status')
+    .maybeSingle()
+
+  if (error || !data) return c.json<ApiResponse>({ success: false, error: error?.message || 'Lição não encontrada' }, 404)
+  return c.json<ApiResponse>({ success: true, data, message: 'Pedido de alterações enviado ao professor' })
 })
 
+// ═══════════════════════════════════════════════════════════════════════════
 // GET /api/editor/approved
-editor.get('/approved', (c) => {
-  const approved = MOCK_LESSONS_PENDING.filter(l => l.status === 'approved')
-  return c.json<ApiResponse>({ success: true, data: { lessons: approved, total: approved.length } })
+// ═══════════════════════════════════════════════════════════════════════════
+editor.get('/approved', async (c) => {
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: true, data: { lessons: [], total: 0 } })
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'Database não configurada' }, 500)
+
+  const lessons = await fetchReviewLessons(supabase, ['published'], { orderBy: 'updated_at', ascending: false })
+  return c.json<ApiResponse>({ success: true, data: { lessons, total: lessons.length } })
 })
 
+// ═══════════════════════════════════════════════════════════════════════════
 // GET /api/editor/rejected
-editor.get('/rejected', (c) => {
-  const rejected = MOCK_LESSONS_PENDING.filter(l => l.status === 'rejected')
-  return c.json<ApiResponse>({ success: true, data: { lessons: rejected, total: rejected.length } })
+// ═══════════════════════════════════════════════════════════════════════════
+editor.get('/rejected', async (c) => {
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: true, data: { lessons: [], total: 0 } })
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'Database não configurada' }, 500)
+
+  const all = await fetchReviewLessons(supabase, ['draft'], { orderBy: 'updated_at', ascending: false })
+  const lessons = all.filter((l: any) => l.review_action === 'rejected')
+  return c.json<ApiResponse>({ success: true, data: { lessons, total: lessons.length } })
 })
 
-// GET /api/editor/history
+// ═══════════════════════════════════════════════════════════════════════════
+// GET /api/editor/history — sem tabela de auditoria própria (ver plano); a UI
+// não tem aba de histórico hoje, este endpoint fica pronto mas honesto.
+// ═══════════════════════════════════════════════════════════════════════════
 editor.get('/history', async (c) => {
-  return c.json<ApiResponse>({ success: true, data: { history: MOCK_HISTORY, total: MOCK_HISTORY.length } })
+  return c.json<ApiResponse>({ success: true, data: { history: [], total: 0 } })
 })
 
 export default editor

@@ -194,11 +194,10 @@ curl -X POST http://localhost:3000/api/auth/register \
 - [ ] Checkbox "Lembrar de mim"
 - [ ] Link "Esqueceu a senha?"
 - [ ] Link "Registar agora"
-- [ ] Box azul com usuários de teste
 
 **Teste de Login:**
-1. Email: `estudante@vclass.mz`
-2. Senha: `password123`
+1. Email: `ana.silva@vclass.mz`
+2. Senha: `vclass2024`
 3. Clicar "Entrar"
 
 **Resultado esperado:**

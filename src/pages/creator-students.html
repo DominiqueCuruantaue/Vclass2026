@@ -44,11 +44,11 @@
                     </span>
                 </div>
                 <div class="hidden md:flex items-center space-x-1">
-                    <a href="/creator-dashboard.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50"><i class="fas fa-th-large"></i> Visão Geral</a>
-                    <a href="/creator-content.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50"><i class="fas fa-layer-group"></i> Conteúdos</a>
+                    <a href="/creator-dashboard.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-th-large"></i> Visão Geral</a>
+                    <a href="/creator-content.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-layer-group"></i> Conteúdos</a>
                     <a href="/creator-students.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-purple-50 text-purple-700"><i class="fas fa-users"></i> Alunos</a>
-                    <a href="/creator-analytics.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50"><i class="fas fa-chart-bar"></i> Analytics</a>
-                    <a href="/creator-earnings.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50"><i class="fas fa-coins"></i> Ganhos</a>
+                    <a href="/creator-analytics.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-chart-bar"></i> Analytics</a>
+                    <a href="/creator-earnings.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50"><i class="fas fa-coins"></i> Ganhos</a>
                 </div>
                 <div id="nav-avatar-sm" class="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-white text-sm font-bold cursor-pointer">?</div>
             </div>
@@ -69,6 +69,9 @@
                 </button>
                 <button onclick="openMessageModal()" class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700 transition shadow-sm">
                     <i class="fas fa-envelope"></i> Mensagem em Massa
+                </button>
+                <button onclick="openSessionModal()" class="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 text-white text-sm font-semibold rounded-xl hover:bg-sky-700 transition shadow-sm">
+                    <i class="fas fa-video"></i> Marcar Sessão
                 </button>
             </div>
         </div>
@@ -158,6 +161,17 @@
 
             <!-- Right Sidebar -->
             <div class="space-y-5">
+                <!-- Sessões Online (Google Meet) -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 fade-in">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-semibold text-gray-900"><i class="fas fa-video text-sky-500 mr-1"></i> Sessões Agendadas</h3>
+                        <button onclick="openSessionModal()" class="text-xs font-semibold text-sky-600 hover:text-sky-700">+ Nova</button>
+                    </div>
+                    <div class="space-y-2.5" id="sessions-list">
+                        <p class="text-xs text-gray-400 text-center py-2"><i class="fas fa-spinner fa-spin"></i></p>
+                    </div>
+                </div>
+
                 <!-- Progress Distribution Chart -->
                 <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 fade-in">
                     <h3 class="text-sm font-semibold text-gray-900 mb-4">Distribuição de Progresso</h3>
@@ -264,6 +278,56 @@
                 <button onclick="closeModal('modal-message')" class="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition">Cancelar</button>
                 <button onclick="sendMessage()" class="flex-1 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 transition">
                     <i class="fas fa-paper-plane mr-1"></i> Enviar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Marcar Sessão (Google Meet) -->
+    <div id="modal-session" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+                <h3 class="text-base font-bold text-gray-900"><i class="fas fa-video text-sky-500 mr-1.5"></i> Marcar Sessão Online</h3>
+                <button onclick="closeModal('modal-session')" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 text-gray-500"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Curso (capítulo)</label>
+                    <select id="session-chapter" class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400">
+                        <option value="">A carregar capítulos...</option>
+                    </select>
+                    <p class="text-xs text-gray-400 mt-1">Os alunos com progresso registado neste capítulo recebem o convite.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Título da sessão</label>
+                    <input type="text" id="session-title" placeholder="Ex: Revisão — Leis de Newton" class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Data</label>
+                        <input type="date" id="session-date" class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Hora</label>
+                        <input type="time" id="session-time" class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Link do Google Meet</label>
+                    <input type="text" id="session-link" placeholder="https://meet.google.com/abc-defg-hij" class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400">
+                    <a href="https://meet.google.com/new" target="_blank" rel="noopener" class="text-xs text-sky-600 hover:underline mt-1 inline-flex items-center gap-1">
+                        <i class="fas fa-external-link-alt"></i> Criar uma nova reunião no Google Meet
+                    </a>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Descrição (opcional)</label>
+                    <textarea id="session-desc" rows="2" placeholder="Ex: Traga dúvidas sobre o exercício 4." class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 resize-none"></textarea>
+                </div>
+            </div>
+            <div class="px-6 pb-5 flex gap-2">
+                <button onclick="closeModal('modal-session')" class="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition">Cancelar</button>
+                <button id="session-submit-btn" onclick="submitSession()" class="flex-1 py-2.5 bg-sky-600 text-white rounded-xl text-sm font-semibold hover:bg-sky-700 transition">
+                    <i class="fas fa-paper-plane mr-1"></i> Marcar e Partilhar
                 </button>
             </div>
         </div>
@@ -496,6 +560,118 @@
             closeModal('modal-message');
         }
 
+        // ── Sessões Online (Google Meet) ─────────────────────────────────────
+        let SESSIONS = [];
+        let sessionChaptersLoaded = false;
+
+        async function loadSessionChapters() {
+            if (sessionChaptersLoaded) return;
+            const sel = document.getElementById('session-chapter');
+            try {
+                const r = await fetch('/api/creator/chapters', { headers: apiHeaders() });
+                const d = await r.json();
+                const chapters = (d.success && Array.isArray(d.data)) ? d.data : [];
+                sel.innerHTML = chapters.length
+                    ? '<option value="">Selecione um capítulo...</option>' + chapters.map(ch => `<option value="${ch.id}">${ch.title}</option>`).join('')
+                    : '<option value="">Nenhum capítulo criado ainda</option>';
+                sessionChaptersLoaded = true;
+            } catch(e) {
+                sel.innerHTML = '<option value="">Erro ao carregar capítulos</option>';
+            }
+        }
+
+        function openSessionModal() {
+            loadSessionChapters();
+            document.getElementById('modal-session').classList.remove('hidden');
+        }
+
+        async function submitSession() {
+            const chapter_id = document.getElementById('session-chapter').value;
+            const title = document.getElementById('session-title').value.trim();
+            const date = document.getElementById('session-date').value;
+            const time = document.getElementById('session-time').value;
+            const meet_link = document.getElementById('session-link').value.trim();
+            const description = document.getElementById('session-desc').value.trim();
+
+            if (!chapter_id) return VClass.showNotification('Selecione um curso (capítulo)', 'error');
+            if (!title || title.length < 3) return VClass.showNotification('Título obrigatório (mín. 3 caracteres)', 'error');
+            if (!date || !time) return VClass.showNotification('Escolha a data e a hora da sessão', 'error');
+            if (!meet_link) return VClass.showNotification('Cole o link do Google Meet', 'error');
+
+            const scheduled_at = new Date(`${date}T${time}`).toISOString();
+            const btn = document.getElementById('session-submit-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> A marcar...';
+
+            try {
+                const r = await fetch('/api/creator/session', {
+                    method: 'POST',
+                    headers: apiHeaders(),
+                    body: JSON.stringify({ chapter_id, title, description, meet_link, scheduled_at })
+                });
+                const d = await r.json();
+                if (d.success) {
+                    VClass.showNotification(d.message || 'Sessão marcada com sucesso!', 'success');
+                    closeModal('modal-session');
+                    ['session-title','session-date','session-time','session-link','session-desc'].forEach(id => document.getElementById(id).value = '');
+                    loadSessions();
+                } else {
+                    VClass.showNotification(d.error || 'Erro ao marcar sessão', 'error');
+                }
+            } catch(e) {
+                VClass.showNotification('Erro de rede ao marcar sessão', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane mr-1"></i> Marcar e Partilhar';
+            }
+        }
+
+        async function loadSessions() {
+            const el = document.getElementById('sessions-list');
+            try {
+                const r = await fetch('/api/creator/sessions', { headers: apiHeaders() });
+                const d = await r.json();
+                SESSIONS = (d.success && Array.isArray(d.data)) ? d.data.filter(s => s.status === 'scheduled') : [];
+            } catch(e) {
+                SESSIONS = [];
+            }
+            if (!SESSIONS.length) {
+                el.innerHTML = '<p class="text-xs text-gray-400 text-center py-2">Nenhuma sessão agendada.</p>';
+                return;
+            }
+            el.innerHTML = SESSIONS.map(s => {
+                const d = new Date(s.scheduled_at);
+                const when = d.toLocaleDateString('pt', { day:'2-digit', month:'2-digit' }) + ' às ' + d.toLocaleTimeString('pt', { hour:'2-digit', minute:'2-digit' });
+                return `<div class="flex items-start gap-2 p-2.5 rounded-xl border border-sky-100 bg-sky-50">
+                    <div class="w-8 h-8 rounded-lg bg-sky-500 text-white flex items-center justify-center flex-shrink-0 text-xs"><i class="fas fa-video"></i></div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-semibold text-gray-800 truncate">${s.title}</p>
+                        <p class="text-[11px] text-gray-500 truncate">${s.chapter_title} · ${when}</p>
+                        <p class="text-[11px] text-sky-600">${s.students_notified} aluno${s.students_notified===1?'':'s'} convidado${s.students_notified===1?'':'s'}</p>
+                    </div>
+                    <button onclick="cancelSession('${s.id}')" class="text-gray-300 hover:text-red-500 transition p-0.5" title="Cancelar sessão">
+                        <i class="fas fa-times text-xs"></i>
+                    </button>
+                </div>`;
+            }).join('');
+        }
+
+        async function cancelSession(id) {
+            if (!confirm('Cancelar esta sessão? Os alunos deixarão de a ver.')) return;
+            try {
+                const r = await fetch(`/api/creator/session/${id}`, { method: 'DELETE', headers: apiHeaders() });
+                const d = await r.json();
+                if (d.success) {
+                    VClass.showNotification('Sessão cancelada', 'success');
+                    loadSessions();
+                } else {
+                    VClass.showNotification(d.error || 'Erro ao cancelar', 'error');
+                }
+            } catch(e) {
+                VClass.showNotification('Erro de rede ao cancelar', 'error');
+            }
+        }
+
         function exportCSV() {
             const header = 'Nome,Email,Progresso,Nota,Licoes';
             const rows = ALL_STUDENTS.map(s => [s.name, s.email, s.progress+'%', s.score+'%', s.lessons].join(','));
@@ -507,12 +683,13 @@
             VClass.showNotification('CSV exportado com sucesso!', 'success');
         }
 
-        ['modal-student','modal-message'].forEach(id=>{
+        ['modal-student','modal-message','modal-session'].forEach(id=>{
             document.getElementById(id)?.addEventListener('click',function(e){if(e.target===this)closeModal(id);});
         });
 
         // ── Init ──────────────────────────────────────────────────────────
         loadStudents();
+        loadSessions();
     </script>
 </body>
 </html>

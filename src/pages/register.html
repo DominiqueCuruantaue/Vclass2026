@@ -24,7 +24,7 @@
         .input-field.error { border-color: #ef4444; }
         .input-field.success { border-color: #10b981; }
         .btn-primary {
-            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            background: linear-gradient(135deg, #7c3aed, #5b21b6);
             color: white;
             border: none;
             padding: 0.75rem 1.5rem;
@@ -39,12 +39,12 @@
             justify-content: center;
             gap: 0.5rem;
         }
-        .btn-primary:hover:not(:disabled) { background: linear-gradient(135deg, #6d28d9, #5b21b6); transform: translateY(-1px); box-shadow: 0 4px 15px rgba(109,40,217,0.4); }
+        .btn-primary:hover:not(:disabled) { background: linear-gradient(135deg, #6d28d9, #4c1d95); transform: translateY(-1px); box-shadow: 0 4px 15px rgba(109,40,217,0.4); }
         .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
         .error-msg { color: #ef4444; font-size: 0.75rem; margin-top: 0.25rem; display: none; }
         .error-msg.show { display: block; }
         .strength-bar { height: 4px; border-radius: 2px; transition: width 0.3s, background 0.3s; }
-        .left-panel { background: linear-gradient(160deg, #7c3aed 0%, #4f46e5 50%, #1e40af 100%); }
+        .left-panel { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 40%, #312e81 70%, #4c1d95 100%); }
         .step-indicator { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; }
         .step-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.3); }
         .step-dot.active { background: white; width: 24px; border-radius: 4px; }
@@ -147,7 +147,7 @@
             </div>
 
             <div class="max-w-md mx-auto">
-                <div class="mb-8">
+                <div class="mb-8 text-center">
                     <h1 class="text-2xl font-bold text-gray-900 mb-1">Criar conta gratuita</h1>
                     <p class="text-sm text-gray-500">Preencha os dados abaixo para começar</p>
                 </div>
@@ -240,6 +240,35 @@
                         <p class="error-msg" id="confirm_password-error">As senhas não coincidem</p>
                     </div>
 
+                    <!-- Country -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">País</label>
+                        <div class="relative">
+                            <i class="fas fa-globe-africa absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                            <select id="country_code" class="input-field" onchange="loadGrades()">
+                                <option value="" disabled selected>Selecione o seu país</option>
+                                <option value="mz">🇲🇿 Moçambique</option>
+                                <option value="ao">🇦🇴 Angola</option>
+                                <option value="br">🇧🇷 Brasil</option>
+                                <option value="pt">🇵🇹 Portugal</option>
+                                <option value="cv">🇨🇻 Cabo Verde</option>
+                            </select>
+                        </div>
+                        <p class="error-msg" id="country_code-error">Seleccione o seu país</p>
+                    </div>
+
+                    <!-- Grade -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Classe / Ano</label>
+                        <div class="relative">
+                            <i class="fas fa-layer-group absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                            <select id="grade_id" class="input-field" disabled>
+                                <option value="" disabled selected>Seleccione primeiro o país</option>
+                            </select>
+                        </div>
+                        <p class="error-msg" id="grade_id-error">Seleccione a sua classe/ano</p>
+                    </div>
+
                     <!-- Terms -->
                     <div class="flex items-start gap-3 py-1">
                         <input type="checkbox" id="terms" class="mt-0.5 w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500 cursor-pointer" required>
@@ -276,6 +305,37 @@
     <script src="/static/app.js"></script>
     <script>
         let selectedRole = 'student';
+        let _gradesCache = {};
+
+        async function loadGrades() {
+            const countryCode = document.getElementById('country_code').value;
+            const gradeSelect = document.getElementById('grade_id');
+            clearFieldError('country_code');
+
+            gradeSelect.disabled = true;
+            gradeSelect.innerHTML = '<option value="" disabled selected>A carregar...</option>';
+            if (!countryCode) return;
+
+            try {
+                let grades = _gradesCache[countryCode];
+                if (!grades) {
+                    const res = await fetch(`/api/curriculum/tree/${countryCode}`);
+                    const json = await res.json();
+                    if (!json.success) throw new Error('Erro ao carregar classes');
+                    grades = [];
+                    json.data.curriculum.forEach(level => {
+                        level.grades.forEach(g => grades.push(g));
+                    });
+                    _gradesCache[countryCode] = grades;
+                }
+
+                gradeSelect.innerHTML = '<option value="" disabled selected>Seleccione a sua classe/ano</option>' +
+                    grades.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+                gradeSelect.disabled = false;
+            } catch (e) {
+                gradeSelect.innerHTML = '<option value="" disabled selected>Erro ao carregar classes</option>';
+            }
+        }
 
         function selectRole(role, el) {
             selectedRole = role;
@@ -348,8 +408,9 @@
         }
 
         // Real-time validation
-        ['full_name', 'email', 'password', 'confirm_password'].forEach(id => {
+        ['full_name', 'email', 'password', 'confirm_password', 'country_code', 'grade_id'].forEach(id => {
             document.getElementById(id)?.addEventListener('blur', () => validateField(id));
+            document.getElementById(id)?.addEventListener('change', () => validateField(id));
         });
 
         function validateField(id) {
@@ -367,6 +428,12 @@
                 const pwd = document.getElementById('password')?.value;
                 if (val !== pwd) { showFieldError('confirm_password', 'As senhas não coincidem'); return false; }
                 clearFieldError('confirm_password');
+            } else if (id === 'country_code') {
+                if (!val) { showFieldError('country_code', 'Seleccione o seu país'); return false; }
+                clearFieldError('country_code');
+            } else if (id === 'grade_id') {
+                if (!val) { showFieldError('grade_id', 'Seleccione a sua classe/ano'); return false; }
+                clearFieldError('grade_id');
             }
             return true;
         }
@@ -380,7 +447,7 @@
                 return;
             }
 
-            const valid = ['full_name', 'email', 'password', 'confirm_password'].every(id => validateField(id));
+            const valid = ['full_name', 'email', 'password', 'confirm_password', 'country_code', 'grade_id'].every(id => validateField(id));
             if (!valid) return;
 
             if (!document.getElementById('terms').checked) {
@@ -398,7 +465,9 @@
                 full_name: document.getElementById('full_name').value.trim(),
                 email: document.getElementById('email').value.trim(),
                 password: document.getElementById('password').value,
-                role: document.getElementById('role').value
+                role: document.getElementById('role').value,
+                country_code: document.getElementById('country_code').value,
+                grade_id: document.getElementById('grade_id').value
             };
 
             try {

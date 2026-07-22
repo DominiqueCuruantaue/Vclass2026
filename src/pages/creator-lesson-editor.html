@@ -11,7 +11,8 @@
         @keyframes fadeIn { from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);} }
         .fade-in { animation: fadeIn 0.3s ease forwards; }
         .tab-btn { border-bottom: 3px solid transparent; transition: all 0.15s; }
-        .tab-btn.active { border-color: #8b5cf6; color: #7c3aed; font-weight: 600; }
+        .tab-btn.active { border-color: #8b5cf6; color: #7c3aed; }
+        .field-required-error { border-color: #ef4444 !important; box-shadow: 0 0 0 3px rgba(239,68,68,0.12); }
         .section-card { transition: box-shadow 0.2s; }
         .section-card:hover { box-shadow: 0 4px 20px rgba(139,92,246,0.1); }
         /* Video upload area */
@@ -169,6 +170,12 @@
 
         <!-- ── TAB: Informações ─────────────────────────────────────── -->
         <div id="panel-info" class="fade-in">
+            <div class="mb-5 flex items-start gap-3 p-4 bg-purple-50 border border-purple-100 rounded-2xl">
+                <i class="fas fa-lock text-purple-500 mt-0.5"></i>
+                <p class="text-xs text-purple-800">
+                    <strong>Preencha todos os campos obrigatórios (marcados com <span class="text-red-500 font-bold">*</span>)</strong> — Título, Disciplina e Capítulo — para desbloquear a aba "Vídeo". Só é possível avançar clicando no botão <strong>"Prosseguir"</strong> no final desta aba.
+                </p>
+            </div>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Main Info -->
                 <div class="lg:col-span-2 space-y-5">
@@ -183,6 +190,7 @@
                                     <p class="text-xs text-gray-400">Seja claro e objetivo. Títulos descritivos têm mais visualizações.</p>
                                     <span class="text-xs text-gray-400"><span id="title-count">0</span>/100</span>
                                 </div>
+                                <p id="field-title-error" class="text-xs text-red-500 mt-1 hidden"></p>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
@@ -253,6 +261,7 @@
                                 <select id="field-subject" onchange="onSubjectChange()" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
                                     <option value="">Selecionar disciplina...</option>
                                 </select>
+                                <p id="field-subject-error" class="text-xs text-red-500 mt-1 hidden"></p>
                             </div>
 
                             <!-- Capítulo -->
@@ -264,6 +273,7 @@
                                     <option value="">Selecionar capítulo...</option>
                                 </select>
                                 <p id="chapter-empty-hint" class="hidden text-xs text-gray-400 mt-1">Ainda não há capítulos para esta disciplina. Crie capítulos na página <a href="/creator-content.html" class="text-purple-600 font-semibold hover:underline">Conteúdos</a>.</p>
+                                <p id="field-chapter-error" class="text-xs text-red-500 mt-1 hidden"></p>
                                 <!-- Badge do trimestre -->
                                 <div id="chapter-term-badge" class="hidden mt-1">
                                     <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-semibold" id="chapter-term-text"></span>
@@ -356,6 +366,14 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Avançar para a aba Vídeo — só libera com Título, Disciplina e Capítulo preenchidos -->
+            <p class="text-xs text-gray-400 text-right mt-4"><i class="fas fa-circle-info mr-1"></i>Antes de clicar em "Prosseguir", confira se já preencheu todos os campos obrigatórios (Título, Disciplina e Capítulo).</p>
+            <div class="flex justify-end mt-2">
+                <button onclick="goToNextTab()" class="px-5 py-2.5 text-sm font-semibold text-white bg-purple-600 rounded-xl hover:bg-purple-700 transition shadow-sm flex items-center gap-2">
+                    Prosseguir <i class="fas fa-arrow-right"></i>
+                </button>
             </div>
         </div>
 
@@ -1052,6 +1070,15 @@
                             </div>
                         </div>
                     </div>
+                    <div class="bg-red-50 rounded-2xl p-5 border border-red-100">
+                        <h3 class="text-sm font-semibold text-red-900 mb-3"><i class="fas fa-hard-drive text-red-500 mr-2"></i>Requisitos do Vídeo</h3>
+                        <ul class="text-xs text-red-800 space-y-1.5">
+                            <li>📐 Qualidade máxima: <strong>480p</strong> — resoluções maiores deixam o ficheiro pesado e lento para carregar, principalmente com internet fraca</li>
+                            <li>🎞️ Formatos aceites: <strong>MP4, MOV, AVI, MKV, WebM</strong> (recomenda-se MP4/H.264)</li>
+                            <li>💾 Tamanho máximo do ficheiro: <strong>4 GB</strong> — prefira ficheiros comprimidos e leves</li>
+                            <li>⏱️ Duração recomendada: <strong>8–15 minutos</strong> por aula</li>
+                        </ul>
+                    </div>
                     <div class="bg-amber-50 rounded-2xl p-5 border border-amber-100">
                         <h3 class="text-sm font-semibold text-amber-900 mb-3"><i class="fas fa-lightbulb text-amber-500 mr-2"></i>Boas Práticas</h3>
                         <ul class="text-xs text-amber-800 space-y-1.5">
@@ -1062,6 +1089,13 @@
                         </ul>
                     </div>
                 </div>
+            </div>
+
+            <p class="text-xs text-gray-400 text-right mt-4"><i class="fas fa-circle-info mr-1"></i>Antes de prosseguir, confira se o vídeo está configurado (checklist ao lado).</p>
+            <div class="flex justify-end mt-2">
+                <button onclick="goToNextTab()" class="px-5 py-2.5 text-sm font-semibold text-white bg-purple-600 rounded-xl hover:bg-purple-700 transition shadow-sm flex items-center gap-2">
+                    Prosseguir <i class="fas fa-arrow-right"></i>
+                </button>
             </div>
         </div>
 
@@ -1146,7 +1180,7 @@
                     <div class="bg-blue-50 rounded-2xl p-5 border border-blue-100">
                         <h3 class="text-sm font-semibold text-blue-900 mb-3"><i class="fas fa-info-circle text-blue-500 mr-2"></i>Diretrizes</h3>
                         <ul class="text-xs text-blue-800 space-y-1.5">
-                            <li>✅ Mínimo de <strong>3 exercícios</strong> por lição</li>
+                            <li>✅ Crie <strong>pelo menos 5 perguntas</strong> para o exercício da sua lição</li>
                             <li>✅ Sempre inclua <strong>explicação</strong> para respostas incorretas</li>
                             <li>✅ As 4 alternativas devem ser <strong>plausíveis</strong></li>
                             <li>✅ Use linguagem <strong>clara e objetiva</strong> nas perguntas</li>
@@ -1154,6 +1188,14 @@
                         </ul>
                     </div>
                 </div>
+            </div>
+
+            <p class="text-xs text-gray-400 text-right mt-4"><i class="fas fa-circle-info mr-1"></i>Antes de prosseguir, confira se já criou pelo menos 5 perguntas.</p>
+
+            <div class="flex justify-end mt-6">
+                <button onclick="goToNextTab()" class="px-5 py-2.5 text-sm font-semibold text-white bg-purple-600 rounded-xl hover:bg-purple-700 transition shadow-sm flex items-center gap-2">
+                    Prosseguir <i class="fas fa-arrow-right"></i>
+                </button>
             </div>
         </div>
 
@@ -1193,6 +1235,13 @@
                     </div>
                 </div>
             </div>
+
+            <p class="text-xs text-gray-400 text-right mt-4"><i class="fas fa-circle-info mr-1"></i>Materiais complementares são opcionais, mas ajudam o aluno a fixar o conteúdo.</p>
+            <div class="flex justify-end mt-2">
+                <button onclick="goToNextTab()" class="px-5 py-2.5 text-sm font-semibold text-white bg-purple-600 rounded-xl hover:bg-purple-700 transition shadow-sm flex items-center gap-2">
+                    Prosseguir <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
         </div>
 
         <!-- ── TAB: Publicar ────────────────────────────────────────── -->
@@ -1202,8 +1251,8 @@
                     <div id="publish-ready-icon" class="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                         <i class="fas fa-clipboard-list text-amber-600 text-2xl"></i>
                     </div>
-                    <h2 class="text-xl font-bold text-gray-900 mb-2" id="publish-heading">Verificação Pré-publicação</h2>
-                    <p class="text-sm text-gray-500 mb-6" id="publish-subheading">Verifique os itens abaixo antes de publicar sua lição.</p>
+                    <h2 class="text-xl font-bold text-gray-900 mb-2" id="publish-heading">Verificação Pré-envio</h2>
+                    <p class="text-sm text-gray-500 mb-6" id="publish-subheading">Verifique os itens abaixo antes de enviar a lição para aprovação do administrador.</p>
 
                     <!-- Checklist final -->
                     <div class="text-left space-y-3 mb-8" id="publish-checklist">
@@ -1238,9 +1287,9 @@
                     </div>
 
                     <button onclick="publishLesson()" id="btn-publish-final" class="w-full py-3 bg-green-600 text-white font-bold rounded-2xl hover:bg-green-700 transition shadow-md text-base disabled:opacity-50 disabled:cursor-not-allowed">
-                        <i class="fas fa-rocket mr-2"></i> Publicar Lição Agora
+                        <i class="fas fa-paper-plane mr-2"></i> Enviar para Aprovação
                     </button>
-                    <p class="text-xs text-gray-400 mt-3">A lição ficará disponível para os alunos imediatamente após publicação.</p>
+                    <p class="text-xs text-gray-400 mt-3">A lição será enviada para o administrador rever. Só ficará disponível para os alunos depois de aprovada.</p>
                 </div>
 
                 <!-- Danger zone -->
@@ -1325,6 +1374,8 @@
             if (lessonDbId) {
                 await loadExistingLesson(lessonDbId);
                 await restoreCurriculumSelects();
+                // Lição já existente: desbloqueia todas as abas (não é uma criação nova passo-a-passo)
+                maxUnlockedTabIndex = TABS.length - 1;
             }
 
             setVideoSource(lessonData.videoSource || 'upload');
@@ -1435,9 +1486,9 @@
                 const badge = document.getElementById('lesson-status-badge');
                 if (badge) {
                     const statusMap = {
-                        published: { label: 'Publicada',  cls: 'bg-green-100 text-green-700' },
-                        draft:     { label: 'Rascunho',   cls: 'bg-amber-100 text-amber-700' },
-                        review:    { label: 'Em Revisão', cls: 'bg-blue-100 text-blue-700'   }
+                        published:      { label: 'Publicada',  cls: 'bg-green-100 text-green-700' },
+                        draft:          { label: 'Rascunho',   cls: 'bg-amber-100 text-amber-700' },
+                        pending_review: { label: 'Em Revisão', cls: 'bg-blue-100 text-blue-700'   }
                     };
                     const s = statusMap[lessonData.status] || statusMap.draft;
                     badge.textContent = s.label;
@@ -1628,6 +1679,7 @@
 
             // Renderizar apenas capítulos criados pelo professor para esta disciplina
             renderChapterSelectForSubject(subjectId);
+            if (document.getElementById('field-subject').classList.contains('field-required-error')) validateInfoTab();
             scheduleAutoSave();
         }
 
@@ -1725,17 +1777,76 @@
                 document.getElementById('chapter-term-text').textContent = `${termLabel} ${term}`;
                 document.getElementById('chapter-term-badge').classList.remove('hidden');
             }
+            if (document.getElementById('field-chapter').classList.contains('field-required-error')) validateInfoTab();
             scheduleAutoSave();
         }
 
         // ── Tabs ─────────────────────────────────────────────────────────
         const TABS = ['info','video','exercises','resources','publish'];
-        function switchTab(tab) {
+
+        // Valida os campos obrigatórios da aba Informações (Título, Disciplina, Capítulo).
+        // Marca a borda vermelha + mostra a mensagem de erro abaixo do campo em falta.
+        function validateInfoTab() {
+            const checks = [
+                { id: 'field-title',   errId: 'field-title-error',   ok: (document.getElementById('field-title')?.value || '').trim().length >= 5,
+                  msg: (document.getElementById('field-title')?.value || '').trim().length === 0 ? 'O título é obrigatório.' : 'O título deve ter pelo menos 5 caracteres.' },
+                { id: 'field-subject', errId: 'field-subject-error', ok: !!document.getElementById('field-subject')?.value,
+                  msg: 'Selecione uma disciplina.' },
+                { id: 'field-chapter', errId: 'field-chapter-error', ok: !!document.getElementById('field-chapter')?.value,
+                  msg: 'Selecione um capítulo.' }
+            ];
+            checks.forEach(({ id, errId, ok, msg }) => {
+                const el = document.getElementById(id);
+                const errEl = document.getElementById(errId);
+                if (el) el.classList.toggle('field-required-error', !ok);
+                if (errEl) {
+                    errEl.textContent = ok ? '' : msg;
+                    errEl.classList.toggle('hidden', ok);
+                }
+            });
+            return checks.every(c => c.ok);
+        }
+
+        // Passo mais avançado já desbloqueado (índice em TABS). Começa só na aba Informações;
+        // ao editar uma lição já existente, é desbloqueado tudo (ver window.onload).
+        let maxUnlockedTabIndex = 0;
+
+        function _activateTab(tab) {
             TABS.forEach(t => {
                 document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
                 document.getElementById(`panel-${t}`).classList.toggle('hidden', t !== tab);
             });
             if (tab === 'publish') updatePublishChecklist();
+        }
+
+        // Clique directo nos separadores do topo: só permite ir para uma aba já desbloqueada
+        // (pode voltar a abas anteriores livremente, mas não avançar sem passar pelo botão "Prosseguir").
+        function switchTab(tab) {
+            const targetIndex = TABS.indexOf(tab);
+            if (targetIndex > maxUnlockedTabIndex) {
+                VClass.showNotification('Preencha os campos obrigatórios da aba actual antes de avançar.', 'warning');
+                return;
+            }
+            _activateTab(tab);
+        }
+
+        function currentTabName() {
+            return TABS.find(t => document.getElementById(`tab-${t}`).classList.contains('active')) || 'info';
+        }
+
+        // Botão "Prosseguir" (presente no fim de cada aba, excepto Publicar) — valida a aba
+        // actual antes de desbloquear e avançar para a próxima.
+        function goToNextTab() {
+            const current = currentTabName();
+            if (current === 'info' && !validateInfoTab()) {
+                VClass.showNotification('Preencha Título, Disciplina e Capítulo antes de continuar.', 'warning');
+                document.getElementById('field-title')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+            const nextIndex = TABS.indexOf(current) + 1;
+            if (nextIndex >= TABS.length) return;
+            maxUnlockedTabIndex = Math.max(maxUnlockedTabIndex, nextIndex);
+            _activateTab(TABS[nextIndex]);
         }
 
         // ── Field Changes ────────────────────────────────────────────────
@@ -1746,6 +1857,7 @@
             document.getElementById('header-title').textContent = lessonData.title || 'Editar Lição';
             updateCharCount('field-title','title-count');
             updateCharCount('field-desc','desc-count');
+            if (document.getElementById('field-title').classList.contains('field-required-error')) validateInfoTab();
             scheduleAutoSave();
         }
 
@@ -2139,6 +2251,89 @@
             VClass.showNotification('Thumbnail aplicada à lição!', 'success');
         }
 
+        // ── Compressão client-side (ffmpeg.wasm) ───────────────────────────
+        // Reduz um pouco o tamanho do vídeo antes de o enviar para o Bunny,
+        // poupando tempo/dados de upload. Corre inteiramente no browser —
+        // nenhum ficheiro passa pelo nosso servidor. Falha graciosamente
+        // (usa o ficheiro original) se o ffmpeg.wasm não carregar ou o
+        // resultado não ficar mais pequeno.
+        const COMPRESS_MIN_SIZE = 15 * 1024 * 1024; // não compensa recodificar ficheiros pequenos
+        let ffmpegInstance = null;
+        let ffmpegUtil     = null;
+        async function getFFmpeg() {
+            if (ffmpegInstance) return ffmpegInstance;
+            const [{ FFmpeg }, util] = await Promise.all([
+                import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js'),
+                import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js')
+            ]);
+            ffmpegUtil = util;
+            const ffmpeg = new FFmpeg();
+            const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
+            await ffmpeg.load({
+                coreURL: await util.toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+                wasmURL: await util.toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
+            });
+            ffmpegInstance = ffmpeg;
+            return ffmpeg;
+        }
+
+        async function compressVideoBeforeUpload(file) {
+            if (file.size < COMPRESS_MIN_SIZE) return file;
+
+            let ffmpeg;
+            try {
+                document.getElementById('upload-status-text').textContent = 'A preparar compressão...';
+                setUploadProgress(0);
+                ffmpeg = await getFFmpeg();
+            } catch (err) {
+                console.warn('ffmpeg.wasm indisponível, a usar ficheiro original:', err);
+                return file;
+            }
+
+            const onProgress = ({ progress }) => {
+                const pct = Math.max(0, Math.min(99, Math.round((progress || 0) * 100)));
+                document.getElementById('upload-status-text').textContent = `A comprimir vídeo... ${pct}%`;
+                setUploadProgress(pct);
+            };
+
+            const inputName  = 'input' + (file.name.match(/\.\w+$/)?.[0] || '.mp4');
+            const outputName = 'output.mp4';
+
+            try {
+                ffmpeg.on('progress', onProgress);
+                await ffmpeg.writeFile(inputName, await ffmpegUtil.fetchFile(file));
+
+                // Baixa um pouco o bitrate/qualidade e limita a 1080p — reduz o
+                // tamanho sem degradar visivelmente a lição.
+                await ffmpeg.exec([
+                    '-i', inputName,
+                    '-vf', "scale='min(1920,iw)':-2",
+                    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '28',
+                    '-c:a', 'aac', '-b:a', '128k',
+                    outputName
+                ]);
+
+                const data = await ffmpeg.readFile(outputName);
+                const compressed = new Blob([data.buffer], { type: 'video/mp4' });
+
+                // Só vale a pena se ficou de facto mais pequeno
+                if (!compressed.size || compressed.size >= file.size) return file;
+
+                const newName = file.name.replace(/\.\w+$/, '') + '.mp4';
+                const saved = Math.round((1 - compressed.size / file.size) * 100);
+                document.getElementById('upload-status-text').textContent =
+                    `Compressão concluída: ${formatBytes(file.size)} → ${formatBytes(compressed.size)} (-${saved}%)`;
+                return new File([compressed], newName, { type: 'video/mp4' });
+            } catch (err) {
+                console.warn('Compressão falhou, a usar ficheiro original:', err);
+                return file;
+            } finally {
+                ffmpeg.off('progress', onProgress);
+                try { await ffmpeg.deleteFile(inputName); } catch {}
+                try { await ffmpeg.deleteFile(outputName); } catch {}
+            }
+        }
+
         // ── Iniciar Upload ───────────────────────────────────────────────
         async function startUpload() {
             if (!uploadFile) return;
@@ -2150,14 +2345,17 @@
             uploadStartTime = Date.now();
 
             try {
+                const fileToUpload = await compressVideoBeforeUpload(uploadFile);
+                uploadStartTime = Date.now(); // cronómetro de envio começa após a compressão
+
                 const token = localStorage.getItem('accessToken') || '';
                 const hasTrim = trimIn > 0.5 || trimOut < videoDuration - 0.5;
                 const prepRes = await fetch('/api/creator/video/upload-url', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({
-                        filename: uploadFile.name,
-                        title: document.getElementById('field-title')?.value || uploadFile.name,
+                        filename: fileToUpload.name,
+                        title: document.getElementById('field-title')?.value || fileToUpload.name,
                         trimIn:  hasTrim ? trimIn  : null,
                         trimOut: hasTrim ? trimOut : null
                     })
@@ -2171,10 +2369,10 @@
                 if (demoNotice) demoNotice.classList.toggle('hidden', !demo);
 
                 if (demo || !upload) {
-                    await simulateDemoUpload(videoId, uploadFile.name);
+                    await simulateDemoUpload(videoId, fileToUpload);
                 } else {
                     document.getElementById('upload-status-text').textContent = 'A enviar para Bunny.net...';
-                    await doTusUpload(upload, videoId);
+                    await doTusUpload(upload, videoId, fileToUpload);
                 }
             } catch (err) {
                 showUploadError(err.message || 'Erro desconhecido durante o upload.');
@@ -2185,11 +2383,11 @@
         // O servidor já criou o vídeo no Bunny e devolveu uma assinatura HMAC
         // com escopo (videoId × expiração). A master API key NUNCA é exposta.
         let currentTusUpload = null;
-        function doTusUpload(uploadCfg, videoId) {
+        function doTusUpload(uploadCfg, videoId, fileToUpload) {
             return new Promise((resolve, reject) => {
                 if (!window.tus) return reject(new Error('TUS client não carregado.'));
 
-                currentTusUpload = new tus.Upload(uploadFile, {
+                currentTusUpload = new tus.Upload(fileToUpload || uploadFile, {
                     endpoint: uploadCfg.endpoint,
                     retryDelays: [0, 3000, 5000, 10000, 20000],
                     headers: uploadCfg.headers || {},
@@ -2222,11 +2420,12 @@
         }
 
         // ── Upload demo ──────────────────────────────────────────────────
-        function simulateDemoUpload(videoId, filename) {
+        function simulateDemoUpload(videoId, fileOrName) {
+            const filename = typeof fileOrName === 'string' ? fileOrName : fileOrName?.name;
+            const total = (typeof fileOrName === 'object' && fileOrName?.size) ? fileOrName.size : uploadFile.size;
             return new Promise((resolve) => {
                 document.getElementById('upload-status-text').textContent = 'A simular upload (modo demo)...';
                 let pct = 0;
-                const total = uploadFile.size;
                 const iv = setInterval(() => {
                     pct = Math.min(pct + Math.random() * 8 + 2, 99);
                     const sent  = (pct / 100) * total;
@@ -2718,16 +2917,26 @@
                 VClass.showNotification('Selecione um capítulo antes de publicar.', 'warning');
                 return;
             }
-            lessonData.status = 'published';
             performSave();
 
+            // O backend nunca publica directamente a partir do professor — a lição
+            // vai para 'pending_review' e só um admin a aprova (ver src/routes/creator.ts).
             const result = await performSaveAPI('published');
             if (!result) return;  // erro já notificado
 
-            document.getElementById('lesson-status-badge').textContent = 'Publicada';
-            document.getElementById('lesson-status-badge').className = 'text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700';
-            VClass.showNotification('Lição publicada! 🎉', 'success');
-            setTimeout(() => location.href = '/creator-content.html', 1500);
+            const finalStatus = result.status || 'pending_review';
+            lessonData.status = finalStatus;
+            const isPublished = finalStatus === 'published';
+            document.getElementById('lesson-status-badge').textContent = isPublished ? 'Publicada' : 'Em Revisão';
+            document.getElementById('lesson-status-badge').className = 'text-xs font-semibold px-2 py-0.5 rounded-full ' +
+                (isPublished ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700');
+            VClass.showNotification(
+                isPublished
+                    ? 'Lição publicada! 🎉'
+                    : 'Lição enviada para aprovação do administrador! Assim que for aprovada, ficará disponível para os alunos.',
+                'success'
+            );
+            setTimeout(() => location.href = '/creator-content.html', 1800);
         }
 
         async function unpublishLesson() {

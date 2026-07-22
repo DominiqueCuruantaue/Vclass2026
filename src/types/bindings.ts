@@ -30,6 +30,11 @@ export interface CloudflareBindings {
   // Integrações opcionais (chat AI)
   OPENAI_API_KEY?: string
   OPENAI_BASE_URL?: string
+  OPENAI_MODEL?: string
+
+  // Email transacional (Resend) — ver src/utils/email.ts
+  RESEND_API_KEY?: string
+  RESEND_FROM_EMAIL?: string
 
   // KV namespaces
   RATE_LIMIT?: KVNamespace

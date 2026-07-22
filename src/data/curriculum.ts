@@ -136,7 +136,101 @@ export const GRADES: Grade[] = [
 //  DISCIPLINAS E CAPÍTULOS
 // ============================================================
 export const SUBJECTS: Subject[] = [
-  // ══ MOÇAMBIQUE 10ª Classe ══
+  // ══ MOÇAMBIQUE — Ensino Primário (1ª a 7ª Classe — EP1 + EP2, PCEB/INDE 2003) ══
+  // Disciplinas conforme o Plano de Estudos do PCEB, Tabela 4 (regime de 2 turnos,
+  // programa monolingue) — a tabela que corresponde à estrutura já usada neste
+  // ficheiro (EP1 = 1ª-5ª classe, EP2 = 6ª-7ª classe). Língua Moçambicana fica de
+  // fora por ser disciplina facultativa e dependente da região; Educação Física
+  // fica de fora por não se prestar a vídeo-aula (nenhuma classe/país no ficheiro
+  // inclui Educação Física como disciplina).
+  { id: 'mz1-port', gradeId: 'mz-1c', name: 'Língua Portuguesa', shortName: 'PORT', icon: 'fa-book-open',  color: '#3b82f6', description: 'Iniciação à leitura, escrita e oralidade',         displayOrder: 1 },
+  { id: 'mz1-mat',  gradeId: 'mz-1c', name: 'Matemática',        shortName: 'MAT',  icon: 'fa-calculator', color: '#9333ea', description: 'Números até 100, contagem e noções espaciais',     displayOrder: 2 },
+  { id: 'mz1-ev',   gradeId: 'mz-1c', name: 'Educação Visual',   shortName: 'EV',   icon: 'fa-palette',    color: '#f97316', description: 'Desenho, observação e expressão através da imagem', displayOrder: 3 },
+  { id: 'mz1-em',   gradeId: 'mz-1c', name: 'Educação Musical',  shortName: 'EM',   icon: 'fa-music',      color: '#ec4899', description: 'Jogos, canções e ritmo',                          displayOrder: 4 },
+  { id: 'mz1-of',   gradeId: 'mz-1c', name: 'Ofícios',           shortName: 'OF',   icon: 'fa-hammer',     color: '#78716c', description: 'Iniciação a actividades manuais e práticas',       displayOrder: 5 },
+
+  { id: 'mz2-port', gradeId: 'mz-2c', name: 'Língua Portuguesa', shortName: 'PORT', icon: 'fa-book-open',  color: '#3b82f6', description: 'Leitura de textos curtos e primeiras produções',   displayOrder: 1 },
+  { id: 'mz2-mat',  gradeId: 'mz-2c', name: 'Matemática',        shortName: 'MAT',  icon: 'fa-calculator', color: '#9333ea', description: 'Números até 1000 e introdução à multiplicação',    displayOrder: 2 },
+  { id: 'mz2-ev',   gradeId: 'mz-2c', name: 'Educação Visual',   shortName: 'EV',   icon: 'fa-palette',    color: '#f97316', description: 'Desenho de formas e modelagem',                    displayOrder: 3 },
+  { id: 'mz2-em',   gradeId: 'mz-2c', name: 'Educação Musical',  shortName: 'EM',   icon: 'fa-music',      color: '#ec4899', description: 'Canções tradicionais e percussão corporal',        displayOrder: 4 },
+  { id: 'mz2-of',   gradeId: 'mz-2c', name: 'Ofícios',           shortName: 'OF',   icon: 'fa-hammer',     color: '#78716c', description: 'Costura simples e jardinagem',                     displayOrder: 5 },
+
+  { id: 'mz3-port', gradeId: 'mz-3c', name: 'Língua Portuguesa', shortName: 'PORT', icon: 'fa-book-open',  color: '#3b82f6', description: 'Leitura interpretativa e produção textual',        displayOrder: 1 },
+  { id: 'mz3-mat',  gradeId: 'mz-3c', name: 'Matemática',        shortName: 'MAT',  icon: 'fa-calculator', color: '#9333ea', description: 'Tabuadas, fracções iniciais e medidas',            displayOrder: 2 },
+  { id: 'mz3-cn',   gradeId: 'mz-3c', name: 'Ciências Naturais', shortName: 'CN',   icon: 'fa-leaf',       color: '#22c55e', description: 'Corpo humano, seres vivos e recursos naturais',    displayOrder: 3 },
+  { id: 'mz3-ev',   gradeId: 'mz-3c', name: 'Educação Visual',   shortName: 'EV',   icon: 'fa-palette',    color: '#f97316', description: 'Desenho de observação e construções geométricas', displayOrder: 4 },
+  { id: 'mz3-em',   gradeId: 'mz-3c', name: 'Educação Musical',  shortName: 'EM',   icon: 'fa-music',      color: '#ec4899', description: 'Instrumentos tradicionais e ritmo',                displayOrder: 5 },
+  { id: 'mz3-of',   gradeId: 'mz-3c', name: 'Ofícios',           shortName: 'OF',   icon: 'fa-hammer',     color: '#78716c', description: 'Marcenaria básica e agro-pecuária',                displayOrder: 6 },
+
+  { id: 'mz4-port', gradeId: 'mz-4c', name: 'Língua Portuguesa', shortName: 'PORT', icon: 'fa-book-open',  color: '#3b82f6', description: 'Classes de palavras e texto narrativo/descritivo', displayOrder: 1 },
+  { id: 'mz4-mat',  gradeId: 'mz-4c', name: 'Matemática',        shortName: 'MAT',  icon: 'fa-calculator', color: '#9333ea', description: 'Fracções, perímetro e literacia financeira',       displayOrder: 2 },
+  { id: 'mz4-cs',   gradeId: 'mz-4c', name: 'Ciências Sociais',  shortName: 'CS',   icon: 'fa-landmark',   color: '#f59e0b', description: 'Espaço, tempo, direitos e deveres da criança',     displayOrder: 3 },
+  { id: 'mz4-cn',   gradeId: 'mz-4c', name: 'Ciências Naturais', shortName: 'CN',   icon: 'fa-leaf',       color: '#22c55e', description: 'Sistemas do corpo humano e ecossistemas',          displayOrder: 4 },
+  { id: 'mz4-ev',   gradeId: 'mz-4c', name: 'Educação Visual',   shortName: 'EV',   icon: 'fa-palette',    color: '#f97316', description: 'Proporção, composição e desenho técnico inicial',  displayOrder: 5 },
+  { id: 'mz4-em',   gradeId: 'mz-4c', name: 'Educação Musical',  shortName: 'EM',   icon: 'fa-music',      color: '#ec4899', description: 'Música das regiões de Moçambique',                 displayOrder: 6 },
+  { id: 'mz4-of',   gradeId: 'mz-4c', name: 'Ofícios',           shortName: 'OF',   icon: 'fa-hammer',     color: '#78716c', description: 'Artesanato e técnicas de cultivo',                 displayOrder: 7 },
+
+  { id: 'mz5-port', gradeId: 'mz-5c', name: 'Língua Portuguesa', shortName: 'PORT', icon: 'fa-book-open',  color: '#3b82f6', description: 'Texto argumentativo e tempos verbais',             displayOrder: 1 },
+  { id: 'mz5-mat',  gradeId: 'mz-5c', name: 'Matemática',        shortName: 'MAT',  icon: 'fa-calculator', color: '#9333ea', description: 'Decimais, área, volume e estatística inicial',     displayOrder: 2 },
+  { id: 'mz5-cs',   gradeId: 'mz-5c', name: 'Ciências Sociais',  shortName: 'CS',   icon: 'fa-landmark',   color: '#f59e0b', description: 'Regiões de Moçambique e história pré-colonial',    displayOrder: 3 },
+  { id: 'mz5-cn',   gradeId: 'mz-5c', name: 'Ciências Naturais', shortName: 'CN',   icon: 'fa-leaf',       color: '#22c55e', description: 'Sistemas do corpo humano e recursos naturais',     displayOrder: 4 },
+  { id: 'mz5-ev',   gradeId: 'mz-5c', name: 'Educação Visual',   shortName: 'EV',   icon: 'fa-palette',    color: '#f97316', description: 'Desenho técnico e ilustração',                     displayOrder: 5 },
+  { id: 'mz5-em',   gradeId: 'mz-5c', name: 'Educação Musical',  shortName: 'EM',   icon: 'fa-music',      color: '#ec4899', description: 'Timbre, altura e composição musical simples',      displayOrder: 6 },
+  { id: 'mz5-of',   gradeId: 'mz-5c', name: 'Ofícios',           shortName: 'OF',   icon: 'fa-hammer',     color: '#78716c', description: 'Marcenaria, pesca e culinária tradicional',        displayOrder: 7 },
+
+  { id: 'mz6-port', gradeId: 'mz-6c', name: 'Língua Portuguesa', shortName: 'PORT', icon: 'fa-book-open',  color: '#3b82f6', description: 'Texto argumentativo avançado e literatura moçambicana', displayOrder: 1 },
+  { id: 'mz6-mat',  gradeId: 'mz-6c', name: 'Matemática',        shortName: 'MAT',  icon: 'fa-calculator', color: '#9333ea', description: 'Proporcionalidade, percentagem e estatística',      displayOrder: 2 },
+  { id: 'mz6-cs',   gradeId: 'mz-6c', name: 'Ciências Sociais',  shortName: 'CS',   icon: 'fa-landmark',   color: '#f59e0b', description: 'Colonização, resistência e instituições do Estado', displayOrder: 3 },
+  { id: 'mz6-cn',   gradeId: 'mz-6c', name: 'Ciências Naturais', shortName: 'CN',   icon: 'fa-leaf',       color: '#22c55e', description: 'Célula, ambiente e biodiversidade',                 displayOrder: 4 },
+  { id: 'mz6-ev',   gradeId: 'mz-6c', name: 'Educação Visual',   shortName: 'EV',   icon: 'fa-palette',    color: '#f97316', description: 'Desenho técnico e projecto criativo',              displayOrder: 5 },
+  { id: 'mz6-em',   gradeId: 'mz-6c', name: 'Educação Musical',  shortName: 'EM',   icon: 'fa-music',      color: '#ec4899', description: 'Escrita musical elementar e harmonia',             displayOrder: 6 },
+  { id: 'mz6-of',   gradeId: 'mz-6c', name: 'Ofícios',           shortName: 'OF',   icon: 'fa-hammer',     color: '#78716c', description: 'Agro-pecuária e artesanato para o mercado local',   displayOrder: 7 },
+  { id: 'mz6-ing',  gradeId: 'mz-6c', name: 'Língua Inglesa',    shortName: 'ING',  icon: 'fa-language',   color: '#7c3aed', description: 'Vocabulário básico para comunicação',               displayOrder: 8 },
+  { id: 'mz6-emc',  gradeId: 'mz-6c', name: 'Ed. Moral e Cívica',shortName: 'EMC',  icon: 'fa-handshake',  color: '#64748b', description: 'Direitos, deveres e valores cívicos',               displayOrder: 9 },
+
+  { id: 'mz7-port', gradeId: 'mz-7c', name: 'Língua Portuguesa', shortName: 'PORT', icon: 'fa-book-open',  color: '#3b82f6', description: 'Produção textual formal e literatura moçambicana', displayOrder: 1 },
+  { id: 'mz7-mat',  gradeId: 'mz-7c', name: 'Matemática',        shortName: 'MAT',  icon: 'fa-calculator', color: '#9333ea', description: 'Potências, equações e geometria de sólidos',        displayOrder: 2 },
+  { id: 'mz7-cs',   gradeId: 'mz-7c', name: 'Ciências Sociais',  shortName: 'CS',   icon: 'fa-landmark',   color: '#f59e0b', description: 'Independência de Moçambique e geopolítica',         displayOrder: 3 },
+  { id: 'mz7-cn',   gradeId: 'mz-7c', name: 'Ciências Naturais', shortName: 'CN',   icon: 'fa-leaf',       color: '#22c55e', description: 'Genética elementar e sustentabilidade',             displayOrder: 4 },
+  { id: 'mz7-ev',   gradeId: 'mz-7c', name: 'Educação Visual',   shortName: 'EV',   icon: 'fa-palette',    color: '#f97316', description: 'Desenho técnico avançado e projecto final',         displayOrder: 5 },
+  { id: 'mz7-em',   gradeId: 'mz-7c', name: 'Educação Musical',  shortName: 'EM',   icon: 'fa-music',      color: '#ec4899', description: 'Leitura de partituras e música contemporânea',      displayOrder: 6 },
+  { id: 'mz7-of',   gradeId: 'mz-7c', name: 'Ofícios',           shortName: 'OF',   icon: 'fa-hammer',     color: '#78716c', description: 'Empreendedorismo e técnicas avançadas de artesanato', displayOrder: 7 },
+  { id: 'mz7-ing',  gradeId: 'mz-7c', name: 'Língua Inglesa',    shortName: 'ING',  icon: 'fa-language',   color: '#7c3aed', description: 'Rotinas, descrições e comunicação funcional',       displayOrder: 8 },
+  { id: 'mz7-emc',  gradeId: 'mz-7c', name: 'Ed. Moral e Cívica',shortName: 'EMC',  icon: 'fa-handshake',  color: '#64748b', description: 'Democracia, direitos humanos e ética',              displayOrder: 9 },
+
+  // ══ MOÇAMBIQUE 8ª Classe (ESG1 — 1º Ciclo) ══
+  // Disciplinas do tronco comum do ESG1 + área de Actividades Práticas e
+  // Tecnológicas (Educação Visual, TIC, Noções de Empreendedorismo,
+  // Agro-Pecuária), conforme o currículo do ESG (INDE/MEC). Educação Física
+  // fica de fora por não se prestar a vídeo-aula (padrão já usado no ficheiro).
+  { id: 'mz8-mat',  gradeId: 'mz-8c', name: 'Matemática',            shortName: 'MAT', icon: 'fa-calculator',    color: '#9333ea', description: 'Conjuntos, funções e trigonometria inicial',        displayOrder: 1 },
+  { id: 'mz8-port', gradeId: 'mz-8c', name: 'Português',             shortName: 'PORT',icon: 'fa-book-open',    color: '#3b82f6', description: 'Gramática, leitura e produção de texto',            displayOrder: 2 },
+  { id: 'mz8-fis',  gradeId: 'mz-8c', name: 'Física',                shortName: 'FIS', icon: 'fa-atom',         color: '#10b981', description: 'Grandezas físicas e métodos de medição',            displayOrder: 3 },
+  { id: 'mz8-qui',  gradeId: 'mz-8c', name: 'Química',               shortName: 'QUI', icon: 'fa-flask',        color: '#f59e0b', description: 'Introdução à matéria e às transformações químicas', displayOrder: 4 },
+  { id: 'mz8-bio',  gradeId: 'mz-8c', name: 'Biologia',              shortName: 'BIO', icon: 'fa-leaf',         color: '#22c55e', description: 'Célula, tecidos e níveis de organização',           displayOrder: 5 },
+  { id: 'mz8-geo',  gradeId: 'mz-8c', name: 'Geografia',             shortName: 'GEO', icon: 'fa-globe-africa', color: '#0ea5e9', description: 'Geografia física de Moçambique',                    displayOrder: 6 },
+  { id: 'mz8-his',  gradeId: 'mz-8c', name: 'História',              shortName: 'HIS', icon: 'fa-landmark',     color: '#dc2626', description: 'Pré-história e primeiras civilizações',             displayOrder: 7 },
+  { id: 'mz8-ing',  gradeId: 'mz-8c', name: 'Inglês',                shortName: 'ING', icon: 'fa-language',     color: '#7c3aed', description: 'Inglês básico — comunicação elementar',             displayOrder: 8 },
+  { id: 'mz8-ev',   gradeId: 'mz-8c', name: 'Educação Visual',       shortName: 'EV',  icon: 'fa-palette',      color: '#f97316', description: 'Desenho, expressão e técnicas de representação',   displayOrder: 9 },
+  { id: 'mz8-tic',  gradeId: 'mz-8c', name: 'TIC',                   shortName: 'TIC', icon: 'fa-laptop-code',  color: '#0891b2', description: 'Introdução às Tecnologias de Informação e Comunicação', displayOrder: 10 },
+  { id: 'mz8-emp',  gradeId: 'mz-8c', name: 'Noções de Empreendedorismo', shortName: 'EMP', icon: 'fa-briefcase', color: '#16a34a', description: 'Espírito empreendedor e identificação de oportunidades', displayOrder: 11 },
+  { id: 'mz8-agro', gradeId: 'mz-8c', name: 'Agro-Pecuária',         shortName: 'AGRO',icon: 'fa-tractor',      color: '#84cc16', description: 'Técnicas básicas de produção agro-pecuária',        displayOrder: 12 },
+
+  // ══ MOÇAMBIQUE 9ª Classe (ESG1 — 1º Ciclo) ══
+  { id: 'mz9-mat',  gradeId: 'mz-9c', name: 'Matemática',            shortName: 'MAT', icon: 'fa-calculator',    color: '#9333ea', description: 'Equações, funções e estatística',                   displayOrder: 1 },
+  { id: 'mz9-port', gradeId: 'mz-9c', name: 'Português',             shortName: 'PORT',icon: 'fa-book-open',    color: '#3b82f6', description: 'Textos argumentativos e literatura',                displayOrder: 2 },
+  { id: 'mz9-fis',  gradeId: 'mz-9c', name: 'Física',                shortName: 'FIS', icon: 'fa-atom',         color: '#10b981', description: 'Mecânica — cinemática e dinâmica',                  displayOrder: 3 },
+  { id: 'mz9-qui',  gradeId: 'mz-9c', name: 'Química',               shortName: 'QUI', icon: 'fa-flask',        color: '#f59e0b', description: 'Tabela periódica e ligações químicas',              displayOrder: 4 },
+  { id: 'mz9-bio',  gradeId: 'mz-9c', name: 'Biologia',              shortName: 'BIO', icon: 'fa-leaf',         color: '#22c55e', description: 'Genética básica e reprodução',                       displayOrder: 5 },
+  { id: 'mz9-geo',  gradeId: 'mz-9c', name: 'Geografia',             shortName: 'GEO', icon: 'fa-globe-africa', color: '#0ea5e9', description: 'Geografia humana e económica de Moçambique',        displayOrder: 6 },
+  { id: 'mz9-his',  gradeId: 'mz-9c', name: 'História',              shortName: 'HIS', icon: 'fa-landmark',     color: '#dc2626', description: 'Moçambique colonial e luta de libertação',          displayOrder: 7 },
+  { id: 'mz9-ing',  gradeId: 'mz-9c', name: 'Inglês',                shortName: 'ING', icon: 'fa-language',     color: '#7c3aed', description: 'Inglês pré-intermédio',                             displayOrder: 8 },
+  { id: 'mz9-ev',   gradeId: 'mz-9c', name: 'Educação Visual',       shortName: 'EV',  icon: 'fa-palette',      color: '#f97316', description: 'Desenho técnico inicial e expressão plástica',      displayOrder: 9 },
+  { id: 'mz9-tic',  gradeId: 'mz-9c', name: 'TIC',                   shortName: 'TIC', icon: 'fa-laptop-code',  color: '#0891b2', description: 'Ferramentas digitais e pesquisa de informação',     displayOrder: 10 },
+  { id: 'mz9-emp',  gradeId: 'mz-9c', name: 'Noções de Empreendedorismo', shortName: 'EMP', icon: 'fa-briefcase', color: '#16a34a', description: 'Gestão de pequenas iniciativas e ideias de negócio', displayOrder: 11 },
+  { id: 'mz9-agro', gradeId: 'mz-9c', name: 'Agro-Pecuária',         shortName: 'AGRO',icon: 'fa-tractor',      color: '#84cc16', description: 'Produção e conservação de produtos agro-pecuários', displayOrder: 12 },
+
+  // ══ MOÇAMBIQUE 10ª Classe (ESG1 — 1º Ciclo) ══
   { id: 'mz10-mat',  gradeId: 'mz-10c', name: 'Matemática',        shortName: 'MAT', icon: 'fa-calculator', color: '#9333ea', description: 'Álgebra, Geometria Analítica e Trigonometria',     displayOrder: 1 },
   { id: 'mz10-port', gradeId: 'mz-10c', name: 'Português',         shortName: 'PORT',icon: 'fa-book-open',  color: '#3b82f6', description: 'Gramática, Literatura e Produção de Texto',        displayOrder: 2 },
   { id: 'mz10-fis',  gradeId: 'mz-10c', name: 'Física',            shortName: 'FIS', icon: 'fa-atom',       color: '#10b981', description: 'Mecânica, Termodinâmica e Electricidade',           displayOrder: 3 },
@@ -146,8 +240,15 @@ export const SUBJECTS: Subject[] = [
   { id: 'mz10-his',  gradeId: 'mz-10c', name: 'História',          shortName: 'HIS', icon: 'fa-landmark',   color: '#dc2626', description: 'História de Moçambique e Universal',               displayOrder: 7 },
   { id: 'mz10-ing',  gradeId: 'mz-10c', name: 'Inglês',            shortName: 'ING', icon: 'fa-language',   color: '#7c3aed', description: 'Língua Inglesa — Comunicação e Gramática',         displayOrder: 8 },
   { id: 'mz10-edm',  gradeId: 'mz-10c', name: 'Ed. Moral e Cívica',shortName: 'EMC', icon: 'fa-handshake',  color: '#64748b', description: 'Valores cívicos e cidadania',                       displayOrder: 9 },
+  { id: 'mz10-ev',   gradeId: 'mz-10c', name: 'Educação Visual',   shortName: 'EV',  icon: 'fa-palette',    color: '#f97316', description: 'Desenho, projecção e técnicas de expressão plástica', displayOrder: 10 },
+  { id: 'mz10-tic',  gradeId: 'mz-10c', name: 'TIC',               shortName: 'TIC', icon: 'fa-laptop-code',color: '#0891b2', description: 'Sistematização e tratamento de informação digital', displayOrder: 11 },
+  { id: 'mz10-emp',  gradeId: 'mz-10c', name: 'Noções de Empreendedorismo', shortName: 'EMP', icon: 'fa-briefcase', color: '#16a34a', description: 'Identificação e gestão de oportunidades de negócio', displayOrder: 12 },
+  { id: 'mz10-agro', gradeId: 'mz-10c', name: 'Agro-Pecuária',     shortName: 'AGRO',icon: 'fa-tractor',    color: '#84cc16', description: 'Técnicas de produção e conservação agro-pecuária',  displayOrder: 13 },
 
-  // ══ MOÇAMBIQUE 11ª Classe ══
+  // ══ MOÇAMBIQUE 11ª Classe (ESG2 — 2º Ciclo, Tronco Comum + Opções) ══
+  // Tronco comum + disciplina profissionalizante (o aluno escolhe uma) +
+  // disciplinas das três opções de especialização (Comunicação e Ciências
+  // Sociais / Matemática e Ciências Naturais / Artes Visuais e Cénicas).
   { id: 'mz11-mat',  gradeId: 'mz-11c', name: 'Matemática',        shortName: 'MAT', icon: 'fa-calculator', color: '#9333ea', description: 'Cálculo diferencial, Integrais e Álgebra',         displayOrder: 1 },
   { id: 'mz11-port', gradeId: 'mz-11c', name: 'Português',         shortName: 'PORT',icon: 'fa-book-open',  color: '#3b82f6', description: 'Literatura Moçambicana e Portuguesa',              displayOrder: 2 },
   { id: 'mz11-fis',  gradeId: 'mz-11c', name: 'Física',            shortName: 'FIS', icon: 'fa-atom',       color: '#10b981', description: 'Óptica, Electromagnetismo e Física Moderna',        displayOrder: 3 },
@@ -156,13 +257,34 @@ export const SUBJECTS: Subject[] = [
   { id: 'mz11-geo',  gradeId: 'mz-11c', name: 'Geografia',         shortName: 'GEO', icon: 'fa-globe-africa',color:'#0ea5e9', description: 'Geopolítica, Recursos Naturais e Desenvolvimento', displayOrder: 6 },
   { id: 'mz11-his',  gradeId: 'mz-11c', name: 'História',          shortName: 'HIS', icon: 'fa-landmark',   color: '#dc2626', description: 'História Contemporânea e Relações Internacionais',  displayOrder: 7 },
   { id: 'mz11-ing',  gradeId: 'mz-11c', name: 'Inglês',            shortName: 'ING', icon: 'fa-language',   color: '#7c3aed', description: 'Inglês Intermediário-Avançado',                    displayOrder: 8 },
+  { id: 'mz11-fil',  gradeId: 'mz-11c', name: 'Introdução à Filosofia', shortName: 'FIL', icon: 'fa-brain',  color: '#64748b', description: 'Reflexão crítica sobre a realidade e o conhecimento', displayOrder: 9 },
+  { id: 'mz11-tic',  gradeId: 'mz-11c', name: 'TIC',               shortName: 'TIC', icon: 'fa-laptop-code',color: '#0891b2', description: 'Tecnologia aplicada à área de especialidade',       displayOrder: 10 },
+  { id: 'mz11-emp',  gradeId: 'mz-11c', name: 'Noções de Empreendedorismo', shortName: 'EMP', icon: 'fa-briefcase', color: '#16a34a', description: 'Nível II — gestão da produção, qualidade e finanças', displayOrder: 11 },
+  { id: 'mz11-psi',  gradeId: 'mz-11c', name: 'Introdução à Psicologia e Pedagogia', shortName: 'PSI', icon: 'fa-user-graduate', color: '#ec4899', description: 'Noções básicas de psicologia e didáctica geral',   displayOrder: 12 },
+  { id: 'mz11-lm',   gradeId: 'mz-11c', name: 'Línguas Moçambicanas', shortName: 'LM', icon: 'fa-comments',  color: '#14b8a6', description: 'Aprofundamento linguístico de uma língua moçambicana', displayOrder: 13 },
+  { id: 'mz11-fr',   gradeId: 'mz-11c', name: 'Francês',           shortName: 'FR',  icon: 'fa-language',   color: '#6366f1', description: 'Língua Francesa — compreensão e expressão básica', displayOrder: 14 },
+  { id: 'mz11-dgd',  gradeId: 'mz-11c', name: 'Desenho e Geometria Descritiva', shortName: 'DGD', icon: 'fa-drafting-compass', color: '#a855f7', description: 'Projecções e métodos de representação gráfica',   displayOrder: 15 },
+  { id: 'mz11-ev',   gradeId: 'mz-11c', name: 'Educação Visual',   shortName: 'EV',  icon: 'fa-palette',    color: '#f97316', description: 'Expressão plástica e produção artística',          displayOrder: 16 },
+  { id: 'mz11-ac',   gradeId: 'mz-11c', name: 'Artes Cénicas',     shortName: 'AC',  icon: 'fa-masks-theater', color: '#f43f5e', description: 'Teatro, música e dança',                          displayOrder: 17 },
 
-  // ══ MOÇAMBIQUE 12ª Classe ══
+  // ══ MOÇAMBIQUE 12ª Classe (ESG2 — 2º Ciclo, Tronco Comum + Opções) ══
   { id: 'mz12-mat',  gradeId: 'mz-12c', name: 'Matemática',        shortName: 'MAT', icon: 'fa-calculator', color: '#9333ea', description: 'Cálculo Integral, Probabilidades e Estatística',  displayOrder: 1 },
   { id: 'mz12-port', gradeId: 'mz-12c', name: 'Português',         shortName: 'PORT',icon: 'fa-book-open',  color: '#3b82f6', description: 'Produção Textual, Análise Literária',              displayOrder: 2 },
   { id: 'mz12-fis',  gradeId: 'mz-12c', name: 'Física',            shortName: 'FIS', icon: 'fa-atom',       color: '#10b981', description: 'Física Atómica e Nuclear',                         displayOrder: 3 },
   { id: 'mz12-qui',  gradeId: 'mz-12c', name: 'Química',           shortName: 'QUI', icon: 'fa-flask',      color: '#f59e0b', description: 'Química Industrial e Ambiental',                   displayOrder: 4 },
   { id: 'mz12-bio',  gradeId: 'mz-12c', name: 'Biologia',          shortName: 'BIO', icon: 'fa-leaf',       color: '#22c55e', description: 'Microbiologia, Imunologia e Saúde',                displayOrder: 5 },
+  { id: 'mz12-geo',  gradeId: 'mz-12c', name: 'Geografia',         shortName: 'GEO', icon: 'fa-globe-africa',color:'#0ea5e9', description: 'Geografia Física e Económica — Aprofundamento',    displayOrder: 6 },
+  { id: 'mz12-his',  gradeId: 'mz-12c', name: 'História',          shortName: 'HIS', icon: 'fa-landmark',   color: '#dc2626', description: 'História Contemporânea e Cidadania',               displayOrder: 7 },
+  { id: 'mz12-ing',  gradeId: 'mz-12c', name: 'Inglês',            shortName: 'ING', icon: 'fa-language',   color: '#7c3aed', description: 'Inglês avançado para fins académicos e profissionais', displayOrder: 8 },
+  { id: 'mz12-fil',  gradeId: 'mz-12c', name: 'Introdução à Filosofia', shortName: 'FIL', icon: 'fa-brain',  color: '#64748b', description: 'Reflexão crítica sobre a realidade e o conhecimento', displayOrder: 9 },
+  { id: 'mz12-tic',  gradeId: 'mz-12c', name: 'TIC',               shortName: 'TIC', icon: 'fa-laptop-code',color: '#0891b2', description: 'Tecnologia aplicada à área de especialidade',       displayOrder: 10 },
+  { id: 'mz12-emp',  gradeId: 'mz-12c', name: 'Noções de Empreendedorismo', shortName: 'EMP', icon: 'fa-briefcase', color: '#16a34a', description: 'Nível II — gestão da produção, qualidade e finanças', displayOrder: 11 },
+  { id: 'mz12-psi',  gradeId: 'mz-12c', name: 'Introdução à Psicologia e Pedagogia', shortName: 'PSI', icon: 'fa-user-graduate', color: '#ec4899', description: 'Noções básicas de psicologia e didáctica geral',   displayOrder: 12 },
+  { id: 'mz12-lm',   gradeId: 'mz-12c', name: 'Línguas Moçambicanas', shortName: 'LM', icon: 'fa-comments',  color: '#14b8a6', description: 'Aprofundamento linguístico de uma língua moçambicana', displayOrder: 13 },
+  { id: 'mz12-fr',   gradeId: 'mz-12c', name: 'Francês',           shortName: 'FR',  icon: 'fa-language',   color: '#6366f1', description: 'Língua Francesa — compreensão e expressão básica', displayOrder: 14 },
+  { id: 'mz12-dgd',  gradeId: 'mz-12c', name: 'Desenho e Geometria Descritiva', shortName: 'DGD', icon: 'fa-drafting-compass', color: '#a855f7', description: 'Projecções e métodos de representação gráfica',   displayOrder: 15 },
+  { id: 'mz12-ev',   gradeId: 'mz-12c', name: 'Educação Visual',   shortName: 'EV',  icon: 'fa-palette',    color: '#f97316', description: 'Expressão plástica e produção artística',          displayOrder: 16 },
+  { id: 'mz12-ac',   gradeId: 'mz-12c', name: 'Artes Cénicas',     shortName: 'AC',  icon: 'fa-masks-theater', color: '#f43f5e', description: 'Teatro, música e dança',                          displayOrder: 17 },
 
   // ══ ANGOLA 7ª Classe (ES1) ══
   { id: 'ao7-mat',  gradeId: 'ao-7c', name: 'Matemática',        shortName: 'MAT', icon: 'fa-calculator',  color: '#9333ea', description: 'Números inteiros, frações e geometria plana',         displayOrder: 1 },
@@ -286,6 +408,383 @@ export const SUBJECTS: Subject[] = [
 export const CHAPTERS: Chapter[] = [
 
   // ══════════════════════════════════════════════════════════
+  //  MOÇAMBIQUE — Ensino Primário (1ª a 6ª Classe)
+  //  Capítulos derivados das áreas de estudo e competências descritas no
+  //  PCEP (secções 9.1, 10.1-10.3) — o documento não traz um programa
+  //  disciplina-a-disciplina por classe, apenas o enquadramento por área.
+  // ══════════════════════════════════════════════════════════
+
+  // ─── 1ª Classe — Língua Portuguesa ────────────────────────
+  { id:'mz1port-1', subjectId:'mz1-port', title:'Vogais e Consoantes',            description:'Reconhecimento oral e escrito das letras',                term:1, displayOrder:1 },
+  { id:'mz1port-2', subjectId:'mz1-port', title:'Sílabas Simples',                description:'Formação de sílabas e primeiras palavras',                 term:1, displayOrder:2 },
+  { id:'mz1port-3', subjectId:'mz1-port', title:'O Meu Nome e a Minha Família',   description:'Vocabulário do quotidiano e oralidade',                    term:1, displayOrder:3 },
+  { id:'mz1port-4', subjectId:'mz1-port', title:'Leitura de Palavras Simples',    description:'Consciência fonológica e decodificação',                   term:2, displayOrder:4 },
+  { id:'mz1port-5', subjectId:'mz1-port', title:'Escrita de Palavras',            description:'Cópia e ditado de palavras curtas',                        term:2, displayOrder:5 },
+  { id:'mz1port-6', subjectId:'mz1-port', title:'Higiene e Saúde',                description:'Vocabulário sobre cuidados com o corpo',                   term:2, displayOrder:6 },
+  { id:'mz1port-7', subjectId:'mz1-port', title:'Frases Simples',                 description:'Construção e leitura de frases curtas',                    term:3, displayOrder:7 },
+  { id:'mz1port-8', subjectId:'mz1-port', title:'Histórias Curtas',               description:'Compreensão oral de pequenas histórias',                   term:3, displayOrder:8 },
+  { id:'mz1port-9', subjectId:'mz1-port', title:'Revisão e Consolidação',         description:'Leitura e escrita do que foi aprendido no ano',            term:3, displayOrder:9 },
+
+  // ─── 1ª Classe — Matemática ───────────────────────────────
+  { id:'mz1mat-1', subjectId:'mz1-mat', title:'Números até 10',                  description:'Contagem, leitura e escrita',                              term:1, displayOrder:1 },
+  { id:'mz1mat-2', subjectId:'mz1-mat', title:'Noções Espaciais',                description:'Dentro/fora, perto/longe, em cima/em baixo',               term:1, displayOrder:2 },
+  { id:'mz1mat-3', subjectId:'mz1-mat', title:'Formas Geométricas Simples',      description:'Círculo, quadrado, triângulo e rectângulo',                term:1, displayOrder:3 },
+  { id:'mz1mat-4', subjectId:'mz1-mat', title:'Números até 20',                  description:'Contagem e sequência numérica',                            term:2, displayOrder:4 },
+  { id:'mz1mat-5', subjectId:'mz1-mat', title:'Adição Simples',                  description:'Juntar quantidades até 20',                                term:2, displayOrder:5 },
+  { id:'mz1mat-6', subjectId:'mz1-mat', title:'Subtracção Simples',              description:'Tirar quantidades até 20',                                 term:2, displayOrder:6 },
+  { id:'mz1mat-7', subjectId:'mz1-mat', title:'Números até 100',                 description:'Contagem por dezenas',                                     term:3, displayOrder:7 },
+  { id:'mz1mat-8', subjectId:'mz1-mat', title:'Comparação de Quantidades',       description:'Maior, menor e igual',                                     term:3, displayOrder:8 },
+  { id:'mz1mat-9', subjectId:'mz1-mat', title:'Resolução de Problemas do Quotidiano', description:'Situações simples de contar e calcular',             term:3, displayOrder:9 },
+
+  // ─── 2ª Classe — Língua Portuguesa ────────────────────────
+  { id:'mz2port-1', subjectId:'mz2-port', title:'Alfabeto e Ordem Alfabética',    description:'Reconhecimento e sequência das letras',                    term:1, displayOrder:1 },
+  { id:'mz2port-2', subjectId:'mz2-port', title:'Sílabas Complexas',             description:'Encontros consonantais e vocálicos',                       term:1, displayOrder:2 },
+  { id:'mz2port-3', subjectId:'mz2-port', title:'Leitura de Textos Curtos',      description:'Compreensão de pequenos textos ilustrados',                term:1, displayOrder:3 },
+  { id:'mz2port-4', subjectId:'mz2-port', title:'Produção de Frases e Pequenos Textos', description:'Escrita orientada de frases simples',                term:2, displayOrder:4 },
+  { id:'mz2port-5', subjectId:'mz2-port', title:'Substantivos e Adjectivos',     description:'Noções iniciais de classes de palavras',                   term:2, displayOrder:5 },
+  { id:'mz2port-6', subjectId:'mz2-port', title:'Relação com os Outros',         description:'Vocabulário de convivência e respeito',                    term:2, displayOrder:6 },
+  { id:'mz2port-7', subjectId:'mz2-port', title:'Pontuação Básica',              description:'Ponto final e ponto de interrogação',                      term:3, displayOrder:7 },
+  { id:'mz2port-8', subjectId:'mz2-port', title:'Leitura Expressiva de Histórias', description:'Entoação e compreensão de pequenas narrativas',          term:3, displayOrder:8 },
+  { id:'mz2port-9', subjectId:'mz2-port', title:'Revisão e Consolidação',        description:'Leitura e escrita do que foi aprendido no ano',             term:3, displayOrder:9 },
+
+  // ─── 2ª Classe — Matemática ───────────────────────────────
+  { id:'mz2mat-1', subjectId:'mz2-mat', title:'Números até 100',                 description:'Leitura, escrita e ordenação',                             term:1, displayOrder:1 },
+  { id:'mz2mat-2', subjectId:'mz2-mat', title:'Adição com Transporte',           description:'Somar números com reagrupamento',                          term:1, displayOrder:2 },
+  { id:'mz2mat-3', subjectId:'mz2-mat', title:'Subtracção com Empréstimo',       description:'Subtrair números com reagrupamento',                       term:1, displayOrder:3 },
+  { id:'mz2mat-4', subjectId:'mz2-mat', title:'Dúzia e Dezena',                  description:'Agrupamentos de quantidades',                              term:2, displayOrder:4 },
+  { id:'mz2mat-5', subjectId:'mz2-mat', title:'Introdução à Multiplicação',      description:'Soma de parcelas iguais',                                  term:2, displayOrder:5 },
+  { id:'mz2mat-6', subjectId:'mz2-mat', title:'Medidas de Tempo',                description:'Dias, semanas e meses',                                    term:2, displayOrder:6 },
+  { id:'mz2mat-7', subjectId:'mz2-mat', title:'Números até 1000',                description:'Leitura, escrita e valor posicional',                      term:3, displayOrder:7 },
+  { id:'mz2mat-8', subjectId:'mz2-mat', title:'Moeda Moçambicana',               description:'Reconhecimento e uso simples do metical',                  term:3, displayOrder:8 },
+  { id:'mz2mat-9', subjectId:'mz2-mat', title:'Resolução de Problemas',          description:'Problemas do quotidiano com as operações aprendidas',      term:3, displayOrder:9 },
+
+  // ─── 3ª Classe — Língua Portuguesa ────────────────────────
+  { id:'mz3port-1', subjectId:'mz3-port', title:'Tipos de Frase',                description:'Afirmativa, negativa, interrogativa e exclamativa',        term:1, displayOrder:1 },
+  { id:'mz3port-2', subjectId:'mz3-port', title:'Sinónimos e Antónimos',         description:'Ampliação de vocabulário',                                 term:1, displayOrder:2 },
+  { id:'mz3port-3', subjectId:'mz3-port', title:'Leitura Interpretativa de Textos', description:'Compreensão global e específica de textos',             term:1, displayOrder:3 },
+  { id:'mz3port-4', subjectId:'mz3-port', title:'Produção Textual',              description:'Pequenas redacções e recados',                             term:2, displayOrder:4 },
+  { id:'mz3port-5', subjectId:'mz3-port', title:'Verbos',                        description:'Noção de acção e tempo verbal',                            term:2, displayOrder:5 },
+  { id:'mz3port-6', subjectId:'mz3-port', title:'Ordem Alfabética e Uso do Dicionário', description:'Pesquisa e organização de palavras',                 term:2, displayOrder:6 },
+  { id:'mz3port-7', subjectId:'mz3-port', title:'Texto Narrativo Simples',       description:'Início, meio e fim de uma história',                       term:3, displayOrder:7 },
+  { id:'mz3port-8', subjectId:'mz3-port', title:'Concordância entre Género e Número', description:'Concordância nominal básica',                          term:3, displayOrder:8 },
+  { id:'mz3port-9', subjectId:'mz3-port', title:'Revisão para a Avaliação Final do Ciclo', description:'Consolidação de leitura e escrita do 1º ciclo',    term:3, displayOrder:9 },
+
+  // ─── 3ª Classe — Matemática ───────────────────────────────
+  { id:'mz3mat-1', subjectId:'mz3-mat', title:'Números até 1000',                description:'Valor posicional — unidades, dezenas e centenas',         term:1, displayOrder:1 },
+  { id:'mz3mat-2', subjectId:'mz3-mat', title:'Multiplicação — Tabuadas do 2 ao 5', description:'Memorização e aplicação das tabuadas',                  term:1, displayOrder:2 },
+  { id:'mz3mat-3', subjectId:'mz3-mat', title:'Divisão — Repartir em Partes Iguais', description:'Noção inicial de divisão',                              term:1, displayOrder:3 },
+  { id:'mz3mat-4', subjectId:'mz3-mat', title:'Tabuadas do 6 ao 10',             description:'Memorização e aplicação das tabuadas',                     term:2, displayOrder:4 },
+  { id:'mz3mat-5', subjectId:'mz3-mat', title:'Metade, Terça e Quarta Parte',    description:'Noções iniciais de fracção',                               term:2, displayOrder:5 },
+  { id:'mz3mat-6', subjectId:'mz3-mat', title:'Medidas de Comprimento',          description:'Metro e centímetro',                                       term:2, displayOrder:6 },
+  { id:'mz3mat-7', subjectId:'mz3-mat', title:'Medidas de Massa e Capacidade',   description:'Quilograma e litro',                                       term:3, displayOrder:7 },
+  { id:'mz3mat-8', subjectId:'mz3-mat', title:'Leitura de Tabelas e Gráficos Simples', description:'Organização e interpretação de dados',                term:3, displayOrder:8 },
+  { id:'mz3mat-9', subjectId:'mz3-mat', title:'Revisão para a Avaliação Final do Ciclo', description:'Consolidação das quatro operações e medidas',       term:3, displayOrder:9 },
+
+  // ─── 4ª Classe — Língua Portuguesa ────────────────────────
+  { id:'mz4port-1', subjectId:'mz4-port', title:'Classes de Palavras',           description:'Substantivo, adjectivo e verbo',                           term:1, displayOrder:1 },
+  { id:'mz4port-2', subjectId:'mz4-port', title:'Texto Narrativo',               description:'Estrutura — início, meio e fim',                           term:1, displayOrder:2 },
+  { id:'mz4port-3', subjectId:'mz4-port', title:'Leitura e Interpretação de Textos Informativos', description:'Compreensão de textos não literários',    term:1, displayOrder:3 },
+  { id:'mz4port-4', subjectId:'mz4-port', title:'Frase Simples e Frase Complexa', description:'Distinção e construção de frases',                        term:2, displayOrder:4 },
+  { id:'mz4port-5', subjectId:'mz4-port', title:'Texto Descritivo',              description:'Descrição de pessoas, lugares e objectos',                 term:2, displayOrder:5 },
+  { id:'mz4port-6', subjectId:'mz4-port', title:'Uso da Vírgula e Outros Sinais de Pontuação', description:'Pontuação em textos curtos',                  term:2, displayOrder:6 },
+  { id:'mz4port-7', subjectId:'mz4-port', title:'Carta e Convite',               description:'Textos funcionais do quotidiano',                          term:3, displayOrder:7 },
+  { id:'mz4port-8', subjectId:'mz4-port', title:'Discurso Directo e Indirecto',  description:'Noções iniciais de citação da fala',                       term:3, displayOrder:8 },
+  { id:'mz4port-9', subjectId:'mz4-port', title:'Revisão e Consolidação Anual',  description:'Consolidação da leitura e escrita da 4ª classe',           term:3, displayOrder:9 },
+
+  // ─── 4ª Classe — Matemática ───────────────────────────────
+  { id:'mz4mat-1', subjectId:'mz4-mat', title:'Números até 10 000',              description:'Leitura, escrita e valor posicional',                     term:1, displayOrder:1 },
+  { id:'mz4mat-2', subjectId:'mz4-mat', title:'Multiplicação por Dois Algarismos', description:'Algoritmo da multiplicação',                             term:1, displayOrder:2 },
+  { id:'mz4mat-3', subjectId:'mz4-mat', title:'Divisão com Resto',               description:'Algoritmo da divisão inteira',                             term:1, displayOrder:3 },
+  { id:'mz4mat-4', subjectId:'mz4-mat', title:'Fracções',                       description:'Noção, leitura e representação de fracções',               term:2, displayOrder:4 },
+  { id:'mz4mat-5', subjectId:'mz4-mat', title:'Perímetro de Figuras Planas',     description:'Cálculo do perímetro de polígonos simples',                term:2, displayOrder:5 },
+  { id:'mz4mat-6', subjectId:'mz4-mat', title:'Situar e Orientar',               description:'Noções de localização e trajectos',                        term:2, displayOrder:6 },
+  { id:'mz4mat-7', subjectId:'mz4-mat', title:'Ângulos e Rectas',                description:'Noções básicas de ângulo e rectas',                        term:3, displayOrder:7 },
+  { id:'mz4mat-8', subjectId:'mz4-mat', title:'Interpretação de Gráficos e Tabelas', description:'Leitura e organização de dados simples',                term:3, displayOrder:8 },
+  { id:'mz4mat-9', subjectId:'mz4-mat', title:'Literacia Financeira',           description:'Noções de compra, venda e troco',                          term:3, displayOrder:9 },
+
+  // ─── 4ª Classe — Ciências Sociais ─────────────────────────
+  { id:'mz4cs-1', subjectId:'mz4-cs', title:'A Minha Localidade',                description:'Espaço, tempo e comunidade',                               term:1, displayOrder:1 },
+  { id:'mz4cs-2', subjectId:'mz4-cs', title:'Moçambique no Mapa',                description:'Pontos cardeais e localização',                            term:1, displayOrder:2 },
+  { id:'mz4cs-3', subjectId:'mz4-cs', title:'Os Meus Direitos e Deveres',        description:'Direitos e deveres da criança',                            term:2, displayOrder:3 },
+  { id:'mz4cs-4', subjectId:'mz4-cs', title:'Convivência e Respeito pela Diversidade', description:'Relação com os outros e diferenças',                 term:2, displayOrder:4 },
+  { id:'mz4cs-5', subjectId:'mz4-cs', title:'Factos Históricos da Minha Comunidade', description:'Situar acontecimentos no espaço e no tempo',           term:3, displayOrder:5 },
+  { id:'mz4cs-6', subjectId:'mz4-cs', title:'Cidadania e Cultura de Paz',        description:'Solidariedade e tolerância',                               term:3, displayOrder:6 },
+
+  // ─── 4ª Classe — Ciências Naturais ────────────────────────
+  { id:'mz4cn-1', subjectId:'mz4-cn', title:'O Corpo Humano',                    description:'Órgãos dos sentidos',                                      term:1, displayOrder:1 },
+  { id:'mz4cn-2', subjectId:'mz4-cn', title:'Seres Vivos e Não Vivos',           description:'Características e diferenças',                             term:1, displayOrder:2 },
+  { id:'mz4cn-3', subjectId:'mz4-cn', title:'Plantas',                          description:'Partes e funções das plantas',                             term:2, displayOrder:3 },
+  { id:'mz4cn-4', subjectId:'mz4-cn', title:'Animais',                          description:'Características e habitats',                              term:2, displayOrder:4 },
+  { id:'mz4cn-5', subjectId:'mz4-cn', title:'Água, Ar e Solo',                   description:'Recursos naturais e sua importância',                      term:3, displayOrder:5 },
+  { id:'mz4cn-6', subjectId:'mz4-cn', title:'Higiene, Saúde e Bem-Estar',        description:'Práticas de vida saudável',                                term:3, displayOrder:6 },
+
+  // ─── 5ª Classe — Língua Portuguesa ────────────────────────
+  { id:'mz5port-1', subjectId:'mz5-port', title:'Texto Narrativo — Narrador e Personagens', description:'Elementos da narrativa',                        term:1, displayOrder:1 },
+  { id:'mz5port-2', subjectId:'mz5-port', title:'Sinónimos, Antónimos e Homónimos', description:'Relações de sentido entre palavras',                    term:1, displayOrder:2 },
+  { id:'mz5port-3', subjectId:'mz5-port', title:'Leitura Crítica de Textos',      description:'Interpretação e opinião sobre o texto',                    term:1, displayOrder:3 },
+  { id:'mz5port-4', subjectId:'mz5-port', title:'Texto Argumentativo',            description:'Noções iniciais de opinião e argumento',                   term:2, displayOrder:4 },
+  { id:'mz5port-5', subjectId:'mz5-port', title:'Tempos Verbais',                 description:'Presente, passado e futuro',                               term:2, displayOrder:5 },
+  { id:'mz5port-6', subjectId:'mz5-port', title:'Discurso Directo e Indirecto',   description:'Transformação e uso em textos',                           term:2, displayOrder:6 },
+  { id:'mz5port-7', subjectId:'mz5-port', title:'Texto Poético',                  description:'Rima, estrofe e verso',                                    term:3, displayOrder:7 },
+  { id:'mz5port-8', subjectId:'mz5-port', title:'Concordância Verbal e Nominal',  description:'Regras de concordância em frases',                        term:3, displayOrder:8 },
+  { id:'mz5port-9', subjectId:'mz5-port', title:'Produção de Relatórios Simples', description:'Estrutura de um relatório curto',                         term:3, displayOrder:9 },
+
+  // ─── 5ª Classe — Matemática ───────────────────────────────
+  { id:'mz5mat-1', subjectId:'mz5-mat', title:'Números Decimais',                description:'Leitura e escrita de decimais',                            term:1, displayOrder:1 },
+  { id:'mz5mat-2', subjectId:'mz5-mat', title:'Operações com Fracções',          description:'Adição e subtracção de fracções',                          term:1, displayOrder:2 },
+  { id:'mz5mat-3', subjectId:'mz5-mat', title:'Área de Figuras Planas',          description:'Cálculo da área de quadrados, rectângulos e triângulos',    term:1, displayOrder:3 },
+  { id:'mz5mat-4', subjectId:'mz5-mat', title:'Volume — Noção Inicial',          description:'Volume de sólidos simples',                                term:2, displayOrder:4 },
+  { id:'mz5mat-5', subjectId:'mz5-mat', title:'Proporcionalidade',               description:'Noções de razão',                                          term:2, displayOrder:5 },
+  { id:'mz5mat-6', subjectId:'mz5-mat', title:'Estatística',                     description:'Recolha e organização de dados',                           term:2, displayOrder:6 },
+  { id:'mz5mat-7', subjectId:'mz5-mat', title:'Percentagem — Noções Iniciais',   description:'Leitura e cálculo simples de percentagens',                term:3, displayOrder:7 },
+  { id:'mz5mat-8', subjectId:'mz5-mat', title:'Construções Geométricas',         description:'Uso de régua e esquadro',                                  term:3, displayOrder:8 },
+  { id:'mz5mat-9', subjectId:'mz5-mat', title:'Literacia Financeira',            description:'Resolução de problemas de compra, venda e poupança',       term:3, displayOrder:9 },
+
+  // ─── 5ª Classe — Ciências Sociais ─────────────────────────
+  { id:'mz5cs-1', subjectId:'mz5-cs', title:'Moçambique — Regiões e Províncias', description:'Divisão administrativa do país',                          term:1, displayOrder:1 },
+  { id:'mz5cs-2', subjectId:'mz5-cs', title:'A Crosta Terrestre',                description:'Noções elementares de geologia',                           term:1, displayOrder:2 },
+  { id:'mz5cs-3', subjectId:'mz5-cs', title:'Sociedades Pré-Coloniais',          description:'Reinos do Monomotapa, Maravi e Rozwi',                      term:2, displayOrder:3 },
+  { id:'mz5cs-4', subjectId:'mz5-cs', title:'Recursos Económicos do País',       description:'Agricultura, pesca e recursos minerais',                    term:2, displayOrder:4 },
+  { id:'mz5cs-5', subjectId:'mz5-cs', title:'Direitos Humanos e Cidadania Responsável', description:'Direitos, deveres e participação cívica',            term:3, displayOrder:5 },
+  { id:'mz5cs-6', subjectId:'mz5-cs', title:'Solidariedade e Tolerância entre Povos', description:'Diversidade cultural e cultura de paz',                term:3, displayOrder:6 },
+
+  // ─── 5ª Classe — Ciências Naturais ────────────────────────
+  { id:'mz5cn-1', subjectId:'mz5-cn', title:'Sistemas do Corpo Humano',          description:'Sistema digestivo e respiratório',                        term:1, displayOrder:1 },
+  { id:'mz5cn-2', subjectId:'mz5-cn', title:'Reprodução nos Seres Vivos',        description:'Noções iniciais adequadas à idade',                        term:1, displayOrder:2 },
+  { id:'mz5cn-3', subjectId:'mz5-cn', title:'Ecossistemas de Moçambique',        description:'Savana, floresta e zonas costeiras',                       term:2, displayOrder:3 },
+  { id:'mz5cn-4', subjectId:'mz5-cn', title:'Fenómenos Naturais',                description:'Chuva, vento e ciclones',                                  term:2, displayOrder:4 },
+  { id:'mz5cn-5', subjectId:'mz5-cn', title:'Preservação do Ambiente',           description:'Uso racional dos recursos naturais',                       term:3, displayOrder:5 },
+  { id:'mz5cn-6', subjectId:'mz5-cn', title:'Ciência e Tecnologia no Dia-a-Dia', description:'Aplicações simples da ciência no quotidiano',              term:3, displayOrder:6 },
+
+  // ─── 5ª Classe — Educação Visual e Ofícios ────────────────
+  { id:'mz5evo-1', subjectId:'mz5-evo', title:'Desenho e Observação',            description:'Formas, proporções e observação do real',                  term:1, displayOrder:1 },
+  { id:'mz5evo-2', subjectId:'mz5-evo', title:'Recorte, Colagem e Picotagem',    description:'Técnicas de expressão através da imagem',                  term:1, displayOrder:2 },
+  { id:'mz5evo-3', subjectId:'mz5-evo', title:'Culinária e Artesanato Local',    description:'Práticas ligadas às actividades da comunidade',            term:2, displayOrder:3 },
+  { id:'mz5evo-4', subjectId:'mz5-evo', title:'Costura e Jardinagem',           description:'Noções básicas de costura e cultivo',                       term:2, displayOrder:4 },
+  { id:'mz5evo-5', subjectId:'mz5-evo', title:'Modelagem e Construções Geométricas', description:'Trabalhos em barro e formas geométricas simples',      term:3, displayOrder:5 },
+  { id:'mz5evo-6', subjectId:'mz5-evo', title:'Expressão Criativa',              description:'Pintura e materiais locais',                               term:3, displayOrder:6 },
+
+  // ─── 6ª Classe — Língua Portuguesa ────────────────────────
+  { id:'mz6port-1', subjectId:'mz6-port', title:'Texto Narrativo Complexo',       description:'Enredo, clímax e desfecho',                               term:1, displayOrder:1 },
+  { id:'mz6port-2', subjectId:'mz6-port', title:'Classes de Palavras — Revisão Aprofundada', description:'Consolidação das classes gramaticais',         term:1, displayOrder:2 },
+  { id:'mz6port-3', subjectId:'mz6-port', title:'Literatura Moçambicana para Crianças', description:'Contos e poemas de autores moçambicanos',            term:1, displayOrder:3 },
+  { id:'mz6port-4', subjectId:'mz6-port', title:'Texto Argumentativo',           description:'Estrutura de argumentos e contra-argumentos',              term:2, displayOrder:4 },
+  { id:'mz6port-5', subjectId:'mz6-port', title:'Regras de Concordância e Regência', description:'Concordância e regência verbal e nominal',              term:2, displayOrder:5 },
+  { id:'mz6port-6', subjectId:'mz6-port', title:'Discurso Directo, Indirecto e Indirecto Livre', description:'Formas de relatar a fala',                   term:2, displayOrder:6 },
+  { id:'mz6port-7', subjectId:'mz6-port', title:'Produção de Textos Diversos',    description:'Carta, relatório e redacção',                              term:3, displayOrder:7 },
+  { id:'mz6port-8', subjectId:'mz6-port', title:'Figuras de Estilo Simples',      description:'Metáfora, comparação e personificação',                    term:3, displayOrder:8 },
+  { id:'mz6port-9', subjectId:'mz6-port', title:'Revisão para a Conclusão do Ensino Primário', description:'Preparação para o exame da 6ª classe',        term:3, displayOrder:9 },
+
+  // ─── 6ª Classe — Matemática ───────────────────────────────
+  { id:'mz6mat-1', subjectId:'mz6-mat', title:'Operações com Números Decimais',  description:'Adição, subtracção, multiplicação e divisão',              term:1, displayOrder:1 },
+  { id:'mz6mat-2', subjectId:'mz6-mat', title:'Fracções Equivalentes e Operações', description:'Comparação e operações com fracções',                    term:1, displayOrder:2 },
+  { id:'mz6mat-3', subjectId:'mz6-mat', title:'Perímetro, Área e Volume',        description:'Cálculo aplicado a figuras e sólidos',                     term:1, displayOrder:3 },
+  { id:'mz6mat-4', subjectId:'mz6-mat', title:'Proporcionalidade e Regra de Três Simples', description:'Resolução de problemas proporcionais',            term:2, displayOrder:4 },
+  { id:'mz6mat-5', subjectId:'mz6-mat', title:'Percentagem',                     description:'Cálculos aplicados de percentagem',                        term:2, displayOrder:5 },
+  { id:'mz6mat-6', subjectId:'mz6-mat', title:'Ângulos e Polígonos',             description:'Classificação e propriedades',                             term:2, displayOrder:6 },
+  { id:'mz6mat-7', subjectId:'mz6-mat', title:'Estatística',                     description:'Gráficos e interpretação de dados',                        term:3, displayOrder:7 },
+  { id:'mz6mat-8', subjectId:'mz6-mat', title:'Literacia Financeira',            description:'Orçamento simples e resolução de problemas',                term:3, displayOrder:8 },
+  { id:'mz6mat-9', subjectId:'mz6-mat', title:'Revisão para a Conclusão do Ensino Primário', description:'Preparação para o exame da 6ª classe',          term:3, displayOrder:9 },
+
+  // ─── 6ª Classe — Ciências Sociais ─────────────────────────
+  { id:'mz6cs-1', subjectId:'mz6-cs', title:'Moçambique e a Região Austral de África', description:'Geografia física e humana regional',                 term:1, displayOrder:1 },
+  { id:'mz6cs-2', subjectId:'mz6-cs', title:'Recursos Naturais e Desenvolvimento Económico', description:'Sectores produtivos do país',                    term:1, displayOrder:2 },
+  { id:'mz6cs-3', subjectId:'mz6-cs', title:'Independência de Moçambique',       description:'Processo histórico da luta de libertação',                  term:2, displayOrder:3 },
+  { id:'mz6cs-4', subjectId:'mz6-cs', title:'Instituições do Estado e Cidadania', description:'Organização do Estado moçambicano',                       term:2, displayOrder:4 },
+  { id:'mz6cs-5', subjectId:'mz6-cs', title:'Direitos Humanos, Democracia e Cultura de Paz', description:'Valores de cidadania responsável',                 term:3, displayOrder:5 },
+  { id:'mz6cs-6', subjectId:'mz6-cs', title:'Moçambique no Mundo',               description:'Relações internacionais básicas',                          term:3, displayOrder:6 },
+
+  // ─── 6ª Classe — Ciências Naturais ────────────────────────
+  { id:'mz6cn-1', subjectId:'mz6-cn', title:'Sistemas do Corpo Humano',          description:'Sistema circulatório e nervoso',                           term:1, displayOrder:1 },
+  { id:'mz6cn-2', subjectId:'mz6-cn', title:'Saúde Reprodutiva',                 description:'Noções adequadas à idade',                                 term:1, displayOrder:2 },
+  { id:'mz6cn-3', subjectId:'mz6-cn', title:'Ambiente e Alterações Climáticas',  description:'Impacto humano no ambiente',                               term:2, displayOrder:3 },
+  { id:'mz6cn-4', subjectId:'mz6-cn', title:'Ciência, Tecnologia e Sociedade',   description:'Relação entre ciência e vida quotidiana',                  term:2, displayOrder:4 },
+  { id:'mz6cn-5', subjectId:'mz6-cn', title:'Conservação da Biodiversidade em Moçambique', description:'Fauna, flora e áreas protegidas',                 term:3, displayOrder:5 },
+  { id:'mz6cn-6', subjectId:'mz6-cn', title:'Revisão de Ciências Naturais',      description:'Consolidação para o fim do Ensino Primário',                term:3, displayOrder:6 },
+
+  // ─── 6ª Classe — Educação Visual e Ofícios ────────────────
+  { id:'mz6evo-1', subjectId:'mz6-evo', title:'Desenho Técnico Simples',        description:'Uso de régua, esquadro e transferidor',                     term:1, displayOrder:1 },
+  { id:'mz6evo-2', subjectId:'mz6-evo', title:'Artesanato e Marcenaria Básica', description:'Trabalhos manuais com madeira e materiais locais',          term:1, displayOrder:2 },
+  { id:'mz6evo-3', subjectId:'mz6-evo', title:'Culinária, Criação de Animais e Agricultura', description:'Actividades práticas ligadas à comunidade',      term:2, displayOrder:3 },
+  { id:'mz6evo-4', subjectId:'mz6-evo', title:'Costura e Trabalhos Manuais',    description:'Técnicas simples de costura',                                term:2, displayOrder:4 },
+  { id:'mz6evo-5', subjectId:'mz6-evo', title:'Projecto Criativo Final',        description:'Planificação e execução de um projecto',                     term:3, displayOrder:5 },
+  { id:'mz6evo-6', subjectId:'mz6-evo', title:'Apreciação e Exposição de Trabalhos', description:'Avaliação crítica das produções da turma',              term:3, displayOrder:6 },
+
+  // ══════════════════════════════════════════════════════════
+  //  MOÇAMBIQUE 8ª Classe (ESG1 — 1º Ciclo)
+  // ══════════════════════════════════════════════════════════
+  { id:'mz8mat-1', subjectId:'mz8-mat', title:'Conjuntos Numéricos',            description:'Naturais, inteiros, racionais e irracionais',                term:1, displayOrder:1 },
+  { id:'mz8mat-2', subjectId:'mz8-mat', title:'Potenciação e Radiciação',       description:'Propriedades e cálculo',                                     term:1, displayOrder:2 },
+  { id:'mz8mat-3', subjectId:'mz8-mat', title:'Equações do 1º Grau',           description:'Resolução e problemas do quotidiano',                        term:2, displayOrder:3 },
+  { id:'mz8mat-4', subjectId:'mz8-mat', title:'Funções',                       description:'Noção de função e representação gráfica',                    term:2, displayOrder:4 },
+  { id:'mz8mat-5', subjectId:'mz8-mat', title:'Trigonometria Inicial',         description:'Razões trigonométricas no triângulo rectângulo',             term:3, displayOrder:5 },
+  { id:'mz8mat-6', subjectId:'mz8-mat', title:'Estatística Descritiva',        description:'Recolha, organização e representação de dados',              term:3, displayOrder:6 },
+
+  { id:'mz8port-1', subjectId:'mz8-port', title:'Classes de Palavras',         description:'Revisão e aprofundamento',                                    term:1, displayOrder:1 },
+  { id:'mz8port-2', subjectId:'mz8-port', title:'Texto Narrativo',             description:'Estrutura e elementos da narrativa',                         term:1, displayOrder:2 },
+  { id:'mz8port-3', subjectId:'mz8-port', title:'Texto Descritivo',            description:'Técnicas de descrição',                                       term:2, displayOrder:3 },
+  { id:'mz8port-4', subjectId:'mz8-port', title:'Análise Sintáctica',          description:'Sujeito e predicado',                                         term:2, displayOrder:4 },
+  { id:'mz8port-5', subjectId:'mz8-port', title:'Literatura Moçambicana',      description:'Introdução a autores nacionais',                              term:3, displayOrder:5 },
+  { id:'mz8port-6', subjectId:'mz8-port', title:'Produção Textual',            description:'Redacção e correcção de textos',                              term:3, displayOrder:6 },
+
+  { id:'mz8fis-1', subjectId:'mz8-fis', title:'Grandezas Físicas e Unidades',  description:'Sistema Internacional de Unidades',                          term:1, displayOrder:1 },
+  { id:'mz8fis-2', subjectId:'mz8-fis', title:'Medição e Instrumentos',       description:'Precisão e erro experimental',                                term:1, displayOrder:2 },
+  { id:'mz8fis-3', subjectId:'mz8-fis', title:'Estados da Matéria',           description:'Sólido, líquido e gasoso',                                    term:2, displayOrder:3 },
+  { id:'mz8fis-4', subjectId:'mz8-fis', title:'Movimento',                    description:'Noções de trajectória e velocidade',                          term:2, displayOrder:4 },
+  { id:'mz8fis-5', subjectId:'mz8-fis', title:'Força e Equilíbrio',           description:'Noções elementares de força',                                 term:3, displayOrder:5 },
+  { id:'mz8fis-6', subjectId:'mz8-fis', title:'Energia',                      description:'Formas e transformações de energia',                          term:3, displayOrder:6 },
+
+  { id:'mz8qui-1', subjectId:'mz8-qui', title:'A Matéria e as suas Propriedades', description:'Propriedades gerais e específicas',                       term:1, displayOrder:1 },
+  { id:'mz8qui-2', subjectId:'mz8-qui', title:'Estados Físicos e Mudanças de Estado', description:'Fusão, ebulição, condensação e solidificação',           term:1, displayOrder:2 },
+  { id:'mz8qui-3', subjectId:'mz8-qui', title:'Misturas e Métodos de Separação', description:'Filtração, decantação e destilação',                       term:2, displayOrder:3 },
+  { id:'mz8qui-4', subjectId:'mz8-qui', title:'Átomos e Elementos Químicos',  description:'Estrutura atómica elementar',                                 term:2, displayOrder:4 },
+  { id:'mz8qui-5', subjectId:'mz8-qui', title:'Substâncias Simples e Compostas', description:'Diferenças e exemplos do quotidiano',                       term:3, displayOrder:5 },
+  { id:'mz8qui-6', subjectId:'mz8-qui', title:'Introdução às Reacções Químicas', description:'Reagentes, produtos e sinais de reacção',                  term:3, displayOrder:6 },
+
+  { id:'mz8bio-1', subjectId:'mz8-bio', title:'Níveis de Organização dos Seres Vivos', description:'Célula, tecido, órgão, sistema e organismo',            term:1, displayOrder:1 },
+  { id:'mz8bio-2', subjectId:'mz8-bio', title:'A Célula — Estrutura Básica',  description:'Membrana, citoplasma e núcleo',                               term:1, displayOrder:2 },
+  { id:'mz8bio-3', subjectId:'mz8-bio', title:'Tecidos Animais e Vegetais',   description:'Tipos e funções básicas',                                     term:2, displayOrder:3 },
+  { id:'mz8bio-4', subjectId:'mz8-bio', title:'Funções Vitais dos Seres Vivos', description:'Nutrição, relação e reprodução',                             term:2, displayOrder:4 },
+  { id:'mz8bio-5', subjectId:'mz8-bio', title:'Classificação dos Seres Vivos', description:'Reinos e critérios de classificação',                        term:3, displayOrder:5 },
+  { id:'mz8bio-6', subjectId:'mz8-bio', title:'Saúde e Higiene',              description:'Prevenção de doenças e boas práticas de saúde',               term:3, displayOrder:6 },
+
+  { id:'mz8geo-1', subjectId:'mz8-geo', title:'Moçambique — Localização e Limites', description:'Posição geográfica e fronteiras',                        term:1, displayOrder:1 },
+  { id:'mz8geo-2', subjectId:'mz8-geo', title:'Relevo de Moçambique',         description:'Planícies, planaltos e montanhas',                            term:1, displayOrder:2 },
+  { id:'mz8geo-3', subjectId:'mz8-geo', title:'Clima e Vegetação',            description:'Tipos de clima e cobertura vegetal',                          term:2, displayOrder:3 },
+  { id:'mz8geo-4', subjectId:'mz8-geo', title:'Hidrografia de Moçambique',    description:'Principais rios e bacias hidrográficas',                      term:2, displayOrder:4 },
+  { id:'mz8geo-5', subjectId:'mz8-geo', title:'Recursos Naturais',            description:'Minerais, florestas e recursos hídricos',                     term:3, displayOrder:5 },
+  { id:'mz8geo-6', subjectId:'mz8-geo', title:'Cartografia e Orientação',     description:'Leitura de mapas e pontos cardeais',                          term:3, displayOrder:6 },
+
+  { id:'mz8his-1', subjectId:'mz8-his', title:'Origem do Homem e Pré-História', description:'Evolução humana e períodos pré-históricos',                 term:1, displayOrder:1 },
+  { id:'mz8his-2', subjectId:'mz8-his', title:'Primeiras Civilizações',       description:'Mesopotâmia, Egipto e vale do Indo',                          term:1, displayOrder:2 },
+  { id:'mz8his-3', subjectId:'mz8-his', title:'Civilizações Africanas Antigas', description:'Reinos e impérios africanos',                                term:2, displayOrder:3 },
+  { id:'mz8his-4', subjectId:'mz8-his', title:'Sociedades Bantu em Moçambique', description:'Organização social e económica',                            term:2, displayOrder:4 },
+  { id:'mz8his-5', subjectId:'mz8-his', title:'Comércio e Trocas na Costa Africana', description:'Rotas comerciais do Índico',                             term:3, displayOrder:5 },
+  { id:'mz8his-6', subjectId:'mz8-his', title:'Revisão — Da Pré-História às Sociedades Antigas', description:'Consolidação dos temas do ano',              term:3, displayOrder:6 },
+
+  { id:'mz8ing-1', subjectId:'mz8-ing', title:'Greetings and Introductions',  description:'Cumprimentos e apresentação pessoal',                         term:1, displayOrder:1 },
+  { id:'mz8ing-2', subjectId:'mz8-ing', title:'Family and Daily Life',        description:'Vocabulário sobre família e rotina',                          term:1, displayOrder:2 },
+  { id:'mz8ing-3', subjectId:'mz8-ing', title:'Present Simple Tense',         description:'Formação e uso do presente simples',                          term:2, displayOrder:3 },
+  { id:'mz8ing-4', subjectId:'mz8-ing', title:'Numbers, Time and Dates',      description:'Números, horas e datas',                                      term:2, displayOrder:4 },
+  { id:'mz8ing-5', subjectId:'mz8-ing', title:'School and Environment Vocabulary', description:'Vocabulário escolar e ambiental',                        term:3, displayOrder:5 },
+  { id:'mz8ing-6', subjectId:'mz8-ing', title:'Basic Reading Comprehension',  description:'Compreensão de textos simples',                               term:3, displayOrder:6 },
+
+  { id:'mz8ev-1', subjectId:'mz8-ev', title:'Desenho de Observação',         description:'Registo gráfico de objectos reais',                           term:1, displayOrder:1 },
+  { id:'mz8ev-2', subjectId:'mz8-ev', title:'Cor e Composição',              description:'Teoria da cor e organização visual',                          term:1, displayOrder:2 },
+  { id:'mz8ev-3', subjectId:'mz8-ev', title:'Técnicas de Pintura',           description:'Aguarela, guache e outras técnicas',                          term:2, displayOrder:3 },
+  { id:'mz8ev-4', subjectId:'mz8-ev', title:'Desenho Geométrico Inicial',    description:'Traçados com régua, esquadro e compasso',                     term:2, displayOrder:4 },
+  { id:'mz8ev-5', subjectId:'mz8-ev', title:'Materiais e Texturas',          description:'Exploração de materiais diversos',                            term:3, displayOrder:5 },
+  { id:'mz8ev-6', subjectId:'mz8-ev', title:'Projecto de Expressão Plástica', description:'Planificação e execução de um trabalho final',              term:3, displayOrder:6 },
+
+  { id:'mz8tic-1', subjectId:'mz8-tic', title:'Introdução ao Computador e Componentes', description:'Hardware e software básicos',                        term:1, displayOrder:1 },
+  { id:'mz8tic-2', subjectId:'mz8-tic', title:'Sistemas Operativos — Noções Básicas', description:'Funcionamento e organização de ficheiros',                term:1, displayOrder:2 },
+  { id:'mz8tic-3', subjectId:'mz8-tic', title:'Processamento de Texto',      description:'Criação e formatação de documentos',                          term:2, displayOrder:3 },
+  { id:'mz8tic-4', subjectId:'mz8-tic', title:'Folhas de Cálculo — Introdução', description:'Células, fórmulas simples e gráficos',                     term:2, displayOrder:4 },
+  { id:'mz8tic-5', subjectId:'mz8-tic', title:'Internet e Pesquisa de Informação', description:'Navegação e critérios de pesquisa',                       term:3, displayOrder:5 },
+  { id:'mz8tic-6', subjectId:'mz8-tic', title:'Segurança e Ética Digital',   description:'Boas práticas online e protecção de dados',                   term:3, displayOrder:6 },
+
+  { id:'mz8emp-1', subjectId:'mz8-emp', title:'O que é Empreendedorismo',    description:'Conceitos e importância para a comunidade',                   term:1, displayOrder:1 },
+  { id:'mz8emp-2', subjectId:'mz8-emp', title:'Identificação de Oportunidades Locais', description:'Análise do meio envolvente',                          term:1, displayOrder:2 },
+  { id:'mz8emp-3', subjectId:'mz8-emp', title:'Ideias de Negócio',           description:'Geração e selecção de ideias',                                term:2, displayOrder:3 },
+  { id:'mz8emp-4', subjectId:'mz8-emp', title:'Planeamento de uma Actividade', description:'Passos para organizar uma iniciativa',                       term:2, displayOrder:4 },
+  { id:'mz8emp-5', subjectId:'mz8-emp', title:'Noções de Custo e Preço',     description:'Cálculo simples de custos e margem',                          term:3, displayOrder:5 },
+  { id:'mz8emp-6', subjectId:'mz8-emp', title:'Apresentação de um Projecto Simples', description:'Comunicação de uma ideia de negócio',                    term:3, displayOrder:6 },
+
+  { id:'mz8agro-1', subjectId:'mz8-agro', title:'Introdução à Agricultura',  description:'Importância da agricultura para Moçambique',                  term:1, displayOrder:1 },
+  { id:'mz8agro-2', subjectId:'mz8-agro', title:'Preparação do Solo',       description:'Técnicas de preparação para cultivo',                          term:1, displayOrder:2 },
+  { id:'mz8agro-3', subjectId:'mz8-agro', title:'Sementeira e Cultivo',     description:'Técnicas básicas de plantio',                                  term:2, displayOrder:3 },
+  { id:'mz8agro-4', subjectId:'mz8-agro', title:'Criação de Pequenos Animais', description:'Aves e outros pequenos animais',                             term:2, displayOrder:4 },
+  { id:'mz8agro-5', subjectId:'mz8-agro', title:'Conservação de Produtos Agrícolas', description:'Métodos de armazenamento',                              term:3, displayOrder:5 },
+  { id:'mz8agro-6', subjectId:'mz8-agro', title:'Segurança Alimentar',      description:'Produção e acesso a alimentos',                                term:3, displayOrder:6 },
+
+  // ══════════════════════════════════════════════════════════
+  //  MOÇAMBIQUE 9ª Classe (ESG1 — 1º Ciclo)
+  // ══════════════════════════════════════════════════════════
+  { id:'mz9mat-1', subjectId:'mz9-mat', title:'Equações do 2º Grau',         description:'Fórmula resolvente e problemas',                              term:1, displayOrder:1 },
+  { id:'mz9mat-2', subjectId:'mz9-mat', title:'Sistemas de Equações Lineares', description:'Métodos de resolução',                                      term:1, displayOrder:2 },
+  { id:'mz9mat-3', subjectId:'mz9-mat', title:'Funções Quadráticas',         description:'Representação gráfica e vértice da parábola',                 term:2, displayOrder:3 },
+  { id:'mz9mat-4', subjectId:'mz9-mat', title:'Semelhança de Triângulos',    description:'Critérios de semelhança e aplicações',                        term:2, displayOrder:4 },
+  { id:'mz9mat-5', subjectId:'mz9-mat', title:'Teorema de Pitágoras',        description:'Demonstração e aplicações práticas',                          term:3, displayOrder:5 },
+  { id:'mz9mat-6', subjectId:'mz9-mat', title:'Estatística e Probabilidade Inicial', description:'Medidas de tendência central e noção de probabilidade', term:3, displayOrder:6 },
+
+  { id:'mz9port-1', subjectId:'mz9-port', title:'Texto Argumentativo',       description:'Estrutura e construção de argumentos',                        term:1, displayOrder:1 },
+  { id:'mz9port-2', subjectId:'mz9-port', title:'Orações Coordenadas e Subordinadas', description:'Tipos e funções sintácticas',                          term:1, displayOrder:2 },
+  { id:'mz9port-3', subjectId:'mz9-port', title:'Literatura Moçambicana — Poesia', description:'Craveirinha e outros poetas nacionais',                    term:2, displayOrder:3 },
+  { id:'mz9port-4', subjectId:'mz9-port', title:'Discurso Directo e Indirecto', description:'Transformação e uso em textos',                              term:2, displayOrder:4 },
+  { id:'mz9port-5', subjectId:'mz9-port', title:'Produção de Textos de Opinião', description:'Defesa de um ponto de vista',                                term:3, displayOrder:5 },
+  { id:'mz9port-6', subjectId:'mz9-port', title:'Revisão Gramatical Geral',  description:'Consolidação das classes e funções gramaticais',              term:3, displayOrder:6 },
+
+  { id:'mz9fis-1', subjectId:'mz9-fis', title:'Cinemática — Movimento Rectilíneo', description:'Posição, deslocamento e trajectória',                     term:1, displayOrder:1 },
+  { id:'mz9fis-2', subjectId:'mz9-fis', title:'Velocidade e Aceleração',    description:'Cálculo e interpretação de gráficos',                          term:1, displayOrder:2 },
+  { id:'mz9fis-3', subjectId:'mz9-fis', title:'Leis de Newton — Introdução', description:'Inércia, força e acção-reacção',                              term:2, displayOrder:3 },
+  { id:'mz9fis-4', subjectId:'mz9-fis', title:'Força e Massa',              description:'Relação entre força, massa e aceleração',                      term:2, displayOrder:4 },
+  { id:'mz9fis-5', subjectId:'mz9-fis', title:'Trabalho e Energia Mecânica', description:'Energia cinética e potencial',                                term:3, displayOrder:5 },
+  { id:'mz9fis-6', subjectId:'mz9-fis', title:'Máquinas Simples',           description:'Alavancas, roldanas e planos inclinados',                      term:3, displayOrder:6 },
+
+  { id:'mz9qui-1', subjectId:'mz9-qui', title:'Tabela Periódica — Organização', description:'Períodos, grupos e classificação dos elementos',            term:1, displayOrder:1 },
+  { id:'mz9qui-2', subjectId:'mz9-qui', title:'Propriedades Periódicas',    description:'Raio atómico, electronegatividade e energia de ionização',    term:1, displayOrder:2 },
+  { id:'mz9qui-3', subjectId:'mz9-qui', title:'Ligação Iónica e Covalente', description:'Formação e características das ligações',                     term:2, displayOrder:3 },
+  { id:'mz9qui-4', subjectId:'mz9-qui', title:'Fórmulas Químicas',          description:'Escrita e interpretação de fórmulas',                          term:2, displayOrder:4 },
+  { id:'mz9qui-5', subjectId:'mz9-qui', title:'Reacções Químicas — Tipos',  description:'Síntese, decomposição, deslocamento e dupla troca',           term:3, displayOrder:5 },
+  { id:'mz9qui-6', subjectId:'mz9-qui', title:'Balanceamento de Equações Químicas', description:'Conservação da massa e coeficientes estequiométricos',   term:3, displayOrder:6 },
+
+  { id:'mz9bio-1', subjectId:'mz9-bio', title:'Reprodução nos Seres Vivos', description:'Reprodução sexuada e assexuada',                              term:1, displayOrder:1 },
+  { id:'mz9bio-2', subjectId:'mz9-bio', title:'Reprodução Humana',         description:'Sistema reprodutor e ciclo reprodutivo',                       term:1, displayOrder:2 },
+  { id:'mz9bio-3', subjectId:'mz9-bio', title:'Hereditariedade — Noções Básicas', description:'Transmissão de características entre gerações',           term:2, displayOrder:3 },
+  { id:'mz9bio-4', subjectId:'mz9-bio', title:'Genes e Cromossomas',       description:'Localização da informação genética',                          term:2, displayOrder:4 },
+  { id:'mz9bio-5', subjectId:'mz9-bio', title:'Saúde Reprodutiva e Prevenção de Doenças', description:'Comportamento sexual responsável',                    term:3, displayOrder:5 },
+  { id:'mz9bio-6', subjectId:'mz9-bio', title:'Ecossistemas e Cadeias Alimentares', description:'Relações entre seres vivos e ambiente',                    term:3, displayOrder:6 },
+
+  { id:'mz9geo-1', subjectId:'mz9-geo', title:'População de Moçambique',   description:'Distribuição e crescimento populacional',                      term:1, displayOrder:1 },
+  { id:'mz9geo-2', subjectId:'mz9-geo', title:'Urbanização e Migrações',   description:'Movimentos populacionais e crescimento urbano',               term:1, displayOrder:2 },
+  { id:'mz9geo-3', subjectId:'mz9-geo', title:'Actividades Económicas — Agricultura e Pesca', description:'Principais sectores produtivos',                   term:2, displayOrder:3 },
+  { id:'mz9geo-4', subjectId:'mz9-geo', title:'Indústria e Comércio',      description:'Sectores secundário e terciário em Moçambique',                term:2, displayOrder:4 },
+  { id:'mz9geo-5', subjectId:'mz9-geo', title:'Transportes e Comunicações', description:'Redes de infra-estruturas do país',                            term:3, displayOrder:5 },
+  { id:'mz9geo-6', subjectId:'mz9-geo', title:'Moçambique na SADC',        description:'Cooperação regional austral-africana',                         term:3, displayOrder:6 },
+
+  { id:'mz9his-1', subjectId:'mz9-his', title:'Chegada dos Portugueses a Moçambique', description:'Primeiros contactos e feitorias',                       term:1, displayOrder:1 },
+  { id:'mz9his-2', subjectId:'mz9-his', title:'Sistema Colonial Português', description:'Estrutura administrativa e económica colonial',               term:1, displayOrder:2 },
+  { id:'mz9his-3', subjectId:'mz9-his', title:'Resistência à Ocupação Colonial', description:'Movimentos e figuras de resistência',                       term:2, displayOrder:3 },
+  { id:'mz9his-4', subjectId:'mz9-his', title:'Surgimento do Nacionalismo Moçambicano', description:'Contexto e primeiros movimentos nacionalistas',          term:2, displayOrder:4 },
+  { id:'mz9his-5', subjectId:'mz9-his', title:'Fundação da FRELIMO',       description:'Unificação dos movimentos nacionalistas',                      term:3, displayOrder:5 },
+  { id:'mz9his-6', subjectId:'mz9-his', title:'Luta Armada de Libertação Nacional', description:'Principais fases da luta armada',                          term:3, displayOrder:6 },
+
+  { id:'mz9ing-1', subjectId:'mz9-ing', title:'Past Simple Tense',         description:'Formação e uso do passado simples',                            term:1, displayOrder:1 },
+  { id:'mz9ing-2', subjectId:'mz9-ing', title:'Comparatives and Superlatives', description:'Comparação de adjectivos',                                    term:1, displayOrder:2 },
+  { id:'mz9ing-3', subjectId:'mz9-ing', title:'Describing People and Places', description:'Adjectivos descritivos',                                       term:2, displayOrder:3 },
+  { id:'mz9ing-4', subjectId:'mz9-ing', title:'Future Plans — Going to / Will', description:'Expressão de planos futuros',                                term:2, displayOrder:4 },
+  { id:'mz9ing-5', subjectId:'mz9-ing', title:'Reading — Short Stories',   description:'Compreensão de pequenas histórias',                            term:3, displayOrder:5 },
+  { id:'mz9ing-6', subjectId:'mz9-ing', title:'Writing — Personal Letters', description:'Estrutura de cartas pessoais',                                  term:3, displayOrder:6 },
+
+  { id:'mz9ev-1', subjectId:'mz9-ev', title:'Desenho Técnico — Instrumentos e Traçados', description:'Uso de régua, esquadro e compasso',                     term:1, displayOrder:1 },
+  { id:'mz9ev-2', subjectId:'mz9-ev', title:'Perspectiva — Noções Iniciais', description:'Profundidade e ponto de fuga',                                 term:1, displayOrder:2 },
+  { id:'mz9ev-3', subjectId:'mz9-ev', title:'Escultura e Modelagem',       description:'Trabalhos tridimensionais',                                    term:2, displayOrder:3 },
+  { id:'mz9ev-4', subjectId:'mz9-ev', title:'Design e Comunicação Visual', description:'Elementos gráficos e mensagem visual',                          term:2, displayOrder:4 },
+  { id:'mz9ev-5', subjectId:'mz9-ev', title:'Cor Aplicada ao Desenho Técnico', description:'Uso da cor em representações técnicas',                       term:3, displayOrder:5 },
+  { id:'mz9ev-6', subjectId:'mz9-ev', title:'Projecto de Expressão Plástica', description:'Planificação e execução de um trabalho final',                term:3, displayOrder:6 },
+
+  { id:'mz9tic-1', subjectId:'mz9-tic', title:'Apresentações Digitais',    description:'Criação de slides e recursos visuais',                         term:1, displayOrder:1 },
+  { id:'mz9tic-2', subjectId:'mz9-tic', title:'Folhas de Cálculo — Fórmulas Básicas', description:'Cálculos e funções simples',                              term:1, displayOrder:2 },
+  { id:'mz9tic-3', subjectId:'mz9-tic', title:'Bases de Dados — Noções Iniciais', description:'Organização de informação em tabelas',                       term:2, displayOrder:3 },
+  { id:'mz9tic-4', subjectId:'mz9-tic', title:'Comunicação Digital e Correio Electrónico', description:'Boas práticas de comunicação online',                    term:2, displayOrder:4 },
+  { id:'mz9tic-5', subjectId:'mz9-tic', title:'Pesquisa Avançada de Informação', description:'Critérios de fiabilidade das fontes',                        term:3, displayOrder:5 },
+  { id:'mz9tic-6', subjectId:'mz9-tic', title:'Ética e Segurança na Internet', description:'Uso responsável das tecnologias digitais',                     term:3, displayOrder:6 },
+
+  { id:'mz9emp-1', subjectId:'mz9-emp', title:'Gestão de Pequenos Negócios', description:'Princípios básicos de gestão',                                 term:1, displayOrder:1 },
+  { id:'mz9emp-2', subjectId:'mz9-emp', title:'Marketing Básico',          description:'Identificação de clientes e divulgação',                       term:1, displayOrder:2 },
+  { id:'mz9emp-3', subjectId:'mz9-emp', title:'Noções de Contabilidade Simples', description:'Registo de receitas e despesas',                            term:2, displayOrder:3 },
+  { id:'mz9emp-4', subjectId:'mz9-emp', title:'Legislação Comercial Básica', description:'Noções de licenciamento e impostos',                            term:2, displayOrder:4 },
+  { id:'mz9emp-5', subjectId:'mz9-emp', title:'Trabalho em Equipa e Liderança', description:'Competências para gerir pessoas',                              term:3, displayOrder:5 },
+  { id:'mz9emp-6', subjectId:'mz9-emp', title:'Elaboração de um Plano de Negócio Simples', description:'Estrutura de um plano de negócio',                    term:3, displayOrder:6 },
+
+  { id:'mz9agro-1', subjectId:'mz9-agro', title:'Técnicas de Cultivo Melhoradas', description:'Rotação de culturas e adubação',                            term:1, displayOrder:1 },
+  { id:'mz9agro-2', subjectId:'mz9-agro', title:'Pragas e Doenças das Plantas', description:'Identificação e controlo básico',                             term:1, displayOrder:2 },
+  { id:'mz9agro-3', subjectId:'mz9-agro', title:'Criação de Gado — Noções Básicas', description:'Maneio de bovinos e caprinos',                              term:2, displayOrder:3 },
+  { id:'mz9agro-4', subjectId:'mz9-agro', title:'Conservação e Armazenamento de Alimentos', description:'Técnicas de conservação pós-colheita',                  term:2, displayOrder:4 },
+  { id:'mz9agro-5', subjectId:'mz9-agro', title:'Comercialização de Produtos Agro-Pecuários', description:'Do produtor ao mercado',                              term:3, displayOrder:5 },
+  { id:'mz9agro-6', subjectId:'mz9-agro', title:'Sustentabilidade e Ambiente na Agricultura', description:'Práticas agrícolas sustentáveis',                        term:3, displayOrder:6 },
+
+  // ══════════════════════════════════════════════════════════
   //  MOÇAMBIQUE 10ª Classe
   // ══════════════════════════════════════════════════════════
 
@@ -377,6 +876,46 @@ export const CHAPTERS: Chapter[] = [
   { id:'mz10ing-3-2', subjectId:'mz10-ing', title:'Writing — Formal & Informal',         description:'Letters, emails, essays and reports',                             term:3, displayOrder:8 },
   { id:'mz10ing-3-3', subjectId:'mz10-ing', title:'Vocabulary & Idioms',                  description:'Word formation, collocations and common idioms',                  term:3, displayOrder:9 },
 
+  // ─── Ed. Moral e Cívica 10ª Classe ─────────────────────────
+  { id:'mz10edm-1', subjectId:'mz10-edm', title:'Direitos Humanos e Constituição',       description:'Constituição da República e direitos fundamentais',              term:1, displayOrder:1 },
+  { id:'mz10edm-2', subjectId:'mz10-edm', title:'Cidadania e Participação Democrática',  description:'Deveres cívicos e participação na vida pública',                  term:1, displayOrder:2 },
+  { id:'mz10edm-3', subjectId:'mz10-edm', title:'Valores Éticos e Morais',                description:'Honestidade, responsabilidade e integridade',                     term:2, displayOrder:3 },
+  { id:'mz10edm-4', subjectId:'mz10-edm', title:'Diversidade Cultural e Tolerância',      description:'Respeito pela diversidade cultural e religiosa',                  term:2, displayOrder:4 },
+  { id:'mz10edm-5', subjectId:'mz10-edm', title:'Saúde, Sexualidade e Prevenção',         description:'Comportamento sexual responsável e prevenção de doenças',         term:3, displayOrder:5 },
+  { id:'mz10edm-6', subjectId:'mz10-edm', title:'Ambiente e Desenvolvimento Sustentável', description:'Responsabilidade ambiental e sustentabilidade',                    term:3, displayOrder:6 },
+
+  // ─── Educação Visual 10ª Classe ─────────────────────────────
+  { id:'mz10ev-1', subjectId:'mz10-ev', title:'Desenho de Projecção — Vistas Ortogonais', description:'Representação de objectos em várias vistas',                  term:1, displayOrder:1 },
+  { id:'mz10ev-2', subjectId:'mz10-ev', title:'Perspectiva Cónica e Cavaleira',          description:'Métodos de representação em profundidade',                        term:1, displayOrder:2 },
+  { id:'mz10ev-3', subjectId:'mz10-ev', title:'Cor, Luz e Sombra',                       description:'Efeitos de luz e volume no desenho',                              term:2, displayOrder:3 },
+  { id:'mz10ev-4', subjectId:'mz10-ev', title:'Composição e Design Gráfico',             description:'Princípios de composição visual',                                 term:2, displayOrder:4 },
+  { id:'mz10ev-5', subjectId:'mz10-ev', title:'Materiais Convencionais e Reciclados',    description:'Exploração de novos materiais',                                   term:3, displayOrder:5 },
+  { id:'mz10ev-6', subjectId:'mz10-ev', title:'Projecto de Expressão Plástica',          description:'Planificação e execução de um trabalho final',                    term:3, displayOrder:6 },
+
+  // ─── TIC 10ª Classe ──────────────────────────────────────────
+  { id:'mz10tic-1', subjectId:'mz10-tic', title:'Sistemas de Informação — Conceitos',     description:'Fundamentos de sistemas de informação',                          term:1, displayOrder:1 },
+  { id:'mz10tic-2', subjectId:'mz10-tic', title:'Processamento e Organização de Dados',   description:'Estruturação e tratamento de dados',                              term:1, displayOrder:2 },
+  { id:'mz10tic-3', subjectId:'mz10-tic', title:'Folhas de Cálculo Aplicadas',            description:'Fórmulas, funções e gráficos avançados',                          term:2, displayOrder:3 },
+  { id:'mz10tic-4', subjectId:'mz10-tic', title:'Apresentações e Comunicação Digital',    description:'Recursos multimédia para comunicação',                            term:2, displayOrder:4 },
+  { id:'mz10tic-5', subjectId:'mz10-tic', title:'Introdução à Programação',               description:'Lógica de programação e algoritmos simples',                      term:3, displayOrder:5 },
+  { id:'mz10tic-6', subjectId:'mz10-tic', title:'Segurança da Informação',                description:'Protecção de dados e boas práticas digitais',                     term:3, displayOrder:6 },
+
+  // ─── Noções de Empreendedorismo 10ª Classe ──────────────────
+  { id:'mz10emp-1', subjectId:'mz10-emp', title:'O Espírito Empreendedor',               description:'Atitudes e características do empreendedor',                     term:1, displayOrder:1 },
+  { id:'mz10emp-2', subjectId:'mz10-emp', title:'Identificação de Oportunidades de Negócio', description:'Análise do mercado e necessidades locais',                     term:1, displayOrder:2 },
+  { id:'mz10emp-3', subjectId:'mz10-emp', title:'Elaboração de um Plano de Negócio',      description:'Estrutura e componentes de um plano de negócio',                  term:2, displayOrder:3 },
+  { id:'mz10emp-4', subjectId:'mz10-emp', title:'Gestão Financeira Básica',               description:'Receitas, despesas e fluxo de caixa',                             term:2, displayOrder:4 },
+  { id:'mz10emp-5', subjectId:'mz10-emp', title:'Marketing e Vendas',                     description:'Estratégias de divulgação e venda',                               term:3, displayOrder:5 },
+  { id:'mz10emp-6', subjectId:'mz10-emp', title:'Ética e Responsabilidade Empresarial',   description:'Boas práticas no exercício de uma actividade',                    term:3, displayOrder:6 },
+
+  // ─── Agro-Pecuária 10ª Classe ────────────────────────────────
+  { id:'mz10agro-1', subjectId:'mz10-agro', title:'Sistemas de Produção Agrícola',        description:'Modelos de produção agrícola em Moçambique',                     term:1, displayOrder:1 },
+  { id:'mz10agro-2', subjectId:'mz10-agro', title:'Maneio de Culturas e Irrigação',       description:'Técnicas de rega e manutenção de culturas',                       term:1, displayOrder:2 },
+  { id:'mz10agro-3', subjectId:'mz10-agro', title:'Produção Pecuária — Bovinos e Aves',   description:'Boas práticas de criação animal',                                 term:2, displayOrder:3 },
+  { id:'mz10agro-4', subjectId:'mz10-agro', title:'Conservação de Produtos Agro-Pecuários', description:'Métodos de conservação pós-colheita',                           term:2, displayOrder:4 },
+  { id:'mz10agro-5', subjectId:'mz10-agro', title:'Comercialização e Mercado',            description:'Do produtor ao consumidor',                                       term:3, displayOrder:5 },
+  { id:'mz10agro-6', subjectId:'mz10-agro', title:'Agricultura Sustentável e Ambiente',   description:'Impacto ambiental e boas práticas',                               term:3, displayOrder:6 },
+
   // ══════════════════════════════════════════════════════════
   //  MOÇAMBIQUE 11ª Classe
   // ══════════════════════════════════════════════════════════
@@ -394,6 +933,78 @@ export const CHAPTERS: Chapter[] = [
   { id:'mz11fis-3-1', subjectId:'mz11-fis', title:'Física Nuclear',                       description:'Radioactividade, fissão e fusão nuclear',                         term:3, displayOrder:5 },
   { id:'mz11fis-3-2', subjectId:'mz11-fis', title:'Relatividade Especial',                description:'Postulados de Einstein e dilatação do tempo',                     term:3, displayOrder:6 },
 
+  // ─── Introdução à Filosofia 11ª Classe ──────────────────────
+  { id:'mz11fil-1', subjectId:'mz11-fil', title:'O que é Filosofia',                     description:'Origem, objecto e método da reflexão filosófica',                 term:1, displayOrder:1 },
+  { id:'mz11fil-2', subjectId:'mz11-fil', title:'O Conhecimento e a Verdade',            description:'Teorias do conhecimento',                                          term:1, displayOrder:2 },
+  { id:'mz11fil-3', subjectId:'mz11-fil', title:'Lógica e Argumentação',                 description:'Estrutura de argumentos válidos e falácias',                       term:2, displayOrder:3 },
+  { id:'mz11fil-4', subjectId:'mz11-fil', title:'Ética e Moral',                         description:'Fundamentos da acção moral',                                       term:2, displayOrder:4 },
+  { id:'mz11fil-5', subjectId:'mz11-fil', title:'Filosofia Africana e Moçambicana',      description:'Pensadores e correntes filosóficas africanas',                     term:3, displayOrder:5 },
+  { id:'mz11fil-6', subjectId:'mz11-fil', title:'Filosofia Política — Liberdade e Justiça', description:'Conceitos de liberdade, justiça e poder',                       term:3, displayOrder:6 },
+
+  // ─── TIC 11ª Classe ──────────────────────────────────────────
+  { id:'mz11tic-1', subjectId:'mz11-tic', title:'Tecnologia Aplicada à Área de Especialidade', description:'Ferramentas digitais específicas da área escolhida',            term:1, displayOrder:1 },
+  { id:'mz11tic-2', subjectId:'mz11-tic', title:'Ferramentas de Produtividade Avançadas', description:'Automatização de tarefas com folhas de cálculo',                   term:1, displayOrder:2 },
+  { id:'mz11tic-3', subjectId:'mz11-tic', title:'Pesquisa Científica com Recurso às TIC', description:'Bases de dados académicas e citação de fontes',                    term:2, displayOrder:3 },
+  { id:'mz11tic-4', subjectId:'mz11-tic', title:'Multimédia e Comunicação Digital',      description:'Produção de conteúdo multimédia',                                   term:2, displayOrder:4 },
+  { id:'mz11tic-5', subjectId:'mz11-tic', title:'Introdução a Bases de Dados',           description:'Modelação simples de dados',                                       term:3, displayOrder:5 },
+  { id:'mz11tic-6', subjectId:'mz11-tic', title:'Ética e Segurança Digital',             description:'Uso responsável da tecnologia',                                    term:3, displayOrder:6 },
+
+  // ─── Noções de Empreendedorismo 11ª Classe ──────────────────
+  { id:'mz11emp-1', subjectId:'mz11-emp', title:'Identificação de Oportunidades de Negócio', description:'Análise aprofundada de oportunidades locais',                    term:1, displayOrder:1 },
+  { id:'mz11emp-2', subjectId:'mz11-emp', title:'Gestão da Produção',                    description:'Organização de processos produtivos',                              term:1, displayOrder:2 },
+  { id:'mz11emp-3', subjectId:'mz11-emp', title:'Gestão da Qualidade',                   description:'Controlo e melhoria da qualidade',                                  term:2, displayOrder:3 },
+  { id:'mz11emp-4', subjectId:'mz11-emp', title:'Gestão de Recursos Humanos',            description:'Organização e liderança de equipas',                               term:2, displayOrder:4 },
+  { id:'mz11emp-5', subjectId:'mz11-emp', title:'Gestão Financeira',                     description:'Controlo financeiro de uma actividade',                            term:3, displayOrder:5 },
+  { id:'mz11emp-6', subjectId:'mz11-emp', title:'Oportunidades de Emprego e Auto-Emprego', description:'Transição da escola para o mercado de trabalho',                  term:3, displayOrder:6 },
+
+  // ─── Introdução à Psicologia e Pedagogia 11ª Classe ─────────
+  { id:'mz11psi-1', subjectId:'mz11-psi', title:'Introdução à Psicologia',               description:'Conceitos básicos e ramos da psicologia',                          term:1, displayOrder:1 },
+  { id:'mz11psi-2', subjectId:'mz11-psi', title:'O Processo de Ensino-Aprendizagem',      description:'Como o aluno aprende',                                             term:1, displayOrder:2 },
+  { id:'mz11psi-3', subjectId:'mz11-psi', title:'Desenvolvimento Humano e Aprendizagem',  description:'Etapas do desenvolvimento cognitivo',                              term:2, displayOrder:3 },
+  { id:'mz11psi-4', subjectId:'mz11-psi', title:'Conceitos Básicos de Didáctica',         description:'Métodos e estratégias de ensino',                                  term:2, displayOrder:4 },
+  { id:'mz11psi-5', subjectId:'mz11-psi', title:'Motivação e Comportamento em Sala de Aula', description:'Factores que influenciam a aprendizagem',                       term:3, displayOrder:5 },
+  { id:'mz11psi-6', subjectId:'mz11-psi', title:'A Profissão Docente',                    description:'Papel e responsabilidades do professor',                          term:3, displayOrder:6 },
+
+  // ─── Línguas Moçambicanas 11ª Classe ─────────────────────────
+  { id:'mz11lm-1', subjectId:'mz11-lm', title:'Fonética e Fonologia da Língua Moçambicana', description:'Sistema de sons da língua escolhida',                              term:1, displayOrder:1 },
+  { id:'mz11lm-2', subjectId:'mz11-lm', title:'Morfologia — Classes de Palavras',        description:'Estrutura das palavras na língua moçambicana',                     term:1, displayOrder:2 },
+  { id:'mz11lm-3', subjectId:'mz11-lm', title:'Leitura e Escrita na Língua Moçambicana', description:'Ortografia padronizada e prática de leitura',                     term:2, displayOrder:3 },
+  { id:'mz11lm-4', subjectId:'mz11-lm', title:'Literatura Oral — Provérbios e Contos',   description:'Tradição oral e valores culturais',                                term:2, displayOrder:4 },
+  { id:'mz11lm-5', subjectId:'mz11-lm', title:'Produção de Textos na Língua Moçambicana', description:'Redacção de textos simples',                                       term:3, displayOrder:5 },
+  { id:'mz11lm-6', subjectId:'mz11-lm', title:'Cultura e Identidade Linguística',        description:'Relação entre língua e identidade cultural',                       term:3, displayOrder:6 },
+
+  // ─── Francês 11ª Classe ──────────────────────────────────────
+  { id:'mz11fr-1', subjectId:'mz11-fr', title:'Salutations et Présentations',           description:'Cumprimentos e apresentação pessoal em francês',                   term:1, displayOrder:1 },
+  { id:'mz11fr-2', subjectId:'mz11-fr', title:"Le Présent de l'Indicatif",              description:'Formação e uso do presente do indicativo',                         term:1, displayOrder:2 },
+  { id:'mz11fr-3', subjectId:'mz11-fr', title:'Vocabulaire Quotidien',                  description:'Vocabulário do dia-a-dia',                                          term:2, displayOrder:3 },
+  { id:'mz11fr-4', subjectId:'mz11-fr', title:'Description de Personnes et de Lieux',   description:'Adjectivos descritivos em francês',                                term:2, displayOrder:4 },
+  { id:'mz11fr-5', subjectId:'mz11-fr', title:'Le Passé Composé',                       description:'Formação e uso do passado composto',                               term:3, displayOrder:5 },
+  { id:'mz11fr-6', subjectId:'mz11-fr', title:'Compréhension de Textes Simples',        description:'Leitura e interpretação de textos curtos',                         term:3, displayOrder:6 },
+
+  // ─── Desenho e Geometria Descritiva 11ª Classe ──────────────
+  { id:'mz11dgd-1', subjectId:'mz11-dgd', title:'Sistemas de Projecção',                description:'Fundamentos da representação gráfica',                             term:1, displayOrder:1 },
+  { id:'mz11dgd-2', subjectId:'mz11-dgd', title:'Representação Diédrica — Ponto, Recta e Plano', description:'Métodos de representação diédrica',                          term:1, displayOrder:2 },
+  { id:'mz11dgd-3', subjectId:'mz11-dgd', title:'Verdadeira Grandeza',                  description:'Determinação de medidas reais em projecção',                       term:2, displayOrder:3 },
+  { id:'mz11dgd-4', subjectId:'mz11-dgd', title:'Axonometria',                          description:'Representação axonométrica de sólidos',                            term:2, displayOrder:4 },
+  { id:'mz11dgd-5', subjectId:'mz11-dgd', title:'Secções e Intersecções de Sólidos',    description:'Cortes e intersecções geométricas',                                term:3, displayOrder:5 },
+  { id:'mz11dgd-6', subjectId:'mz11-dgd', title:'Aplicação a Problemas Estéticos e Utilitários', description:'Uso prático das construções geométricas',                    term:3, displayOrder:6 },
+
+  // ─── Educação Visual 11ª Classe ─────────────────────────────
+  { id:'mz11ev-1', subjectId:'mz11-ev', title:'Expressão Plástica e Materiais Multimédia', description:'Exploração de suportes convencionais e digitais',                 term:1, displayOrder:1 },
+  { id:'mz11ev-2', subjectId:'mz11-ev', title:'Fotografia e Imagem Digital',            description:'Composição fotográfica e edição básica',                           term:1, displayOrder:2 },
+  { id:'mz11ev-3', subjectId:'mz11-ev', title:'Design e Comunicação Visual',            description:'Princípios de identidade visual',                                  term:2, displayOrder:3 },
+  { id:'mz11ev-4', subjectId:'mz11-ev', title:'Arte Contemporânea Moçambicana',         description:'Artistas e movimentos actuais',                                    term:2, displayOrder:4 },
+  { id:'mz11ev-5', subjectId:'mz11-ev', title:'Escultura e Instalação',                 description:'Trabalhos tridimensionais e espaciais',                            term:3, displayOrder:5 },
+  { id:'mz11ev-6', subjectId:'mz11-ev', title:'Projecto Artístico Individual',          description:'Concepção e apresentação de um trabalho próprio',                  term:3, displayOrder:6 },
+
+  // ─── Artes Cénicas 11ª Classe ────────────────────────────────
+  { id:'mz11ac-1', subjectId:'mz11-ac', title:'Introdução ao Teatro',                   description:'Elementos e linguagem teatral',                                    term:1, displayOrder:1 },
+  { id:'mz11ac-2', subjectId:'mz11-ac', title:'Expressão Corporal e Voz',               description:'Técnicas de corpo e voz para a cena',                              term:1, displayOrder:2 },
+  { id:'mz11ac-3', subjectId:'mz11-ac', title:'Teoria Musical Aplicada',                description:'Elementos musicais aplicados à performance',                       term:2, displayOrder:3 },
+  { id:'mz11ac-4', subjectId:'mz11-ac', title:'Dança Tradicional e Contemporânea',      description:'Movimentos e géneros de dança',                                    term:2, displayOrder:4 },
+  { id:'mz11ac-5', subjectId:'mz11-ac', title:'Encenação e Interpretação',              description:'Construção de uma personagem',                                     term:3, displayOrder:5 },
+  { id:'mz11ac-6', subjectId:'mz11-ac', title:'Produção de um Espectáculo',             description:'Planificação e apresentação final',                                term:3, displayOrder:6 },
+
   // ══════════════════════════════════════════════════════════
   //  MOÇAMBIQUE 12ª Classe
   // ══════════════════════════════════════════════════════════
@@ -404,6 +1015,102 @@ export const CHAPTERS: Chapter[] = [
   { id:'mz12fis-1-1', subjectId:'mz12-fis', title:'Física Atómica e Espectros',           description:'Espectros de emissão e absorção, lasers',                         term:1, displayOrder:1 },
   { id:'mz12fis-2-1', subjectId:'mz12-fis', title:'Energia Nuclear e Reactores',          description:'Aplicações da energia nuclear e segurança',                       term:2, displayOrder:2 },
   { id:'mz12fis-3-1', subjectId:'mz12-fis', title:'Revisão para Exame Nacional',          description:'Exercícios de exames anteriores e simulações',                    term:3, displayOrder:3 },
+
+  // ─── Geografia 12ª Classe ────────────────────────────────────
+  { id:'mz12geo-1', subjectId:'mz12-geo', title:'Geografia Física de Moçambique — Aprofundamento', description:'Análise integrada do relevo e clima',                      term:1, displayOrder:1 },
+  { id:'mz12geo-2', subjectId:'mz12-geo', title:'Recursos Naturais e Desenvolvimento',    description:'Exploração de recursos e desenvolvimento sustentável',            term:1, displayOrder:2 },
+  { id:'mz12geo-3', subjectId:'mz12-geo', title:'Geografia Económica Mundial',            description:'Blocos económicos e comércio internacional',                      term:2, displayOrder:3 },
+  { id:'mz12geo-4', subjectId:'mz12-geo', title:'Globalização e Relações Económicas',     description:'Interdependência económica entre países',                          term:2, displayOrder:4 },
+  { id:'mz12geo-5', subjectId:'mz12-geo', title:'Ambiente e Alterações Climáticas Globais', description:'Impactos e respostas às alterações climáticas',                   term:3, displayOrder:5 },
+  { id:'mz12geo-6', subjectId:'mz12-geo', title:'Revisão para Exame Nacional',            description:'Consolidação dos temas do ESG2',                                   term:3, displayOrder:6 },
+
+  // ─── História 12ª Classe ─────────────────────────────────────
+  { id:'mz12his-1', subjectId:'mz12-his', title:'Moçambique Independente — Primeiros Anos', description:'Construção do Estado após 1975',                                 term:1, displayOrder:1 },
+  { id:'mz12his-2', subjectId:'mz12-his', title:'Guerra Civil e Acordo de Paz',           description:'Conflito armado e Acordo Geral de Paz de 1992',                    term:1, displayOrder:2 },
+  { id:'mz12his-3', subjectId:'mz12-his', title:'Democracia Multipartidária em Moçambique', description:'Transição política e eleições',                                  term:2, displayOrder:3 },
+  { id:'mz12his-4', subjectId:'mz12-his', title:'Moçambique na SADC e na União Africana', description:'Cooperação regional e continental',                                term:2, displayOrder:4 },
+  { id:'mz12his-5', subjectId:'mz12-his', title:'Grandes Conflitos do Século XX',         description:'Guerras mundiais e Guerra Fria',                                   term:3, displayOrder:5 },
+  { id:'mz12his-6', subjectId:'mz12-his', title:'Revisão para Exame Nacional',            description:'Consolidação dos temas do ESG2',                                   term:3, displayOrder:6 },
+
+  // ─── Inglês 12ª Classe ───────────────────────────────────────
+  { id:'mz12ing-1', subjectId:'mz12-ing', title:'Advanced Reading Comprehension',         description:'Textos académicos e jornalísticos complexos',                     term:1, displayOrder:1 },
+  { id:'mz12ing-2', subjectId:'mz12-ing', title:'Academic Writing Skills',                description:'Estrutura de ensaios e trabalhos académicos',                      term:1, displayOrder:2 },
+  { id:'mz12ing-3', subjectId:'mz12-ing', title:'Debate and Argumentation in English',    description:'Técnicas de argumentação e debate',                                term:2, displayOrder:3 },
+  { id:'mz12ing-4', subjectId:'mz12-ing', title:'English for Specific Purposes',          description:'Vocabulário técnico da área de especialidade',                    term:2, displayOrder:4 },
+  { id:'mz12ing-5', subjectId:'mz12-ing', title:'Listening and Note-Taking',              description:'Compreensão oral e registo de notas',                              term:3, displayOrder:5 },
+  { id:'mz12ing-6', subjectId:'mz12-ing', title:'Exam Preparation and Practice',          description:'Simulações para o exame nacional',                                 term:3, displayOrder:6 },
+
+  // ─── Introdução à Filosofia 12ª Classe ──────────────────────
+  { id:'mz12fil-1', subjectId:'mz12-fil', title:'Filosofia da Ciência',                  description:'Método científico e limites do conhecimento',                     term:1, displayOrder:1 },
+  { id:'mz12fil-2', subjectId:'mz12-fil', title:'Filosofia Social e Política',           description:'Poder, Estado e sociedade',                                        term:1, displayOrder:2 },
+  { id:'mz12fil-3', subjectId:'mz12-fil', title:'Existencialismo e Liberdade',           description:'Liberdade, responsabilidade e existência',                         term:2, displayOrder:3 },
+  { id:'mz12fil-4', subjectId:'mz12-fil', title:'Filosofia e Cidadania',                 description:'Reflexão filosófica sobre direitos e deveres',                     term:2, displayOrder:4 },
+  { id:'mz12fil-5', subjectId:'mz12-fil', title:'Grandes Correntes do Pensamento Contemporâneo', description:'Panorama das principais correntes filosóficas',                term:3, displayOrder:5 },
+  { id:'mz12fil-6', subjectId:'mz12-fil', title:'Revisão para Exame Nacional',           description:'Consolidação dos temas do ESG2',                                   term:3, displayOrder:6 },
+
+  // ─── TIC 12ª Classe ──────────────────────────────────────────
+  { id:'mz12tic-1', subjectId:'mz12-tic', title:'Sistemas de Informação Aplicados',      description:'Aplicação de sistemas de informação à área de especialidade',      term:1, displayOrder:1 },
+  { id:'mz12tic-2', subjectId:'mz12-tic', title:'Gestão de Projectos Digitais',          description:'Planeamento e execução de projectos com recurso às TIC',          term:1, displayOrder:2 },
+  { id:'mz12tic-3', subjectId:'mz12-tic', title:'Segurança e Protecção de Dados',        description:'Boas práticas de segurança da informação',                        term:2, displayOrder:3 },
+  { id:'mz12tic-4', subjectId:'mz12-tic', title:'Introdução à Programação Aplicada',     description:'Resolução de problemas com lógica de programação',                 term:2, displayOrder:4 },
+  { id:'mz12tic-5', subjectId:'mz12-tic', title:'Tecnologia e Inovação',                 description:'Tendências tecnológicas e impacto social',                         term:3, displayOrder:5 },
+  { id:'mz12tic-6', subjectId:'mz12-tic', title:'Revisão para Exame Nacional',           description:'Consolidação dos temas do ESG2',                                   term:3, displayOrder:6 },
+
+  // ─── Noções de Empreendedorismo 12ª Classe ──────────────────
+  { id:'mz12emp-1', subjectId:'mz12-emp', title:'Plano de Negócio Avançado',             description:'Elaboração completa de um plano de negócio',                      term:1, displayOrder:1 },
+  { id:'mz12emp-2', subjectId:'mz12-emp', title:'Gestão Financeira e Investimento',      description:'Análise de investimento e viabilidade financeira',                term:1, displayOrder:2 },
+  { id:'mz12emp-3', subjectId:'mz12-emp', title:'Marketing Estratégico',                 description:'Estratégias de posicionamento e marca',                            term:2, displayOrder:3 },
+  { id:'mz12emp-4', subjectId:'mz12-emp', title:'Legislação Comercial e Fiscal',         description:'Enquadramento legal da actividade empresarial',                    term:2, displayOrder:4 },
+  { id:'mz12emp-5', subjectId:'mz12-emp', title:'Ética e Responsabilidade Social Empresarial', description:'Impacto social e ambiental do negócio',                        term:3, displayOrder:5 },
+  { id:'mz12emp-6', subjectId:'mz12-emp', title:'Projecto Final de Empreendedorismo',    description:'Apresentação de um projecto de negócio completo',                 term:3, displayOrder:6 },
+
+  // ─── Introdução à Psicologia e Pedagogia 12ª Classe ─────────
+  { id:'mz12psi-1', subjectId:'mz12-psi', title:'Psicologia do Desenvolvimento do Adolescente', description:'Características da fase da adolescência',                    term:1, displayOrder:1 },
+  { id:'mz12psi-2', subjectId:'mz12-psi', title:'Teorias de Aprendizagem',               description:'Principais teorias pedagógicas',                                   term:1, displayOrder:2 },
+  { id:'mz12psi-3', subjectId:'mz12-psi', title:'Avaliação Educacional',                 description:'Métodos e finalidades da avaliação',                              term:2, displayOrder:3 },
+  { id:'mz12psi-4', subjectId:'mz12-psi', title:'Gestão da Sala de Aula',                description:'Estratégias de organização da turma',                              term:2, displayOrder:4 },
+  { id:'mz12psi-5', subjectId:'mz12-psi', title:'Inclusão e Necessidades Educativas Especiais', description:'Estratégias para uma educação inclusiva',                       term:3, displayOrder:5 },
+  { id:'mz12psi-6', subjectId:'mz12-psi', title:'Preparação para a Formação de Professores', description:'Requisitos e percursos de formação docente',                    term:3, displayOrder:6 },
+
+  // ─── Línguas Moçambicanas 12ª Classe ─────────────────────────
+  { id:'mz12lm-1', subjectId:'mz12-lm', title:'Sintaxe da Língua Moçambicana',           description:'Estrutura de frases na língua escolhida',                          term:1, displayOrder:1 },
+  { id:'mz12lm-2', subjectId:'mz12-lm', title:'Literatura Escrita em Língua Moçambicana', description:'Autores e obras em línguas moçambicanas',                          term:1, displayOrder:2 },
+  { id:'mz12lm-3', subjectId:'mz12-lm', title:'Tradução e Interpretação Básica',         description:'Noções de tradução entre línguas moçambicanas e português',        term:2, displayOrder:3 },
+  { id:'mz12lm-4', subjectId:'mz12-lm', title:'Produção de Textos Avançados',            description:'Redacção de textos complexos',                                     term:2, displayOrder:4 },
+  { id:'mz12lm-5', subjectId:'mz12-lm', title:'Línguas Moçambicanas e Identidade Nacional', description:'Papel das línguas na identidade do país',                       term:3, displayOrder:5 },
+  { id:'mz12lm-6', subjectId:'mz12-lm', title:'Revisão para Exame Nacional',             description:'Consolidação dos temas do ESG2',                                   term:3, displayOrder:6 },
+
+  // ─── Francês 12ª Classe ──────────────────────────────────────
+  { id:'mz12fr-1', subjectId:'mz12-fr', title:'Le Futur Simple',                        description:'Formação e uso do futuro simples',                                 term:1, displayOrder:1 },
+  { id:'mz12fr-2', subjectId:'mz12-fr', title:"Expression de l'Opinion",                description:'Estruturas para expressar opinião',                                term:1, displayOrder:2 },
+  { id:'mz12fr-3', subjectId:'mz12-fr', title:'Culture et Francophonie',                description:'Países e culturas de língua francesa',                             term:2, displayOrder:3 },
+  { id:'mz12fr-4', subjectId:'mz12-fr', title:'Compréhension Orale Avancée',            description:'Compreensão de diálogos e áudios complexos',                       term:2, displayOrder:4 },
+  { id:'mz12fr-5', subjectId:'mz12-fr', title:'Rédaction de Textes',                    description:'Produção de textos estruturados em francês',                       term:3, displayOrder:5 },
+  { id:'mz12fr-6', subjectId:'mz12-fr', title:"Révision pour l'Examen National",        description:'Consolidação dos temas do ESG2',                                    term:3, displayOrder:6 },
+
+  // ─── Desenho e Geometria Descritiva 12ª Classe ──────────────
+  { id:'mz12dgd-1', subjectId:'mz12-dgd', title:'Superfícies e Sólidos Complexos',       description:'Representação de sólidos de revolução',                            term:1, displayOrder:1 },
+  { id:'mz12dgd-2', subjectId:'mz12-dgd', title:'Perspectiva Aplicada a Projectos',      description:'Uso da perspectiva em projectos técnicos',                         term:1, displayOrder:2 },
+  { id:'mz12dgd-3', subjectId:'mz12-dgd', title:'Desenho Assistido — Noções Digitais',   description:'Introdução a ferramentas digitais de desenho técnico',             term:2, displayOrder:3 },
+  { id:'mz12dgd-4', subjectId:'mz12-dgd', title:'Aplicações à Arquitectura e Design',    description:'Uso da geometria descritiva em projectos reais',                   term:2, displayOrder:4 },
+  { id:'mz12dgd-5', subjectId:'mz12-dgd', title:'Projecto Técnico Final',               description:'Concepção e apresentação de um projecto completo',                 term:3, displayOrder:5 },
+  { id:'mz12dgd-6', subjectId:'mz12-dgd', title:'Revisão para Exame Nacional',          description:'Consolidação dos temas do ESG2',                                    term:3, displayOrder:6 },
+
+  // ─── Educação Visual 12ª Classe ─────────────────────────────
+  { id:'mz12ev-1', subjectId:'mz12-ev', title:'Projecto Artístico Avançado',            description:'Desenvolvimento de um projecto artístico pessoal',                 term:1, displayOrder:1 },
+  { id:'mz12ev-2', subjectId:'mz12-ev', title:'Curadoria e Exposição de Trabalhos',     description:'Organização e apresentação de uma exposição',                      term:1, displayOrder:2 },
+  { id:'mz12ev-3', subjectId:'mz12-ev', title:'Arte e Sociedade Moçambicana',           description:'Relação entre produção artística e contexto social',               term:2, displayOrder:3 },
+  { id:'mz12ev-4', subjectId:'mz12-ev', title:'Novos Media e Arte Digital',             description:'Exploração de ferramentas digitais na arte',                       term:2, displayOrder:4 },
+  { id:'mz12ev-5', subjectId:'mz12-ev', title:'Portfólio Artístico Final',              description:'Organização do portfólio de trabalhos do ciclo',                   term:3, displayOrder:5 },
+  { id:'mz12ev-6', subjectId:'mz12-ev', title:'Revisão para Exame Nacional',            description:'Consolidação dos temas do ESG2',                                    term:3, displayOrder:6 },
+
+  // ─── Artes Cénicas 12ª Classe ────────────────────────────────
+  { id:'mz12ac-1', subjectId:'mz12-ac', title:'Dramaturgia e Escrita Cénica',           description:'Criação de textos para teatro',                                    term:1, displayOrder:1 },
+  { id:'mz12ac-2', subjectId:'mz12-ac', title:'Direcção e Produção Teatral',           description:'Organização de uma produção teatral',                              term:1, displayOrder:2 },
+  { id:'mz12ac-3', subjectId:'mz12-ac', title:'Música Cénica e Sonoplastia',           description:'Uso da música e do som na cena',                                    term:2, displayOrder:3 },
+  { id:'mz12ac-4', subjectId:'mz12-ac', title:'Dança Contemporânea Moçambicana',       description:'Criações coreográficas contemporâneas',                             term:2, displayOrder:4 },
+  { id:'mz12ac-5', subjectId:'mz12-ac', title:'Produção de um Espectáculo Final',      description:'Planificação e apresentação de um espectáculo completo',           term:3, displayOrder:5 },
+  { id:'mz12ac-6', subjectId:'mz12-ac', title:'Revisão para Exame Nacional',           description:'Consolidação dos temas do ESG2',                                    term:3, displayOrder:6 },
 
   // ══════════════════════════════════════════════════════════
   //  ANGOLA 10ª Classe

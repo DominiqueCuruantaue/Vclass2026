@@ -24,7 +24,7 @@
 </head>
 <body class="bg-gray-50 min-h-screen">
 
-    <div id="navbar-placeholder"></div>
+    <div id="navbar-placeholder" style="min-height:64px"></div>
 
     <main class="container mx-auto px-4 py-8 max-w-3xl">
 
@@ -60,6 +60,9 @@
             </button>
             <button class="filter-tab px-3.5 py-2 rounded-xl text-xs font-semibold" onclick="setFilter('exercise', this)">
                 <i class="fas fa-tasks mr-1"></i> Exercícios
+            </button>
+            <button class="filter-tab px-3.5 py-2 rounded-xl text-xs font-semibold" onclick="setFilter('session', this)">
+                <i class="fas fa-video mr-1"></i> Sessões
             </button>
         </div>
 
@@ -132,6 +135,7 @@
             achievement: { icon: 'fa-trophy', color: '#f59e0b', bg: '#fffbeb' },
             lesson:      { icon: 'fa-play-circle', color: '#6366f1', bg: '#eef2ff' },
             exercise:    { icon: 'fa-check-circle', color: '#22c55e', bg: '#f0fdf4' },
+            session:     { icon: 'fa-video', color: '#0ea5e9', bg: '#f0f9ff' },
             default:     { icon: 'fa-bell', color: '#7c3aed', bg: '#faf5ff' },
         };
 

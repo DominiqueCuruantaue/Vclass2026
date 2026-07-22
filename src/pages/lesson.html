@@ -10,6 +10,8 @@
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
     <!-- HLS.js para streaming protegido (sem VideoJS) -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
+    <!-- Transferências offline (IndexedDB) — guarda o vídeo apenas dentro da plataforma -->
+    <script src="/static/offline.js"></script>
     <style>
         .gradient-primary {
             background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
@@ -754,6 +756,13 @@
                             class="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-purple-50 text-gray-600 hover:text-purple-600 text-sm font-semibold rounded-xl transition">
                             <i class="fas fa-share-alt"></i> Partilhar
                         </button>
+                        <button onclick="downloadVideoOffline()" id="btn-download-video"
+                            class="hidden items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-indigo-50 text-gray-600 hover:text-indigo-600 text-sm font-semibold rounded-xl transition">
+                            <i class="fas fa-download" id="download-video-icon"></i> <span id="download-video-label">Baixar vídeo</span>
+                        </button>
+                        <span id="offline-badge" class="hidden items-center gap-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1.5 rounded-full">
+                            <i class="fas fa-download"></i> Modo offline
+                        </span>
                         <!-- Speed selector -->
                         <div class="ml-auto flex items-center gap-2 text-sm">
                             <span class="text-gray-500 text-xs">Velocidade:</span>
@@ -786,7 +795,7 @@
                         <button onclick="switchTab('qa')" id="tab-qa"
                             class="tab-btn flex-1 py-3 text-sm font-semibold text-gray-500 hover:text-gray-700 border-b-2 border-transparent transition">
                             <i class="fas fa-comments mr-2"></i>Dúvidas
-                            <span class="ml-1 text-xs bg-green-100 text-green-600 px-1.5 py-0.5 rounded-full font-bold">2</span>
+                            <span id="qa-count-badge" class="ml-1 text-xs bg-green-100 text-green-600 px-1.5 py-0.5 rounded-full font-bold hidden">0</span>
                         </button>
                     </div>
 
@@ -824,55 +833,28 @@
 
                     <!-- Tab: Q&A -->
                     <div id="tab-content-qa" class="p-5 hidden">
-                        <div id="qa-list" class="space-y-4 mb-4 max-h-72 overflow-y-auto pr-1">
-                            <!-- Question 1 -->
-                            <div class="p-4 bg-gray-50 rounded-xl">
-                                <div class="flex items-start gap-3">
-                                    <div class="w-9 h-9 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">JS</div>
-                                    <div class="flex-1">
-                                        <div class="flex items-center gap-2">
-                                            <p class="text-sm font-semibold text-gray-900">João Silva</p>
-                                            <span class="text-xs text-gray-400">• há 2 horas</span>
-                                        </div>
-                                        <p class="text-sm text-gray-700 mt-1">Como calcular a velocidade média neste exemplo?</p>
-                                        <div class="flex gap-2 mt-2">
-                                            <button class="text-xs text-gray-400 hover:text-blue-600 transition"><i class="fas fa-thumbs-up mr-1"></i>4</button>
-                                            <button class="text-xs text-gray-400 hover:text-blue-600 transition"><i class="fas fa-reply mr-1"></i>Responder</button>
-                                        </div>
-                                        <!-- Reply -->
-                                        <div class="mt-3 ml-4 p-3 bg-white rounded-xl border-l-4 border-green-400">
-                                            <div class="flex items-center gap-2 mb-1">
-                                                <div class="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold">MS</div>
-                                                <p class="text-xs font-semibold text-gray-900">Prof. Maria Santos</p>
-                                                <span class="text-xs bg-green-100 text-green-700 px-1.5 rounded font-bold">Professor</span>
-                                            </div>
-                                            <p class="text-sm text-gray-700">Use a fórmula v = Δs/Δt. No exemplo, divida a distância pelo tempo gasto.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- Question 2 -->
-                            <div class="p-4 bg-gray-50 rounded-xl">
-                                <div class="flex items-start gap-3">
-                                    <div class="w-9 h-9 bg-purple-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">AM</div>
-                                    <div class="flex-1">
-                                        <div class="flex items-center gap-2">
-                                            <p class="text-sm font-semibold text-gray-900">Ana Machava</p>
-                                            <span class="text-xs text-gray-400">• ontem</span>
-                                        </div>
-                                        <p class="text-sm text-gray-700 mt-1">Qual é a diferença entre MU e MUV?</p>
-                                        <div class="flex gap-2 mt-2">
-                                            <button class="text-xs text-gray-400 hover:text-blue-600 transition"><i class="fas fa-thumbs-up mr-1"></i>7</button>
-                                            <button class="text-xs text-gray-400 hover:text-blue-600 transition"><i class="fas fa-reply mr-1"></i>Responder</button>
-                                        </div>
-                                    </div>
+                        <!-- Caixa de escrita sempre visível (sem popup) -->
+                        <div class="flex items-start gap-3 mb-4">
+                            <div id="qa-compose-avatar" class="w-9 h-9 bg-purple-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">?</div>
+                            <div class="flex-1">
+                                <textarea id="qa-compose-input" rows="1" placeholder="Escreva a sua dúvida sobre a lição..."
+                                    class="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none text-sm text-gray-700 placeholder-gray-400 transition"
+                                    oninput="autoGrowTextarea(this)"></textarea>
+                                <div class="flex justify-end mt-2">
+                                    <button onclick="submitQuestion()"
+                                        class="px-4 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1.5">
+                                        <i class="fas fa-paper-plane"></i> Perguntar
+                                    </button>
                                 </div>
                             </div>
                         </div>
-                        <button onclick="openQAModal()"
-                            class="w-full py-2.5 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2">
-                            <i class="fas fa-plus-circle"></i> Fazer uma Pergunta
-                        </button>
+
+                        <div id="qa-list" class="space-y-4 mb-2 max-h-96 overflow-y-auto pr-1">
+                            <div class="text-center py-6 text-gray-400">
+                                <i class="fas fa-comments text-3xl mb-2 opacity-30"></i>
+                                <p class="text-sm">Nenhuma pergunta ainda — seja o primeiro a perguntar</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1152,13 +1134,27 @@
         const user = VClass.getCurrentUser();
         if (user) {
             document.getElementById('user-name').textContent = user.full_name;
+            const composeAvatar = document.getElementById('qa-compose-avatar');
+            if (composeAvatar) {
+                composeAvatar.textContent = (user.full_name || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+            }
         }
 
         // Get lesson ID from URL — aceita UUID real (BD) ou slug demo
         const urlParams = new URLSearchParams(window.location.search);
         let lessonId = urlParams.get('id') || urlParams.get('lesson') || urlParams.get('lesson_id');
 
-        let player = null;
+        // Deep-link opcional: /lesson.html?id=X&t=180 salta o vídeo para o
+        // segundo 180 assim que os metadados carregarem (usado pelos chips
+        // de marcador em /bookmarks.html).
+        function applyDeepLinkSeek() {
+            const t = parseInt(urlParams.get('t') || '', 10);
+            const video = document.getElementById('vclass-video');
+            if (video && !isNaN(t) && t > 0) {
+                video.currentTime = t;
+            }
+        }
+
         let lessonData = null;
 
         // Show page-level error (replaces loading state cleanly)
@@ -1212,6 +1208,9 @@
                     loadNotes();
                     loadFavoriteState();
                     loadRating();
+                    loadComments();
+                } else if (await loadLessonFromOfflineCache(vload)) {
+                    // Sem rede/lição indisponível, mas há uma cópia offline guardada — usá-la.
                 } else {
                     // Lição não existe na BD — mostrar erro limpo
                     if (vload) vload.classList.add('hidden');
@@ -1220,12 +1219,47 @@
                 }
             } catch (error) {
                 console.error('Error loading lesson:', error);
-                if (vload) vload.classList.add('hidden');
-                showLessonError('Ocorreu um erro ao carregar a lição. Tente novamente.');
-                VClass.showNotification('Erro ao carregar lição', 'error');
+                if (await loadLessonFromOfflineCache(vload)) {
+                    // Recuperado a partir da cópia offline
+                } else {
+                    if (vload) vload.classList.add('hidden');
+                    showLessonError('Ocorreu um erro ao carregar a lição. Tente novamente.');
+                    VClass.showNotification('Erro ao carregar lição', 'error');
+                }
             } finally {
                 VClass.hideLoading();
             }
+        }
+
+        // Reconstrói a lição a partir da cópia offline guardada (título, descrição,
+        // duração) quando não há rede ou o servidor não respondeu. O vídeo em si é
+        // depois resolvido por tryPlayOfflineVideo() dentro de loadVideo().
+        async function loadLessonFromOfflineCache(vload) {
+            if (!window.VClassOffline) return false;
+            const meta = await VClassOffline.getVideoMeta(lessonId).catch(() => null);
+            if (!meta) return false;
+
+            lessonData = {
+                id: lessonId,
+                title: meta.title,
+                description: meta.description || '',
+                duration: meta.duration || 0,
+                views: 0,
+                created_at: meta.saved_at,
+                content: '',
+                objectives: [],
+                video_id: null,
+                video_url: null
+            };
+
+            if (vload) vload.classList.add('hidden');
+            displayLessonInfo();
+            buildLeftSidebar();
+            await loadVideo();
+            loadNotes();
+            loadFavoriteState();
+            VClass.showNotification('Sem ligação — a mostrar a cópia offline guardada desta lição', 'info');
+            return true;
         }
 
         const DEFAULT_RICH_CONTENT = (desc, objectives) => {
@@ -1307,6 +1341,184 @@
         let hlsInstance = null;   // instância HLS.js
         let vcDuration  = 0;      // duração total em segundos
         let vcProgressSaveTimer = null;
+
+        // ── Transferências offline (vídeo guardado no IndexedDB do dispositivo) ──
+        let resolvedVideoUrl  = null;   // URL do stream resolvido, usada como fonte para a transferência
+        let isOfflineVideo    = false;  // true quando a reproduzir a partir da cópia local
+        let videoDownloadBusy = false;
+
+        function showOfflineBadge(show) {
+            const el = document.getElementById('offline-badge');
+            if (!el) return;
+            el.classList.toggle('hidden', !show);
+            el.classList.toggle('flex', show);
+        }
+
+        async function refreshDownloadButtonUI() {
+            const btn = document.getElementById('btn-download-video');
+            if (!btn || videoDownloadBusy) return;
+            const icon  = document.getElementById('download-video-icon');
+            const label = document.getElementById('download-video-label');
+
+            if (!resolvedVideoUrl && !isOfflineVideo) {
+                btn.classList.add('hidden');
+                btn.classList.remove('flex');
+                return;
+            }
+            btn.classList.remove('hidden');
+            btn.classList.add('flex');
+
+            const saved = window.VClassOffline ? await VClassOffline.isVideoSaved(lessonId).catch(() => false) : false;
+            if (saved) {
+                icon.className = 'fas fa-trash-alt';
+                label.textContent = 'Remover offline';
+                btn.onclick = removeVideoOffline;
+                btn.classList.add('text-green-600', 'bg-green-50');
+                btn.classList.remove('text-gray-600', 'bg-gray-100');
+            } else {
+                icon.className = 'fas fa-download';
+                label.textContent = 'Baixar vídeo';
+                btn.onclick = downloadVideoOffline;
+                btn.classList.remove('text-green-600', 'bg-green-50');
+                btn.classList.add('text-gray-600', 'bg-gray-100');
+            }
+        }
+
+        async function downloadVideoOffline() {
+            if (!window.VClassOffline) {
+                VClass.showNotification('O seu navegador não suporta transferências offline', 'error');
+                return;
+            }
+            if (!resolvedVideoUrl) {
+                VClass.showNotification('Aguarde o vídeo carregar antes de transferir', 'info');
+                return;
+            }
+            if (videoDownloadBusy) return;
+            videoDownloadBusy = true;
+
+            const btn   = document.getElementById('btn-download-video');
+            const icon  = document.getElementById('download-video-icon');
+            const label = document.getElementById('download-video-label');
+            icon.className = 'fas fa-spinner fa-spin';
+            label.textContent = 'A transferir... 0%';
+            btn.disabled = true;
+
+            try {
+                await VClassOffline.saveVideoItem({
+                    id: lessonId,
+                    title: lessonData.title,
+                    description: lessonData.description || '',
+                    thumbnail_url: lessonData.thumbnail_url || null,
+                    masterUrl: resolvedVideoUrl,
+                    durationMin: Math.round(lessonData.duration || (vcDuration ? vcDuration / 60 : 0))
+                }, (done, total) => {
+                    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+                    label.textContent = `A transferir... ${pct}%`;
+                });
+                VClass.showNotification('Vídeo guardado para acesso offline', 'success');
+            } catch (err) {
+                console.error('Download offline falhou:', err);
+                // "URL Direta" (criador de lições) aceita qualquer link — se o servidor
+                // de vídeo não enviar cabeçalhos CORS, o browser bloqueia o fetch()
+                // mesmo que o vídeo toque normalmente no <video>. Dar uma pista clara.
+                const isLikelyCors = err instanceof TypeError;
+                VClass.showNotification(
+                    isLikelyCors
+                        ? 'Este vídeo está alojado num servidor que não permite transferência directa. Não é possível guardá-lo offline.'
+                        : 'Não foi possível transferir o vídeo. Tente novamente.',
+                    'error'
+                );
+            } finally {
+                videoDownloadBusy = false;
+                btn.disabled = false;
+                await refreshDownloadButtonUI();
+            }
+        }
+
+        async function removeVideoOffline() {
+            if (!window.VClassOffline) return;
+            try {
+                await VClassOffline.removeVideoItem(lessonId);
+                VClass.showNotification('Vídeo removido do dispositivo', 'info');
+            } catch (err) {
+                console.error('Falha ao remover vídeo offline:', err);
+            } finally {
+                await refreshDownloadButtonUI();
+            }
+        }
+
+        // Tenta reproduzir a cópia local (IndexedDB) do vídeo desta lição.
+        // Usado quando não há rede, ou quando o aluno pede explicitamente
+        // reprodução offline (?offline=1, vindo da aba Transferências).
+        async function tryPlayOfflineVideo(showToast) {
+            if (!window.VClassOffline || !lessonId) return false;
+            const meta = await VClassOffline.getVideoMeta(lessonId).catch(() => null);
+            if (!meta) return false;
+
+            const vcont = document.getElementById('video-container');
+            const verr  = document.getElementById('video-error');
+            const vload = document.getElementById('vc-loading');
+            const vclass_video = document.getElementById('vclass-video');
+
+            if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+
+            try {
+                if (meta.kind === 'mp4') {
+                    const blobUrl = await VClassOffline.getVideoFileBlobUrl(lessonId);
+                    if (!blobUrl) return false;
+                    vclass_video.src = blobUrl;
+                    vclass_video.addEventListener('loadedmetadata', () => {
+                        vload && vload.classList.add('hidden');
+                        vcDuration = vclass_video.duration || (meta.duration ? meta.duration * 60 : 0);
+                        vcScheduleSave();
+                        applyDeepLinkSeek();
+                        startWatermark('VClass (offline)');
+                    }, { once: true });
+                } else if (Hls.isSupported()) {
+                    hlsInstance = new Hls({ enableWorker: true, loader: VClassOffline.OfflineHlsLoader });
+                    hlsInstance.loadSource(`idb://${encodeURIComponent(lessonId)}/master.m3u8`);
+                    hlsInstance.attachMedia(vclass_video);
+                    hlsInstance.on(Hls.Events.MANIFEST_PARSED, function() {
+                        vload && vload.classList.add('hidden');
+                        vcDuration = vclass_video.duration || (meta.duration ? meta.duration * 60 : 0);
+                        vcScheduleSave();
+                        applyDeepLinkSeek();
+                        startWatermark('VClass (offline)');
+                    });
+                    hlsInstance.on(Hls.Events.ERROR, function(event, data) {
+                        if (data.fatal) {
+                            vcont.classList.add('hidden');
+                            verr.classList.remove('hidden');
+                        }
+                    });
+                } else {
+                    return false;
+                }
+            } catch (err) {
+                console.error('Reprodução offline falhou:', err);
+                return false;
+            }
+
+            vclass_video.addEventListener('timeupdate', vcUpdateUI);
+            vclass_video.addEventListener('play', () => {
+                document.getElementById('vc-play-icon').className = 'fas fa-pause';
+            });
+            vclass_video.addEventListener('pause', () => {
+                document.getElementById('vc-play-icon').className = 'fas fa-play';
+            });
+            vclass_video.addEventListener('ended', onVideoEnded);
+            vclass_video.addEventListener('durationchange', () => {
+                vcDuration = vclass_video.duration;
+            });
+            vclass_video.addEventListener('click', vcPlay);
+
+            vcont.classList.remove('hidden');
+            verr.classList.add('hidden');
+            isOfflineVideo = true;
+            showOfflineBadge(true);
+            if (showToast) VClass.showNotification('Sem ligação — a reproduzir vídeo guardado offline', 'info');
+            return true;
+        }
 
         // ─── Funções de controlo do player ──────────────────────────────────
 
@@ -1486,11 +1698,19 @@
             const vclass_video = document.getElementById('vclass-video');
 
             // Aceitar lições da BD (têm video_id Bunny) e mocks (têm video_url HLS).
-            // Sem qualquer dos dois, não há vídeo para tocar.
+            // Sem qualquer dos dois, tentar a cópia offline antes de desistir.
             if (!lessonData || (!lessonData.video_id && !lessonData.video_url)) {
+                if (await tryPlayOfflineVideo(true)) { await refreshDownloadButtonUI(); return; }
                 if (vload) vload.classList.add('hidden');
                 vcont.classList.add('hidden');
                 verr.classList.remove('hidden');
+                return;
+            }
+
+            // Pedido explícito de reprodução offline (aba Transferências) ou sem rede
+            const forceOffline = urlParams.get('offline') === '1';
+            if ((forceOffline || !navigator.onLine) && await tryPlayOfflineVideo(!navigator.onLine)) {
+                await refreshDownloadButtonUI();
                 return;
             }
 
@@ -1544,13 +1764,18 @@
                     console.warn('Token/stream fetch failed, fallback to lesson.video_url:', e);
                 }
 
-                // Sem URL final, abortar com erro limpo
+                // Sem URL final: tentar a cópia offline antes de desistir
                 if (!videoUrl) {
+                    if (await tryPlayOfflineVideo(true)) { await refreshDownloadButtonUI(); return; }
                     if (vload) vload.classList.add('hidden');
                     vcont.classList.add('hidden');
                     verr.classList.remove('hidden');
                     return;
                 }
+
+                resolvedVideoUrl = videoUrl;
+                isOfflineVideo   = false;
+                showOfflineBadge(false);
 
                 // ── Passo 2: Inicializar HLS.js ──────────────────────────────
                 if (hlsInstance) {
@@ -1575,6 +1800,7 @@
                         vload && vload.classList.add('hidden');
                         vcDuration = vclass_video.duration || 0;
                         vcScheduleSave();
+                        applyDeepLinkSeek();
                         startWatermark(watermarkLabel);
                     });
                     hlsInstance.on(Hls.Events.LEVEL_LOADED, function(event, data) {
@@ -1594,6 +1820,7 @@
                         vload && vload.classList.add('hidden');
                         vcDuration = vclass_video.duration;
                         vcScheduleSave();
+                        applyDeepLinkSeek();
                         startWatermark(watermarkLabel);
                     }, { once: true });
                 } else {
@@ -1603,6 +1830,7 @@
                         vload && vload.classList.add('hidden');
                         vcDuration = vclass_video.duration;
                         vcScheduleSave();
+                        applyDeepLinkSeek();
                         startWatermark(watermarkLabel);
                     }, { once: true });
                 }
@@ -1626,9 +1854,11 @@
                 // Mostrar container
                 vcont.classList.remove('hidden');
                 verr.classList.add('hidden');
+                await refreshDownloadButtonUI();
 
             } catch (error) {
                 console.error('Error loading video:', error);
+                if (await tryPlayOfflineVideo(true)) { await refreshDownloadButtonUI(); return; }
                 // Garantir que o overlay de loading é sempre removido
                 if (vload) vload.classList.add('hidden');
                 vcont.classList.add('hidden');
@@ -1798,15 +2028,15 @@
 
         // Bookmarks management
         let bookmarks = [];
-        
-        function loadBookmarks() {
-            const stored = localStorage.getItem(`bookmarks_${lessonId}`);
-            if (stored) {
-                bookmarks = JSON.parse(stored);
+
+        async function loadBookmarks() {
+            const res = await VClass.api.bookmarks.listForLesson(lessonId);
+            if (res.success) {
+                bookmarks = res.data || [];
                 displayBookmarks();
             }
         }
-        
+
         function displayBookmarks() {
             const container = document.getElementById('bookmarks-list');
             if (bookmarks.length === 0) {
@@ -1818,50 +2048,59 @@
                 updateBookmarkBadge();
                 return;
             }
-            container.innerHTML = bookmarks.map((bookmark, index) => `
+            container.innerHTML = bookmarks.map((bookmark) => `
                 <div class="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition">
-                    <div class="flex-shrink-0 px-2 py-1 bg-blue-500 text-white text-xs font-mono font-bold rounded-lg cursor-pointer" onclick="jumpToBookmark(${bookmark.time})">
-                        ${formatTime(bookmark.time)}
+                    <div class="flex-shrink-0 px-2 py-1 bg-blue-500 text-white text-xs font-mono font-bold rounded-lg cursor-pointer" onclick="jumpToBookmark(${bookmark.time_seconds})">
+                        ${formatTime(bookmark.time_seconds)}
                     </div>
-                    <div class="flex-1 cursor-pointer" onclick="jumpToBookmark(${bookmark.time})">
+                    <div class="flex-1 cursor-pointer" onclick="jumpToBookmark(${bookmark.time_seconds})">
                         <p class="text-sm font-semibold text-gray-800">${escapeHtml(bookmark.title || 'Marcador')}</p>
                     </div>
-                    <button onclick="deleteBookmark(${index})" class="text-gray-400 hover:text-red-500 transition">
+                    <button onclick="deleteBookmark('${bookmark.id}')" class="text-gray-400 hover:text-red-500 transition">
                         <i class="fas fa-times text-sm"></i>
                     </button>
                 </div>
             `).join('');
             updateBookmarkBadge();
         }
-        
-        function addBookmark() {
-            if (!player) {
+
+        async function addBookmark() {
+            const video = document.getElementById('vclass-video');
+            if (!video) {
                 VClass.showNotification('Aguarde o vídeo carregar', 'warning');
                 return;
             }
-            
-            const currentTime = player.currentTime();
+
+            const currentTime = video.currentTime;
             const title = prompt('Dê um título para este marcador:');
-            
+
             if (title) {
-                bookmarks.push({ time: currentTime, title });
-                localStorage.setItem(`bookmarks_${lessonId}`, JSON.stringify(bookmarks));
-                displayBookmarks();
-                VClass.showNotification('Marcador adicionado!', 'success');
+                const res = await VClass.api.bookmarks.create({ lesson_id: lessonId, time_seconds: Math.floor(currentTime), title });
+                if (res.success) {
+                    bookmarks.push(res.data);
+                    bookmarks.sort((a, b) => a.time_seconds - b.time_seconds);
+                    displayBookmarks();
+                    VClass.showNotification('Marcador adicionado!', 'success');
+                } else {
+                    VClass.showNotification(res.error || 'Erro ao adicionar marcador', 'error');
+                }
             }
         }
-        
-        function deleteBookmark(index) {
-            bookmarks.splice(index, 1);
-            localStorage.setItem(`bookmarks_${lessonId}`, JSON.stringify(bookmarks));
-            displayBookmarks();
-            VClass.showNotification('Marcador removido', 'info');
+
+        async function deleteBookmark(id) {
+            const res = await VClass.api.bookmarks.remove(id);
+            if (res.success) {
+                bookmarks = bookmarks.filter(b => b.id !== id);
+                displayBookmarks();
+                VClass.showNotification('Marcador removido', 'info');
+            }
         }
-        
+
         function jumpToBookmark(time) {
-            if (player) {
-                player.currentTime(time);
-                player.play();
+            const video = document.getElementById('vclass-video');
+            if (video) {
+                video.currentTime = time;
+                video.play();
                 VClass.showNotification('Saltando para o marcador...', 'info');
             }
         }
@@ -1907,37 +2146,166 @@
             }
         }
         
-        // Q&A Modal
-        function openQAModal() {
-            const modal = document.createElement('div');
-            modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
-            modal.innerHTML = `
-                <div class="bg-white rounded-lg max-w-2xl w-full p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-xl font-bold text-gray-900">Fazer uma Pergunta</h3>
-                        <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
-                            <i class="fas fa-times text-xl"></i>
-                        </button>
-                    </div>
-                    <textarea id="qa-question" rows="4" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Digite sua pergunta sobre a lição..."></textarea>
-                    <div class="flex justify-end space-x-3 mt-4">
-                        <button onclick="this.closest('.fixed').remove()" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">Cancelar</button>
-                        <button onclick="submitQuestion()" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
-                            <i class="fas fa-paper-plane mr-2"></i> Enviar Pergunta
-                        </button>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
+        // ─────────────────────────────────────────
+        //  DÚVIDAS / COMENTÁRIOS (lesson_comments) — fórum partilhado por aula,
+        //  qualquer estudante vê as perguntas e respostas dos outros.
+        // ─────────────────────────────────────────
+        let lessonComments = [];
+
+        async function loadComments() {
+            const res = await VClass.api.comments.list(lessonId);
+            if (res.success) {
+                lessonComments = res.data?.comments || [];
+                renderComments();
+            }
         }
-        
-        function submitQuestion() {
-            const question = document.getElementById('qa-question').value;
-            if (question.trim()) {
-                VClass.showNotification('Pergunta enviada! O professor responderá em breve.', 'success');
-                document.querySelector('.fixed').remove();
+
+        function initials(name) {
+            return (name || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+        }
+
+        function renderCommentCard(comment) {
+            const name = comment.users?.full_name || 'Utilizador';
+            const isTeacher = comment.users?.role === 'teacher';
+            const avatarColor = isTeacher ? 'bg-green-500' : 'bg-blue-500';
+            const isMine = !!user && comment.users?.id === user.id;
+
+            const repliesHtml = (comment.replies || []).map(r => {
+                const rIsTeacher = r.users?.role === 'teacher';
+                const rIsMine = !!user && r.users?.id === user.id;
+                return `
+                <div class="mt-3 ml-4 p-3 bg-white rounded-xl border-l-4 border-green-400">
+                    <div class="flex items-center justify-between gap-2 mb-1">
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-6 ${rIsTeacher ? 'bg-green-500' : 'bg-blue-500'} text-white rounded-full flex items-center justify-center text-xs font-bold">${escapeHtml(initials(r.users?.full_name))}</div>
+                            <p class="text-xs font-semibold text-gray-900">${escapeHtml(r.users?.full_name || 'Utilizador')}</p>
+                            ${rIsTeacher ? `<span class="text-xs bg-green-100 text-green-700 px-1.5 rounded font-bold">Professor</span>` : ''}
+                        </div>
+                        ${rIsMine ? `<button onclick="deleteComment('${r.id}')" class="text-gray-300 hover:text-red-500 transition" title="Eliminar"><i class="fas fa-trash-alt text-xs"></i></button>` : ''}
+                    </div>
+                    <p class="text-sm text-gray-700">${escapeHtml(r.content)}</p>
+                </div>`;
+            }).join('');
+
+            return `
+                <div class="p-4 bg-gray-50 rounded-xl">
+                    <div class="flex items-start gap-3">
+                        <div class="w-9 h-9 ${avatarColor} text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">${escapeHtml(initials(name))}</div>
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-2">
+                                    <p class="text-sm font-semibold text-gray-900">${escapeHtml(name)}</p>
+                                    ${isTeacher ? `<span class="text-xs bg-green-100 text-green-700 px-1.5 rounded font-bold">Professor</span>` : ''}
+                                    <span class="text-xs text-gray-400">• ${escapeHtml(VClass.formatRelativeTime(comment.created_at))}</span>
+                                </div>
+                                ${isMine ? `<button onclick="deleteComment('${comment.id}')" class="text-gray-300 hover:text-red-500 transition" title="Eliminar"><i class="fas fa-trash-alt text-xs"></i></button>` : ''}
+                            </div>
+                            <p class="text-sm text-gray-700 mt-1">${escapeHtml(comment.content)}</p>
+                            <div class="flex gap-2 mt-2">
+                                <button onclick="likeComment('${comment.id}')" class="text-xs text-gray-400 hover:text-blue-600 transition"><i class="fas fa-thumbs-up mr-1"></i>${comment.likes_count || 0}</button>
+                                <button onclick="toggleReplyBox('${comment.id}')" class="text-xs text-gray-400 hover:text-blue-600 transition"><i class="fas fa-reply mr-1"></i>Responder</button>
+                            </div>
+
+                            <!-- Resposta inline (estilo YouTube) — sem popup -->
+                            <div id="reply-box-${comment.id}" class="hidden mt-3 flex items-start gap-2">
+                                <textarea id="reply-input-${comment.id}" rows="1" placeholder="Escreva a sua resposta..."
+                                    class="flex-1 p-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none text-sm text-gray-700 placeholder-gray-400 transition"
+                                    oninput="autoGrowTextarea(this)"></textarea>
+                                <div class="flex flex-col gap-1 flex-shrink-0">
+                                    <button onclick="submitReply('${comment.id}')" class="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-semibold rounded-lg transition">Enviar</button>
+                                    <button onclick="toggleReplyBox('${comment.id}')" class="px-3 py-1 text-gray-400 hover:text-gray-600 text-xs">Cancelar</button>
+                                </div>
+                            </div>
+
+                            ${repliesHtml}
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        function renderComments() {
+            const list  = document.getElementById('qa-list');
+            const badge = document.getElementById('qa-count-badge');
+            const total = lessonComments.reduce((sum, c) => sum + 1 + (c.replies?.length || 0), 0);
+
+            badge.textContent = total;
+            badge.classList.toggle('hidden', total === 0);
+
+            if (lessonComments.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center py-6 text-gray-400">
+                        <i class="fas fa-comments text-3xl mb-2 opacity-30"></i>
+                        <p class="text-sm">Nenhuma pergunta ainda — seja o primeiro a perguntar</p>
+                    </div>`;
+                return;
+            }
+
+            list.innerHTML = lessonComments.map(renderCommentCard).join('');
+        }
+
+        async function likeComment(id) {
+            const res = await VClass.api.comments.like(id);
+            if (res.success) loadComments();
+        }
+
+        // Cresce a caixa de texto conforme o utilizador escreve, sem popup —
+        // igual ao campo de comentários do YouTube.
+        function autoGrowTextarea(el) {
+            el.style.height = 'auto';
+            el.style.height = el.scrollHeight + 'px';
+        }
+
+        function toggleReplyBox(commentId) {
+            // Só uma caixa de resposta aberta de cada vez
+            document.querySelectorAll('[id^="reply-box-"]').forEach(box => {
+                if (box.id !== `reply-box-${commentId}`) box.classList.add('hidden');
+            });
+            const box = document.getElementById(`reply-box-${commentId}`);
+            if (!box) return;
+            const willOpen = box.classList.contains('hidden');
+            box.classList.toggle('hidden');
+            if (willOpen) document.getElementById(`reply-input-${commentId}`)?.focus();
+        }
+
+        async function submitQuestion() {
+            const input = document.getElementById('qa-compose-input');
+            const content = input.value.trim();
+            if (!content) {
+                VClass.showNotification('Escreva a sua dúvida antes de enviar', 'warning');
+                return;
+            }
+            const res = await VClass.api.comments.create(lessonId, { content });
+            if (res.success) {
+                input.value = '';
+                autoGrowTextarea(input);
+                loadComments();
             } else {
-                VClass.showNotification('Por favor, escreva uma pergunta', 'warning');
+                VClass.showNotification(res.error || 'Erro ao enviar', 'error');
+            }
+        }
+
+        async function submitReply(parentCommentId) {
+            const input = document.getElementById(`reply-input-${parentCommentId}`);
+            const content = input.value.trim();
+            if (!content) {
+                VClass.showNotification('Escreva a sua resposta antes de enviar', 'warning');
+                return;
+            }
+            const res = await VClass.api.comments.create(lessonId, { content, parent_comment_id: parentCommentId });
+            if (res.success) {
+                loadComments();
+            } else {
+                VClass.showNotification(res.error || 'Erro ao enviar resposta', 'error');
+            }
+        }
+
+        async function deleteComment(id) {
+            if (!confirm('Eliminar esta mensagem?')) return;
+            const res = await VClass.api.comments.remove(id);
+            if (res.success) {
+                loadComments();
+            } else {
+                VClass.showNotification(res.error || 'Erro ao eliminar', 'error');
             }
         }
 
@@ -2039,8 +2407,7 @@
         //  FAVORITE TOGGLE
         // ─────────────────────────────────────────
         let isFavorite = false;
-        function toggleFavorite() {
-            isFavorite = !isFavorite;
+        function applyFavoriteState() {
             const btn = document.getElementById('btn-favorite');
             const icon = document.getElementById('heart-icon');
             if (isFavorite) {
@@ -2048,21 +2415,30 @@
                 icon.classList.add('text-red-500');
                 btn.classList.add('bg-red-50','text-red-500');
                 btn.classList.remove('bg-gray-100','text-gray-600');
-                localStorage.setItem(`fav_${lessonId}`, '1');
-                VClass.showNotification('Adicionado aos favoritos! ❤️', 'success');
             } else {
                 icon.classList.replace('fas','far');
                 icon.classList.remove('text-red-500');
                 btn.classList.remove('bg-red-50','text-red-500');
                 btn.classList.add('bg-gray-100','text-gray-600');
-                localStorage.removeItem(`fav_${lessonId}`);
-                VClass.showNotification('Removido dos favoritos', 'info');
             }
         }
-        function loadFavoriteState() {
-            if (localStorage.getItem(`fav_${lessonId}`)) {
-                isFavorite = false;
-                toggleFavorite(); // will flip to true
+        async function toggleFavorite() {
+            const res = isFavorite
+                ? await VClass.api.favorites.remove(lessonId)
+                : await VClass.api.favorites.toggle(lessonId);
+            if (!res.success) {
+                VClass.showNotification(res.error || 'Erro ao atualizar favorito', 'error');
+                return;
+            }
+            isFavorite = !isFavorite;
+            applyFavoriteState();
+            VClass.showNotification(isFavorite ? 'Adicionado aos favoritos! ❤️' : 'Removido dos favoritos', isFavorite ? 'success' : 'info');
+        }
+        async function loadFavoriteState() {
+            const res = await VClass.api.favorites.get(lessonId);
+            if (res.success) {
+                isFavorite = !!res.data?.favorited;
+                applyFavoriteState();
             }
         }
 

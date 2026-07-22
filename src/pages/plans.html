@@ -336,7 +336,7 @@ const CURRENCY_KEYS = { MZN: 'mzn', AOA: 'aoa', BRL: 'brl', EUR: 'eur' }
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   // Check auth
-  const token = localStorage.getItem('vclass_token')
+  const token = localStorage.getItem('accessToken')
   if (token) {
     isLoggedIn = true
     const navAuth = document.getElementById('nav-auth')
@@ -588,7 +588,7 @@ async function submitSubscription() {
       billing: currentBilling,
       currency: currentCurrency,
       payment_method: method
-    }, { headers: { Authorization: `Bearer ${localStorage.getItem('vclass_token')}` } })
+    }, { headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` } })
 
     const data = res.data.data
     document.getElementById('payment-ref').textContent = data.payment_instructions.reference

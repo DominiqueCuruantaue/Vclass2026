@@ -1,0 +1,258 @@
+================================================================================
+VCLASS — MECANISMOS DE SEGURANÇA IMPLEMENTADOS
+================================================================================
+Documento gerado a partir de inspeção directa do código-fonte do módulo
+(banco de dados, backend/API, frontend e hospedagem). Cobre o que ESTÁ
+implementado hoje, como funciona, e lacunas conhecidas com o respectivo
+estado (corrigido / pendente).
+
+Stack: Hono (Cloudflare Workers/Pages) + Supabase (PostgreSQL) + Bunny.net
+(streaming de vídeo).
+
+================================================================================
+1. CAMADA DE BANCO DE DADOS (Supabase / PostgreSQL)
+================================================================================
+
+1.1 Arquitetura de acesso
+----------------------------------------
+O backend acede ao Supabase exclusivamente através da chave `service_role`,
+que ignora Row Level Security (RLS). As chaves `anon`/`authenticated` nunca
+são usadas por nenhum código — nem no backend, nem no frontend (confirmado:
+o frontend fala apenas com a própria API Hono, nunca directamente com o
+Supabase). Ver `src/config/supabase.ts`.
+
+1.2 Row Level Security (RLS)
+----------------------------------------
+Todas as tabelas com dados de utilizador têm RLS activo e uma política
+RESTRICTIVE que nega todo o acesso (SELECT/INSERT/UPDATE/DELETE) às roles
+`anon` e `authenticated` — só `service_role` consegue aceder:
+
+  users, student_progress, exercise_submissions, lesson_comments,
+  subscriptions, refresh_tokens, teacher_applications          (migrations 001, 005, 006)
+
+  video_tokens, lesson_attachments, library_items, countries,
+  education_systems, grades, subjects, grade_subjects, chapters,
+  lessons, exercises, exercise_options                          (migration 016)
+
+  Motivo da migration 016: auditoria encontrou 2 bugs e 10 tabelas sem
+  protecção nenhuma.
+    - BUG: migration 004 criava políticas de negação para `video_tokens` e
+      `lesson_attachments`, mas RLS nunca tinha sido ligado nessas duas
+      tabelas em 001 — a política ficava "morta" (política sem RLS activo
+      não é aplicada). CORRIGIDO em 016 (ALTER TABLE ... ENABLE ROW LEVEL
+      SECURITY antes de recriar a política).
+    - GAP: `library_items` (013) e as 9 tabelas de currículo/conteúdo nunca
+      tiveram RLS. Sem RLS, o PostgREST do Supabase expõe as tabelas por
+      defeito a quem tiver a `anon key` (chave desenhada para não ser
+      secreta). CORRIGIDO em 016.
+
+  Linters de segurança do próprio Supabase corrigidos nas migrations:
+    002 — security_definer_view (views recriadas com security_invoker=true,
+          para respeitarem RLS do utilizador consultante)
+    003 — function_search_path_mutable (funções com search_path fixo,
+          evita hijack via schemas mutáveis)
+    004 — rls_enabled_no_policy (política explícita de deny nas tabelas
+          sensíveis originais)
+
+1.3 Dados sensíveis — nunca em texto plano
+----------------------------------------
+  - Senhas: nunca armazenadas em plaintext. Só o hash bcrypt
+    (`users.password_hash`) é persistido — ver secção 2.2.
+  - Refresh tokens: a tabela `refresh_tokens` guarda apenas o SHA-256 do
+    JWT (`token_hash`), nunca o token em claro. Mesmo com acesso de leitura
+    à tabela, não é possível reconstituir um token válido a partir do hash
+    — ver `src/utils/refreshTokens.ts`.
+  - Candidaturas de professor (`teacher_applications`) guardam o hash da
+    password do candidato (copiado para `users.password_hash` só na
+    aprovação), nunca a password em claro.
+
+1.4 Storage (ficheiros)
+----------------------------------------
+  Bucket `vclass-library` (migration 014):
+    - Leitura pública (biblioteca é conteúdo aberto por design)
+    - Upload restrito a `auth.role() = 'authenticated'` (na prática, como
+      a app não usa Supabase Auth para sessões de utilizador, isto só é
+      alcançável pelo backend via service_role — o "authenticated" do
+      Supabase Auth não é emitido para os utilizadores da app)
+    - Delete restrito a `service_role`
+    - Limite de 100MB por ficheiro e whitelist de MIME types (PDF, DOC,
+      DOCX) aplicada pelo próprio Storage do Supabase
+
+================================================================================
+2. CAMADA DE BACKEND / API (Hono em Cloudflare Workers)
+================================================================================
+
+2.1 Autenticação — JWT (src/utils/jwt.ts, src/middleware/auth.ts)
+----------------------------------------
+  - Access token: 8h de validade
+  - Refresh token: 30 dias, tipado (`type: 'refresh'`) para não poder ser
+    usado como access token nem vice-versa
+  - Token de vídeo: 15 min (payload interno) / 4h (token exposto na rota
+    de vídeo) — ver secção 2.6
+  - `requireSecret()` recusa gerar/verificar tokens se o secret tiver
+    menos de 16 caracteres — falha em vez de assinar com segredo fraco
+  - `authMiddleware` extrai o Bearer token, valida assinatura+expiração,
+    e injecta `{ id, email, role }` no contexto do pedido
+  - `optionalAuth` — variante que não bloqueia se não houver token
+    (rotas públicas com comportamento diferente para utilizador logado)
+
+2.2 Passwords (src/utils/password.ts)
+----------------------------------------
+  - Hash: bcrypt, cost factor 12 (~250ms/hash — equilíbrio entre
+    resistência a brute-force offline e UX)
+  - `validatePassword()`: exige mínimo 8 caracteres, maiúscula, minúscula
+    e número, antes de qualquer hash
+  - `needsRehash()` / `getHashRounds()`: permite migrar automaticamente
+    hashes antigos (cost menor) para o cost actual no próximo login bem
+    sucedido, sem forçar reset de senha em massa
+
+2.3 Autorização por papel (RBAC) (src/middleware/auth.ts)
+----------------------------------------
+  Roles suportadas: student, teacher, admin, support, editor,
+  country_manager, finance, moderator.
+
+  Guards prontos (`requireRole(...roles)` e atalhos como `requireAdmin`,
+  `requireTeacherOrAdmin`, `requireAnyStaff`, etc.) aplicados em praticamente
+  todas as rotas autenticadas: admin.ts, chat.ts, content.ts, country.ts,
+  creator.ts, curriculum.ts, editor.ts, exercises.ts, finance.ts,
+  library.ts, moderator.ts, notifications.ts, plans.ts, progress.ts,
+  search.ts, support.ts, teacher-verification.ts, video.ts.
+
+2.4 Revogação de sessão (src/utils/refreshTokens.ts)
+----------------------------------------
+  - Logout: revoga o refresh token específico usado
+  - Logout-all / troca de senha: revoga TODOS os refresh tokens do
+    utilizador (`revokeAllUserTokens`) — invalida sessões noutros
+    dispositivos imediatamente
+  - Verificação de token activo (`isRefreshTokenActive`) confere existência,
+    não-revogação e não-expiração antes de emitir novo access token
+
+2.5 Rate limiting (src/middleware/auth.ts — rateLimitMiddleware)
+----------------------------------------
+  - Backend: Cloudflare KV (namespace `RATE_LIMIT`), contador fixed-window
+    por chave `IP + path`; fallback in-memory (com warning nos logs) se o
+    binding KV não estiver configurado — aceitável em dev, não em produção
+  - Limites aplicados:
+      POST /api/auth/login              → 20 tentativas / 60s
+      POST /api/auth/register           → 5 tentativas / 60s
+      POST /api/auth/refresh            → 30 tentativas / 60s
+      POST /api/teacher-verification/apply → 10 tentativas / 1h
+  - Resposta 429 com header `Retry-After` quando o limite é excedido
+
+2.6 Streaming de vídeo protegido (src/routes/video.ts, src/utils/bunny.ts)
+----------------------------------------
+  Objectivo declarado no código: vídeo só visualizável na plataforma, sem
+  download nem partilha directa do link.
+  - Token HMAC-SHA256 (Web Crypto do Workers) com escopo
+    userId × lessonId × videoId × expiração × IP × user-agent
+  - `authMiddleware` aplicado a todas as rotas de vídeo, EXCEPTO o proxy
+    HLS (que precisa de autenticar via token na query string, já que o
+    HLS.js no browser não garante envio fiável do header Authorization)
+  - Upload para o Bunny.net Stream via TUS assinado: o browser recebe
+    apenas uma assinatura HMAC com escopo limitado (videoId + expiração),
+    NUNCA a master API key do Bunny
+  - GAP CONHECIDO: existe um fallback hardcoded
+    (`DEFAULT_VIDEO_SECRET = 'VCLASS_VIDEO_SECRET_2024_CHANGE_IN_PROD'`)
+    usado se a env var `VIDEO_SECRET` não estiver configurada. Ao contrário
+    do JWT_SECRET (que falha explicitamente se ausente/curto via
+    `requireSecret`), o VIDEO_SECRET falha silenciosamente para um valor
+    público e previsível. RECOMENDAÇÃO: aplicar o mesmo padrão de
+    `requireSecret` (falhar em vez de usar fallback) antes de ir para
+    produção — já documentado como obrigatório em `wrangler.jsonc`
+    ("VIDEO_SECRET, ≥32 chars"), mas não é enforced em runtime.
+
+2.7 Validação de entrada
+----------------------------------------
+  - Validação com `zod` (schemas tipados) nas rotas: auth.ts, chat.ts,
+    exercises.ts, notifications.ts, teacher-verification.ts
+  - `registerSchema` valida formato de email, força mínima de password,
+    enum de role (só student/teacher podem auto-registar-se — admin não é
+    atribuível via API pública), e a validação cruzada país↔classe
+    (`isValidCountryGrade`) descrita na migration 015
+
+2.8 CORS (src/middleware/cors.ts)
+----------------------------------------
+  - Allowlist explícita de origens (`localhost:3000`, `localhost:5173`,
+    `vclass.pages.dev` + extra via env var `ALLOWED_ORIGINS`) — sem
+    wildcard, obrigatório porque `credentials: true` está activo
+  - Métodos e headers permitidos restritos ao necessário
+    (GET/POST/PUT/DELETE/PATCH/OPTIONS; Content-Type, Authorization)
+
+2.9 Cabeçalhos de segurança HTTP (src/index.tsx)
+----------------------------------------
+  Aplicados a TODAS as respostas via middleware global:
+    X-Frame-Options: DENY                  → bloqueia clickjacking/iframe
+    X-Content-Type-Options: nosniff        → bloqueia MIME sniffing
+    Referrer-Policy: strict-origin-when-cross-origin
+    Strict-Transport-Security: max-age=31536000; includeSubDomains  → HSTS
+    Permissions-Policy: camera=(), microphone=(), geolocation=()
+    Content-Security-Policy: default-src 'self' + allowlist explícita
+      para scripts/estilos/fontes (Tailwind CDN, jsdelivr, Google Fonts),
+      frame-ancestors 'none', base-uri 'self', form-action 'self'
+
+================================================================================
+3. CAMADA DE FRONTEND (proteção contra XSS)
+================================================================================
+
+3.1 public/static/safe-dom.js — carregado em todas as páginas
+----------------------------------------
+  - `escapeHtml()` / `escapeAttr()`: escapam texto de utilizador antes de
+    interpolar em `innerHTML` (previne XSS reflectido/armazenado ao
+    renderizar nomes, comentários, etc.)
+  - `sanitizeHtml()`: usa DOMPurify quando disponível para conteúdo HTML
+    rico (ex: descrição de lição com markdown renderizado); tem um
+    fallback próprio (regex) que remove tags perigosas (`script`,
+    `iframe`, `object`, `embed`, `style`, `link`, `meta`, `base`, `form`),
+    atributos `on*` (onclick, onerror, etc.) e URLs `javascript:` — mas o
+    próprio comentário no código avisa que este fallback "nunca deve ser
+    atingido em produção", ou seja, DOMPurify é a defesa real esperada.
+
+================================================================================
+4. HOSPEDAGEM / INFRAESTRUTURA (Cloudflare Pages + Workers)
+================================================================================
+
+4.1 Gestão de segredos
+----------------------------------------
+  - Segredos nunca commitados: `.env`, `.env.production`, `.dev.vars` estão
+    no `.gitignore`
+  - Em produção, segredos configurados via Cloudflare secrets/wrangler
+    (não como variáveis de ambiente em texto plano no `wrangler.jsonc`)
+  - Segredos usados: SUPABASE_URL, SUPABASE_ANON_KEY,
+    SUPABASE_SERVICE_ROLE_KEY, JWT_SECRET (≥16 chars), VIDEO_SECRET
+    (≥32 chars documentado), BUNNY_API_KEY, BUNNY_LIBRARY_ID,
+    BUNNY_CDN_HOST, BUNNY_TOKEN_KEY, ALLOWED_ORIGINS
+
+4.2 Rate limiting distribuído
+----------------------------------------
+  - KV namespace `RATE_LIMIT` (Cloudflare) partilha o contador de rate
+    limit entre isolates/instâncias do Worker — sem isto, rate limiting
+    in-memory seria por-instância e ineficaz contra ataques distribuídos
+    (aviso explícito no código quando o binding falta)
+
+4.3 Transporte
+----------------------------------------
+  - HTTPS/TLS terminado pela Cloudflare (infraestrutura da plataforma)
+  - Reforçado por HSTS (secção 2.9) para forçar HTTPS em pedidos futuros
+    do browser
+
+4.4 CDN de vídeo (Bunny.net)
+----------------------------------------
+  - Vídeos servidos via Bunny Stream com Token Authentication (URLs HLS
+    assinadas, de curta duração) — ver secção 2.6
+  - Master API key do Bunny nunca sai do backend
+
+================================================================================
+5. RESUMO DE LACUNAS CONHECIDAS (estado actual)
+================================================================================
+  [CORRIGIDO]  RLS ausente/morto em 12 tabelas          → migration 016
+  [CORRIGIDO]  Bug de sintaxe SQL (comentário sem abertura,
+               migration 011, PARTE 1) — quebraria a criação do banco
+  [PENDENTE]   VIDEO_SECRET com fallback hardcoded em vez de falhar
+               explicitamente quando ausente (src/routes/video.ts)
+  [A CONFIRMAR] JWT_SECRET e demais segredos de produção devem ser
+               rodados (novos valores) ao migrar para a nova conta Supabase,
+               já que a conta antiga foi comprometida (senha perdida)
+
+================================================================================
+FIM DO DOCUMENTO
+================================================================================

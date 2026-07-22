@@ -3,6 +3,7 @@ import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware } from '../middleware/auth'
 import { getSupabase } from '../config/supabase'
 import { createBunnyVideo, buildBunnyTusCredentials, getBunnyVideoStatus } from '../utils/bunny'
+import { extractPageCount } from '../utils/documentMeta'
 
 function isDatabaseConfigured(env?: any): boolean {
   const hasUrl = !!(env?.SUPABASE_URL || process.env.SUPABASE_URL)
@@ -118,14 +119,14 @@ creator.get('/dashboard', async (c) => {
     try {
       const { data: lessonsWithSubj } = await supabase
         .from('lessons')
-        .select('id, status, chapters(title, grade_subjects(subjects(name, icon_name)))')
+        .select('id, status, chapters(title, grade_subjects(subjects(name, icon_url)))')
         .eq('created_by', user.id)
 
       const subjectMap = new Map<string, { lessons: number; published: number; icon: string }>()
       for (const l of lessonsWithSubj ?? []) {
         const ch = (l as any).chapters
         const subjectName: string = ch?.grade_subjects?.subjects?.name || 'Outros'
-        const subjectIcon: string = ch?.grade_subjects?.subjects?.icon_name || 'fa-book'
+        const subjectIcon: string = ch?.grade_subjects?.subjects?.icon_url || 'fa-book'
         if (!subjectMap.has(subjectName)) {
           subjectMap.set(subjectName, { lessons: 0, published: 0, icon: subjectIcon })
         }
@@ -402,6 +403,14 @@ async function resolveChapterUuid(supabase: any, chapterId: string, fallbackTitl
   return created.id
 }
 
+// Professores nunca publicam directamente — "Publicar" envia para a fila de
+// revisão do admin ('pending_review'). Só um admin (painel Admin > Conteúdo)
+// pode mudar o estado para 'published', que é o único estado visível aos
+// estudantes (ver filtro em src/routes/content.ts).
+function toSubmittableStatus(status: string): string {
+  return status === 'published' ? 'pending_review' : status
+}
+
 creator.post('/lesson', async (c) => {
   const user = c.get('user') as any
   const body = await c.req.json()
@@ -418,9 +427,10 @@ creator.post('/lesson', async (c) => {
     thumbnail_url,
     is_free = false,
     display_order = body.order || 1,
-    status = 'draft',
+    status: statusInput = 'draft',
     objectives
   } = body
+  const status = toSubmittableStatus(statusInput)
 
   if (!title || title.length < 3) {
     return c.json({ success: false, error: 'Título obrigatório (mín. 3 caracteres)' }, 400)
@@ -488,15 +498,17 @@ creator.put('/lesson/:id', async (c) => {
       thumbnail_url,
       is_free,
       display_order = body.order,
-      status,
+      status: statusInput,
       objectives
     } = body
 
-    // Validações de publicação
-    if (status === 'published') {
+    // Validações de publicação (o professor pede 'published'; o estado gravado
+    // fica 'pending_review' — ver toSubmittableStatus)
+    if (statusInput === 'published') {
       if (!title || title.length < 3) return c.json({ success: false, error: 'Título obrigatório para publicar' }, 400)
       if (!video_id && !video_url) return c.json({ success: false, error: 'Vídeo obrigatório para publicar' }, 400)
     }
+    const status = statusInput !== undefined ? toSubmittableStatus(statusInput) : undefined
 
     // Construir payload só com campos definidos (evita NULL acidental)
     const patch: Record<string, any> = { updated_at: new Date().toISOString() }
@@ -770,6 +782,156 @@ creator.get('/students', async (c) => {
     })
 
     return c.json({ success: true, data, total: count ?? data.length, page, limit })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Sessões Online (Google Meet)
+//
+//  POST   /api/creator/session      → marcar sessão para um capítulo (curso)
+//  GET    /api/creator/sessions     → listar sessões marcadas pelo professor
+//  DELETE /api/creator/session/:id  → cancelar sessão
+//
+// O professor cola o link de uma reunião já criada no Google Meet — a
+// plataforma não integra com a Google Calendar API. Ao marcar, todos os
+// alunos com progresso registado nas lições do capítulo (mesma definição
+// de "meus alunos" usada em GET /api/creator/students) são inscritos como
+// destinatários e passam a ver a sessão no dashboard e nas notificações.
+// ═════════════════════════════════════════════════════════════════════════════
+const MEET_LINK_RE = /^https:\/\/meet\.google\.com\/[a-z]{3}-[a-z]{4}-[a-z]{3}(\?.*)?$/i
+
+creator.post('/session', async (c) => {
+  const user = c.get('user') as any
+  const body = await c.req.json().catch(() => ({})) as any
+  const { chapter_id, description = '', duration_minutes = 60 } = body
+  const title       = (body.title || '').trim()
+  const meetLink    = (body.meet_link || '').trim()
+  const scheduledAt = body.scheduled_at
+
+  if (!chapter_id) return c.json({ success: false, error: 'Capítulo (curso) obrigatório' }, 400)
+  if (!title || title.length < 3) return c.json({ success: false, error: 'Título obrigatório (mín. 3 caracteres)' }, 400)
+  if (!scheduledAt || isNaN(Date.parse(scheduledAt))) return c.json({ success: false, error: 'Data e hora inválidas' }, 400)
+  if (new Date(scheduledAt).getTime() < Date.now() - 60_000) {
+    return c.json({ success: false, error: 'A data da sessão deve ser no futuro' }, 400)
+  }
+  if (!MEET_LINK_RE.test(meetLink)) {
+    return c.json({ success: false, error: 'Link inválido. Cole um link do Google Meet (ex: https://meet.google.com/abc-defg-hij)' }, 400)
+  }
+
+  const supabase = createSupabaseClient(c.env)
+  try {
+    // Verificar propriedade do capítulo
+    const { data: chapter } = await supabase
+      .from('chapters').select('id, title').eq('id', chapter_id).eq('created_by', user.id).maybeSingle()
+    if (!chapter) return c.json({ success: false, error: 'Capítulo não encontrado ou sem permissão' }, 404)
+
+    const { data: session, error } = await supabase
+      .from('live_sessions')
+      .insert({
+        creator_id: user.id,
+        chapter_id,
+        title,
+        description: description?.trim() || null,
+        meet_link: meetLink,
+        scheduled_at: scheduledAt,
+        duration_minutes: Number(duration_minutes) > 0 ? Number(duration_minutes) : 60
+      })
+      .select()
+      .single()
+    if (error) throw error
+
+    // Alunos "inscritos" no curso: têm progresso nas lições deste capítulo
+    const { data: lessons } = await supabase.from('lessons').select('id').eq('chapter_id', chapter_id)
+    const lessonIds = (lessons ?? []).map((l: any) => l.id)
+
+    let studentIds: string[] = []
+    if (lessonIds.length > 0) {
+      const { data: progress } = await supabase
+        .from('student_progress').select('student_id').in('lesson_id', lessonIds)
+      studentIds = [...new Set((progress ?? []).map((p: any) => p.student_id))]
+    }
+
+    if (studentIds.length > 0) {
+      const { error: recError } = await supabase
+        .from('live_session_recipients')
+        .insert(studentIds.map((sid) => ({ session_id: session.id, student_id: sid })))
+      if (recError) throw recError
+    }
+
+    return c.json({
+      success: true,
+      data: { ...session, chapter_title: chapter.title, students_notified: studentIds.length },
+      message: studentIds.length > 0
+        ? `Sessão marcada e link partilhado com ${studentIds.length} aluno${studentIds.length > 1 ? 's' : ''}.`
+        : 'Sessão marcada. Ainda não há alunos com progresso registado neste capítulo para notificar.'
+    }, 201)
+  } catch (error: any) {
+    console.error('Create session error:', error)
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+creator.get('/sessions', async (c) => {
+  const user = c.get('user') as any
+  const supabase = createSupabaseClient(c.env)
+
+  try {
+    const { data, error } = await supabase
+      .from('live_sessions')
+      .select('id, title, description, meet_link, scheduled_at, duration_minutes, status, created_at, chapters(title)')
+      .eq('creator_id', user.id)
+      .order('scheduled_at', { ascending: true })
+    if (error) throw error
+
+    const ids = (data ?? []).map((s: any) => s.id)
+    const countBySession: Record<string, number> = {}
+    if (ids.length > 0) {
+      const { data: recips } = await supabase
+        .from('live_session_recipients').select('session_id').in('session_id', ids)
+      for (const r of recips ?? []) {
+        const sid = (r as any).session_id
+        countBySession[sid] = (countBySession[sid] ?? 0) + 1
+      }
+    }
+
+    const normalized = (data ?? []).map((s: any) => ({
+      id: s.id,
+      title: s.title,
+      description: s.description,
+      meet_link: s.meet_link,
+      scheduled_at: s.scheduled_at,
+      duration_minutes: s.duration_minutes,
+      status: s.status,
+      chapter_title: s.chapters?.title || '—',
+      students_notified: countBySession[s.id] ?? 0,
+      created_at: s.created_at
+    }))
+
+    return c.json({ success: true, data: normalized })
+  } catch (error: any) {
+    console.error('List sessions error:', error)
+    return c.json({ success: false, error: error.message || 'DB error' }, 500)
+  }
+})
+
+creator.delete('/session/:id', async (c) => {
+  const user = c.get('user') as any
+  const id   = c.req.param('id')
+  const supabase = createSupabaseClient(c.env)
+
+  try {
+    const { data, error } = await supabase
+      .from('live_sessions')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('creator_id', user.id)
+      .select()
+      .maybeSingle()
+    if (error) throw error
+    if (!data) return c.json({ success: false, error: 'Sessão não encontrada' }, 404)
+    return c.json({ success: true, message: 'Sessão cancelada' })
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500)
   }
@@ -1339,11 +1501,18 @@ creator.post('/library/upload', async (c) => {
   if (!file || !file.name) return c.json({ success: false, error: 'Ficheiro não encontrado no pedido' }, 400)
 
   const allowed = ['application/pdf', 'application/msword',
-                   'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
-  if (!allowed.includes(file.type) && !file.name.match(/\.(pdf|doc|docx)$/i))
-    return c.json({ success: false, error: 'Apenas PDF ou Word são aceites' }, 400)
+                   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                   'application/vnd.ms-excel',
+                   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                   'application/vnd.ms-powerpoint',
+                   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                   'image/jpeg', 'image/png',
+                   'application/zip', 'application/x-zip-compressed']
+  if (!allowed.includes(file.type) && !file.name.match(/\.(pdf|docx?|xlsx?|pptx?|jpe?g|png|zip)$/i))
+    return c.json({ success: false, error: 'Tipo de ficheiro não suportado' }, 400)
 
-  const MAX_MB = 100
+  // Tecto do bucket 'vclass-library' no Supabase (limite global de upload do projecto) — manter em sincronia
+  const MAX_MB = 50
   if (file.size > MAX_MB * 1024 * 1024)
     return c.json({ success: false, error: `Ficheiro demasiado grande (máx ${MAX_MB} MB)` }, 400)
 
@@ -1351,6 +1520,10 @@ creator.post('/library/upload', async (c) => {
   const path     = `library/teachers/${user.id}/${Date.now()}_${safeName}`
 
   const buffer = await file.arrayBuffer()
+
+  // Nº de páginas real, extraído do ficheiro (não confiar em input manual do utilizador)
+  const pages = await extractPageCount(buffer, file.type, file.name)
+
   const { error: upErr } = await supabase.storage
     .from('vclass-library')
     .upload(path, buffer, { contentType: file.type || 'application/pdf', upsert: false })
@@ -1365,6 +1538,7 @@ creator.post('/library/upload', async (c) => {
       url:           urlData.publicUrl,
       path,
       size_kb:       Math.round(file.size / 1024),
+      pages,
       original_name: file.name,
     }
   }, 201)

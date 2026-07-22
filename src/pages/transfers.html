@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transferências - VClass</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/styles.css" rel="stylesheet">
+    <style>
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .transfer-card { animation: fadeInUp 0.4s ease forwards; opacity: 0; }
+        #empty-state { display: none; }
+    </style>
+  <script src="/static/safe-dom.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <div id="navbar-placeholder" style="min-height:64px"></div>
+
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-purple-700 to-indigo-600 text-white py-10">
+        <div class="container mx-auto px-6">
+            <h1 class="text-3xl md:text-4xl font-bold flex items-center gap-3">
+                <i class="fas fa-cloud-download-alt"></i> Transferências
+            </h1>
+            <p class="text-purple-200 mt-1 text-sm">Vídeos de aula, livros e materiais guardados neste dispositivo para acesso offline</p>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-6 py-8 max-w-4xl">
+
+        <!-- Uso de armazenamento -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-hdd text-purple-600"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold text-gray-800" id="storage-count">0 itens guardados</p>
+                    <p class="text-xs text-gray-400" id="storage-size">0 MB usados neste dispositivo</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Livros baixados -->
+        <div id="books-section" class="hidden mb-8">
+            <h2 class="text-base font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <i class="fas fa-file-pdf text-purple-600"></i> Livros baixados
+                <span id="books-count-badge" class="text-xs font-normal text-gray-400"></span>
+            </h2>
+            <div id="books-list" class="space-y-3"></div>
+            <p id="books-empty" class="hidden text-sm text-gray-400 py-4 text-center">Nenhum livro guardado ainda.</p>
+        </div>
+
+        <!-- Vídeos baixados -->
+        <div id="videos-section" class="hidden mb-10">
+            <h2 class="text-base font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <i class="fas fa-video text-indigo-600"></i> Vídeos baixados
+                <span id="videos-count-badge" class="text-xs font-normal text-gray-400"></span>
+            </h2>
+            <div id="videos-list" class="space-y-3"></div>
+            <p id="videos-empty" class="hidden text-sm text-gray-400 py-4 text-center">Nenhum vídeo guardado ainda.</p>
+        </div>
+
+        <div id="empty-state" class="text-center py-16">
+            <div class="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-cloud-download-alt text-gray-300 text-2xl"></i>
+            </div>
+            <p class="text-gray-500 font-medium mb-1">Ainda não guardaste nada offline</p>
+            <p class="text-gray-400 text-sm mb-4">Na Biblioteca, clica em "Descarregar" num livro, ou na página de uma lição usa "Baixar vídeo" para os teres aqui sem internet</p>
+            <a href="/library.html" class="inline-block px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 transition">
+                <i class="fas fa-book-open mr-1.5"></i>Ir para a Biblioteca
+            </a>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script src="/static/offline.js"></script>
+    <script>
+        VClass.initNavbar('transfers');
+
+        function formatBytes(kb) {
+            if (kb >= 1024) return `${(kb / 1024).toFixed(1)} MB`;
+            return `${Math.round(kb)} KB`;
+        }
+
+        function formatDate(iso) {
+            try { return VClass.formatDate(iso); } catch { return new Date(iso).toLocaleDateString('pt'); }
+        }
+
+        function bookCardHtml(item, i) {
+            const meta = `${formatBytes(item.file_size_kb || 0)} • guardado em ${formatDate(item.saved_at)}`;
+            return `
+            <div class="transfer-card bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-4" style="animation-delay:${Math.min(i * 0.05, 0.4)}s">
+                <div class="w-11 h-11 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-file-pdf text-purple-600"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-gray-800 truncate">${escapeHtml(item.title)}</p>
+                    <p class="text-xs text-gray-400">${meta}</p>
+                </div>
+                <button onclick="openTransfer('${item.id}')" class="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-600 text-xs font-semibold rounded-lg transition">
+                    <i class="fas fa-external-link-alt mr-1"></i>Abrir
+                </button>
+                <button onclick="removeTransfer('${item.id}', 'book')" class="text-gray-400 hover:text-red-500 transition p-1.5" title="Remover">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>`;
+        }
+
+        function videoCardHtml(item, i) {
+            const meta = item.duration
+                ? `${formatBytes(item.size_kb || 0)} • ${item.duration} min • guardado em ${formatDate(item.saved_at)}`
+                : `${formatBytes(item.size_kb || 0)} • guardado em ${formatDate(item.saved_at)}`;
+            return `
+            <div class="transfer-card bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-4" style="animation-delay:${Math.min(i * 0.05, 0.4)}s">
+                <div class="w-11 h-11 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-video text-indigo-600"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-gray-800 truncate">${escapeHtml(item.title)}</p>
+                    <p class="text-xs text-gray-400">${meta}</p>
+                </div>
+                <button onclick="window.location.href='/lesson.html?id=${encodeURIComponent(item.id)}&offline=1'" class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-semibold rounded-lg transition">
+                    <i class="fas fa-play mr-1"></i>Assistir
+                </button>
+                <button onclick="removeTransfer('${item.id}', 'video')" class="text-gray-400 hover:text-red-500 transition p-1.5" title="Remover">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>`;
+        }
+
+        async function loadTransfers() {
+            const [books, videos] = await Promise.all([
+                VClassOffline.listItems(),
+                VClassOffline.listVideoItems()
+            ]);
+            books.sort((a, b) => new Date(b.saved_at) - new Date(a.saved_at));
+            videos.sort((a, b) => new Date(b.saved_at) - new Date(a.saved_at));
+
+            const totalKb = books.reduce((sum, i) => sum + (i.file_size_kb || 0), 0)
+                          + videos.reduce((sum, i) => sum + (i.size_kb || 0), 0);
+            const totalCount = books.length + videos.length;
+            document.getElementById('storage-count').textContent = `${totalCount} ${totalCount === 1 ? 'item guardado' : 'itens guardados'}`;
+            document.getElementById('storage-size').textContent  = `${formatBytes(totalKb)} usados neste dispositivo`;
+
+            const booksSection  = document.getElementById('books-section');
+            const videosSection = document.getElementById('videos-section');
+            const empty         = document.getElementById('empty-state');
+
+            if (totalCount === 0) {
+                booksSection.classList.add('hidden');
+                videosSection.classList.add('hidden');
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+            booksSection.classList.remove('hidden');
+            videosSection.classList.remove('hidden');
+
+            document.getElementById('books-count-badge').textContent = books.length ? `(${books.length})` : '';
+            document.getElementById('books-list').innerHTML = books.map(bookCardHtml).join('');
+            document.getElementById('books-empty').classList.toggle('hidden', books.length > 0);
+
+            document.getElementById('videos-count-badge').textContent = videos.length ? `(${videos.length})` : '';
+            document.getElementById('videos-list').innerHTML = videos.map(videoCardHtml).join('');
+            document.getElementById('videos-empty').classList.toggle('hidden', videos.length > 0);
+        }
+
+        async function openTransfer(id) {
+            const url = await VClassOffline.getBlobUrl(id);
+            if (url) window.open(url, '_blank', 'noopener');
+        }
+
+        async function removeTransfer(id, kind) {
+            if (kind === 'video') {
+                await VClassOffline.removeVideoItem(id);
+            } else {
+                await VClassOffline.removeItem(id);
+            }
+            VClass.showNotification('Removido das transferências', 'info');
+            loadTransfers();
+        }
+
+        loadTransfers();
+    </script>
+</body>
+</html>

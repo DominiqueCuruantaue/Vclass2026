@@ -1,5 +1,6 @@
 // JWT utilities for authentication
 import jwt from 'jsonwebtoken'
+import type { UserRole } from '../types'
 
 const JWT_EXPIRES_IN = '8h'
 const REFRESH_TOKEN_EXPIRES_IN = '30d'
@@ -8,7 +9,7 @@ const VIDEO_TOKEN_EXPIRES_IN = '15m'
 export interface JWTPayload {
   sub: string
   email: string
-  role: 'student' | 'teacher' | 'admin'
+  role: UserRole
   name?: string
   iat?: number
   exp?: number

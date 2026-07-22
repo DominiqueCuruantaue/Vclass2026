@@ -198,6 +198,26 @@
                 </div>
             </section>
 
+            <!-- Biblioteca (materiais recentes) -->
+            <section class="dash-card p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
+                            <i class="fas fa-book-open text-indigo-600 text-sm"></i>
+                        </span>
+                        Biblioteca
+                    </h2>
+                    <a href="/library.html" class="text-xs font-semibold text-purple-600 hover:text-purple-700 flex items-center gap-1">
+                        Ver tudo <i class="fas fa-arrow-right text-[10px]"></i>
+                    </a>
+                </div>
+                <div class="scroll-x" id="library-widget">
+                    <div class="subj-card skeleton w-40 h-40"></div>
+                    <div class="subj-card skeleton w-40 h-40"></div>
+                    <div class="subj-card skeleton w-40 h-40"></div>
+                </div>
+            </section>
+
             <!-- Disciplinas (scroll horizontal) -->
             <section class="dash-card p-6">
                 <div class="flex items-center justify-between mb-4">
@@ -281,6 +301,18 @@
                 </div>
             </section>
 
+            <!-- Próximas Sessões Online (Google Meet) -->
+            <section class="dash-card p-5" id="sessions">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-bold text-gray-900 flex items-center gap-2">
+                        <i class="fas fa-video text-sky-500"></i> Próximas Sessões
+                    </h2>
+                </div>
+                <div id="sessions-list" class="space-y-2">
+                    <div class="skeleton h-14 w-full"></div>
+                </div>
+            </section>
+
             <!-- Conquistas -->
             <section class="dash-card p-5">
                 <div class="flex items-center justify-between mb-3">
@@ -343,16 +375,11 @@
 </main>
 
 <script src="/static/app.js"></script>
+<script src="/static/offline.js"></script>
 <script>
 // ── Auth guard ──────────────────────────────────────────────────────────────
 if (!VClass.isAuthenticated()) { window.location.href = '/login.html'; }
 const _user = VClass.getCurrentUser();
-const _staffRedirects = {
-    admin: '/admin-dashboard.html', support: '/support-dashboard.html',
-    editor: '/editor-dashboard.html', country_manager: '/country-dashboard.html',
-    finance: '/finance-dashboard.html', moderator: '/moderator-dashboard.html'
-};
-if (_staffRedirects[_user?.role]) { window.location.href = _staffRedirects[_user.role]; }
 
 // ── Dropdown ────────────────────────────────────────────────────────────────
 function toggleDropdown() { document.getElementById('user-dropdown').classList.toggle('open'); }
@@ -677,7 +704,7 @@ function updateNotifBadge() {
 
 // ── Plan banner ─────────────────────────────────────────────────────────────
 async function loadPlanBanner() {
-    const token = localStorage.getItem('vclass_token');
+    const token = localStorage.getItem('accessToken');
     if (!token) return;
     try {
         const res  = await fetch('/api/plans/my', { headers: { Authorization: `Bearer ${token}` } });
@@ -755,11 +782,149 @@ async function loadDashboard() {
     animateCounter(document.getElementById('streak-count'), streak, ' dias');
 }
 
+// ── Próximas Sessões Online (Google Meet) ─────────────────────────────────────
+async function loadSessions() {
+    const el = document.getElementById('sessions-list');
+    try {
+        const token = localStorage.getItem('accessToken') || '';
+        const res = await fetch('/api/sessions', { headers: { 'Authorization': `Bearer ${token}` } });
+        const json = await res.json();
+        const upcoming = (json.success && Array.isArray(json.data) ? json.data : []).filter(s => !s.is_past).slice(0, 3);
+
+        if (!upcoming.length) {
+            el.innerHTML = '<p class="text-xs text-gray-400 text-center py-3">Nenhuma sessão agendada pelos seus professores.</p>';
+            return;
+        }
+        el.innerHTML = upcoming.map(s => {
+            const d = new Date(s.scheduled_at);
+            const dateStr = d.toLocaleDateString('pt', { day: '2-digit', month: 'short' });
+            const timeStr = d.toLocaleTimeString('pt', { hour: '2-digit', minute: '2-digit' });
+            return `
+            <a href="${s.meet_link}" target="_blank" rel="noopener" onclick="markSessionRead('${s.id}')"
+               class="flex items-center gap-3 p-2.5 rounded-xl border border-sky-100 bg-sky-50 hover:bg-sky-100 transition">
+                <div class="w-11 h-11 rounded-lg bg-sky-500 text-white flex flex-col items-center justify-center flex-shrink-0 text-[10px] font-bold leading-tight uppercase">
+                    <span>${dateStr}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-semibold text-gray-900 truncate">${s.title}</p>
+                    <p class="text-[11px] text-gray-500 truncate">${s.chapter_title} · ${timeStr} · ${s.teacher_name}</p>
+                </div>
+                <i class="fas fa-external-link-alt text-sky-500 text-xs"></i>
+            </a>`;
+        }).join('');
+    } catch (e) {
+        el.innerHTML = '<p class="text-xs text-gray-400 text-center py-3">Nenhuma sessão agendada pelos seus professores.</p>';
+    }
+}
+
+function markSessionRead(id) {
+    const token = localStorage.getItem('accessToken') || '';
+    fetch(`/api/sessions/${id}/read`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}` } }).catch(() => {});
+}
+
+// ── Biblioteca (materiais recentes) ────────────────────────────────────────
+let _libBooks = [];
+
+function libIsPdf(b) {
+    return /\.pdf(\?|$)/i.test(b.file_url || '');
+}
+
+function libCardHtml(b) {
+    const isPdf   = libIsPdf(b);
+    const pages   = b.pages || '—';
+    const icon    = isPdf ? 'fa-file-pdf' : 'fa-file-word';
+    const grad    = isPdf ? 'from-red-500 to-rose-600' : 'from-blue-500 to-indigo-600';
+    const idAttr  = String(b.id).replace(/'/g, "\\'");
+    return `
+    <div class="flex-shrink-0 w-40 rounded-2xl border border-gray-100 overflow-hidden bg-white transition hover:-translate-y-1 hover:shadow-md">
+        <div class="h-20 bg-gradient-to-br ${grad} flex items-center justify-center relative">
+            <i class="fas ${icon} text-3xl text-white/85"></i>
+            <span class="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 bg-black/30 text-white text-[10px] font-semibold rounded">${pages}p</span>
+        </div>
+        <div class="p-2.5">
+            <p class="text-xs font-bold text-gray-900 line-clamp-2 leading-tight mb-2" style="min-height:2rem" title="${escapeAttr(b.title)}">${escapeHtml(b.title)}</p>
+            <div class="flex gap-1.5">
+                ${isPdf ? `<button onclick="libView('${idAttr}')" title="Ler antes de baixar" class="flex-1 py-1.5 bg-purple-50 text-purple-700 rounded-lg text-[11px] font-semibold hover:bg-purple-100 transition"><i class="fas fa-eye"></i></button>` : ''}
+                <button onclick="libDownload('${idAttr}')" title="Descarregar" class="flex-1 py-1.5 bg-purple-600 text-white rounded-lg text-[11px] font-semibold hover:bg-purple-700 transition"><i class="fas fa-download"></i></button>
+            </div>
+        </div>
+    </div>`;
+}
+
+async function loadLibraryWidget() {
+    const el = document.getElementById('library-widget');
+    try {
+        const token = localStorage.getItem('accessToken') || '';
+        const res  = await fetch('/api/library?limit=8', { headers: { 'Authorization': `Bearer ${token}` } });
+        const json = await res.json();
+        _libBooks = (json.success && json.data?.books) || [];
+
+        if (!_libBooks.length) {
+            el.innerHTML = `<div class="w-full text-center py-6">
+                <i class="fas fa-book text-3xl text-gray-200 mb-2"></i>
+                <p class="text-xs text-gray-400">Nenhum material publicado ainda.</p>
+            </div>`;
+            return;
+        }
+        el.innerHTML = _libBooks.map(libCardHtml).join('');
+    } catch {
+        el.innerHTML = `<p class="text-xs text-gray-400 text-center py-3 w-full">Não foi possível carregar a biblioteca.</p>`;
+    }
+}
+
+function libView(id) {
+    const b = _libBooks.find(x => String(x.id) === id);
+    if (!b || !b.file_url) { VClass.showNotification('Ficheiro ainda não disponível', 'warning'); return; }
+    window.open(b.file_url, '_blank', 'noopener');
+}
+
+function libFileExt(url) {
+    const m = /\.([a-z0-9]+)(?:\?.*)?$/i.exec(url || '');
+    return m ? m[1] : 'pdf';
+}
+
+// Guarda o ficheiro em Transferências (IndexedDB) e entrega-o ao SO a partir de um
+// blob: URL — file_url aponta para o Supabase Storage (outra origem), e o browser
+// ignora silenciosamente o atributo "download" em links cross-origin.
+async function libDownload(id) {
+    const b = _libBooks.find(x => String(x.id) === id);
+    if (!b || !b.file_url) { VClass.showNotification('Ficheiro ainda não disponível para download', 'warning'); return; }
+
+    const token = localStorage.getItem('accessToken') || '';
+    fetch(`/api/library/${b.id}/download`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }).catch(() => {});
+
+    VClass.showNotification(`A descarregar "${b.title}"...`, 'info');
+    try {
+        if (!(await VClassOffline.isSaved(b.id))) {
+            await VClassOffline.saveItem({
+                id: b.id,
+                type: 'book',
+                title: b.title,
+                cover_url: b.cover_url || null,
+                file_url: b.file_url,
+                file_size_kb: b.file_size_kb
+            });
+        }
+        const blobUrl = await VClassOffline.getBlobUrl(b.id);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = `${b.title}.${libFileExt(b.file_url)}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        VClass.showNotification(`"${b.title}" guardado em Transferências.`, 'success');
+    } catch (e) {
+        window.open(b.file_url, '_blank', 'noopener');
+        VClass.showNotification('Não foi possível guardar offline — a abrir o ficheiro.', 'warning');
+    }
+}
+
 // ── INIT ────────────────────────────────────────────────────────────────────
 setupUserInfo();
 setGreeting();
 createChart();
-Promise.all([loadDashboard(), loadSuggestedLessons(), loadPlanBanner()]);
+Promise.all([loadDashboard(), loadSuggestedLessons(), loadPlanBanner(), loadSessions(), loadLibraryWidget()]);
 updateNotifBadge();
 </script>
 </body>

@@ -257,6 +257,13 @@
                 const json = await res.json();
                 hideTyping();
 
+                if (!json.success && json.data?.upgrade_required) {
+                    addMsg(json.error || 'O Chat IA é exclusivo dos planos Basic e Premium.', 'bot');
+                    addUpgradeCta();
+                    saveToHistory(text);
+                    return;
+                }
+
                 const reply = json.data?.response || getBotResponse(text);
                 addMsg(reply, 'bot');
                 saveToHistory(text);
@@ -314,6 +321,17 @@
                     </div>`;
             }
 
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function addUpgradeCta() {
+            const container = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = 'flex justify-center msg-new';
+            div.innerHTML = `<a href="/plans.html" class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-full transition">
+                <i class="fas fa-crown"></i> Ver planos e fazer upgrade
+            </a>`;
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
         }

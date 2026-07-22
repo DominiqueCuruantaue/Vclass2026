@@ -154,7 +154,7 @@ content.get('/recent-lessons', async (c) => {
 
   const { data, error: dbError } = await supabase!
     .from('lessons')
-    .select('id, title, description, thumbnail_url, video_duration, views_count, created_at, chapter_id, chapters(title, slug, grade_subjects(subjects(name, color, icon_name), grades(name)))')
+    .select('id, title, description, thumbnail_url, video_duration, views_count, created_at, chapter_id, chapters(title, slug, grade_subjects(subjects(name, color, icon_url), grades(name)))')
     .eq('status', 'published')
     .order('created_at', { ascending: false })
     .limit(limit)

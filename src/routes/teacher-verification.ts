@@ -9,6 +9,13 @@ import { authMiddleware, requireAdmin, rateLimitMiddleware } from '../middleware
 import { hashPassword } from '../utils/password'
 import { getSupabase } from '../config/supabase'
 import type { ApiResponse } from '../types'
+import {
+  sendEmail,
+  teacherApplicationReceivedEmail,
+  teacherApplicationApprovedEmail,
+  teacherApplicationRejectedEmail,
+  teacherApplicationInfoRequestedEmail
+} from '../utils/email'
 
 const tv = new Hono<{ Bindings: CloudflareBindings }>()
 
@@ -221,8 +228,10 @@ tv.post('/apply', async (c) => {
       }, 500)
     }
 
-    // TODO: enviar email de confirmação via Resend/SendGrid (piloto: notificação manual)
     console.log(`[KYT] Nova candidatura ${inserted.id} de ${data.email} (score ${score}${flagged ? ', flagged' : ''})`)
+
+    const receivedEmail = teacherApplicationReceivedEmail(data.full_name)
+    const emailResult = await sendEmail(c.env, { to: data.email, ...receivedEmail })
 
     return c.json<ApiResponse>({
       success: true,
@@ -231,9 +240,10 @@ tv.post('/apply', async (c) => {
         status: 'pending',
         estimated_review_days: 5,
         tracking_email: data.email,
-        score_preview: score >= 60 ? 'Perfil promissor' : score >= 40 ? 'Perfil a avaliar' : 'Perfil com lacunas — pode ser contactado para esclarecimentos'
+        score_preview: score >= 60 ? 'Perfil promissor' : score >= 40 ? 'Perfil a avaliar' : 'Perfil com lacunas — pode ser contactado para esclarecimentos',
+        email_sent: emailResult.ok
       },
-      message: 'A sua candidatura foi recebida. Será contactado em até 5 dias úteis.'
+      message: 'A sua candidatura foi recebida. Após a revisão das suas qualificações, receberá um email com a decisão final. Será contactado em até 5 dias úteis.'
     }, 201)
   } catch (err: any) {
     console.error('Teacher apply error:', err)
@@ -293,37 +303,82 @@ tv.get('/applications', authMiddleware, requireAdmin, async (c) => {
   const limit   = Math.min(parseInt(c.req.query('limit') || '10'), 50)
 
   let q = supabase.from('teacher_applications').select(
-    'id, full_name, email, phone, country_id, degree, degree_field, years_experience, subjects, has_teaching_cert, digital_literacy, status, verification_step, submitted_at, score, flagged, admin_notes, documents_submitted, documents_link',
+    'id, user_id, full_name, email, phone, country_id, degree, degree_field, years_experience, subjects, has_teaching_cert, digital_literacy, status, verification_step, submitted_at, score, flagged, admin_notes, documents_submitted, documents_link',
     { count: 'exact' }
   )
-  if (status  !== 'all') q = q.eq('status', status)
+  if (status  !== 'all' && status !== 'inactive') q = q.eq('status', status)
   if (country !== 'all') q = q.eq('country_id', country)
   if (flagged === 'true') q = q.eq('flagged', true)
   if (search) q = q.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`)
   q = q.order('submitted_at', { ascending: false }).range((page - 1) * limit, page * limit - 1)
 
-  const { data: apps, count, error } = await q
+  const { data: appsRaw, count, error } = await q
   if (error) {
     console.error('TV list error:', error)
     return c.json<ApiResponse>({ success: false, error: 'Falha ao listar' }, 500)
   }
+  // status='inactive' não existe em teacher_applications (é só para contas directas) — não devolver candidaturas reais nesse filtro
+  const apps = status === 'inactive' ? [] : (appsRaw || [])
 
-  // Stats globais
+  // ── Contas de professor criadas sem passar pelo KYT (promoção manual via
+  // Utilizadores, ou dados legados) — "quem já está a trabalhar no sistema
+  // é porque já foi aprovado". Mostradas na mesma tabela como source:'direct_account'.
+  const { data: allApplicationLinks } = await supabase.from('teacher_applications').select('user_id')
+  const linkedUserIds = new Set((allApplicationLinks || []).map((a: any) => a.user_id).filter(Boolean))
+
+  const { data: teacherUsers } = await supabase
+    .from('users')
+    .select('id, full_name, email, phone, country_code, is_active, created_at')
+    .eq('role', 'teacher')
+
+  let directAccounts = (teacherUsers || [])
+    .filter((u: any) => !linkedUserIds.has(u.id))
+    .map((u: any) => ({
+      id: `user-${u.id}`,
+      user_id: u.id,
+      full_name: u.full_name,
+      email: u.email,
+      phone: u.phone,
+      country_id: u.country_code || null,
+      degree: null, degree_field: null, years_experience: null, subjects: [],
+      has_teaching_cert: false, digital_literacy: null,
+      status: u.is_active ? 'approved' : 'inactive',
+      verification_step: 'completed',
+      submitted_at: u.created_at,
+      score: null, flagged: false, admin_notes: '', documents_submitted: [], documents_link: null,
+      source: 'direct_account'
+    }))
+
+  // Aplicar os mesmos filtros que a query acima aplica às candidaturas reais
+  if (status  !== 'all') directAccounts = directAccounts.filter((a: any) => a.status === status)
+  if (country !== 'all') directAccounts = directAccounts.filter((a: any) => a.country_id === country)
+  if (flagged === 'true') directAccounts = []  // contas directas nunca são sinalizáveis
+  if (search) directAccounts = directAccounts.filter((a: any) =>
+    a.full_name?.toLowerCase().includes(search) || a.email?.toLowerCase().includes(search))
+
+  const merged = [...apps, ...directAccounts]
+    .sort((a: any, b: any) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
+    .slice(0, limit)
+
+  // Stats globais (candidaturas reais + contas directas)
   const { data: statsRows } = await supabase.from('teacher_applications').select('status, flagged')
   const all = statsRows || []
+  const activeDirect = (teacherUsers || []).filter((u: any) => !linkedUserIds.has(u.id) && u.is_active).length
+  const inactiveDirect = (teacherUsers || []).filter((u: any) => !linkedUserIds.has(u.id) && !u.is_active).length
   const stats = {
-    total: all.length,
+    total: all.length + activeDirect + inactiveDirect,
     pending:        all.filter(a => a.status === 'pending').length,
     under_review:   all.filter(a => a.status === 'under_review').length,
-    approved:       all.filter(a => a.status === 'approved').length,
+    approved:       all.filter(a => a.status === 'approved').length + activeDirect,
     rejected:       all.filter(a => a.status === 'rejected').length,
     info_requested: all.filter(a => a.status === 'info_requested').length,
-    flagged:        all.filter(a => a.flagged).length
+    flagged:        all.filter(a => a.flagged).length,
+    direct_accounts: activeDirect + inactiveDirect
   }
 
   return c.json<ApiResponse>({
     success: true,
-    data: { applications: apps || [], total: count || 0, page, limit, pages: Math.ceil((count || 0) / limit), stats }
+    data: { applications: merged, total: (count || 0) + directAccounts.length, page, limit, pages: Math.ceil(((count || 0) + directAccounts.length) / limit), stats }
   })
 })
 
@@ -476,9 +531,12 @@ tv.post('/applications/:id/approve', authMiddleware, requireAdmin, async (c) => 
 
   console.log(`[KYT] Aprovada candidatura ${id} → user ${userId} (${app.email})`)
 
+  const approvedEmail = teacherApplicationApprovedEmail(app.full_name, app.email)
+  const emailResult = await sendEmail(c.env, { to: app.email, ...approvedEmail })
+
   return c.json<ApiResponse>({
     success: true,
-    data: { id, status: 'approved', user_id: userId, score, login_email: app.email },
+    data: { id, status: 'approved', user_id: userId, score, login_email: app.email, email_sent: emailResult.ok },
     message: `Professor ${app.full_name} aprovado. Conta criada — pode fazer login com email + senha que registou na candidatura.`
   })
 })
@@ -507,7 +565,7 @@ tv.post('/applications/:id/reject', authMiddleware, requireAdmin, async (c) => {
       reapply_after_months: body.reapply_after_months || 6
     })
     .eq('id', id)
-    .select('id, full_name, status, rejected_at, rejection_reason, allow_reapply, reapply_after_months')
+    .select('id, full_name, email, status, rejected_at, rejection_reason, allow_reapply, reapply_after_months')
     .maybeSingle()
 
   if (error || !data) {
@@ -516,9 +574,12 @@ tv.post('/applications/:id/reject', authMiddleware, requireAdmin, async (c) => {
 
   console.log(`[KYT] Rejeitada candidatura ${id} (motivo: ${body.reason})`)
 
+  const rejectedEmail = teacherApplicationRejectedEmail(data.full_name, data.rejection_reason || body.reason, !!data.allow_reapply, data.reapply_after_months || 6)
+  const emailResult = await sendEmail(c.env, { to: data.email, ...rejectedEmail })
+
   return c.json<ApiResponse>({
     success: true,
-    data,
+    data: { ...data, email_sent: emailResult.ok },
     message: `Candidatura de ${data.full_name} rejeitada. ${data.allow_reapply ? `Pode candidatar-se novamente após ${data.reapply_after_months} meses.` : 'Nova candidatura não permitida.'}`
   })
 })
@@ -552,7 +613,10 @@ tv.post('/applications/:id/request-info', authMiddleware, requireAdmin, async (c
 
   console.log(`[KYT] Pedido de info ${id} para ${data.email}: ${body.message}`)
 
-  return c.json<ApiResponse>({ success: true, data, message: 'Pedido de informação registado' })
+  const infoEmail = teacherApplicationInfoRequestedEmail(data.full_name, body.message, body.required_documents || [])
+  const emailResult = await sendEmail(c.env, { to: data.email, ...infoEmail })
+
+  return c.json<ApiResponse>({ success: true, data: { ...data, email_sent: emailResult.ok }, message: 'Pedido de informação registado' })
 })
 
 // ──────────────────────────────────────────────────────────────────────────────

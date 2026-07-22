@@ -18,8 +18,9 @@ BUNNY_CDN_URL=https://your-zone.b-cdn.net
 BUNNY_API_KEY=your-bunny-api-key
 BUNNY_LIBRARY_ID=your-library-id
 
-# Optional: Email Service (for future)
-SENDGRID_API_KEY=your-sendgrid-key
+# Optional: Email Service (Resend) — used for teacher application emails
+RESEND_API_KEY=your-resend-api-key
+RESEND_FROM_EMAIL=VClass <onboarding@resend.dev>
 
 # Optional: Payment Gateway (for future)
 STRIPE_SECRET_KEY=your-stripe-key

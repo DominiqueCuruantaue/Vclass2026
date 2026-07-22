@@ -11,7 +11,7 @@
     body { font-family:'Inter',system-ui,sans-serif; background:#f8fafc; }
     .creator-nav-link { transition:all .15s; border-radius:.5rem; }
     .creator-nav-link:hover { background:rgba(139,92,246,.08); color:#7c3aed; }
-    .creator-nav-link.active { background:#f5f3ff; color:#7c3aed; font-weight:600; }
+    .creator-nav-link.active { background:#f5f3ff; color:#7c3aed; }
     .stat-card { transition:transform .2s,box-shadow .2s; }
     .stat-card:hover { transform:translateY(-3px); box-shadow:0 12px 28px rgba(0,0,0,.09); }
     .fade-in { animation:fadeIn .4s ease both; }
@@ -502,7 +502,7 @@ const COLORS = { free:'#9ca3af', basic:'#2563eb', premium:'#7c3aed' }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-  const token = localStorage.getItem('vclass_token')
+  const token = localStorage.getItem('accessToken')
   if (!token) { window.location.href = '/login.html'; return }
 
   // Setup nav user info
@@ -522,7 +522,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // ── Load Earnings ─────────────────────────────────────────────────────────────
 async function loadEarnings() {
-  const token = localStorage.getItem('vclass_token')
+  const token = localStorage.getItem('accessToken')
   try {
     const res = await axios.get(`/api/creator/earnings?period=${currentPeriod}`, {
       headers: { Authorization: `Bearer ${token}` }
@@ -806,7 +806,7 @@ async function submitWithdraw() {
   const phone  = document.getElementById('withdraw-phone').value.trim()
   if (!amount || amount < 500) { showToast('Valor mínimo de MT 500.', 'error'); return }
   if (amount > availableMzn)   { showToast('Valor superior ao saldo disponível.', 'error'); return }
-  const token = localStorage.getItem('vclass_token')
+  const token = localStorage.getItem('accessToken')
   try {
     const res = await axios.post('/api/creator/earnings/withdraw', { amount_mzn: amount, method, phone }, {
       headers: { Authorization: `Bearer ${token}` }
@@ -832,7 +832,7 @@ function showToast(msg, type='info') {
 
 function doLogout() {
   if (typeof VClass !== 'undefined' && VClass.logout) VClass.logout()
-  else { localStorage.removeItem('vclass_token'); window.location.href = '/login.html' }
+  else { localStorage.removeItem('accessToken'); window.location.href = '/login.html' }
 }
 </script>
 </body>

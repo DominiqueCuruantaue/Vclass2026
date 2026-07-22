@@ -9,17 +9,21 @@ import { generateAccessToken, generateRefreshToken, verifyToken, verifyRefreshTo
 import { storeRefreshToken, isRefreshTokenActive, revokeRefreshToken, revokeAllUserTokens } from '../utils/refreshTokens'
 import { mockUsers, DEMO_PASSWORD } from '../middleware/database'
 import { authMiddleware, rateLimitMiddleware } from '../middleware/auth'
+import { COUNTRIES, GRADES, EDUCATION_LEVELS } from '../data/curriculum'
 
 const REFRESH_COOKIE = 'vclass_rt'
-const REFRESH_MAX_AGE = 30 * 24 * 3600 // 30 dias em segundos
+const REFRESH_MAX_AGE = 30 * 24 * 3600 // 30 dias em segundos — usado apenas como validade absoluta do JWT/registo em BD
 
 function setRefreshCookie(c: any, token: string) {
+  // Sem maxAge/expires: cookie de sessão. O navegador apaga-o ao fechar por completo,
+  // forçando novo login mesmo que o utilizador reabra o navegador com as abas restauradas
+  // (a menos que o utilizador tenha "continuar de onde parei" activo — nesse caso a
+  // verificação extra em window.name, no frontend, cobre esse cenário).
   setCookie(c, REFRESH_COOKIE, token, {
     httpOnly: true,
     secure: true,
     sameSite: 'Strict',
-    path: '/',
-    maxAge: REFRESH_MAX_AGE
+    path: '/'
   })
 }
 
@@ -68,10 +72,31 @@ const registerSchema = z.object({
   email: z.string().email('Invalid email format'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   full_name: z.string().min(3, 'Full name must be at least 3 characters'),
-  role: z.enum(['student', 'teacher']), // Only students and teachers can self-register
+  // Apenas estudantes podem auto-registar-se por aqui. Professores passam
+  // obrigatoriamente pela verificação KYT em /api/teacher-verification/apply
+  // (ver register-teacher.html) — nunca por este endpoint. A validação estrita
+  // (rejeitar role='teacher' com mensagem clara) é feita a seguir ao parse,
+  // porque a mensagem custom de z.literal() não se propaga para invalid_literal.
+  role: z.string().optional().default('student'),
   country_id: z.string().uuid().optional(),
-  phone: z.string().optional()
+  phone: z.string().optional(),
+  // País e classe do currículo (src/data/curriculum.ts) — usados para restringir
+  // o Explorar ao currículo do próprio estudante. Códigos curtos (ex: 'mz'),
+  // não confundir com o country_id (UUID legado da tabela countries).
+  country_code: z.string().optional(),
+  grade_id: z.string().optional()
 })
+
+// Confirma que grade_id pertence de facto ao país indicado em country_code
+function isValidCountryGrade(countryCode?: string, gradeId?: string): boolean {
+  if (!countryCode && !gradeId) return true
+  if (!countryCode || !gradeId) return false
+  if (!COUNTRIES.some(c => c.id === countryCode)) return false
+  const grade = GRADES.find(g => g.id === gradeId)
+  if (!grade) return false
+  const level = EDUCATION_LEVELS.find(l => l.id === grade.levelId)
+  return level?.countryId === countryCode
+}
 
 /**
  * POST /api/auth/register
@@ -89,8 +114,15 @@ auth.post('/register', async (c) => {
       }, 400)
     }
     
-    const { email, password, full_name, role, country_id, phone } = validation.data
-    
+    const { email, password, full_name, role, country_id, phone, country_code, grade_id } = validation.data
+
+    if (role !== 'student') {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Professores não se podem registar diretamente. Use o formulário de candidatura em /register-teacher.html'
+      }, 400)
+    }
+
     // Validate password strength
     const passwordValidation = validatePassword(password)
     if (!passwordValidation.valid) {
@@ -99,7 +131,14 @@ auth.post('/register', async (c) => {
         error: passwordValidation.message
       }, 400)
     }
-    
+
+    if (!isValidCountryGrade(country_code, grade_id)) {
+      return c.json<ApiResponse>({
+        success: false,
+        error: 'Classe inválida para o país seleccionado'
+      }, 400)
+    }
+
     // Use service_role client (consistente com login/refresh/me)
     const supabase = getSupabase(c.env)
     if (!supabase) {
@@ -136,10 +175,12 @@ auth.post('/register', async (c) => {
         role,
         country_id,
         phone,
+        country_code,
+        grade_id,
         is_active: true,
         is_verified: false
       })
-      .select('id, email, full_name, role, country_id, phone, avatar_url, is_verified, created_at')
+      .select('id, email, full_name, role, country_id, phone, country_code, grade_id, avatar_url, is_verified, created_at')
       .single()
     
     if (error || !user) {
@@ -256,7 +297,7 @@ auth.post('/login', async (c) => {
     // Get user by email
     const { data: user, error } = await supabase
       .from('users')
-      .select('id, email, password_hash, full_name, role, country_id, phone, avatar_url, is_verified, is_active, created_at')
+      .select('id, email, password_hash, full_name, role, country_id, phone, country_code, grade_id, avatar_url, is_verified, is_active, created_at')
       .eq('email', email)
       .single()
     
@@ -465,7 +506,7 @@ auth.get('/me', authMiddleware, async (c) => {
 
     const { data: dbUser, error } = await supabase
       .from('users')
-      .select('id, email, full_name, role, country_id, phone, avatar_url, is_verified, created_at')
+      .select('id, email, full_name, role, country_id, phone, country_code, grade_id, avatar_url, is_verified, created_at')
       .eq('id', user.id)
       .single()
 

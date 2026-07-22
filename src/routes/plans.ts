@@ -3,108 +3,29 @@
 import { Hono } from 'hono'
 import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware } from '../middleware/auth'
+import { getSupabase } from '../config/supabase'
+import { loadPlans, isDatabaseConfigured, FALLBACK_PLANS_DATA, type PlanRecord } from '../utils/plans'
+import { getUserPlan } from '../utils/subscription'
 import type { ApiResponse } from '../types'
 
 const plans = new Hono<{ Bindings: CloudflareBindings }>()
 
 // ── Dados dos planos ──────────────────────────────────────────────────────────
+// Preços e funcionalidades reais vêm agora das tabelas `plans`/`plan_features`
+// (migration 024), editáveis pela equipa financeira em /api/finance/plans.
+// FALLBACK_PLANS_DATA (src/utils/plans.ts) só é usado em dev sem Supabase.
 
-// ── Notas sobre preços ────────────────────────────────────────────────────────
-// Plataforma focada em países em desenvolvimento (Moçambique, Angola, África).
-// Preços calibrados em relação ao PIB per capita e salário mínimo local:
-//   MZN: salário mínimo ~5.400 MT/mês → Básico ≈ 1,7 % do salário mínimo
-//   AOA: salário mínimo ~70.000 Kz/mês → Básico ≈ 1,4 % do salário mínimo
-//   BRL: salário mínimo ~1.412 R$/mês  → Básico ≈ 1,6 % do salário mínimo
-//   EUR: referência europeia mantida acessível para diásporas
-// Desconto anual de 30 % (vs. 25 % anterior) para incentivar compromisso longo.
-
-export const PLANS_DATA = [
-  {
-    id: 'free',
-    name: 'Gratuito',
-    tagline: 'Começa sem custo',
-    price_monthly: { mzn: 0, aoa: 0, brl: 0, eur: 0 },
-    price_yearly:  { mzn: 0, aoa: 0, brl: 0, eur: 0 },
-    color: '#6b7280',
-    color_bg: '#f3f4f6',
-    icon: 'fa-seedling',
-    popular: false,
-    active_users: 0, // MVP — sem utilizadores pagantes ainda
-    features: [
-      { text: '10 aulas por mês', included: true },
-      { text: 'Exercícios básicos', included: true },
-      { text: 'Biblioteca limitada (30 recursos)', included: true },
-      { text: 'Chat de suporte comunitário', included: true },
-      { text: 'Descarregar PDFs', included: false },
-      { text: 'Chat com IA', included: false },
-      { text: 'Aulas ilimitadas', included: false },
-      { text: 'Acesso antecipado a novos conteúdos', included: false },
-      { text: 'Certificados de conclusão', included: false },
-      { text: 'Suporte prioritário', included: false },
-    ],
-    limits: { lessons_per_month: 10, exercises: 'básicos', downloads: false, ai_chat: false, library: 30 },
-    cta: 'Começar Grátis',
-    cta_style: 'outline',
-  },
-  {
-    id: 'basic',
-    name: 'Básico',
-    tagline: 'Para estudantes dedicados',
-    // ~1,7 % do salário mínimo moçambicano
-    price_monthly: { mzn: 99, aoa: 800, brl: 9.9, eur: 1.99 },
-    price_yearly:  { mzn: 830, aoa: 6720, brl: 83, eur: 16.7 },
-    yearly_saving_pct: 30,
-    color: '#2563eb',
-    color_bg: '#eff6ff',
-    icon: 'fa-book-open',
-    popular: false,
-    active_users: 0, // MVP — sem utilizadores pagantes ainda
-    features: [
-      { text: 'Aulas ilimitadas', included: true },
-      { text: 'Todos os exercícios', included: true },
-      { text: 'Biblioteca completa', included: true },
-      { text: 'Chat de suporte prioritário', included: true },
-      { text: 'Descarregar PDFs', included: true },
-      { text: 'Chat com IA (30 msg/dia)', included: true },
-      { text: 'Modo offline (app móvel)', included: false },
-      { text: 'Acesso antecipado a novos conteúdos', included: false },
-      { text: 'Certificados de conclusão', included: false },
-      { text: 'Sessões ao vivo com professores', included: false },
-    ],
-    limits: { lessons_per_month: 'ilimitadas', exercises: 'todos', downloads: true, ai_chat: '30/dia', library: 'completo' },
-    cta: 'Subscrever Básico',
-    cta_style: 'primary',
-  },
-  {
-    id: 'premium',
-    name: 'Premium',
-    tagline: 'A experiência completa',
-    // ~3,5 % do salário mínimo moçambicano
-    price_monthly: { mzn: 199, aoa: 1600, brl: 19.9, eur: 3.49 },
-    price_yearly:  { mzn: 1670, aoa: 13440, brl: 167, eur: 29.3 },
-    yearly_saving_pct: 30,
-    color: '#7c3aed',
-    color_bg: '#f5f3ff',
-    icon: 'fa-crown',
-    popular: true,
-    active_users: 0, // MVP — sem utilizadores pagantes ainda
-    features: [
-      { text: 'Aulas ilimitadas', included: true },
-      { text: 'Exercícios ilimitados', included: true },
-      { text: 'Biblioteca completa + exclusivos', included: true },
-      { text: 'Chat de suporte prioritário', included: true },
-      { text: 'Descarregar PDFs ilimitados', included: true },
-      { text: 'Chat com IA ilimitado', included: true },
-      { text: 'Modo offline (app móvel)', included: true },
-      { text: 'Acesso antecipado a novos conteúdos', included: true },
-      { text: 'Certificados de conclusão', included: true },
-      { text: 'Sessões ao vivo com professores', included: true },
-    ],
-    limits: { lessons_per_month: 'ilimitadas', exercises: 'ilimitado', downloads: 'ilimitado', ai_chat: 'ilimitado', library: 'completo+exclusivo' },
-    cta: 'Subscrever Premium',
-    cta_style: 'premium',
+async function getPlansData(env?: any): Promise<PlanRecord[]> {
+  if (!isDatabaseConfigured(env)) return FALLBACK_PLANS_DATA
+  const supabase = getSupabase(env)
+  if (!supabase) return FALLBACK_PLANS_DATA
+  try {
+    return await loadPlans(supabase)
+  } catch (e) {
+    console.error('Falha ao carregar planos da BD, a usar fallback:', e)
+    return FALLBACK_PLANS_DATA
   }
-]
+}
 
 const PAYMENT_METHODS = [
   { id: 'mpesa',      name: 'M-Pesa',     icon: 'fa-mobile-alt',   countries: ['MZ'],          color: '#E31E26' },
@@ -142,12 +63,13 @@ const FAQ_DATA = [
 ]
 
 // ── GET /api/plans — pública, sem auth ───────────────────────────────────────
-plans.get('/', (c) => {
+plans.get('/', async (c) => {
   const currency = (c.req.query('currency') || 'mzn').toLowerCase()
   const validCurrencies = ['mzn', 'aoa', 'brl', 'eur']
-  const cur = validCurrencies.includes(currency) ? currency as keyof typeof PLANS_DATA[0]['price_monthly'] : 'mzn'
+  const cur = (validCurrencies.includes(currency) ? currency : 'mzn') as 'mzn' | 'aoa' | 'brl' | 'eur'
 
-  const formattedPlans = PLANS_DATA.map(p => ({
+  const plansData = await getPlansData(c.env)
+  const formattedPlans = plansData.map(p => ({
     ...p,
     display_price_monthly: p.price_monthly[cur],
     display_price_yearly:  p.price_yearly[cur],
@@ -171,12 +93,12 @@ plans.get('/', (c) => {
 })
 
 // ── GET /api/plans/compare — comparação detalhada ────────────────────────────
-plans.get('/compare', (c) => {
+plans.get('/compare', async (c) => {
   const rows = [
     { feature: 'Aulas por mês',        free: '5',        basic: '50',        premium: 'Ilimitadas' },
     { feature: 'Exercícios',            free: 'Básicos',  basic: 'Todos',     premium: 'Ilimitados' },
     { feature: 'Descarregar PDFs',      free: '✗',        basic: '✓',         premium: '✓ Ilimitados' },
-    { feature: 'Chat com IA',           free: '✗',        basic: '20 msg/dia',premium: 'Ilimitado' },
+    { feature: 'Chat com IA',           free: '✗',        basic: '30 msg/dia',premium: 'Ilimitado' },
     { feature: 'Biblioteca',            free: '20 items', basic: 'Completa',  premium: 'Completa + Exclusivos' },
     { feature: 'Certificados',          free: '✗',        basic: '✗',         premium: '✓' },
     { feature: 'Acesso antecipado',     free: '✗',        basic: '✗',         premium: '✓' },
@@ -184,7 +106,8 @@ plans.get('/compare', (c) => {
     { feature: 'Streak de estudo',      free: '✓',        basic: '✓',         premium: '✓' },
     { feature: 'XP e conquistas',       free: '✓',        basic: '✓',         premium: '✓' },
   ]
-  return c.json<ApiResponse>({ success: true, data: { comparison: rows, plans: PLANS_DATA.map(p => ({ id: p.id, name: p.name, color: p.color })) } })
+  const plansData = await getPlansData(c.env)
+  return c.json<ApiResponse>({ success: true, data: { comparison: rows, plans: plansData.map(p => ({ id: p.id, name: p.name, color: p.color })) } })
 })
 
 // ── POST /api/plans/subscribe — iniciar subscrição (requer auth) ─────────────
@@ -201,7 +124,8 @@ plans.post('/subscribe', authMiddleware, async (c) => {
     return c.json<ApiResponse>({ success: false, message: 'Ciclo de facturação inválido.' }, 400)
   }
 
-  const plan = PLANS_DATA.find(p => p.id === plan_id)!
+  const plansData = await getPlansData(c.env)
+  const plan = plansData.find(p => p.id === plan_id)!
   const cur  = (currency || 'mzn').toLowerCase() as keyof typeof plan.price_monthly
   const price = billing === 'yearly' ? plan.price_yearly[cur] : plan.price_monthly[cur]
 
@@ -246,14 +170,14 @@ plans.post('/subscribe', authMiddleware, async (c) => {
 })
 
 // ── GET /api/plans/my — subscrição do utilizador logado ──────────────────────
-plans.get('/my', authMiddleware, (c) => {
+plans.get('/my', authMiddleware, async (c) => {
   const user = c.get('user' as any) as any
-  // Demo: estudante demo tem premium, outros têm free
-  const isDemoPremium = user.email?.includes('ana.silva') || user.email?.includes('prof.')
-  const isDemoBasic   = user.email?.includes('mario.costa')
-
-  const planId   = isDemoPremium ? 'premium' : isDemoBasic ? 'basic' : 'free'
-  const planData = PLANS_DATA.find(p => p.id === planId)!
+  const supabase = getSupabase(c.env)
+  // Papéis sem plano aplicável (professor/admin/staff) contam como sem restrição —
+  // aqui, só para preencher a resposta, tratamos como 'free' (não têm o que "subscrever").
+  const planId = (await getUserPlan(supabase, user.id, user.role)) || 'free'
+  const plansData = await getPlansData(c.env)
+  const planData = plansData.find(p => p.id === planId)!
 
   return c.json<ApiResponse>({
     success: true,
@@ -270,7 +194,6 @@ plans.get('/my', authMiddleware, (c) => {
         started_at: planId === 'free' ? null : '2025-10-01',
         expires_at: planId === 'free' ? null : '2026-10-01',
         auto_renew: planId !== 'free',
-        limits: planData.limits,
       },
       upgrade_available: planId !== 'premium',
       suggested_plan: planId === 'free' ? 'basic' : planId === 'basic' ? 'premium' : null,

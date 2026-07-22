@@ -33,7 +33,7 @@
   <script src="/static/safe-dom.js"></script>
 </head>
 <body class="bg-gray-50">
-    <div id="navbar-placeholder"></div>
+    <div id="navbar-placeholder" style="min-height:64px"></div>
 
     <!-- Profile Hero -->
     <div class="bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-700">
@@ -287,7 +287,7 @@
         <div id="content-achievements" class="tab-content">
             <div class="bg-white rounded-2xl shadow-sm p-6">
                 <h3 class="text-lg font-bold text-gray-900 mb-2">Suas Conquistas</h3>
-                <p class="text-sm text-gray-500 mb-6">Desbloqueie conquistas completando aulas e exercícios!</p>
+                <p id="achievements-subtitle" class="text-sm text-gray-500 mb-6">Desbloqueie conquistas completando aulas e exercícios!</p>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="achievements-grid">
                     <!-- Will be populated -->
                 </div>
@@ -464,6 +464,12 @@
             document.getElementById('edit-registered').value = user.created_at ? VClass.formatDate(user.created_at) : '-';
             originalData = { name, country: user.country || 'mz' };
 
+            if (user.role === 'teacher') {
+                document.getElementById('tab-subscription').classList.add('hidden');
+                document.getElementById('content-subscription').classList.add('hidden');
+                document.getElementById('achievements-subtitle').textContent = 'Desbloqueie conquistas criando e partilhando as suas aulas!';
+            }
+
             loadStats();
             loadSettings();
         }
@@ -634,7 +640,7 @@
         }
 
         // Achievements
-        const ACHIEVEMENTS = [
+        const ACHIEVEMENTS_STUDENT = [
             { id: 1, emoji: '🎓', title: 'Primeiro Passo', desc: 'Complete sua primeira aula', locked: false },
             { id: 2, emoji: '🔥', title: 'Em Chamas', desc: '7 dias de sequência', locked: false },
             { id: 3, emoji: '📚', title: 'Leitor Ávido', desc: '10 aulas completadas', locked: false },
@@ -649,9 +655,25 @@
             { id: 12, emoji: '👑', title: 'Rei do VClass', desc: 'Todas as conquistas', locked: true },
         ];
 
+        const ACHIEVEMENTS_TEACHER = [
+            { id: 1, emoji: '🎬', title: 'Primeira Aula Publicada', desc: 'Publique a sua primeira aula', locked: false },
+            { id: 2, emoji: '🔥', title: 'Vídeo Mais Viral da Semana', desc: 'Aula com mais visualizações na semana', locked: false },
+            { id: 3, emoji: '✂️', title: 'Vídeo com Boa Edição', desc: 'Receba avaliação de 5 estrelas na edição', locked: false },
+            { id: 4, emoji: '📅', title: '7 Dias Consecutivos', desc: 'Publique conteúdo 7 dias seguidos', locked: false },
+            { id: 5, emoji: '💪', title: 'Criador Incansável', desc: 'Publique 30 aulas', locked: true },
+            { id: 6, emoji: '⭐', title: 'Bem Avaliado', desc: 'Média de avaliação acima de 4.5', locked: true },
+            { id: 7, emoji: '🎓', title: 'Mentor', desc: '100 alunos concluíram as suas aulas', locked: true },
+            { id: 8, emoji: '📈', title: 'Em Ascensão', desc: '1000 visualizações acumuladas', locked: true },
+            { id: 9, emoji: '🏆', title: 'Professor do Mês', desc: 'Eleito professor destaque do mês', locked: true },
+            { id: 10, emoji: '📝', title: 'Precisão nos Exercícios', desc: 'Crie 50 exercícios', locked: true },
+            { id: 11, emoji: '🚀', title: 'Criador Prolífico', desc: 'Publique 100 aulas', locked: true },
+            { id: 12, emoji: '👑', title: 'Lenda do VClass', desc: 'Todas as conquistas de criador desbloqueadas', locked: true },
+        ];
+
         function loadAchievements() {
+            const list = user?.role === 'teacher' ? ACHIEVEMENTS_TEACHER : ACHIEVEMENTS_STUDENT;
             const grid = document.getElementById('achievements-grid');
-            grid.innerHTML = ACHIEVEMENTS.map(a => `
+            grid.innerHTML = list.map(a => `
                 <div class="text-center p-4 rounded-xl border ${a.locked ? 'border-gray-100 bg-gray-50' : 'border-purple-100 bg-purple-50 cursor-pointer hover:bg-purple-100'} transition" title="${a.desc}">
                     <div class="badge-item mx-auto mb-2 ${a.locked ? 'bg-gray-100 badge-locked' : 'bg-white shadow-sm'}">${a.emoji}</div>
                     <p class="text-xs font-semibold ${a.locked ? 'text-gray-400' : 'text-gray-800'}">${a.title}</p>
@@ -662,48 +684,76 @@
         }
 
         // Activity heatmap
-        function loadActivity() {
-            // Generate heatmap
+        function activityTimeAgo(iso) {
+            const diffMs = Date.now() - new Date(iso).getTime();
+            const h = Math.floor(diffMs / 3600000);
+            if (h < 1) return `${Math.max(Math.floor(diffMs / 60000), 1)}min atrás`;
+            if (h < 24) return `${h}h atrás`;
+            const d = Math.floor(h / 24);
+            return d === 1 ? 'Ontem' : `${d} dias atrás`;
+        }
+
+        async function loadActivity() {
             const heatmap = document.getElementById('heatmap');
-            const weeks = 12;
+            const list = document.getElementById('activity-list');
+            heatmap.innerHTML = '<p class="text-xs text-gray-400">Carregando...</p>';
+            list.innerHTML = '<p class="text-center text-gray-400 text-sm py-8">Carregando histórico...</p>';
+
+            const result = await VClass.api.progress.getActivity();
+            if (!result.success) {
+                heatmap.innerHTML = '<p class="text-xs text-gray-400">Não foi possível carregar o mapa de estudo.</p>';
+                list.innerHTML = '<p class="text-center text-gray-400 text-sm py-8">Não foi possível carregar o histórico.</p>';
+                return;
+            }
+
+            const { heatmap: days, recentActivity } = result.data;
+
+            // Heatmap real: agrupa os 84 dias devolvidos em 12 colunas de 7 dias
             let html = '';
-            for (let w = 0; w < weeks; w++) {
+            for (let w = 0; w < 12; w++) {
                 html += '<div class="flex flex-col gap-1">';
                 for (let d = 0; d < 7; d++) {
-                    const intensity = Math.random();
+                    const day = days[w * 7 + d];
+                    const count = day ? day.count : 0;
                     let bg = 'bg-gray-100';
-                    if (intensity > 0.8) bg = 'bg-purple-800';
-                    else if (intensity > 0.6) bg = 'bg-purple-600';
-                    else if (intensity > 0.4) bg = 'bg-purple-400';
-                    else if (intensity > 0.2) bg = 'bg-purple-200';
-                    html += `<div class="heatmap-cell ${bg}" title="${Math.round(intensity*5)} aulas"></div>`;
+                    if (count >= 5) bg = 'bg-purple-800';
+                    else if (count >= 3) bg = 'bg-purple-600';
+                    else if (count >= 2) bg = 'bg-purple-400';
+                    else if (count >= 1) bg = 'bg-purple-200';
+                    const label = day ? `${count} atividade${count === 1 ? '' : 's'} em ${day.date}` : '';
+                    html += `<div class="heatmap-cell ${bg}" title="${label}"></div>`;
                 }
                 html += '</div>';
             }
             heatmap.innerHTML = html;
 
-            // Recent activity
-            const list = document.getElementById('activity-list');
-            const activities = [
-                { icon: 'fa-check-circle', color: 'text-green-600', bg: 'bg-green-100', title: 'Funções Quadráticas - Lição 3', time: '2h atrás', type: 'Aula concluída' },
-                { icon: 'fa-tasks', color: 'text-blue-600', bg: 'bg-blue-100', title: 'Quiz 2 - Algebra Linear', time: '4h atrás', type: 'Exercício • 8/10 pts' },
-                { icon: 'fa-play-circle', color: 'text-purple-600', bg: 'bg-purple-100', title: 'Derivadas - Introdução', time: 'Ontem', type: 'Vídeo assistido' },
-                { icon: 'fa-star', color: 'text-yellow-600', bg: 'bg-yellow-100', title: 'Conquista: Em Chamas 🔥', time: 'Ontem', type: '7 dias de sequência' },
-                { icon: 'fa-check-circle', color: 'text-green-600', bg: 'bg-green-100', title: 'Geometria Euclidiana - Lição 1', time: '2 dias atrás', type: 'Aula concluída' },
-                { icon: 'fa-book', color: 'text-indigo-600', bg: 'bg-indigo-100', title: 'Formulário de Matemática', time: '3 dias atrás', type: 'Recurso acessado' },
-            ];
-            list.innerHTML = activities.map(a => `
+            // Histórico recente — dados reais do próprio aluno
+            if (!recentActivity.length) {
+                list.innerHTML = '<p class="text-center text-gray-400 text-sm py-8">Ainda sem atividade registada. Comece uma aula para aparecer aqui!</p>';
+                return;
+            }
+            const ICONS = {
+                lesson_completed: { icon: 'fa-check-circle', color: 'text-green-600', bg: 'bg-green-100' },
+                lesson_progress:  { icon: 'fa-play-circle',  color: 'text-purple-600', bg: 'bg-purple-100' },
+                exercise:         { icon: 'fa-tasks',        color: 'text-blue-600',   bg: 'bg-blue-100' }
+            };
+            list.innerHTML = recentActivity.map(a => {
+                const style = ICONS[a.type] || ICONS.lesson_completed;
+                let typeLabel = 'Aula concluída';
+                if (a.type === 'lesson_progress') typeLabel = `Em progresso • ${a.progress || 0}%`;
+                if (a.type === 'exercise') typeLabel = `Exercício • ${a.correct ? 'Correto' : 'Incorreto'} • ${a.points}/${a.maxPoints} pts`;
+                return `
                 <div class="flex items-start space-x-4 relative z-10 bg-white pb-2">
-                    <div class="w-10 h-10 ${a.bg} rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 border-2 border-white">
-                        <i class="fas ${a.icon} ${a.color} text-sm"></i>
+                    <div class="w-10 h-10 ${style.bg} rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 border-2 border-white">
+                        <i class="fas ${style.icon} ${style.color} text-sm"></i>
                     </div>
                     <div class="flex-1 pb-4 border-b border-gray-100">
                         <p class="text-sm font-semibold text-gray-900">${a.title}</p>
-                        <p class="text-xs text-gray-500 mt-0.5">${a.type}</p>
-                        <p class="text-xs text-gray-400 mt-1"><i class="far fa-clock mr-1"></i>${a.time}</p>
+                        <p class="text-xs text-gray-500 mt-0.5">${typeLabel}</p>
+                        <p class="text-xs text-gray-400 mt-1"><i class="far fa-clock mr-1"></i>${activityTimeAgo(a.time)}</p>
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
 
         // Settings
@@ -739,7 +789,7 @@
         setupProfile();
 
         // Check URL hash para abrir a aba de subscrição directamente
-        if (window.location.hash === '#subscription') {
+        if (window.location.hash === '#subscription' && user?.role !== 'teacher') {
             setTimeout(() => switchTab('subscription'), 300);
         }
 
@@ -751,7 +801,7 @@
         };
 
         async function loadSubscriptionTab() {
-            const token = localStorage.getItem('vclass_token');
+            const token = localStorage.getItem('accessToken');
             if (!token) return;
             try {
                 const res  = await fetch('/api/plans/my', { headers: { Authorization: `Bearer ${token}` } });
@@ -842,7 +892,7 @@
         async function cancelSubscription() {
             if (!confirm('Tem a certeza que pretende cancelar a sua subscrição? O acesso continua activo até ao fim do período pago.')) return;
             try {
-                const res  = await fetch('/api/plans/cancel', { method:'POST', headers: { Authorization:`Bearer ${localStorage.getItem('vclass_token')}`, 'Content-Type':'application/json' }, body: JSON.stringify({ reason:'Pedido do utilizador' }) });
+                const res  = await fetch('/api/plans/cancel', { method:'POST', headers: { Authorization:`Bearer ${localStorage.getItem('accessToken')}`, 'Content-Type':'application/json' }, body: JSON.stringify({ reason:'Pedido do utilizador' }) });
                 const json = await res.json();
                 if (json.success) {
                     VClass.showNotification('Subscrição cancelada. Acesso mantido até ao fim do período.', 'info');

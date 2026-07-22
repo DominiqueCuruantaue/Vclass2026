@@ -15,7 +15,7 @@
         .filter-btn { transition: all 0.15s; }
         .filter-btn.active { background:#8b5cf6; color:#fff; }
         .tab-btn { border-bottom: 2px solid transparent; transition: all 0.15s; }
-        .tab-btn.active { border-color: #8b5cf6; color: #7c3aed; font-weight: 600; }
+        .tab-btn.active { border-color: #8b5cf6; color: #7c3aed; }
         .lesson-row { transition: background 0.15s; }
         .lesson-row:hover { background: #f9fafb; }
         .status-badge { font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
@@ -52,19 +52,19 @@
                     </span>
                 </div>
                 <div class="hidden md:flex items-center space-x-1">
-                    <a href="/creator-dashboard.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-purple-600 hover:bg-gray-50">
+                    <a href="/creator-dashboard.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:text-purple-600 hover:bg-gray-50">
                         <i class="fas fa-th-large"></i> Visão Geral
                     </a>
                     <a href="/creator-content.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-purple-50 text-purple-700">
                         <i class="fas fa-layer-group"></i> Conteúdos
                     </a>
-                    <a href="/creator-students.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-purple-600 hover:bg-gray-50">
+                    <a href="/creator-students.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:text-purple-600 hover:bg-gray-50">
                         <i class="fas fa-users"></i> Alunos
                     </a>
-                    <a href="/creator-analytics.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-purple-600 hover:bg-gray-50">
+                    <a href="/creator-analytics.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:text-purple-600 hover:bg-gray-50">
                         <i class="fas fa-chart-bar"></i> Analytics
                     </a>
-                    <a href="/creator-earnings.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-purple-600 hover:bg-gray-50">
+                    <a href="/creator-earnings.html" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:text-purple-600 hover:bg-gray-50">
                         <i class="fas fa-coins"></i> Ganhos
                     </a>
                 </div>
@@ -297,7 +297,7 @@
                 </div>
                 <!-- Upload de ficheiro -->
                 <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">Ficheiro PDF</label>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Ficheiro</label>
                     <div id="mat-drop-zone"
                         class="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition"
                         onclick="document.getElementById('mat-file-input').click()"
@@ -305,10 +305,10 @@
                         ondragleave="this.classList.remove('border-purple-400','bg-purple-50')"
                         ondrop="matHandleDrop(event)">
                         <i class="fas fa-cloud-upload-alt text-2xl text-gray-300 mb-1"></i>
-                        <p class="text-xs text-gray-500">Clique ou arraste o PDF aqui</p>
-                        <p class="text-xs text-gray-400">Máx. 100 MB</p>
+                        <p class="text-xs text-gray-500">Clique ou arraste o ficheiro aqui</p>
+                        <p class="text-xs text-gray-400">PDF, Word, Excel, PowerPoint, imagens ou ZIP · Máx. 50 MB</p>
                     </div>
-                    <input type="file" id="mat-file-input" accept=".pdf,.doc,.docx" class="hidden" onchange="matUploadFile(this.files[0])">
+                    <input type="file" id="mat-file-input" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.zip" class="hidden" onchange="matUploadFile(this.files[0])">
                     <!-- Progresso -->
                     <div id="mat-upload-progress" class="hidden mt-2">
                         <div class="flex items-center gap-2 text-xs text-gray-600 mb-1">
@@ -348,7 +348,7 @@
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Nº de páginas</label>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Nº de páginas <span id="mat-f-pages-auto" class="text-green-600 font-normal hidden">(detectado automaticamente)</span></label>
                         <input id="mat-f-pages" type="number" min="1" placeholder="Ex: 12"
                             class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400">
                     </div>
@@ -1416,6 +1416,12 @@
                 document.getElementById('mat-f-url').value = data.data.url;
                 const kb = data.data.size_kb;
                 document.getElementById('mat-f-size').value = kb;
+                if (data.data.pages) {
+                    document.getElementById('mat-f-pages').value = data.data.pages;
+                    document.getElementById('mat-f-pages-auto').classList.remove('hidden');
+                } else {
+                    document.getElementById('mat-f-pages-auto').classList.add('hidden');
+                }
 
                 setTimeout(() => {
                     prog.classList.add('hidden');
@@ -1434,6 +1440,7 @@
             document.getElementById('mat-file-input').value = '';
             document.getElementById('mat-f-url').value = '';
             document.getElementById('mat-f-size').value = '';
+            document.getElementById('mat-f-pages-auto').classList.add('hidden');
             document.getElementById('mat-file-done').classList.add('hidden');
             document.getElementById('mat-drop-zone').classList.remove('hidden');
             document.getElementById('mat-upload-bar').style.width = '0%';
@@ -1448,6 +1455,7 @@
             document.getElementById('mat-f-desc').value       = m?.description || '';
             document.getElementById('mat-f-url').value        = m?.file_url || '';
             document.getElementById('mat-f-pages').value      = m?.pages || '';
+            document.getElementById('mat-f-pages-auto').classList.add('hidden');
             document.getElementById('mat-f-size').value       = m?.file_size_kb || '';
             document.getElementById('mat-f-subject').value    = m?.subject_id || '';
             document.getElementById('mat-f-grade').value      = m?.grade_id || '';

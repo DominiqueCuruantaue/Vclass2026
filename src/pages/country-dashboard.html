@@ -10,7 +10,8 @@
     .sidebar { width:240px; min-height:100vh; }
     .stat-card { transition:transform .15s; }
     .stat-card:hover { transform:translateY(-2px); }
-    .tab-btn.active { border-bottom:3px solid #b45309; color:#b45309; font-weight:700; }
+    .tab-btn { border-bottom:3px solid transparent; transition: all .15s; }
+    .tab-btn.active { border-bottom-color:#b45309; color:#b45309; }
     #overlay { background:rgba(0,0,0,.5); }
     .bar { transition: width .6s ease; }
   </style>
@@ -284,20 +285,45 @@ const COUNTRY_DATA = {
   }
 }
 
-const MOCK_USERS_COUNTRY = [
-  { name:'António Ferreira',  email:'antonio@vclass.ao', role:'student', grade:'12ª Classe', avg_score:82, last_access:'há 2h',  active:true },
-  { name:'Fátima Mbala',      email:'fatima@vclass.ao',  role:'student', grade:'10ª Classe', avg_score:71, last_access:'há 1d',  active:true },
-  { name:'Prof. Domingos',    email:'domingos@vclass.ao',role:'teacher', grade:'—',          avg_score:null,last_access:'há 3h', active:true },
-  { name:'Cristina Leal',     email:'cristina@vclass.ao',role:'student', grade:'11ª Classe', avg_score:65, last_access:'há 5d',  active:false },
-  { name:'Eduardo Kapango',   email:'eduardo@vclass.ao', role:'student', grade:'9ª Classe',  avg_score:78, last_access:'há 1h',  active:true },
-]
 
 let countryData = COUNTRY_DATA.ao
+
+async function countryApi(path, opts = {}) {
+  const token = localStorage.getItem('accessToken')
+  const res = await fetch(path, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...(opts.headers || {}) }
+  })
+  return res.json()
+}
+
+let allCountryUsers = []
 
 async function loadCountryData() {
   const user = VClass.getCurrentUser()
   const managedCountry = user?.managed_country || 'ao'
+  // Fallback local só usado se a API falhar por completo (ex: sem rede).
   countryData = COUNTRY_DATA[managedCountry] || COUNTRY_DATA.ao
+
+  // /api/country/me devolve o país do gestor com estatísticas/lições em
+  // destaque/actividade/alertas REAIS quando já existirem utilizadores desse
+  // país na BD — ou os mesmos valores fictícios de sempre enquanto não existirem
+  // (nunca uma mistura dos dois).
+  const me = await countryApi('/api/country/me')
+  if (me.success && me.data.country) {
+    countryData = me.data.country
+  } else if (me.success && me.data.countries) {
+    countryData = me.data.countries.find(c => c.id === managedCountry) || me.data.countries[0] || countryData
+  }
+
+  // grades vem do backend como [{id,name,shortName}] (currículo real);
+  // gradesFull guarda essa forma para renderCurriculum() cruzar com
+  // subjects_by_grade, e grades vira uma lista de nomes simples para os
+  // sítios mais antigos que só mostram texto (grades-dist).
+  if (Array.isArray(countryData.grades) && countryData.grades[0]?.name) {
+    countryData.gradesFull = countryData.grades
+    countryData.grades = countryData.grades.map(g => g.name)
+  }
 
   document.getElementById('country-flag').textContent  = countryData.flag
   document.getElementById('country-name').textContent  = countryData.name
@@ -331,15 +357,17 @@ async function loadCountryData() {
 
   // Subjects
   document.getElementById('subjects-list').innerHTML = countryData.subjects.map(s => `
-    <span class="text-xs bg-amber-100 text-amber-800 px-3 py-1 rounded-full">${s}</span>`).join('')
+    <span class="text-xs bg-amber-100 text-amber-800 px-3 py-1 rounded-full">${escapeHtml(s)}</span>`).join('')
 
-  // Grades distribution
+  // Grades distribution — ainda sem contagem real de alunos por classe
+  // (precisaria de agregar users.grade_id); mostra as classes reais do
+  // currículo sem inventar números de matrícula por enquanto.
   const gradeVal = [120,180,165,210,190,155]
   document.getElementById('grades-dist').innerHTML = countryData.grades.map((g,i) => `
     <div class="flex items-center gap-3">
-      <span class="text-xs text-gray-600 w-20">${g}</span>
-      <div class="flex-1 bg-gray-200 rounded-full h-2"><div class="bg-green-500 h-2 rounded-full bar" style="width:${(gradeVal[i]/210*100).toFixed(0)}%"></div></div>
-      <span class="text-xs text-gray-500">${gradeVal[i]}</span>
+      <span class="text-xs text-gray-600 w-20">${escapeHtml(g)}</span>
+      <div class="flex-1 bg-gray-200 rounded-full h-2"><div class="bg-green-500 h-2 rounded-full bar" style="width:${(gradeVal[i % gradeVal.length]/210*100).toFixed(0)}%"></div></div>
+      <span class="text-xs text-gray-500">${gradeVal[i % gradeVal.length]}</span>
     </div>`).join('')
 
   // Content by subject
@@ -352,14 +380,25 @@ async function loadCountryData() {
       <span class="text-xs text-gray-600">${s.published} pub / ${s.draft} rascunho</span>
     </div>`).join('')
 
-  // Users table
-  renderUsers(MOCK_USERS_COUNTRY)
+  // Users table — estudantes/professores reais do país, ou fictícios enquanto não existirem
+  const usersR = await countryApi(`/api/country/${managedCountry}/users`)
+  allCountryUsers = usersR.success ? usersR.data.users : []
+  applyUserFilters()
 
   // Alerts
   renderAlerts(countryData.alerts)
 
   // Curriculum
   renderCurriculum()
+}
+
+function applyUserFilters() {
+  const q = (document.getElementById('user-search')?.value || '').toLowerCase()
+  const role = document.getElementById('user-role-filter')?.value || 'all'
+  let users = allCountryUsers
+  if (q) users = users.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
+  if (role !== 'all') users = users.filter(u => u.role === role)
+  renderUsers(users)
 }
 
 function renderUsers(users) {
@@ -372,7 +411,7 @@ function renderUsers(users) {
       <td class="px-4 py-3"><span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">${u.role === 'student' ? 'Estudante' : 'Professor'}</span></td>
       <td class="px-4 py-3 text-gray-600 text-xs">${u.grade}</td>
       <td class="px-4 py-3 font-medium ${u.avg_score >= 70 ? 'text-green-600' : u.avg_score ? 'text-red-500' : 'text-gray-400'}">${u.avg_score != null ? u.avg_score + '%' : '—'}</td>
-      <td class="px-4 py-3 text-gray-500 text-xs">${u.last_access}</td>
+      <td class="px-4 py-3 text-gray-500 text-xs">${u.last_access ? new Date(u.last_access).toLocaleString('pt-PT') : '—'}</td>
       <td class="px-4 py-3"><span class="text-xs px-2 py-0.5 rounded-full ${u.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}">${u.active ? 'Activo' : 'Inactivo'}</span></td>
     </tr>`).join('')
 }
@@ -393,17 +432,24 @@ function renderAlerts(alerts) {
 }
 
 function renderCurriculum() {
-  const grades = countryData.grades || []
-  document.getElementById('curriculum-grid').innerHTML = grades.map((g,i) => `
+  // gradesFull traz {id,name} do currículo real; se a chamada à API falhar,
+  // caímos para os nomes simples do mock (sem disciplinas por classe).
+  const grades = countryData.gradesFull || (countryData.grades || []).map(g => ({ id: null, name: g }))
+  document.getElementById('curriculum-grid').innerHTML = grades.map(g => {
+    const subjects = (g.id && countryData.subjects_by_grade?.[g.id]) || countryData.subjects || []
+    return `
     <div class="border border-gray-200 rounded-2xl p-4">
       <div class="flex items-center justify-between mb-3">
-        <h4 class="font-semibold text-gray-800">${g}</h4>
+        <h4 class="font-semibold text-gray-800">${escapeHtml(g.name)}</h4>
         <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Activo</span>
       </div>
       <div class="flex flex-wrap gap-2">
-        ${countryData.subjects.map(s => `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-lg">${s}</span>`).join('')}
+        ${subjects.length === 0
+          ? '<span class="text-xs text-gray-400">Sem disciplinas configuradas</span>'
+          : subjects.map(s => `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-lg">${escapeHtml(typeof s === 'string' ? s : s.name)}</span>`).join('')}
       </div>
-    </div>`).join('')
+    </div>`
+  }).join('')
 }
 
 function showTab(name) {
@@ -417,10 +463,8 @@ function showTab(name) {
   document.getElementById('page-title').textContent = titles[name] || name
 }
 
-document.getElementById('user-search')?.addEventListener('input', function() {
-  const q = this.value.toLowerCase()
-  renderUsers(MOCK_USERS_COUNTRY.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)))
-})
+document.getElementById('user-search')?.addEventListener('input', applyUserFilters)
+document.getElementById('user-role-filter')?.addEventListener('change', applyUserFilters)
 
 function logout() {
   if (typeof VClass !== 'undefined' && VClass.logout) {

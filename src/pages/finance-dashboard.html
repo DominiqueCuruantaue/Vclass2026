@@ -11,7 +11,8 @@
     .sidebar { width:240px; min-height:100vh; }
     .stat-card { transition:transform .15s; }
     .stat-card:hover { transform:translateY(-2px); }
-    .tab-btn.active { border-bottom:3px solid #166534; color:#166534; font-weight:700; }
+    .tab-btn { border-bottom:3px solid transparent; transition: all .15s; }
+    .tab-btn.active { border-bottom-color:#166534; color:#166534; }
     #overlay { background:rgba(0,0,0,.5); }
     .badge-success  { background:#d1fae5; color:#065f46; }
     .badge-failed   { background:#fee2e2; color:#991b1b; }
@@ -85,31 +86,31 @@
     <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
       <div class="flex items-center justify-between mb-3">
         <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center"><i class="fas fa-dollar-sign text-green-600"></i></div>
-        <span class="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded-full">+7.6% vs mês ant.</span>
+        <span id="kpi-growth-badge" class="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded-full">—</span>
       </div>
-      <div class="text-3xl font-bold text-gray-900">$5.240</div>
+      <div class="text-3xl font-bold text-gray-900" id="kpi-revenue-month">—</div>
       <div class="text-sm text-gray-500">Receita este mês</div>
     </div>
     <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
       <div class="flex items-center justify-between mb-3">
         <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center"><i class="fas fa-users text-blue-500"></i></div>
-        <span class="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-full">+14 este mês</span>
+        <span id="kpi-new-subs-badge" class="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-full">—</span>
       </div>
-      <div class="text-3xl font-bold text-gray-900">2.987</div>
+      <div class="text-3xl font-bold text-gray-900" id="kpi-paid-subs">—</div>
       <div class="text-sm text-gray-500">Subscritores pagos</div>
     </div>
     <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
       <div class="flex items-center justify-between mb-3">
         <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center"><i class="fas fa-chart-pie text-purple-500"></i></div>
       </div>
-      <div class="text-3xl font-bold text-gray-900">26.4%</div>
+      <div class="text-3xl font-bold text-gray-900" id="kpi-conversion">—</div>
       <div class="text-sm text-gray-500">Taxa de conversão</div>
     </div>
     <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
       <div class="flex items-center justify-between mb-3">
         <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center"><i class="fas fa-calendar-check text-amber-500"></i></div>
       </div>
-      <div class="text-3xl font-bold text-gray-900">$62.8K</div>
+      <div class="text-3xl font-bold text-gray-900" id="kpi-arr">—</div>
       <div class="text-sm text-gray-500">ARR (Receita Anual)</div>
     </div>
   </div>
@@ -128,23 +129,8 @@
     <div class="grid grid-cols-2 gap-6">
       <div class="bg-gray-50 rounded-2xl p-5">
         <h3 class="font-semibold text-gray-800 mb-4"><i class="fas fa-globe mr-2 text-blue-500"></i>Receita por País</h3>
-        <div class="space-y-3">
-          <div class="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100">
-            <div class="flex items-center gap-2"><span class="text-lg">🇲🇿</span><span class="font-medium text-sm">Moçambique</span></div>
-            <div class="text-right"><div class="font-bold text-green-600">2.840 MZN</div><div class="text-xs text-gray-400">3 activos · Premium+Básico</div></div>
-          </div>
-          <div class="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100">
-            <div class="flex items-center gap-2"><span class="text-lg">🇦🇴</span><span class="font-medium text-sm">Angola</span></div>
-            <div class="text-right"><div class="font-bold text-green-600">2.500 AOA</div><div class="text-xs text-gray-400">1 activo · Básico</div></div>
-          </div>
-          <div class="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100">
-            <div class="flex items-center gap-2"><span class="text-lg">🇵🇹</span><span class="font-medium text-sm">Portugal</span></div>
-            <div class="text-right"><div class="font-bold text-green-600">9.99 EUR</div><div class="text-xs text-gray-400">1 activo · Premium</div></div>
-          </div>
-          <div class="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100">
-            <div class="flex items-center gap-2"><span class="text-lg">🇧🇷</span><span class="font-medium text-sm">Brasil</span></div>
-            <div class="text-right"><div class="font-bold text-green-600">59.90 BRL</div><div class="text-xs text-gray-400">1 activo · Premium</div></div>
-          </div>
+        <div class="space-y-3" id="revenue-by-country">
+          <div class="text-xs text-gray-400 text-center py-4">A carregar…</div>
         </div>
       </div>
       <div class="bg-gray-50 rounded-2xl p-5">
@@ -154,20 +140,20 @@
       <div class="col-span-2 bg-gray-50 rounded-2xl p-5">
         <h3 class="font-semibold text-gray-800 mb-4"><i class="fas fa-exclamation-triangle mr-2 text-red-500"></i>Alertas Financeiros</h3>
         <div class="grid grid-cols-3 gap-4">
-          <div class="bg-red-50 border border-red-100 rounded-xl p-4">
-            <div class="text-lg font-bold text-red-600">1</div>
-            <div class="text-sm text-gray-600">Pagamento falhado</div>
-            <div class="text-xs text-gray-400 mt-1">Lúcia Afonso — 2.500 AOA</div>
-          </div>
-          <div class="bg-purple-50 border border-purple-100 rounded-xl p-4">
-            <div class="text-lg font-bold text-purple-600">1</div>
-            <div class="text-sm text-gray-600">Reembolso processado</div>
-            <div class="text-xs text-gray-400 mt-1">Pedro Mateus — 9.99 EUR</div>
-          </div>
           <div class="bg-yellow-50 border border-yellow-100 rounded-xl p-4">
-            <div class="text-lg font-bold text-yellow-600">2</div>
+            <div class="text-lg font-bold text-yellow-600" id="alert-expiring">—</div>
             <div class="text-sm text-gray-600">Subscrições a expirar</div>
             <div class="text-xs text-gray-400 mt-1">Nos próximos 30 dias</div>
+          </div>
+          <div class="bg-red-50 border border-red-100 rounded-xl p-4">
+            <div class="text-lg font-bold text-red-600" id="alert-cancelled">—</div>
+            <div class="text-sm text-gray-600">Canceladas (total)</div>
+            <div class="text-xs text-gray-400 mt-1">Histórico completo</div>
+          </div>
+          <div class="bg-gray-100 border border-gray-200 rounded-xl p-4">
+            <div class="text-lg font-bold text-gray-600" id="alert-expired">—</div>
+            <div class="text-sm text-gray-600">Expiradas (total)</div>
+            <div class="text-xs text-gray-400 mt-1">Sem renovação</div>
           </div>
         </div>
       </div>
@@ -187,6 +173,7 @@
         <option value="all">Todos os planos</option>
         <option value="premium">Premium</option>
         <option value="basic">Básico</option>
+        <option value="free">Gratuito</option>
       </select>
     </div>
     <div class="overflow-x-auto">
@@ -210,9 +197,9 @@
     <div class="flex gap-3 mb-4">
       <select id="pay-status-filter" onchange="renderPayments()" class="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-300">
         <option value="all">Todos</option>
-        <option value="success">Sucesso</option>
-        <option value="failed">Falhado</option>
-        <option value="refunded">Reembolsado</option>
+        <option value="active">Activo</option>
+        <option value="cancelled">Cancelado</option>
+        <option value="expired">Expirado</option>
       </select>
     </div>
     <div class="overflow-x-auto">
@@ -235,20 +222,20 @@
   <section id="tab-content-revenue" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
     <div class="grid grid-cols-3 gap-4 mb-6">
       <div class="bg-green-50 border border-green-100 rounded-2xl p-4 text-center">
-        <div class="text-2xl font-bold text-green-700">$36.940</div>
-        <div class="text-sm text-gray-500">Total em 2025</div>
+        <div class="text-2xl font-bold text-green-700" id="rev-total-year">—</div>
+        <div class="text-sm text-gray-500" id="rev-total-year-label">Total este ano</div>
       </div>
       <div class="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-center">
-        <div class="text-2xl font-bold text-blue-700">$5.240</div>
+        <div class="text-2xl font-bold text-blue-700" id="rev-mrr">—</div>
         <div class="text-sm text-gray-500">MRR actual</div>
       </div>
       <div class="bg-purple-50 border border-purple-100 rounded-2xl p-4 text-center">
-        <div class="text-2xl font-bold text-purple-700">$3.080</div>
-        <div class="text-sm text-gray-500">Pico mensal 2024</div>
+        <div class="text-2xl font-bold text-purple-700" id="rev-peak">—</div>
+        <div class="text-sm text-gray-500" id="rev-peak-label">Pico mensal</div>
       </div>
     </div>
     <div class="bg-gray-50 rounded-2xl p-5">
-      <h3 class="font-semibold text-gray-800 mb-4">Receita Mensal (USD) — 2025</h3>
+      <h3 class="font-semibold text-gray-800 mb-4" id="rev-chart-title">Receita Mensal — <span id="rev-chart-year"></span></h3>
       <canvas id="revenue-chart" height="120"></canvas>
     </div>
   </section>
@@ -284,35 +271,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   showTab('overview')
 })
 
-const PLANS_DATA = [
-  { id:'free',    name:'Gratuito', price_mzn:0,   price_aoa:0,    price_brl:0,    price_eur:0,   features:['5 aulas por mês','Exercícios básicos','Biblioteca limitada'], active_users:8320, color:'#6b7280' },
-  { id:'basic',   name:'Básico',   price_mzn:299, price_aoa:2500, price_brl:29.9, price_eur:4.99,features:['50 aulas por mês','Todos os exercícios','Download PDF','Chat IA 20 msg/dia'], active_users:2140, color:'#2563eb' },
-  { id:'premium', name:'Premium',  price_mzn:599, price_aoa:4900, price_brl:59.9, price_eur:9.99,features:['Aulas ilimitadas','Exercícios ilimitados','Downloads ilimitados','Chat IA ilimitado','Acesso antecipado'], active_users:847, color:'#7c3aed' },
-]
+// Preços e funcionalidades reais — carregados de /api/finance/plans (ver renderPlans)
+let PLANS_DATA = []
 
-const SUBS = [
-  { id:'sub-001', user_name:'Ana Silva',    user_email:'ana.silva@vclass.mz',  plan:'premium', country:'🇲🇿', status:'active',    amount:599,  currency:'MZN', expires_at:'2026-10-01', payment_provider:'M-Pesa',    auto_renew:true },
-  { id:'sub-002', user_name:'Mário Costa',  user_email:'mario.costa@vclass.ao',plan:'basic',   country:'🇦🇴', status:'active',    amount:2500, currency:'AOA', expires_at:'2026-11-15', payment_provider:'Multicaixa',auto_renew:true },
-  { id:'sub-003', user_name:'Tomás Ferreira',user_email:'tomas@vclass.mz',    plan:'premium', country:'🇲🇿', status:'active',    amount:599,  currency:'MZN', expires_at:'2026-09-01', payment_provider:'M-Pesa',    auto_renew:false },
-  { id:'sub-004', user_name:'Lúcia Afonso', user_email:'lucia@vclass.ao',     plan:'basic',   country:'🇦🇴', status:'cancelled', amount:2500, currency:'AOA', expires_at:'2025-11-01', payment_provider:'Multicaixa',auto_renew:false },
-  { id:'sub-005', user_name:'Pedro Mateus', user_email:'pedro@vclass.pt',     plan:'premium', country:'🇵🇹', status:'active',    amount:9.99, currency:'EUR', expires_at:'2026-10-20', payment_provider:'Stripe',    auto_renew:true },
-  { id:'sub-006', user_name:'Grace Nkosi',  user_email:'grace@vclass.mz',     plan:'basic',   country:'🇲🇿', status:'expired',   amount:299,  currency:'MZN', expires_at:'2025-10-01', payment_provider:'M-Pesa',    auto_renew:false },
-  { id:'sub-007', user_name:'Bruno Lopes',  user_email:'bruno@vclass.br',     plan:'premium', country:'🇧🇷', status:'active',    amount:59.9, currency:'BRL', expires_at:'2026-11-01', payment_provider:'Stripe',    auto_renew:true },
-  { id:'sub-008', user_name:'Sara Chissano',user_email:'sara@vclass.mz',      plan:'basic',   country:'🇲🇿', status:'active',    amount:299,  currency:'MZN', expires_at:'2026-12-01', payment_provider:'M-Pesa',    auto_renew:true },
-]
-
-const PAYMENTS = [
-  { id:'pay-001', user:'Ana Silva',     amount:599,  currency:'MZN', plan:'premium', method:'M-Pesa',    status:'success', date: new Date(Date.now()-86400000*2).toISOString(),  ref:'MP24-00891' },
-  { id:'pay-002', user:'Bruno Lopes',   amount:59.9, currency:'BRL', plan:'premium', method:'Stripe',    status:'success', date: new Date(Date.now()-86400000*3).toISOString(),  ref:'STR-ch_AB12' },
-  { id:'pay-003', user:'Sara Chissano', amount:299,  currency:'MZN', plan:'basic',   method:'M-Pesa',    status:'success', date: new Date(Date.now()-86400000*4).toISOString(),  ref:'MP24-00788' },
-  { id:'pay-004', user:'Lúcia Afonso',  amount:2500, currency:'AOA', plan:'basic',   method:'Multicaixa',status:'failed',  date: new Date(Date.now()-86400000*5).toISOString(),  ref:'MCA-F-0341' },
-  { id:'pay-005', user:'Tomás Ferreira',amount:599,  currency:'MZN', plan:'premium', method:'M-Pesa',    status:'success', date: new Date(Date.now()-86400000*7).toISOString(),  ref:'MP24-00712' },
-  { id:'pay-006', user:'Pedro Mateus',  amount:9.99, currency:'EUR', plan:'premium', method:'Stripe',    status:'refunded',date: new Date(Date.now()-86400000*8).toISOString(),  ref:'STR-re_CD34' },
-  { id:'pay-007', user:'Mário Costa',   amount:2500, currency:'AOA', plan:'basic',   method:'Multicaixa',status:'success', date: new Date(Date.now()-86400000*10).toISOString(), ref:'MCA-00215' },
-]
-
-const MONTHLY_REVENUE = [1240,1580,1820,2100,2350,2780,3120,3540,3980,4320,4870,5240]
-const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+async function financeApi(path, opts = {}) {
+  const token = localStorage.getItem('accessToken')
+  const res = await fetch(path, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...(opts.headers || {}) }
+  })
+  return res.json()
+}
 
 let revenueChart = null
 let plansChart = null
@@ -329,111 +298,193 @@ function showTab(name) {
 
   if (name === 'subscriptions') renderSubscriptions()
   if (name === 'payments')      renderPayments()
-  if (name === 'revenue')       setTimeout(renderRevenueChart, 100)
+  if (name === 'revenue')       renderRevenueChart()
   if (name === 'plans')         renderPlans()
-  if (name === 'overview')      setTimeout(renderPlansChart, 100)
+  if (name === 'overview')      renderOverviewStats()
+}
+
+function fmtAmount(n) {
+  return Number(n || 0).toLocaleString('pt-PT', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
 
 function statusBadge(s) {
-  const map = { active:'badge-active', cancelled:'badge-cancelled', expired:'badge-expired', success:'badge-success', failed:'badge-failed', refunded:'badge-refunded' }
-  const label = { active:'Activo', cancelled:'Cancelado', expired:'Expirado', success:'Sucesso', failed:'Falhado', refunded:'Reembolsado' }
-  return `<span class="text-xs px-2 py-0.5 rounded-full font-medium ${map[s]}">${label[s]}</span>`
+  const map = { active:'badge-active', cancelled:'badge-cancelled', expired:'badge-expired' }
+  const label = { active:'Activo', cancelled:'Cancelado', expired:'Expirado' }
+  return `<span class="text-xs px-2 py-0.5 rounded-full font-medium ${map[s]||''}">${label[s]||s}</span>`
 }
 
-function renderSubscriptions() {
+function planBadge(plan) {
+  const styles = { premium: ['#ede9fe','#5b21b6'], basic: ['#dbeafe','#1e40af'], free: ['#f3f4f6','#4b5563'] }
+  const labels = { premium: 'Premium', basic: 'Básico', free: 'Gratuito' }
+  const [bg, color] = styles[plan] || styles.free
+  return `<span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background:${bg};color:${color}">${labels[plan] || plan}</span>`
+}
+
+// ── Visão Geral: KPIs, receita por país, distribuição de planos, alertas ────
+async function renderOverviewStats() {
+  const r = await financeApi('/api/finance/stats')
+  if (!r.success) { showToast('Erro ao carregar estatísticas'); return }
+  const { subscriptions: s, revenue: rev, alerts, by_country } = r.data
+
+  document.getElementById('kpi-revenue-month').textContent = fmtAmount(rev.this_month)
+  document.getElementById('kpi-growth-badge').textContent = `${rev.growth_pct >= 0 ? '+' : ''}${rev.growth_pct}% vs mês ant.`
+  document.getElementById('kpi-paid-subs').textContent = s.active.toLocaleString('pt')
+  document.getElementById('kpi-new-subs-badge').textContent = `+${s.new_this_month} este mês`
+  document.getElementById('kpi-conversion').textContent = `${s.conversion_rate}%`
+  document.getElementById('kpi-arr').textContent = fmtAmount(rev.arr)
+
+  document.getElementById('alert-expiring').textContent = alerts.expiring_soon
+  document.getElementById('alert-cancelled').textContent = alerts.cancelled_total
+  document.getElementById('alert-expired').textContent = alerts.expired_total
+
+  const countryEl = document.getElementById('revenue-by-country')
+  countryEl.innerHTML = by_country.length === 0
+    ? '<div class="text-xs text-gray-400 text-center py-4">Ainda sem subscrições pagas registadas</div>'
+    : by_country.map(c => `
+      <div class="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100">
+        <div class="flex items-center gap-2"><span class="text-lg">${c.flag}</span><span class="font-medium text-sm">${escapeHtml(c.country_name)}</span></div>
+        <div class="text-right"><div class="font-bold text-green-600">${fmtAmount(c.revenue)}</div><div class="text-xs text-gray-400">${c.active} activos · Premium ${c.premium} · Básico ${c.basic}</div></div>
+      </div>`).join('')
+
+  plansChart?.destroy()
+  const ctx = document.getElementById('plans-chart')?.getContext('2d')
+  if (ctx) {
+    plansChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Gratuito', 'Básico', 'Premium'],
+        datasets: [{ data: [s.free_users, s.basic_active, s.premium_active], backgroundColor: ['#e5e7eb', '#3b82f6', '#7c3aed'], borderWidth: 0 }]
+      },
+      options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+    })
+  }
+}
+
+async function renderSubscriptions() {
   const sf = document.getElementById('sub-status-filter').value
   const pf = document.getElementById('sub-plan-filter').value
-  let subs = [...SUBS]
-  if (sf !== 'all') subs = subs.filter(s => s.status === sf)
-  if (pf !== 'all') subs = subs.filter(s => s.plan   === pf)
-  document.getElementById('subs-tbody').innerHTML = subs.map(s => `
+  document.getElementById('subs-tbody').innerHTML = '<tr><td colspan="7" class="p-6 text-center text-gray-400 text-sm">A carregar…</td></tr>'
+
+  const q = new URLSearchParams({ status: sf, plan: pf })
+  const r = await financeApi(`/api/finance/subscriptions?${q}`)
+  if (!r.success) { showToast('Erro ao carregar subscrições'); return }
+  const subs = r.data.subscriptions
+
+  document.getElementById('subs-tbody').innerHTML = subs.length === 0
+    ? '<tr><td colspan="7" class="p-6 text-center text-gray-400 text-sm">Nenhuma subscrição encontrada</td></tr>'
+    : subs.map(s => `
     <tr class="border-b border-gray-100 hover:bg-gray-50">
       <td class="px-4 py-3">
-        <div class="font-medium text-gray-800">${s.country} ${s.user_name}</div>
-        <div class="text-xs text-gray-400">${s.user_email}</div>
+        <div class="font-medium text-gray-800">${escapeHtml(s.user_name)}</div>
+        <div class="text-xs text-gray-400">${escapeHtml(s.user_email)}</div>
       </td>
-      <td class="px-4 py-3"><span class="text-xs px-2 py-0.5 rounded-full font-medium" style="background:${s.plan==='premium'?'#ede9fe':'#dbeafe'};color:${s.plan==='premium'?'#5b21b6':'#1e40af'}">${s.plan==='premium'?'Premium':'Básico'}</span></td>
-      <td class="px-4 py-3 font-medium text-gray-800">${s.amount} ${s.currency}</td>
-      <td class="px-4 py-3 text-gray-600 text-xs">${s.payment_provider}</td>
-      <td class="px-4 py-3 text-gray-600 text-xs">${s.expires_at}</td>
+      <td class="px-4 py-3">${planBadge(s.plan)}</td>
+      <td class="px-4 py-3 font-medium text-gray-800">${fmtAmount(s.amount)}</td>
+      <td class="px-4 py-3 text-gray-600 text-xs">${escapeHtml(s.payment_provider)}</td>
+      <td class="px-4 py-3 text-gray-600 text-xs">${s.expires_at ? new Date(s.expires_at).toLocaleDateString('pt-PT') : '—'}</td>
       <td class="px-4 py-3">${statusBadge(s.status)}</td>
       <td class="px-4 py-3">
-        <div class="flex gap-1">
-          ${s.status === 'active' ? `<button onclick="actionSub('cancel','${s.id}')" class="text-xs px-2 py-1 border border-red-200 text-red-600 rounded-lg hover:bg-red-50">Cancelar</button>` : ''}
-          <button onclick="actionSub('refund','${s.id}')" class="text-xs px-2 py-1 border border-purple-200 text-purple-600 rounded-lg hover:bg-purple-50">Reemb.</button>
-        </div>
+        ${s.status === 'active' ? `<button onclick="actionSub('cancel','${s.id}')" class="text-xs px-2 py-1 border border-red-200 text-red-600 rounded-lg hover:bg-red-50">Cancelar</button>` : ''}
       </td>
     </tr>`).join('')
 }
 
-function renderPayments() {
+async function renderPayments() {
   const sf = document.getElementById('pay-status-filter').value
-  let pays = [...PAYMENTS]
-  if (sf !== 'all') pays = pays.filter(p => p.status === sf)
-  document.getElementById('pay-tbody').innerHTML = pays.map(p => `
+  document.getElementById('pay-tbody').innerHTML = '<tr><td colspan="7" class="p-6 text-center text-gray-400 text-sm">A carregar…</td></tr>'
+
+  const q = new URLSearchParams({ status: sf })
+  const r = await financeApi(`/api/finance/payments?${q}`)
+  if (!r.success) { showToast('Erro ao carregar pagamentos'); return }
+  const pays = r.data.payments
+
+  document.getElementById('pay-tbody').innerHTML = pays.length === 0
+    ? '<tr><td colspan="7" class="p-6 text-center text-gray-400 text-sm">Nenhum pagamento encontrado</td></tr>'
+    : pays.map(p => `
     <tr class="border-b border-gray-100 hover:bg-gray-50">
-      <td class="px-4 py-3 text-xs text-gray-400 font-mono">${p.ref}</td>
-      <td class="px-4 py-3 text-gray-800 font-medium">${p.user}</td>
-      <td class="px-4 py-3 font-bold text-gray-900">${p.amount} ${p.currency}</td>
-      <td class="px-4 py-3 text-xs"><span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">${p.plan}</span></td>
-      <td class="px-4 py-3 text-gray-600 text-xs">${p.method}</td>
+      <td class="px-4 py-3 text-xs text-gray-400 font-mono">${escapeHtml(String(p.id).slice(0,8))}</td>
+      <td class="px-4 py-3 text-gray-800 font-medium">${escapeHtml(p.user_name)}</td>
+      <td class="px-4 py-3 font-bold text-gray-900">${fmtAmount(p.amount)}</td>
+      <td class="px-4 py-3 text-xs">${planBadge(p.plan)}</td>
+      <td class="px-4 py-3 text-gray-600 text-xs">${escapeHtml(p.method)}</td>
       <td class="px-4 py-3 text-gray-500 text-xs">${new Date(p.date).toLocaleDateString('pt-PT')}</td>
       <td class="px-4 py-3">${statusBadge(p.status)}</td>
     </tr>`).join('')
 }
 
-function renderRevenueChart() {
+async function renderRevenueChart() {
+  const [r, statsR] = await Promise.all([financeApi('/api/finance/revenue'), financeApi('/api/finance/stats')])
+  if (!r.success) { showToast('Erro ao carregar receita'); return }
+  const { monthly, total_year, peak_month, peak_revenue } = r.data
+  const year = new Date().getFullYear()
+
+  document.getElementById('rev-total-year').textContent = fmtAmount(total_year)
+  document.getElementById('rev-total-year-label').textContent = `Total em ${year}`
+  document.getElementById('rev-mrr').textContent = statsR.success ? fmtAmount(statsR.data.revenue.mrr) : '—'
+  document.getElementById('rev-peak').textContent = peak_month ? fmtAmount(peak_revenue) : '—'
+  document.getElementById('rev-peak-label').textContent = peak_month ? `Pico mensal (${peak_month})` : 'Pico mensal'
+  document.getElementById('rev-chart-year').textContent = year
+
   const ctx = document.getElementById('revenue-chart').getContext('2d')
   if (revenueChart) revenueChart.destroy()
   revenueChart = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: MONTHS,
-      datasets: [{ label: 'Receita (USD)', data: MONTHLY_REVENUE, backgroundColor: '#16a34a', borderRadius: 6 }]
+      labels: monthly.map(m => m.month),
+      datasets: [{ label: 'Receita', data: monthly.map(m => m.revenue), backgroundColor: '#16a34a', borderRadius: 6 }]
     },
     options: { responsive:true, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true } } }
   })
 }
 
-function renderPlansChart() {
-  const ctx = document.getElementById('plans-chart')?.getContext('2d')
-  if (!ctx) return
-  if (plansChart) plansChart.destroy()
-  plansChart = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: ['Gratuito','Básico','Premium'],
-      datasets: [{ data: [8320,2140,847], backgroundColor: ['#e5e7eb','#3b82f6','#7c3aed'], borderWidth: 0 }]
-    },
-    options: { responsive:true, plugins:{ legend:{ position:'bottom' } } }
-  })
-}
+async function renderPlans() {
+  document.getElementById('plans-grid').innerHTML = '<div class="col-span-3 text-center text-gray-400 text-sm py-8">A carregar planos…</div>'
+  const r = await financeApi('/api/finance/plans')
+  if (!r.success) { showToast('Erro ao carregar planos'); return }
+  PLANS_DATA = r.data.plans
 
-function renderPlans() {
   document.getElementById('plans-grid').innerHTML = PLANS_DATA.map(p => `
     <div class="border-2 rounded-2xl p-6" style="border-color:${p.color}20">
       <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style="background:${p.color}20">
-        <i class="fas fa-crown" style="color:${p.color}"></i>
+        <i class="fas ${p.icon || 'fa-crown'}" style="color:${p.color}"></i>
       </div>
-      <h3 class="text-xl font-bold text-gray-900 mb-1">${p.name}</h3>
-      <div class="text-3xl font-bold mb-1" style="color:${p.color}">${p.price_mzn === 0 ? 'Grátis' : p.price_mzn + ' MZN'}</div>
-      ${p.price_mzn > 0 ? `<div class="text-xs text-gray-500 mb-4">${p.price_aoa} AOA · ${p.price_brl} BRL · ${p.price_eur} EUR</div>` : '<div class="mb-4"></div>'}
+      <h3 class="text-xl font-bold text-gray-900 mb-1">${escapeHtml(p.name)}</h3>
+      <p class="text-xs text-gray-400 mb-2">${escapeHtml(p.tagline || '')}</p>
+      <div class="text-3xl font-bold mb-1" style="color:${p.color}">${p.price_monthly.mzn === 0 ? 'Grátis' : p.price_monthly.mzn + ' MZN'}</div>
+      ${p.price_monthly.mzn > 0 ? `<div class="text-xs text-gray-500 mb-4">${p.price_monthly.aoa} AOA · ${p.price_monthly.brl} BRL · ${p.price_monthly.eur} EUR</div>` : '<div class="mb-4"></div>'}
       <ul class="space-y-2 mb-5">
-        ${p.features.map(f => `<li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-xs" style="color:${p.color}"></i>${f}</li>`).join('')}
+        ${p.features.filter(f => f.included).map(f => `<li class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-check text-xs" style="color:${p.color}"></i>${escapeHtml(f.text)}</li>`).join('')}
       </ul>
-      <div class="text-sm text-gray-500 mb-4"><strong class="text-gray-800">${p.active_users.toLocaleString()}</strong> utilizadores activos</div>
-      <button onclick="editPlan('${p.id}')" class="w-full py-2 rounded-xl text-sm font-medium text-white transition" style="background:${p.color}">Editar Preços</button>
+      <button onclick="editPlan('${p.id}')" class="w-full py-2 rounded-xl text-sm font-medium text-white transition" style="background:${p.color}">Editar Plano</button>
     </div>`).join('')
 }
 
+function featureRowHtml(text = '', included = true) {
+  return `
+    <div class="flex items-center gap-2 mb-2" data-feature-row>
+      <input type="checkbox" ${included ? 'checked' : ''} class="feature-included w-4 h-4 flex-shrink-0">
+      <input type="text" value="${escapeAttr(text)}" placeholder="Texto da funcionalidade…"
+        class="feature-text flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-300">
+      <button type="button" onclick="this.closest('[data-feature-row]').remove()" class="text-red-400 hover:text-red-600 flex-shrink-0 px-1">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>`
+}
+
+function addFeatureRow() {
+  const list = document.getElementById('edit-features-list')
+  list.insertAdjacentHTML('beforeend', featureRowHtml('', true))
+  const rows = list.querySelectorAll('[data-feature-row]')
+  rows[rows.length - 1].querySelector('.feature-text').focus()
+}
+
 function actionSub(type, id) {
-  document.getElementById('modal-title').textContent = type === 'cancel' ? 'Cancelar Subscrição' : 'Processar Reembolso'
+  document.getElementById('modal-title').textContent = 'Cancelar Subscrição'
   document.getElementById('modal-body').innerHTML = `
-    <p class="text-sm text-gray-600 mb-3">${type === 'cancel' ? 'Tem a certeza que deseja cancelar esta subscrição?' : 'Introduza o motivo do reembolso:'}</p>
-    <textarea id="action-reason" rows="3" placeholder="Motivo…" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-300 resize-none"></textarea>`
+    <p class="text-sm text-gray-600">Tem a certeza que deseja cancelar esta subscrição? Esta acção actualiza o estado real na base de dados.</p>`
   document.getElementById('modal-actions').innerHTML = `
-    <button onclick="closeModal()" class="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm">Cancelar</button>
-    <button onclick="confirmAction('${type}','${id}')" class="px-4 py-2 ${type==='cancel'?'bg-red-500':'bg-purple-500'} text-white rounded-xl text-sm">${type==='cancel'?'Confirmar Cancelamento':'Processar Reembolso'}</button>`
+    <button onclick="closeModal()" class="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm">Voltar</button>
+    <button onclick="confirmAction('${type}','${id}')" class="px-4 py-2 bg-red-500 text-white rounded-xl text-sm">Confirmar Cancelamento</button>`
   document.getElementById('overlay').classList.remove('hidden')
   document.getElementById('overlay').classList.add('flex')
 }
@@ -442,11 +493,19 @@ function editPlan(id) {
   const plan = PLANS_DATA.find(p => p.id === id)
   document.getElementById('modal-title').textContent = `Editar Plano — ${plan.name}`
   document.getElementById('modal-body').innerHTML = `
-    <div class="grid grid-cols-2 gap-4">
-      <div><label class="text-xs text-gray-600">Preço MZN</label><input type="number" value="${plan.price_mzn}" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1"></div>
-      <div><label class="text-xs text-gray-600">Preço AOA</label><input type="number" value="${plan.price_aoa}" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1"></div>
-      <div><label class="text-xs text-gray-600">Preço BRL</label><input type="number" value="${plan.price_brl}" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1"></div>
-      <div><label class="text-xs text-gray-600">Preço EUR</label><input type="number" value="${plan.price_eur}" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1"></div>
+    <div class="grid grid-cols-2 gap-4 mb-5">
+      <div><label class="text-xs text-gray-600">Preço mensal MZN</label><input type="number" step="0.01" id="edit-price-mzn" value="${plan.price_monthly.mzn}" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1"></div>
+      <div><label class="text-xs text-gray-600">Preço mensal AOA</label><input type="number" step="0.01" id="edit-price-aoa" value="${plan.price_monthly.aoa}" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1"></div>
+      <div><label class="text-xs text-gray-600">Preço mensal BRL</label><input type="number" step="0.01" id="edit-price-brl" value="${plan.price_monthly.brl}" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1"></div>
+      <div><label class="text-xs text-gray-600">Preço mensal EUR</label><input type="number" step="0.01" id="edit-price-eur" value="${plan.price_monthly.eur}" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1"></div>
+    </div>
+    <div>
+      <label class="text-xs text-gray-600 font-semibold">Funcionalidades do plano</label>
+      <p class="text-xs text-gray-400 mb-2">Desmarque para mostrar como não incluída, ou remova a linha para tirar do plano.</p>
+      <div id="edit-features-list" class="max-h-56 overflow-y-auto pr-1">${plan.features.map(f => featureRowHtml(f.text, f.included)).join('')}</div>
+      <button type="button" onclick="addFeatureRow()" class="mt-2 text-xs text-green-700 font-semibold hover:underline">
+        <i class="fas fa-plus mr-1"></i>Adicionar funcionalidade
+      </button>
     </div>`
   document.getElementById('modal-actions').innerHTML = `
     <button onclick="closeModal()" class="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm">Cancelar</button>
@@ -455,8 +514,33 @@ function editPlan(id) {
   document.getElementById('overlay').classList.add('flex')
 }
 
-function confirmAction(type, id) { closeModal(); showToast(type==='cancel'?'Subscrição cancelada':'Reembolso processado') }
-function savePlan(id) { closeModal(); showToast('Plano actualizado com sucesso!') }
+async function confirmAction(type, id) {
+  const r = await financeApi(`/api/finance/subscriptions/${id}/cancel`, { method: 'POST' })
+  closeModal()
+  if (r.success) { showToast('Subscrição cancelada'); renderSubscriptions() }
+  else showToast(r.error || 'Erro ao cancelar subscrição')
+}
+
+async function savePlan(id) {
+  const priceMonthly = {
+    mzn: parseFloat(document.getElementById('edit-price-mzn').value) || 0,
+    aoa: parseFloat(document.getElementById('edit-price-aoa').value) || 0,
+    brl: parseFloat(document.getElementById('edit-price-brl').value) || 0,
+    eur: parseFloat(document.getElementById('edit-price-eur').value) || 0,
+  }
+  const features = [...document.querySelectorAll('#edit-features-list [data-feature-row]')]
+    .map(row => ({ text: row.querySelector('.feature-text').value.trim(), included: row.querySelector('.feature-included').checked }))
+    .filter(f => f.text)
+
+  const [r1, r2] = await Promise.all([
+    financeApi(`/api/finance/plans/${id}`, { method: 'PATCH', body: JSON.stringify({ price_monthly: priceMonthly }) }),
+    financeApi(`/api/finance/plans/${id}/features`, { method: 'PUT', body: JSON.stringify({ features }) })
+  ])
+
+  closeModal()
+  if (r1.success && r2.success) { showToast('Plano actualizado com sucesso!'); renderPlans() }
+  else showToast(r1.error || r2.error || 'Erro ao actualizar plano')
+}
 function exportReport() { showToast('Relatório exportado (CSV)') }
 function closeModal() { document.getElementById('overlay').classList.add('hidden'); document.getElementById('overlay').classList.remove('flex') }
 function showToast(msg) {

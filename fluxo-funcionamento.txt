@@ -1,0 +1,180 @@
+================================================================================
+VCLASS — FLUXO DE FUNCIONAMENTO DO SISTEMA
+================================================================================
+Documento gerado a partir da leitura directa do código (rotas da API,
+páginas e schema do banco). Descreve o percurso de cada perfil de
+utilizador, da entrada na plataforma até às acções principais de cada um.
+
+Perfis cobertos: Estudante (consumidor) → Professor (criador de conteúdo)
+→ Administrador (gestão da plataforma).
+
+================================================================================
+1. ESTUDANTE — o consumidor de conteúdo
+================================================================================
+
+1.1 Entrada na plataforma
+----------------------------------------
+  1. Acede a /register.html, escolhe "Estudante", preenche nome, email,
+     senha, país (Moçambique/Angola/Brasil/Portugal/Cabo Verde) e a sua
+     classe/ano dentro do currículo desse país.
+  2. O backend valida força da senha, formato de email, e confirma que a
+     classe escolhida (`grade_id`) pertence de facto ao país selecionado
+     (`country_code`) — protecção contra combinações inválidas
+     (migration 015 / `isValidCountryGrade`).
+  3. Conta criada com `is_verified: false` mas `is_active: true` — o
+     estudante já pode entrar de imediato, não há espera.
+  4. Login em /login.html devolve um access token (8h) e um refresh
+     token (30 dias, guardado como cookie HttpOnly + hash SHA-256 na
+     tabela `refresh_tokens`, revogável a qualquer momento).
+
+1.2 Navegação e consumo de conteúdo
+----------------------------------------
+  Hierarquia fixa, usada em toda a plataforma:  
+    País → Sistema Educativo → Classe/Ano → Disciplina → Capítulo → Lição
+
+  1. Dashboard (/dashboard.html) — resumo: progresso, streak, XP, banner
+     do plano actual, recomendações.
+  2. Explorar/Conteúdo (/browse.html) — navega a árvore acima até
+     encontrar a lição desejada, ou usa /search.html.
+  3. Assiste à aula (/lesson.html) — vídeo protegido: o browser pede um
+     token de acesso assinado (HMAC, escopo utilizador×lição×vídeo×IP,
+     validade curta) antes do player carregar o stream — não é possível
+     descarregar nem partilhar o link do vídeo directamente.
+  4. Responde aos exercícios da lição — cada submissão dispara
+     automaticamente (trigger na base de dados) a actualização do seu
+     progresso e estado (`not_started` → `in_progress` → `completed`).
+  5. Acompanha evolução em /progress.html (gráficos por disciplina) e
+     /achievements.html (XP, badges, certificados ao completar 100% de
+     uma disciplina com nota ≥ 70%).
+  6. Biblioteca (/library.html) — livros e apostilas complementares,
+     download público dos itens já publicados.
+  7. /profile.html — dados pessoais, senha, e aba de assinatura (planos
+     Free/Básico/Premium, geridos em /plans.html).
+  8. /notifications.html e /help.html — suporte e avisos.
+
+================================================================================
+2. PROFESSOR — o criador de conteúdo
+================================================================================
+
+2.1 Duas portas de entrada (e uma inconsistência entre elas — ver secção 4)
+----------------------------------------
+  Caminho A — Candidatura formal (o que a interface de /register.html
+  mostra): ao escolher "Professor" no registo, é redireccionado para
+  /register-teacher.html, um formulário extenso (formação académica,
+  experiência, disciplinas, referências, disponibilidade). Isto grava um
+  registo em `teacher_applications` com estado `pending`, SEM criar
+  conta em `users` ainda. Um admin analisa e aprova/rejeita
+  (/api/teacher-verification/applications/:id/approve|reject) — só na
+  aprovação é criada a conta real do professor.
+
+  Caminho B — Directo pela API: o endpoint `/api/auth/register` aceita
+  `role: "teacher"` directamente, sem passar pela candidatura. Cria conta
+  imediatamente utilizável (`is_verified: false`, mas nada no sistema
+  bloqueia o acesso ao painel com base nisso).
+
+2.2 Painel do Criador (/creator-dashboard.html)
+----------------------------------------
+  Menu: Visão Geral · Conteúdos · Alunos · Analytics · Ganhos.
+  Visão Geral mostra: nº de lições/capítulos, alunos alcançados, taxa
+  média de aprovação, engajamento semanal, lições recentes, pendências
+  (rascunhos, lições sem exercícios).
+
+2.3 Criar e publicar uma aula (o fluxo pedido)
+----------------------------------------
+  1. Em Conteúdos (/creator-content.html), cria um capítulo (disciplina +
+     classe + trimestre) — ou reutiliza um capítulo já existente seu.
+  2. Abre o Editor de Lições (/creator-lesson-editor.html) — organizado
+     em 5 abas sequenciais:
+       a) Info — título, descrição, capítulo, se é aula gratuita.
+       b) Vídeo — upload directo para o Bunny.net Stream via protocolo
+          TUS assinado (o browser recebe apenas uma assinatura HMAC com
+          validade curta — nunca a chave mestra da API do Bunny). Fica
+          "a processar" no Bunny até terminar o encoding; alternativa
+          para testes locais: `video_url` directo (MP4/HLS) sem Bunny.
+       c) Objectivos/Exercícios — objectivos de aprendizagem (JSON) e
+          perguntas de escolha múltipla com correcção automática.
+       d) Recursos — anexos complementares (PDFs, etc.).
+       e) Publicar — checklist de pré-publicação (título, vídeo pronto,
+          pelo menos 1 exercício, etc.); o botão "Publicar Lição Agora"
+          só fica activo quando os itens críticos estão completos.
+  3. Ao publicar, o professor muda o estado da lição directamente para
+     `published` (`PUT /api/creator/lesson/:id`) — a lição fica
+     imediatamente visível aos estudantes em /browse.html. Não há
+     aprovação de terceiros neste passo (ver observação na secção 4).
+  4. A partir daí acompanha desempenho em Analytics, alunos matriculados
+     em Alunos, e comissão gerada em Ganhos (40% do valor pago pelos
+     alunos com plano Básico/Premium que consumiram o conteúdo,
+     levantável via M-Pesa/e-Mola/transferência a partir de MT 500).
+
+================================================================================
+3. ADMINISTRADOR — gestão da plataforma
+================================================================================
+
+Não existe auto-registo de admin (bloqueado por design na API — só
+`student`/`teacher` podem self-registar). Uma conta admin só nasce por
+promoção manual directa na base de dados por outro admin/operador.
+
+Painel (/admin-dashboard.html) concentra:
+  - Utilizadores — listar, activar/desactivar, mudar papel
+    (`PATCH /api/admin/users/:id`).
+  - Currículo — CRUD de disciplinas e associações disciplina↔classe.
+  - Conteúdo — moderação directa de lições (`PATCH /api/admin/content/:id`).
+  - Candidaturas de professor — aprovar/rejeitar/pedir mais informação
+    (mesmo fluxo referido em 2.1); aprovação cria a conta em `users`.
+  - Biblioteca Digital — fila de itens submetidos por professores
+    (`pending_review`), aprova ou rejeita antes de ficarem públicos;
+    também pode publicar livros directamente como admin.
+  - Estatísticas gerais da plataforma.
+
+Outros papéis de gestão existem em painéis próprios, fora do admin
+central: Editor (revisão de conteúdo — ver secção 4), Financeiro
+(pagamentos/subscrições), Gestor de País, Moderador (denúncias/banimentos),
+Suporte (tickets).
+
+================================================================================
+4. O FLUXO FAZ SENTIDO? — avaliação
+================================================================================
+
+Em traços gerais, SIM — a espinha dorsal é coerente e bem pensada:
+  - A hierarquia País→Classe→Disciplina→Capítulo→Lição é consistente em
+    todo o sistema (registo, navegação, criação de conteúdo, currículo).
+  - Separação clara de responsabilidades por papel, com RBAC granular.
+  - O modelo de negócio (planos pagos → comissão ao professor) fecha o
+    ciclo entre consumo e criação de forma lógica.
+  - Segurança do vídeo (tokens assinados, sem download) e do currículo
+    (validação país×classe no registo) está bem integrada ao fluxo, não
+    é um acrescento solto.
+
+Mas encontrei duas inconsistências reais que valem a pena resolver:
+
+  1. DUAS PORTAS DE ENTRADA PARA PROFESSOR, SÓ UMA COM VERIFICAÇÃO —
+     a interface manda todo professor pela candidatura (KYT) longa, mas
+     a API pública aceita `role: "teacher"` directamente sem candidatura
+     nenhuma. Ou seja, tecnicamente qualquer pessoa com acesso à API
+     (não à interface) cria uma conta de professor completa sem
+     verificação de qualificação nenhuma — o que invalida o propósito
+     de toda a candidatura KYT. Se a verificação é para ser obrigatória,
+     o endpoint `/api/auth/register` deveria recusar `role: "teacher"`
+     directamente e forçar sempre o caminho da candidatura.
+
+  2. FILA DE REVISÃO DO "EDITOR" NÃO ESTÁ LIGADA ÀS LIÇÕES REAIS —
+     o painel do Editor (Fila de Revisão/Aprovados/Rejeitados) lê de
+     dados mock (`MOCK_LESSONS_PENDING` em `src/routes/editor.ts`), não
+     da tabela `lessons` real. Entretanto, o professor já publica lições
+     reais directamente, sem passar por essa fila. Isto sugere que a
+     intenção original era ter um passo de revisão editorial antes da
+     publicação (como já acontece, correctamente, com os itens da
+     Biblioteca Digital — que passam por `pending_review` até
+     aprovação), mas essa peça nunca foi ligada de facto para lições de
+     vídeo. Hoje o painel do Editor mostra dados de exemplo que não
+     reflectem nenhuma lição publicada de verdade.
+
+Se a intenção é que todo professor passe por verificação de
+qualificação E toda lição passe por revisão editorial antes de ir ao
+ar, essas duas peças precisam de ser fechadas — hoje ambas existem na
+interface mas são contornáveis (a primeira via API directa, a segunda
+porque nunca chegou a ser ligada aos dados reais).
+
+================================================================================
+FIM DO DOCUMENTO
+================================================================================

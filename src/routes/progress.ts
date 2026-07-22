@@ -317,4 +317,91 @@ progress.get('/recommendations', requireStudent, async (c) => {
   }
 })
 
+/**
+ * GET /api/progress/activity
+ * Mapa de estudo (últimas 12 semanas) + histórico recente — dados reais,
+ * a partir de student_progress e exercise_submissions do próprio aluno.
+ * Sem requireStudent: outros papéis (ex: professor) simplesmente não têm
+ * linhas nessas tabelas, e recebem um histórico honesto e vazio em vez de 403.
+ */
+progress.get('/activity', async (c) => {
+  try {
+    const user = c.get('user')
+    const supabase = getSupabase(c.env)
+    if (!supabase) {
+      return c.json<ApiResponse>({ success: false, error: 'Database configuration missing' }, 500)
+    }
+
+    const WEEKS = 12
+    const DAYS = WEEKS * 7
+    const since = new Date(Date.now() - DAYS * 86400000).toISOString()
+
+    const [progressRes, submissionsRes] = await Promise.all([
+      supabase
+        .from('student_progress')
+        .select('status, progress_percent, updated_at, completed_at, lesson:lessons(title)')
+        .eq('student_id', user.id)
+        .gte('updated_at', since),
+      supabase
+        .from('exercise_submissions')
+        .select('is_correct, points_earned, submitted_at, exercise:exercises(question, points, lesson:lessons(title))')
+        .eq('student_id', user.id)
+        .gte('submitted_at', since)
+    ])
+
+    const progressRows   = progressRes.data    || []
+    const submissionRows = submissionsRes.data || []
+    const dateKey = (iso: string) => iso.slice(0, 10)
+
+    // Contagem de eventos por dia (para o heatmap)
+    const dayCounts: Record<string, number> = {}
+    progressRows.forEach((p: any) => {
+      const k = dateKey(p.updated_at)
+      dayCounts[k] = (dayCounts[k] || 0) + 1
+    })
+    submissionRows.forEach((s: any) => {
+      const k = dateKey(s.submitted_at)
+      dayCounts[k] = (dayCounts[k] || 0) + 1
+    })
+
+    const heatmap: { date: string; count: number }[] = []
+    for (let i = DAYS - 1; i >= 0; i--) {
+      const k = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10)
+      heatmap.push({ date: k, count: dayCounts[k] || 0 })
+    }
+
+    // Histórico recente — combina lições e exercícios, mais recentes primeiro
+    const events: any[] = []
+    progressRows.forEach((p: any) => {
+      if (p.status === 'completed') {
+        events.push({ type: 'lesson_completed', title: p.lesson?.title || 'Lição', time: p.completed_at || p.updated_at })
+      } else if (p.status === 'in_progress') {
+        events.push({ type: 'lesson_progress', title: p.lesson?.title || 'Lição', time: p.updated_at, progress: p.progress_percent })
+      }
+    })
+    submissionRows.forEach((s: any) => {
+      events.push({
+        type: 'exercise',
+        title: s.exercise?.lesson?.title || s.exercise?.question || 'Exercício',
+        time: s.submitted_at,
+        correct: s.is_correct,
+        points: s.points_earned || 0,
+        maxPoints: s.exercise?.points ?? 1
+      })
+    })
+    events.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+
+    return c.json<ApiResponse>({
+      success: true,
+      data: { heatmap, recentActivity: events.slice(0, 15) }
+    })
+  } catch (error) {
+    console.error('Get activity error:', error)
+    return c.json<ApiResponse>({
+      success: false,
+      error: 'Internal server error'
+    }, 500)
+  }
+})
+
 export default progress

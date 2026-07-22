@@ -9,8 +9,11 @@
     <link href="/static/styles.css" rel="stylesheet">
     <style>
         /* ── Accordion ── */
-        .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.38s cubic-bezier(0.4,0,0.2,1), padding 0.2s; }
-        .faq-answer.open { max-height: 600px; }
+        /* opacity fecha bem mais rápido (.12s) do que a altura colapsa (.38s), para que
+           o texto fique totalmente invisível antes de a caixa terminar de encolher —
+           evita qualquer "sobra" do topo das letras a aparecer ao fechar. */
+        .faq-answer { max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.38s cubic-bezier(0.4,0,0.2,1), opacity 0.12s ease, padding 0.2s; }
+        .faq-item.open .faq-answer { opacity: 1; transition: max-height 0.38s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease 0.08s, padding 0.2s; }
         .faq-icon { transition: transform 0.3s; flex-shrink: 0; }
         .faq-item.open .faq-icon { transform: rotate(180deg); }
         .faq-item { border: 1.5px solid #f3f4f6; transition: border-color 0.2s, box-shadow 0.2s; }
@@ -19,7 +22,7 @@
 
         /* ── Category tabs ── */
         .cat-tab { transition: all .2s; border-bottom: 2px solid transparent; }
-        .cat-tab.active { color: #7c3aed; border-bottom-color: #7c3aed; font-weight: 600; }
+        .cat-tab.active { color: #7c3aed; border-bottom-color: #7c3aed; }
 
         /* ── Quick links ── */
         .quick-link { transition: all 0.2s; border: 1.5px solid #f3f4f6; }
@@ -53,7 +56,7 @@
 </head>
 <body class="bg-gray-50 min-h-screen">
 
-    <div id="navbar-placeholder"></div>
+    <div id="navbar-placeholder" style="min-height:64px"></div>
 
     <!-- ══ Hero ══════════════════════════════════════════════════════════════ -->
     <div class="bg-gradient-to-br from-purple-700 via-purple-600 to-indigo-600 py-16 px-4 text-white text-center relative overflow-hidden">
@@ -64,8 +67,8 @@
             <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-5 backdrop-blur-sm shadow-lg">
                 <i class="fas fa-headset text-2xl text-white"></i>
             </div>
-            <h1 class="text-3xl md:text-4xl font-bold mb-2">Como podemos ajudar?</h1>
-            <p class="text-purple-200 mb-7">Encontre respostas rápidas ou fale com nossa equipe de suporte</p>
+            <h1 id="help-title" class="text-3xl md:text-4xl font-bold mb-2">Como podemos ajudar?</h1>
+            <p id="help-subtitle" class="text-purple-200 mb-7">Encontre respostas rápidas ou fale com nossa equipe de suporte</p>
             <!-- Search -->
             <div class="max-w-lg mx-auto relative">
                 <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
@@ -78,12 +81,7 @@
             </div>
             <!-- Search suggestions -->
             <div class="flex flex-wrap justify-center gap-2 mt-4" id="search-tags">
-                <button onclick="setSearch('senha')" class="px-3 py-1 bg-white/15 hover:bg-white/25 text-white/90 rounded-full text-xs transition">senha</button>
-                <button onclick="setSearch('vídeo')" class="px-3 py-1 bg-white/15 hover:bg-white/25 text-white/90 rounded-full text-xs transition">vídeo</button>
-                <button onclick="setSearch('exercício')" class="px-3 py-1 bg-white/15 hover:bg-white/25 text-white/90 rounded-full text-xs transition">exercício</button>
-                <button onclick="setSearch('conta')" class="px-3 py-1 bg-white/15 hover:bg-white/25 text-white/90 rounded-full text-xs transition">conta</button>
-                <button onclick="setSearch('progresso')" class="px-3 py-1 bg-white/15 hover:bg-white/25 text-white/90 rounded-full text-xs transition">progresso</button>
-                <button onclick="setSearch('certificado')" class="px-3 py-1 bg-white/15 hover:bg-white/25 text-white/90 rounded-full text-xs transition">certificado</button>
+                <!-- Filled by JS -->
             </div>
         </div>
     </div>
@@ -91,43 +89,8 @@
     <div class="container mx-auto px-4 py-10 max-w-5xl">
 
         <!-- ══ Quick Links ═══════════════════════════════════════════════════ -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-10">
-            <a href="#getting-started" class="quick-link bg-white rounded-2xl p-4 text-center shadow-sm hover:shadow-lg">
-                <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-2">
-                    <i class="fas fa-rocket text-blue-600"></i>
-                </div>
-                <p class="text-xs font-semibold text-gray-700">Começar</p>
-            </a>
-            <a href="#video-player" class="quick-link bg-white rounded-2xl p-4 text-center shadow-sm hover:shadow-lg">
-                <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-2">
-                    <i class="fas fa-play-circle text-purple-600"></i>
-                </div>
-                <p class="text-xs font-semibold text-gray-700">Aulas</p>
-            </a>
-            <a href="#exercises" class="quick-link bg-white rounded-2xl p-4 text-center shadow-sm hover:shadow-lg">
-                <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-2">
-                    <i class="fas fa-tasks text-green-600"></i>
-                </div>
-                <p class="text-xs font-semibold text-gray-700">Exercícios</p>
-            </a>
-            <a href="#account" class="quick-link bg-white rounded-2xl p-4 text-center shadow-sm hover:shadow-lg">
-                <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center mx-auto mb-2">
-                    <i class="fas fa-user-cog text-orange-600"></i>
-                </div>
-                <p class="text-xs font-semibold text-gray-700">Conta</p>
-            </a>
-            <a href="#technical" class="quick-link bg-white rounded-2xl p-4 text-center shadow-sm hover:shadow-lg">
-                <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-2">
-                    <i class="fas fa-wrench text-red-600"></i>
-                </div>
-                <p class="text-xs font-semibold text-gray-700">Problemas</p>
-            </a>
-            <a href="#ticket" class="quick-link bg-white rounded-2xl p-4 text-center shadow-sm hover:shadow-lg">
-                <div class="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center mx-auto mb-2">
-                    <i class="fas fa-ticket-alt text-indigo-600"></i>
-                </div>
-                <p class="text-xs font-semibold text-gray-700">Ticket</p>
-            </a>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-10" id="quick-links">
+            <!-- Filled by JS -->
         </div>
 
         <!-- ══ Search Result Counter ══════════════════════════════════════════ -->
@@ -149,438 +112,8 @@
             </a>
         </div>
 
-        <!-- ══ FAQ Sections ═══════════════════════════════════════════════════ -->
-        <div id="faq-container" class="space-y-8">
-
-            <!-- ── Começando ────────────────────────────────────────────── -->
-            <section id="getting-started" data-section>
-                <div class="sec-heading">
-                    <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <i class="fas fa-rocket text-blue-600 text-sm"></i>
-                    </div>
-                    Começando
-                </div>
-                <div class="space-y-2">
-
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="criar conta registro cadastro estudante professor">
-                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">Como criar uma conta?</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
-                        </button>
-                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <ol class="list-decimal list-inside space-y-1.5 mt-2">
-                                <li>Acesse <a href="/register.html" class="text-purple-600 font-medium hover:underline">Criar Conta</a></li>
-                                <li>Preencha nome completo, email e senha (mín. 8 caracteres)</li>
-                                <li>Selecione o tipo: <strong>Estudante</strong> ou <strong>Professor</strong></li>
-                                <li>Escolha seu país (Moçambique, Angola, Brasil, Portugal…)</li>
-                                <li>Aceite os termos e clique em <em>"Criar Conta"</em></li>
-                                <li>Faça login e comece a estudar imediatamente!</li>
-                            </ol>
-                            <div class="mt-3 p-3 bg-blue-50 rounded-lg text-blue-700 text-xs">
-                                <i class="fas fa-info-circle mr-1"></i>
-                                Conta demo: <strong>ana.silva@vclass.mz</strong> — senha: <strong>vclass2024</strong>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="navegar conteúdo disciplinas matérias série classe">
-                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">Como encontrar minhas disciplinas?</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
-                        </button>
-                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <p class="mt-2 mb-2">A navegação segue uma hierarquia simples:</p>
-                            <div class="flex flex-col gap-1.5 mb-3">
-                                <div class="flex items-center gap-2 text-xs">
-                                    <span class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold flex-shrink-0">1</span>
-                                    <span><strong>País</strong> (Moçambique, Angola…)</span>
-                                </div>
-                                <div class="flex items-center gap-2 text-xs pl-3">
-                                    <i class="fas fa-arrow-down text-gray-300"></i>
-                                </div>
-                                <div class="flex items-center gap-2 text-xs">
-                                    <span class="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold flex-shrink-0">2</span>
-                                    <span><strong>Série/Classe</strong> (10ª, 11ª, 12ª…)</span>
-                                </div>
-                                <div class="flex items-center gap-2 text-xs pl-3">
-                                    <i class="fas fa-arrow-down text-gray-300"></i>
-                                </div>
-                                <div class="flex items-center gap-2 text-xs">
-                                    <span class="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold flex-shrink-0">3</span>
-                                    <span><strong>Disciplina</strong> (Matemática, Física…)</span>
-                                </div>
-                                <div class="flex items-center gap-2 text-xs pl-3">
-                                    <i class="fas fa-arrow-down text-gray-300"></i>
-                                </div>
-                                <div class="flex items-center gap-2 text-xs">
-                                    <span class="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 font-bold flex-shrink-0">4</span>
-                                    <span><strong>Capítulos → Aulas</strong></span>
-                                </div>
-                            </div>
-                            <p class="text-xs">Clique em <strong>Conteúdo</strong> na barra de navegação para começar, ou use a <a href="/search.html" class="text-purple-600 hover:underline">busca</a>.</p>
-                        </div>
-                    </div>
-
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="offline funciona internet conexão dados">
-                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">O VClass funciona sem internet?</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
-                        </button>
-                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <ul class="list-disc list-inside space-y-1.5 mt-2">
-                                <li>Vídeos requerem conexão (streaming protegido)</li>
-                                <li>PDFs e materiais textuais ficam em cache do navegador</li>
-                                <li>Progresso é sincronizado quando voltar online</li>
-                                <li>App mobile com download offline — em breve!</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="países disponíveis moçambique angola brasil portugal cabo verde">
-                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">Em quais países o VClass está disponível?</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
-                        </button>
-                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <div class="grid grid-cols-2 gap-2 mt-2">
-                                <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg text-xs">🇲🇿 <span>Moçambique</span></div>
-                                <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg text-xs">🇦🇴 <span>Angola</span></div>
-                                <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg text-xs">🇧🇷 <span>Brasil</span></div>
-                                <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg text-xs">🇵🇹 <span>Portugal</span></div>
-                                <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg text-xs">🇨🇻 <span>Cabo Verde</span></div>
-                            </div>
-                            <p class="text-xs text-gray-500 mt-2">Cada país tem um currículo adaptado ao seu sistema de ensino nacional.</p>
-                        </div>
-                    </div>
-
-                </div>
-            </section>
-
-            <!-- ── Player de Vídeo ───────────────────────────────────────── -->
-            <section id="video-player" data-section>
-                <div class="sec-heading">
-                    <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <i class="fas fa-play-circle text-purple-600 text-sm"></i>
-                    </div>
-                    Aulas e Player de Vídeo
-                </div>
-                <div class="space-y-2">
-
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="qualidade vídeo resolução lento buffering">
-                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">Como controlar a qualidade do vídeo?</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
-                        </button>
-                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <ol class="list-decimal list-inside space-y-1.5 mt-2">
-                                <li>Clique no ícone <i class="fas fa-cog text-gray-500"></i> no player</li>
-                                <li>Selecione <strong>"Qualidade"</strong></li>
-                                <li>Escolha: Auto, 240p, 360p, 480p ou 720p</li>
-                            </ol>
-                            <div class="mt-3 p-3 bg-yellow-50 rounded-lg text-yellow-700 text-xs">
-                                <i class="fas fa-lightbulb mr-1"></i>
-                                Se o vídeo travar, escolha <strong>240p</strong> para economizar dados.
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="download baixar vídeo salvar offline">
-                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">Posso baixar vídeos para assistir offline?</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
-                        </button>
-                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <p class="mt-2">Os vídeos são transmitidos por <strong>streaming protegido</strong> e não podem ser baixados pela versão web. O download estará disponível no app mobile (em breve).</p>
-                            <div class="mt-3 p-3 bg-purple-50 rounded-lg text-purple-700 text-xs">
-                                <i class="fas fa-shield-alt mr-1"></i>
-                                Esta medida protege o conteúdo dos nossos professores.
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="legendas subtítulos cc acessibilidade">
-                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">Como ativar legendas?</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
-                        </button>
-                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <p class="mt-2">Clique no botão <strong>CC</strong> no player. Legendas em Português estão disponíveis na maioria das aulas. Mais idiomas serão adicionados em breve.</p>
-                        </div>
-                    </div>
-
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="velocidade playback velocidade reprodução rápido lento">
-                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">Posso alterar a velocidade do vídeo?</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
-                        </button>
-                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <p class="mt-2">Sim! Clique em <i class="fas fa-cog text-gray-500"></i> no player e escolha a velocidade: <strong>0.5×, 0.75×, 1×, 1.25×, 1.5×</strong> ou <strong>2×</strong>.</p>
-                        </div>
-                    </div>
-
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="progresso aula assistida salvo retomar continuar">
-                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">Meu progresso na aula é salvo?</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
-                        </button>
-                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <p class="mt-2">Sim! O VClass salva automaticamente sua posição a cada 30 segundos. Na próxima vez que abrir a aula, você pode continuar do ponto onde parou.</p>
-                        </div>
-                    </div>
-
-                </div>
-            </section>
-
-            <!-- ── Exercícios ────────────────────────────────────────────── -->
-            <section id="exercises" data-section>
-                <div class="sec-heading">
-                    <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <i class="fas fa-tasks text-green-600 text-sm"></i>
-                    </div>
-                    Exercícios e Avaliações
-                </div>
-                <div class="space-y-2">
-
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="fazer exercícios como responder questão resolver">
-                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">Como fazer exercícios?</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
-                        </button>
-                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <ol class="list-decimal list-inside space-y-1.5 mt-2">
-                                <li>Assista a aula completa (ou pelo menos 80%)</li>
-                                <li>Role até a seção <strong>"Exercícios"</strong> na página da aula</li>
-                                <li>Leia cada questão com atenção e selecione sua resposta</li>
-                                <li>Clique em <strong>"Submeter"</strong> para ver o resultado e a explicação detalhada</li>
-                            </ol>
-                        </div>
-                    </div>
-
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="nota progresso resultado pontuação acerto aprovação">
-                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">Como ver meu progresso e notas?</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
-                        </button>
-                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <ul class="list-disc list-inside space-y-1.5 mt-2">
-                                <li>Acesse <a href="/progress.html" class="text-purple-600 font-medium hover:underline">Progresso</a> no menu</li>
-                                <li>Veja gráficos por disciplina, capítulo e período</li>
-                                <li>O Dashboard exibe um resumo geral com XP e streak</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="refazer repetir exercício tentar novamente">
-                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">Posso refazer exercícios?</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
-                        </button>
-                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <p class="mt-2">Sim! Você pode refazer qualquer exercício quantas vezes quiser. Cada tentativa pode gerar questões diferentes, e <strong>sua melhor pontuação</strong> é salva automaticamente.</p>
-                        </div>
-                    </div>
-
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="certificado conclusão diploma certificação">
-                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">Recebo certificado ao concluir uma disciplina?</span>
-                            <span class="badge-new rounded-full px-2 py-0.5 text-xs font-bold flex-shrink-0">Novo</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
-                        </button>
-                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <p class="mt-2">Ao completar 100% das aulas e exercícios de uma disciplina com nota ≥ 70%, você recebe um <strong>certificado digital VClass</strong>. Acesse em <a href="/achievements.html" class="text-purple-600 hover:underline">Conquistas</a> para baixar.</p>
-                        </div>
-                    </div>
-
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="xp pontos experiência conquistas badges nível">
-                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">Como funciona o sistema de XP e conquistas?</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
-                        </button>
-                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <div class="mt-2 space-y-1.5 text-xs">
-                                <div class="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
-                                    <span><i class="fas fa-play text-purple-500 mr-1.5"></i>Assistir aula completa</span>
-                                    <span class="font-bold text-green-600">+10 XP</span>
-                                </div>
-                                <div class="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
-                                    <span><i class="fas fa-check text-green-500 mr-1.5"></i>Exercício com 100% acerto</span>
-                                    <span class="font-bold text-green-600">+15 XP</span>
-                                </div>
-                                <div class="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
-                                    <span><i class="fas fa-fire text-orange-500 mr-1.5"></i>Streak diário</span>
-                                    <span class="font-bold text-green-600">+5 XP/dia</span>
-                                </div>
-                                <div class="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
-                                    <span><i class="fas fa-book text-blue-500 mr-1.5"></i>Capítulo concluído</span>
-                                    <span class="font-bold text-green-600">+25 XP</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            </section>
-
-            <!-- ── Conta e Perfil ─────────────────────────────────────────── -->
-            <section id="account" data-section>
-                <div class="sec-heading">
-                    <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <i class="fas fa-user-cog text-orange-600 text-sm"></i>
-                    </div>
-                    Conta e Perfil
-                </div>
-                <div class="space-y-2">
-
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="alterar email nome dados pessoais perfil atualizar">
-                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">Como alterar meus dados pessoais?</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
-                        </button>
-                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <ol class="list-decimal list-inside space-y-1.5 mt-2">
-                                <li>Clique no seu avatar no canto superior direito</li>
-                                <li>Selecione <a href="/profile.html" class="text-purple-600 hover:underline">Meu Perfil</a></li>
-                                <li>Edite nome, foto e preferências</li>
-                                <li>Clique em <strong>"Salvar Alterações"</strong></li>
-                            </ol>
-                        </div>
-                    </div>
-
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="alterar trocar mudar senha password segurança">
-                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">Como alterar minha senha?</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
-                        </button>
-                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <ol class="list-decimal list-inside space-y-1.5 mt-2">
-                                <li>Acesse <a href="/profile.html" class="text-purple-600 hover:underline">Meu Perfil</a></li>
-                                <li>Clique em <strong>"Alterar Senha"</strong></li>
-                                <li>Insira a senha atual e a nova senha</li>
-                                <li>Confirme e salve</li>
-                            </ol>
-                        </div>
-                    </div>
-
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="excluir deletar conta cancelar encerrar">
-                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">Posso excluir minha conta?</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
-                        </button>
-                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <p class="mt-2">Para excluir sua conta, entre em contato com nosso suporte via email <strong>suporte@vclass.mz</strong>. Todos os seus dados serão removidos em até 30 dias conforme a lei de proteção de dados.</p>
-                        </div>
-                    </div>
-
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="notificações alertas email push desativar configurar">
-                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">Como gerenciar notificações?</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
-                        </button>
-                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <p class="mt-2">Acesse <a href="/notifications.html" class="text-purple-600 hover:underline">Notificações</a> no menu do perfil. Você pode configurar alertas de novos conteúdos, exercícios e comunicados da equipe VClass.</p>
-                        </div>
-                    </div>
-
-                </div>
-            </section>
-
-            <!-- ── Problemas Técnicos ─────────────────────────────────────── -->
-            <section id="technical" data-section>
-                <div class="sec-heading">
-                    <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <i class="fas fa-wrench text-red-600 text-sm"></i>
-                    </div>
-                    Problemas Técnicos
-                </div>
-                <div class="space-y-2">
-
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="vídeo não carrega trava lento buffering streaming erro">
-                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">Vídeo não carrega ou trava</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
-                        </button>
-                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <ol class="list-decimal list-inside space-y-1.5 mt-2">
-                                <li>Verifique sua conexão de internet</li>
-                                <li>Reduza a qualidade para <strong>240p</strong></li>
-                                <li>Limpe o cache: <kbd class="bg-gray-100 px-1.5 py-0.5 rounded text-xs">Ctrl+Shift+R</kbd></li>
-                                <li>Tente outro navegador (Chrome ou Edge recomendados)</li>
-                                <li>Desative extensões como AdBlock temporariamente</li>
-                                <li>Se persistir, abra um <a href="#ticket" class="text-purple-600 hover:underline">ticket de suporte</a></li>
-                            </ol>
-                        </div>
-                    </div>
-
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="esqueci senha recuperar reset redefinir password">
-                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">Esqueci minha senha</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
-                        </button>
-                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <ol class="list-decimal list-inside space-y-1.5 mt-2">
-                                <li>Acesse a <a href="/login.html" class="text-purple-600 font-medium hover:underline">página de login</a></li>
-                                <li>Clique em <strong>"Esqueceu a senha?"</strong></li>
-                                <li>Insira seu email cadastrado</li>
-                                <li>Verifique sua caixa de entrada (inclusive spam)</li>
-                                <li>Clique no link e crie uma nova senha</li>
-                            </ol>
-                        </div>
-                    </div>
-
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="login erro autenticação conta bloqueada acesso negado 401">
-                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">Erro ao fazer login</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
-                        </button>
-                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <ul class="list-disc list-inside space-y-1.5 mt-2">
-                                <li>Verifique se email e senha estão corretos</li>
-                                <li>Certifique-se de que <kbd class="bg-gray-100 px-1.5 py-0.5 rounded text-xs">CAPS LOCK</kbd> não está ativo</li>
-                                <li>Limpe cookies do navegador e tente novamente</li>
-                                <li>Use <strong>"Esqueceu a senha?"</strong> para redefinir</li>
-                            </ul>
-                            <div class="mt-3 p-3 bg-blue-50 rounded-lg text-blue-700 text-xs">
-                                <i class="fas fa-info-circle mr-1"></i>
-                                Conta demo: <strong>ana.silva@vclass.mz</strong> — senha: <strong>vclass2024</strong>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="página erro 404 não encontrada branco">
-                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">Página em branco ou erro 404</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
-                        </button>
-                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <ul class="list-disc list-inside space-y-1.5 mt-2">
-                                <li>Atualize a página (<kbd class="bg-gray-100 px-1.5 py-0.5 rounded text-xs">F5</kbd>)</li>
-                                <li>Limpe o cache do navegador</li>
-                                <li>Faça logout e login novamente</li>
-                                <li>Se o problema persistir, reporte via ticket</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="navegador compatível suportado chrome firefox safari edge">
-                        <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
-                            <span class="font-medium text-gray-800 text-sm">Quais navegadores são suportados?</span>
-                            <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
-                        </button>
-                        <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">
-                            <div class="grid grid-cols-2 gap-2 mt-2 text-xs">
-                                <div class="flex items-center gap-2 p-2 bg-green-50 rounded-lg text-green-700"><i class="fab fa-chrome"></i> Chrome 90+ ✓</div>
-                                <div class="flex items-center gap-2 p-2 bg-green-50 rounded-lg text-green-700"><i class="fab fa-edge"></i> Edge 90+ ✓</div>
-                                <div class="flex items-center gap-2 p-2 bg-green-50 rounded-lg text-green-700"><i class="fab fa-firefox"></i> Firefox 85+ ✓</div>
-                                <div class="flex items-center gap-2 p-2 bg-green-50 rounded-lg text-green-700"><i class="fab fa-safari"></i> Safari 14+ ✓</div>
-                            </div>
-                            <p class="text-xs text-gray-500 mt-2">Para melhor experiência recomendamos Google Chrome.</p>
-                        </div>
-                    </div>
-
-                </div>
-            </section>
-
-        </div>
+        <!-- ══ FAQ Sections (renderizado por JS conforme o perfil do utilizador) ══ -->
+        <div id="faq-container" class="space-y-8"></div>
 
         <!-- ══ Ticket de Suporte ════════════════════════════════════════════ -->
         <section id="ticket" class="mt-12">
@@ -681,6 +214,19 @@
 
     </div>
 
+    <!-- ══ Demo Video Modal (vídeo único, abre já no timestamp da pergunta) ═══ -->
+    <div id="demo-modal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onclick="if (event.target === this) closeDemoVideo()">
+        <div class="bg-black rounded-2xl overflow-hidden w-full max-w-3xl shadow-2xl">
+            <div class="flex items-center justify-between px-4 py-3 bg-gray-900">
+                <p id="demo-modal-title" class="text-white text-sm font-semibold truncate pr-4"></p>
+                <button type="button" onclick="closeDemoVideo()" class="text-gray-400 hover:text-white flex-shrink-0">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <video id="demo-video" controls playsinline class="w-full aspect-video bg-black"></video>
+        </div>
+    </div>
+
     <script src="/static/app.js"></script>
     <script>
         // ── Init ──────────────────────────────────────────────────────────────
@@ -695,21 +241,500 @@
             if (emailEl && _u.email)     emailEl.value = _u.email;
         }
 
+        const IS_TEACHER = _u?.role === 'teacher';
+
+        // Vídeo único de demonstração (Bunny CDN), por enquanto cobrindo apenas
+        // 3 perguntas do FAQ de Estudante. Cada pergunta guarda o timestamp (em
+        // segundos, via `demoTime`) de onde a sua explicação começa nesse vídeo —
+        // ao abrir o modal, o player pula direto para esse ponto. Perguntas sem
+        // `demoTime` simplesmente não mostram o botão "Ver vídeo demonstrativo".
+        const BUNNY_DEMO_VIDEO = 'https://vclass.b-cdn.net/help/video.ajuda.mp4';
+        let DEMO_LIST = [];
+
+        // ── FAQ: Estudante ───────────────────────────────────────────────────
+        const FAQ_STUDENT = [
+            {
+                id: 'getting-started', color: 'blue', icon: 'fa-rocket', quickLabel: 'Começar', title: 'Começando',
+                items: [
+                    { keywords: 'criar conta registro cadastro estudante professor', q: 'Como criar uma conta?', demoTime: 10, a: `
+                        <ol class="list-decimal list-inside space-y-1.5 mt-2">
+                            <li>Acesse <a href="/register.html" class="text-purple-600 font-medium hover:underline">Criar Conta</a></li>
+                            <li>Preencha nome completo, email e senha (mín. 8 caracteres)</li>
+                            <li>Selecione o tipo: <strong>Estudante</strong> ou <strong>Professor</strong></li>
+                            <li>Escolha seu país (Moçambique, Angola, Brasil, Portugal…)</li>
+                            <li>Aceite os termos e clique em <em>"Criar Conta"</em></li>
+                            <li>Faça login e comece a estudar imediatamente!</li>
+                        </ol>
+                        <div class="mt-3 p-3 bg-blue-50 rounded-lg text-blue-700 text-xs">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Conta demo: <strong>ana.silva@vclass.mz</strong> — senha: <strong>vclass2024</strong>
+                        </div>` },
+                    { keywords: 'navegar conteúdo disciplinas matérias série classe', q: 'Como encontrar minhas disciplinas?', demoTime: 105, a: `
+                        <p class="mt-2 mb-2">A navegação segue uma hierarquia simples:</p>
+                        <div class="flex flex-col gap-1.5 mb-3">
+                            <div class="flex items-center gap-2 text-xs">
+                                <span class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold flex-shrink-0">1</span>
+                                <span><strong>País</strong> (Moçambique, Angola…)</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs pl-3"><i class="fas fa-arrow-down text-gray-300"></i></div>
+                            <div class="flex items-center gap-2 text-xs">
+                                <span class="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold flex-shrink-0">2</span>
+                                <span><strong>Série/Classe</strong> (10ª, 11ª, 12ª…)</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs pl-3"><i class="fas fa-arrow-down text-gray-300"></i></div>
+                            <div class="flex items-center gap-2 text-xs">
+                                <span class="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold flex-shrink-0">3</span>
+                                <span><strong>Disciplina</strong> (Matemática, Física…)</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs pl-3"><i class="fas fa-arrow-down text-gray-300"></i></div>
+                            <div class="flex items-center gap-2 text-xs">
+                                <span class="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 font-bold flex-shrink-0">4</span>
+                                <span><strong>Capítulos → Aulas</strong></span>
+                            </div>
+                        </div>
+                        <p class="text-xs">Clique em <strong>Conteúdo</strong> na barra de navegação para começar, ou use a <a href="/search.html" class="text-purple-600 hover:underline">busca</a>.</p>` },
+                    { keywords: 'offline funciona internet conexão dados', q: 'O VClass funciona sem internet?', a: `
+                        <ul class="list-disc list-inside space-y-1.5 mt-2">
+                            <li>Vídeos requerem conexão (streaming protegido)</li>
+                            <li>PDFs e materiais textuais ficam em cache do navegador</li>
+                            <li>Progresso é sincronizado quando voltar online</li>
+                            <li>App mobile com download offline — em breve!</li>
+                        </ul>` },
+                    { keywords: 'países disponíveis moçambique angola brasil portugal cabo verde', q: 'Em quais países o VClass está disponível?', a: `
+                        <div class="grid grid-cols-2 gap-2 mt-2">
+                            <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg text-xs">🇲🇿 <span>Moçambique</span></div>
+                            <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg text-xs">🇦🇴 <span>Angola</span></div>
+                            <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg text-xs">🇧🇷 <span>Brasil</span></div>
+                            <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg text-xs">🇵🇹 <span>Portugal</span></div>
+                            <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg text-xs">🇨🇻 <span>Cabo Verde</span></div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">Cada país tem um currículo adaptado ao seu sistema de ensino nacional.</p>` },
+                ]
+            },
+            {
+                id: 'video-player', color: 'purple', icon: 'fa-play-circle', quickLabel: 'Aulas', title: 'Aulas e Player de Vídeo',
+                items: [
+                    { keywords: 'qualidade vídeo resolução lento buffering', q: 'Como controlar a qualidade do vídeo?', a: `
+                        <ol class="list-decimal list-inside space-y-1.5 mt-2">
+                            <li>Clique no ícone <i class="fas fa-cog text-gray-500"></i> no player</li>
+                            <li>Selecione <strong>"Qualidade"</strong></li>
+                            <li>Escolha: Auto, 240p, 360p, 480p ou 720p</li>
+                        </ol>
+                        <div class="mt-3 p-3 bg-yellow-50 rounded-lg text-yellow-700 text-xs">
+                            <i class="fas fa-lightbulb mr-1"></i>
+                            Se o vídeo travar, escolha <strong>240p</strong> para economizar dados.
+                        </div>` },
+                    { keywords: 'download baixar vídeo salvar offline', q: 'Posso baixar vídeos para assistir offline?', a: `
+                        <p class="mt-2">Os vídeos são transmitidos por <strong>streaming protegido</strong> e não podem ser baixados pela versão web. O download estará disponível no app mobile (em breve).</p>
+                        <div class="mt-3 p-3 bg-purple-50 rounded-lg text-purple-700 text-xs">
+                            <i class="fas fa-shield-alt mr-1"></i>
+                            Esta medida protege o conteúdo dos nossos professores.
+                        </div>` },
+                    { keywords: 'legendas subtítulos cc acessibilidade', q: 'Como ativar legendas?', a: `
+                        <p class="mt-2">Clique no botão <strong>CC</strong> no player. Legendas em Português estão disponíveis na maioria das aulas. Mais idiomas serão adicionados em breve.</p>` },
+                    { keywords: 'velocidade playback velocidade reprodução rápido lento', q: 'Posso alterar a velocidade do vídeo?', demoTime: 106, a: `
+                        <p class="mt-2">Sim! Clique em <i class="fas fa-cog text-gray-500"></i> no player e escolha a velocidade: <strong>0.5×, 0.75×, 1×, 1.25×, 1.5×</strong> ou <strong>2×</strong>.</p>` },
+                    { keywords: 'progresso aula assistida salvo retomar continuar', q: 'Meu progresso na aula é salvo?', a: `
+                        <p class="mt-2">Sim! O VClass salva automaticamente sua posição a cada 30 segundos. Na próxima vez que abrir a aula, você pode continuar do ponto onde parou.</p>` },
+                ]
+            },
+            {
+                id: 'exercises', color: 'green', icon: 'fa-tasks', quickLabel: 'Exercícios', title: 'Exercícios e Avaliações',
+                items: [
+                    { keywords: 'fazer exercícios como responder questão resolver', q: 'Como fazer exercícios?', a: `
+                        <ol class="list-decimal list-inside space-y-1.5 mt-2">
+                            <li>Assista a aula completa (ou pelo menos 80%)</li>
+                            <li>Role até a seção <strong>"Exercícios"</strong> na página da aula</li>
+                            <li>Leia cada questão com atenção e selecione sua resposta</li>
+                            <li>Clique em <strong>"Submeter"</strong> para ver o resultado e a explicação detalhada</li>
+                        </ol>` },
+                    { keywords: 'nota progresso resultado pontuação acerto aprovação', q: 'Como ver meu progresso e notas?', a: `
+                        <ul class="list-disc list-inside space-y-1.5 mt-2">
+                            <li>Acesse <a href="/progress.html" class="text-purple-600 font-medium hover:underline">Progresso</a> no menu</li>
+                            <li>Veja gráficos por disciplina, capítulo e período</li>
+                            <li>O Dashboard exibe um resumo geral com XP e streak</li>
+                        </ul>` },
+                    { keywords: 'refazer repetir exercício tentar novamente', q: 'Posso refazer exercícios?', a: `
+                        <p class="mt-2">Sim! Você pode refazer qualquer exercício quantas vezes quiser. Cada tentativa pode gerar questões diferentes, e <strong>sua melhor pontuação</strong> é salva automaticamente.</p>` },
+                    { keywords: 'certificado conclusão diploma certificação', q: 'Recebo certificado ao concluir uma disciplina?', a: `
+                        <p class="mt-2">Ao completar 100% das aulas e exercícios de uma disciplina com nota ≥ 70%, você recebe um <strong>certificado digital VClass</strong>. Acesse em <a href="/achievements.html" class="text-purple-600 hover:underline">Conquistas</a> para baixar.</p>` },
+                    { keywords: 'xp pontos experiência conquistas badges nível', q: 'Como funciona o sistema de XP e conquistas?', a: `
+                        <div class="mt-2 space-y-1.5 text-xs">
+                            <div class="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                                <span><i class="fas fa-play text-purple-500 mr-1.5"></i>Assistir aula completa</span>
+                                <span class="font-bold text-green-600">+10 XP</span>
+                            </div>
+                            <div class="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                                <span><i class="fas fa-check text-green-500 mr-1.5"></i>Exercício com 100% acerto</span>
+                                <span class="font-bold text-green-600">+15 XP</span>
+                            </div>
+                            <div class="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                                <span><i class="fas fa-fire text-orange-500 mr-1.5"></i>Streak diário</span>
+                                <span class="font-bold text-green-600">+5 XP/dia</span>
+                            </div>
+                            <div class="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                                <span><i class="fas fa-book text-blue-500 mr-1.5"></i>Capítulo concluído</span>
+                                <span class="font-bold text-green-600">+25 XP</span>
+                            </div>
+                        </div>` },
+                ]
+            },
+            {
+                id: 'account', color: 'orange', icon: 'fa-user-cog', quickLabel: 'Conta', title: 'Conta e Perfil',
+                items: [
+                    { keywords: 'alterar email nome dados pessoais perfil atualizar', q: 'Como alterar meus dados pessoais?', a: `
+                        <ol class="list-decimal list-inside space-y-1.5 mt-2">
+                            <li>Clique no seu avatar no canto superior direito</li>
+                            <li>Selecione <a href="/profile.html" class="text-purple-600 hover:underline">Meu Perfil</a></li>
+                            <li>Edite nome, foto e preferências</li>
+                            <li>Clique em <strong>"Salvar Alterações"</strong></li>
+                        </ol>` },
+                    { keywords: 'alterar trocar mudar senha password segurança', q: 'Como alterar minha senha?', a: `
+                        <ol class="list-decimal list-inside space-y-1.5 mt-2">
+                            <li>Acesse <a href="/profile.html" class="text-purple-600 hover:underline">Meu Perfil</a></li>
+                            <li>Clique em <strong>"Alterar Senha"</strong></li>
+                            <li>Insira a senha atual e a nova senha</li>
+                            <li>Confirme e salve</li>
+                        </ol>` },
+                    { keywords: 'excluir deletar conta cancelar encerrar', q: 'Posso excluir minha conta?', a: `
+                        <p class="mt-2">Para excluir sua conta, entre em contato com nosso suporte via email <strong>suporte@vclass.mz</strong>. Todos os seus dados serão removidos em até 30 dias conforme a lei de proteção de dados.</p>` },
+                    { keywords: 'notificações alertas email push desativar configurar', q: 'Como gerenciar notificações?', a: `
+                        <p class="mt-2">Acesse <a href="/notifications.html" class="text-purple-600 hover:underline">Notificações</a> no menu do perfil. Você pode configurar alertas de novos conteúdos, exercícios e comunicados da equipe VClass.</p>` },
+                ]
+            },
+            {
+                id: 'technical', color: 'red', icon: 'fa-wrench', quickLabel: 'Problemas', title: 'Problemas Técnicos',
+                items: [
+                    { keywords: 'vídeo não carrega trava lento buffering streaming erro', q: 'Vídeo não carrega ou trava', a: `
+                        <ol class="list-decimal list-inside space-y-1.5 mt-2">
+                            <li>Verifique sua conexão de internet</li>
+                            <li>Reduza a qualidade para <strong>240p</strong></li>
+                            <li>Limpe o cache: <kbd class="bg-gray-100 px-1.5 py-0.5 rounded text-xs">Ctrl+Shift+R</kbd></li>
+                            <li>Tente outro navegador (Chrome ou Edge recomendados)</li>
+                            <li>Desative extensões como AdBlock temporariamente</li>
+                            <li>Se persistir, abra um <a href="#ticket" class="text-purple-600 hover:underline">ticket de suporte</a></li>
+                        </ol>` },
+                    { keywords: 'esqueci senha recuperar reset redefinir password', q: 'Esqueci minha senha', a: `
+                        <ol class="list-decimal list-inside space-y-1.5 mt-2">
+                            <li>Acesse a <a href="/login.html" class="text-purple-600 font-medium hover:underline">página de login</a></li>
+                            <li>Clique em <strong>"Esqueceu a senha?"</strong></li>
+                            <li>Insira seu email cadastrado</li>
+                            <li>Verifique sua caixa de entrada (inclusive spam)</li>
+                            <li>Clique no link e crie uma nova senha</li>
+                        </ol>` },
+                    { keywords: 'login erro autenticação conta bloqueada acesso negado 401', q: 'Erro ao fazer login', a: `
+                        <ul class="list-disc list-inside space-y-1.5 mt-2">
+                            <li>Verifique se email e senha estão corretos</li>
+                            <li>Certifique-se de que <kbd class="bg-gray-100 px-1.5 py-0.5 rounded text-xs">CAPS LOCK</kbd> não está ativo</li>
+                            <li>Limpe cookies do navegador e tente novamente</li>
+                            <li>Use <strong>"Esqueceu a senha?"</strong> para redefinir</li>
+                        </ul>
+                        <div class="mt-3 p-3 bg-blue-50 rounded-lg text-blue-700 text-xs">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Conta demo: <strong>ana.silva@vclass.mz</strong> — senha: <strong>vclass2024</strong>
+                        </div>` },
+                    { keywords: 'página erro 404 não encontrada branco', q: 'Página em branco ou erro 404', a: `
+                        <ul class="list-disc list-inside space-y-1.5 mt-2">
+                            <li>Atualize a página (<kbd class="bg-gray-100 px-1.5 py-0.5 rounded text-xs">F5</kbd>)</li>
+                            <li>Limpe o cache do navegador</li>
+                            <li>Faça logout e login novamente</li>
+                            <li>Se o problema persistir, reporte via ticket</li>
+                        </ul>` },
+                    { keywords: 'navegador compatível suportado chrome firefox safari edge', q: 'Quais navegadores são suportados?', a: `
+                        <div class="grid grid-cols-2 gap-2 mt-2 text-xs">
+                            <div class="flex items-center gap-2 p-2 bg-green-50 rounded-lg text-green-700"><i class="fab fa-chrome"></i> Chrome 90+ ✓</div>
+                            <div class="flex items-center gap-2 p-2 bg-green-50 rounded-lg text-green-700"><i class="fab fa-edge"></i> Edge 90+ ✓</div>
+                            <div class="flex items-center gap-2 p-2 bg-green-50 rounded-lg text-green-700"><i class="fab fa-firefox"></i> Firefox 85+ ✓</div>
+                            <div class="flex items-center gap-2 p-2 bg-green-50 rounded-lg text-green-700"><i class="fab fa-safari"></i> Safari 14+ ✓</div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">Para melhor experiência recomendamos Google Chrome.</p>` },
+                ]
+            },
+        ];
+
+        // ── FAQ: Professor ────────────────────────────────────────────────────
+        const FAQ_TEACHER = [
+            {
+                id: 'getting-started', color: 'blue', icon: 'fa-rocket', quickLabel: 'Começar', title: 'Começando como Professor',
+                items: [
+                    { keywords: 'candidatura tornar professor verificação aprovação registo', q: 'Como me torno professor na VClass?', a: `
+                        <ol class="list-decimal list-inside space-y-1.5 mt-2">
+                            <li>Preencha a <a href="/register-teacher.html" class="text-purple-600 font-medium hover:underline">Candidatura de Professor</a></li>
+                            <li>Descreva a sua formação, experiência pedagógica e uma aula de exemplo</li>
+                            <li>A equipa de verificação analisa o pedido (ver estado em <a href="/teacher-verification.html" class="text-purple-600 hover:underline">Verificação de Professor</a>)</li>
+                            <li>Recebe um email com o resultado — normalmente em poucos dias úteis</li>
+                        </ol>` },
+                    { keywords: 'primeiros passos dashboard criador começar publicar', q: 'Depois de aprovado, o que devo fazer primeiro?', a: `
+                        <ol class="list-decimal list-inside space-y-1.5 mt-2">
+                            <li>Acesse o seu <a href="/creator-dashboard.html" class="text-purple-600 font-medium hover:underline">Painel de Criador</a></li>
+                            <li>Complete o seu perfil público (foto, bio, especialidade)</li>
+                            <li>Crie a sua primeira aula em <a href="/creator-lesson-editor.html" class="text-purple-600 hover:underline">Editor de Aulas</a></li>
+                        </ol>
+                        <div class="mt-3 p-3 bg-blue-50 rounded-lg text-blue-700 text-xs">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Recomendamos publicar pelo menos 3 aulas antes de divulgar o seu perfil aos alunos.
+                        </div>` },
+                    { keywords: 'candidatura rejeitada reaplicar recandidatar negada', q: 'A minha candidatura foi rejeitada. Posso reaplicar?', a: `
+                        <p class="mt-2">Sim. Motivos comuns de rejeição: falta de um vídeo/aula de exemplo, dados académicos incompletos ou área de ensino não coberta no momento.</p>
+                        <ol class="list-decimal list-inside space-y-1.5 mt-2">
+                            <li>Reveja o motivo indicado no email de resposta</li>
+                            <li>Reforce a candidatura com um vídeo demonstrativo de melhor qualidade</li>
+                            <li>Reenvie o formulário — não há limite de tentativas</li>
+                        </ol>` },
+                    { keywords: 'disciplinas limite lecionar quantas matérias', q: 'Existe limite de disciplinas que posso lecionar?', a: `
+                        <p class="mt-2">Não há um limite rígido, mas recomendamos concentrar-se nas disciplinas em que tem formação ou experiência comprovada — isto ajuda a manter a sua avaliação (rating) alta e melhora a recomendação das suas aulas aos alunos certos.</p>` },
+                ]
+            },
+            {
+                id: 'video-player', color: 'purple', icon: 'fa-cloud-upload-alt', quickLabel: 'Publicar Aulas', title: 'Criar e Publicar Aulas',
+                items: [
+                    { keywords: 'upload vídeo enviar aula gravar publicar editor', q: 'Como faço upload de um vídeo de aula?', a: `
+                        <ol class="list-decimal list-inside space-y-1.5 mt-2">
+                            <li>Acesse o <a href="/creator-lesson-editor.html" class="text-purple-600 font-medium hover:underline">Editor de Aulas</a></li>
+                            <li>Escolha ou crie um capítulo para a aula</li>
+                            <li>Arraste o ficheiro de vídeo para a área de upload</li>
+                            <li>Aguarde o processamento (encoding) antes de publicar</li>
+                        </ol>` },
+                    { keywords: 'vídeo preso processando processamento travado demorado encoding', q: 'O meu vídeo ficou preso em "A processar" há horas. O que faço?', a: `
+                        <p class="mt-2">O processamento normal leva alguns minutos, dependendo do tamanho do ficheiro. Se ultrapassar <strong>2 horas</strong>:</p>
+                        <ol class="list-decimal list-inside space-y-1.5 mt-2">
+                            <li>Confirme que o formato é <strong>MP4 (H.264)</strong></li>
+                            <li>Tente reenviar numa conexão estável, evitando fechar o separador durante o upload</li>
+                            <li>Se persistir, abra um <a href="#ticket" class="text-purple-600 hover:underline">ticket</a> na categoria <strong>"Problema técnico"</strong> indicando o nome do ficheiro e a hora do envio, para a equipa investigar o processamento</li>
+                        </ol>
+                        <div class="mt-3 p-3 bg-yellow-50 rounded-lg text-yellow-700 text-xs">
+                            <i class="fas fa-lightbulb mr-1"></i>
+                            Este é um dos casos mais difíceis de resolver sozinho — a nossa equipa técnica tem acesso ao estado real do job de processamento.
+                        </div>` },
+                    { keywords: 'editar substituir trocar vídeo já publicado', q: 'Como edito ou substituo um vídeo já publicado?', a: `
+                        <p class="mt-2">Em <a href="/creator-content.html" class="text-purple-600 hover:underline">Conteúdo</a>, selecione a aula e escolha <strong>"Substituir vídeo"</strong>. Os alunos que já tinham progresso na aula mantêm o histórico, mas os pontos onde pararam podem mudar ligeiramente se a nova duração for diferente.</p>` },
+                    { keywords: 'formato requisitos técnicos vídeo tamanho resolução', q: 'Que formato e requisitos técnicos o vídeo deve ter?', a: `
+                        <ul class="list-disc list-inside space-y-1.5 mt-2">
+                            <li>Formato <strong>MP4 (H.264)</strong>, até 2GB por vídeo</li>
+                            <li>Resolução mínima recomendada: <strong>720p</strong></li>
+                            <li>A miniatura (thumbnail) é gerada automaticamente ao minuto 3, mas pode ser substituída manualmente</li>
+                        </ul>` },
+                    { keywords: 'objetivos exercícios aula editor conteúdo criar perguntas', q: 'Como adiciono objetivos de aprendizagem e exercícios à aula?', a: `
+                        <p class="mt-2">No <a href="/creator-lesson-editor.html" class="text-purple-600 hover:underline">Editor de Aulas</a>, use as abas <strong>"Objetivos"</strong> e <strong>"Exercícios"</strong> para associar perguntas de escolha múltipla, corrigidas automaticamente pela plataforma.</p>` },
+                ]
+            },
+            {
+                id: 'exercises', color: 'green', icon: 'fa-chart-line', quickLabel: 'Alunos', title: 'Alunos e Desempenho',
+                items: [
+                    { keywords: 'analytics visualizações estatísticas desempenho aulas', q: 'Como vejo quantos alunos assistem às minhas aulas?', a: `
+                        <p class="mt-2">Acesse <a href="/creator-analytics.html" class="text-purple-600 font-medium hover:underline">Análises</a> para ver gráficos de visualizações, tempo médio assistido e taxa de conclusão por aula.</p>` },
+                    { keywords: 'visualizações não batem contagem errada discrepância views', q: 'Por que o número de visualizações não bate com os alunos que dizem ter assistido?', a: `
+                        <p class="mt-2">Isto costuma ter uma explicação técnica, mas é difícil de perceber sem contexto:</p>
+                        <ul class="list-disc list-inside space-y-1.5 mt-2">
+                            <li>Uma "visualização" só é contabilizada após <strong>30 segundos</strong> de reprodução</li>
+                            <li>Visualizações repetidas do mesmo aluno no mesmo dia são deduplicadas</li>
+                            <li>O painel de Análises pode ter até <strong>24h de atraso</strong> na atualização</li>
+                        </ul>
+                        <p class="text-xs text-gray-500 mt-2">Se após 24h a diferença continuar muito grande, abra um ticket com o link da aula em questão.</p>` },
+                    { keywords: 'lista alunos turma matriculados progresso individual', q: 'Consigo ver quem são os alunos das minhas aulas?', a: `
+                        <p class="mt-2">Sim. Em <a href="/creator-students.html" class="text-purple-600 hover:underline">Meus Alunos</a> encontra a lista de alunos matriculados por disciplina, com o progresso individual de cada um.</p>` },
+                    { keywords: 'vídeo trava só para o aluno reclamação reprodução aluno específico', q: 'Um aluno reporta que o meu vídeo trava, mas para mim funciona bem. O que faço?', a: `
+                        <p class="mt-2">Este é um dos casos mais complicados de diagnosticar sozinho, porque o problema pode estar do lado do aluno ou do streaming:</p>
+                        <ol class="list-decimal list-inside space-y-1.5 mt-2">
+                            <li>Peça ao aluno para testar noutro navegador ou rede (Wi-Fi vs. dados móveis)</li>
+                            <li>Verifique em <a href="/creator-analytics.html" class="text-purple-600 hover:underline">Análises</a> se outros alunos reportam o mesmo problema na mesma aula</li>
+                            <li>Se for isolado a um aluno, é provavelmente da conexão dele — oriente-o a abrir o próprio ticket</li>
+                            <li>Se vários alunos reportarem, abra um ticket com o link da aula para a equipa investigar o CDN de vídeo</li>
+                        </ol>` },
+                ]
+            },
+            {
+                id: 'account', color: 'orange', icon: 'fa-wallet', quickLabel: 'Ganhos', title: 'Conta, Verificação e Pagamentos',
+                items: [
+                    { keywords: 'ganhos pagamento como funciona receber dinheiro monetização', q: 'Como funciona o pagamento pelas minhas aulas (ganhos)?', a: `
+                        <p class="mt-2">Em <a href="/creator-earnings.html" class="text-purple-600 font-medium hover:underline">Ganhos</a> pode acompanhar os seus rendimentos. O valor é calculado com base no tempo assistido das suas aulas por alunos com plano pago (Básico/Premium).</p>` },
+                    { keywords: 'levantamento saque withdraw retirar dinheiro método pagamento prazo', q: 'Quando e como posso levantar os meus ganhos?', a: `
+                        <ol class="list-decimal list-inside space-y-1.5 mt-2">
+                            <li>Existe um valor mínimo acumulado para poder solicitar levantamento</li>
+                            <li>Os pedidos são processados mensalmente, no painel de <a href="/creator-earnings.html" class="text-purple-600 hover:underline">Ganhos</a></li>
+                            <li>Métodos disponíveis: transferência bancária ou M-Pesa, consoante o país</li>
+                            <li>O processamento pode levar alguns dias úteis</li>
+                        </ol>` },
+                    { keywords: 'ganhos incorretos errados não batem visualizações discrepância pagamento', q: 'Os meus ganhos deste mês parecem incorretos em relação às visualizações.', a: `
+                        <p class="mt-2">Antes de assumir que há um erro, tenha em conta:</p>
+                        <ul class="list-disc list-inside space-y-1.5 mt-2">
+                            <li>Só contam para ganhos as visualizações de alunos com <strong>plano pago activo</strong> no momento em que assistiram</li>
+                            <li>Existe um desfasamento entre a visualização e o seu registo no valor a receber</li>
+                        </ul>
+                        <p class="text-xs text-gray-500 mt-2">Se, ainda assim, encontrar uma discrepância que não se explica por estes pontos, abra um ticket na categoria <strong>"Pagamento / plano"</strong> com uma captura de ecrã do painel de Ganhos — este tipo de caso normalmente precisa de análise da nossa equipa financeira.</p>` },
+                    { keywords: 'documentos verificação professor atualizar reenviar expirado', q: 'Como atualizo os meus documentos de verificação de professor?', a: `
+                        <p class="mt-2">Acesse <a href="/teacher-verification.html" class="text-purple-600 hover:underline">Verificação de Professor</a> e reenvie os documentos necessários. Se algum documento estiver expirado, será pedido um novo antes de reativar a verificação.</p>` },
+                    { keywords: 'conta suspensa sinalizada bloqueada moderação denúncia', q: 'A minha conta de professor foi suspensa ou sinalizada. O que aconteceu?', a: `
+                        <p class="mt-2">Isto normalmente acontece por denúncias de conteúdo, direitos autorais ou qualidade reportada pela moderação. É um dos casos mais sensíveis para resolver sozinho:</p>
+                        <ol class="list-decimal list-inside space-y-1.5 mt-2">
+                            <li>Verifique o seu email — a notificação inclui o motivo específico</li>
+                            <li>Reúna provas ou justificação relacionadas com o motivo indicado</li>
+                            <li>Abra um ticket na categoria <strong>"Conta e acesso"</strong> anexando essa justificação para pedido de revisão</li>
+                        </ol>` },
+                ]
+            },
+            {
+                id: 'technical', color: 'red', icon: 'fa-wrench', quickLabel: 'Problemas', title: 'Problemas Técnicos do Criador',
+                items: [
+                    { keywords: 'editor não guarda alterações perdidas salvar aula', q: 'O editor de aulas não guarda as minhas alterações', a: `
+                        <ol class="list-decimal list-inside space-y-1.5 mt-2">
+                            <li>Verifique a sua ligação à internet durante a edição</li>
+                            <li>Use sempre o botão <strong>"Salvar"</strong> antes de sair da página</li>
+                            <li>Limpe o cache: <kbd class="bg-gray-100 px-1.5 py-0.5 rounded text-xs">Ctrl+Shift+R</kbd></li>
+                            <li>Experimente noutro navegador (Chrome ou Edge recomendados)</li>
+                        </ol>` },
+                    { keywords: 'falha ao publicar erro publicar aula não publica', q: 'Recebo um erro ao tentar publicar uma aula ("Falha ao publicar")', a: `
+                        <p class="mt-2">As causas mais comuns são:</p>
+                        <ul class="list-disc list-inside space-y-1.5 mt-2">
+                            <li>Campos obrigatórios em falta (miniatura, objetivos, capítulo)</li>
+                            <li>O vídeo ainda está em processamento</li>
+                            <li>Falha de rede durante um upload grande</li>
+                        </ul>
+                        <p class="text-xs text-gray-500 mt-2">Se o erro persistir após corrigir estes pontos, abra um ticket indicando a mensagem de erro exata — é o tipo de problema que normalmente exige verificação directa pela equipa técnica.</p>` },
+                    { keywords: 'apaguei aula perdida recuperar restaurar excluída engano', q: 'Apaguei uma aula por engano. É possível recuperar?', a: `
+                        <p class="mt-2">Sim, mas o tempo é importante. Aulas apagadas ficam em quarentena por <strong>7 dias</strong> antes da remoção definitiva.</p>
+                        <ol class="list-decimal list-inside space-y-1.5 mt-2">
+                            <li>Contacte o suporte o mais rápido possível através de um <a href="#ticket" class="text-purple-600 hover:underline">ticket</a> na categoria <strong>"Conteúdo e currículo"</strong></li>
+                            <li>Indique o nome exato da aula e a data/hora aproximada da exclusão</li>
+                        </ol>
+                        <div class="mt-3 p-3 bg-red-50 rounded-lg text-red-700 text-xs">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                            Após os 7 dias a recuperação deixa de ser possível — não é algo que consiga reverter sozinho no painel.
+                        </div>` },
+                    { keywords: 'navegador compatível suportado chrome firefox safari edge criador', q: 'Quais navegadores são recomendados para gravar e publicar aulas?', a: `
+                        <div class="grid grid-cols-2 gap-2 mt-2 text-xs">
+                            <div class="flex items-center gap-2 p-2 bg-green-50 rounded-lg text-green-700"><i class="fab fa-chrome"></i> Chrome 90+ ✓</div>
+                            <div class="flex items-center gap-2 p-2 bg-green-50 rounded-lg text-green-700"><i class="fab fa-edge"></i> Edge 90+ ✓</div>
+                            <div class="flex items-center gap-2 p-2 bg-green-50 rounded-lg text-green-700"><i class="fab fa-firefox"></i> Firefox 85+ ✓</div>
+                            <div class="flex items-center gap-2 p-2 bg-green-50 rounded-lg text-green-700"><i class="fab fa-safari"></i> Safari 14+ ✓</div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">Para uploads de vídeo grandes, recomendamos ligação por cabo em vez de Wi-Fi sempre que possível.</p>` },
+                ]
+            },
+        ];
+
+        const SECTIONS   = IS_TEACHER ? FAQ_TEACHER : FAQ_STUDENT;
+        const SEARCH_TAGS = IS_TEACHER
+            ? ['vídeo', 'ganhos', 'alunos', 'publicar', 'verificação', 'processamento']
+            : ['senha', 'vídeo', 'exercício', 'conta', 'progresso', 'certificado'];
+
+        if (IS_TEACHER) {
+            document.getElementById('help-title').textContent    = 'Central de Apoio ao Professor';
+            document.getElementById('help-subtitle').textContent = 'Tire dúvidas sobre criação de aulas, alunos e ganhos, ou fale com a nossa equipe';
+        }
+
+        // ── Render: Quick Links ──────────────────────────────────────────────
+        function renderQuickLinks(sections) {
+            const html = sections.map(s => `
+                <a href="#${s.id}" class="quick-link bg-white rounded-2xl p-4 text-center shadow-sm hover:shadow-lg">
+                    <div class="w-10 h-10 bg-${s.color}-100 rounded-xl flex items-center justify-center mx-auto mb-2">
+                        <i class="fas ${s.icon} text-${s.color}-600"></i>
+                    </div>
+                    <p class="text-xs font-semibold text-gray-700">${s.quickLabel}</p>
+                </a>`).join('') + `
+                <a href="#ticket" class="quick-link bg-white rounded-2xl p-4 text-center shadow-sm hover:shadow-lg">
+                    <div class="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center mx-auto mb-2">
+                        <i class="fas fa-ticket-alt text-indigo-600"></i>
+                    </div>
+                    <p class="text-xs font-semibold text-gray-700">Ticket</p>
+                </a>`;
+            document.getElementById('quick-links').innerHTML = html;
+        }
+
+        // ── Render: Search Tags ──────────────────────────────────────────────
+        function renderSearchTags(tags) {
+            document.getElementById('search-tags').innerHTML = tags.map(t => `
+                <button onclick="setSearch('${t}')" class="px-3 py-1 bg-white/15 hover:bg-white/25 text-white/90 rounded-full text-xs transition">${t}</button>`).join('');
+        }
+
+        // ── Render: FAQ ───────────────────────────────────────────────────────
+        function renderFAQ(sections) {
+            DEMO_LIST = [];
+            const html = sections.map(s => `
+                <section id="${s.id}" data-section>
+                    <div class="sec-heading">
+                        <div class="w-8 h-8 bg-${s.color}-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fas ${s.icon} text-${s.color}-600 text-sm"></i>
+                        </div>
+                        ${s.title}
+                    </div>
+                    <div class="space-y-2">
+                        ${s.items.map(item => `
+                        <div class="faq-item bg-white rounded-xl overflow-hidden" data-keywords="${item.keywords}">
+                            <button class="faq-btn w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50" onclick="toggleFAQ(this)">
+                                <span class="font-medium text-gray-800 text-sm">${item.q}</span>
+                                ${item.badge ? `<span class="badge-new rounded-full px-2 py-0.5 text-xs font-bold flex-shrink-0">${item.badge}</span>` : ''}
+                                <i class="fas fa-chevron-down text-gray-400 text-sm faq-icon"></i>
+                            </button>
+                            <div class="faq-answer px-5 pb-4 text-gray-600 text-sm">${item.a}${item.demoTime !== undefined ? `
+                                <div class="mt-3">
+                                    <button type="button" class="demo-btn inline-flex items-center gap-2 text-xs font-semibold text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-lg transition" data-demo-idx="${DEMO_LIST.push({ time: item.demoTime, title: item.q }) - 1}">
+                                        <i class="fas fa-circle-play"></i> Ver vídeo demonstrativo
+                                    </button>
+                                </div>` : ''}</div>
+                        </div>`).join('')}
+                    </div>
+                </section>`).join('');
+            document.getElementById('faq-container').innerHTML = html;
+        }
+
+        renderQuickLinks(SECTIONS);
+        renderSearchTags(SEARCH_TAGS);
+        renderFAQ(SECTIONS);
+
+        // ── Demo Video Modal ──────────────────────────────────────────────────
+        // Um único vídeo (BUNNY_DEMO_VIDEO) reutilizado para todas as perguntas —
+        // ao abrir, o player carrega (uma vez) e pula para o `demoTime` da pergunta.
+        function openDemoVideo(seconds, title) {
+            const modal = document.getElementById('demo-modal');
+            const video = document.getElementById('demo-video');
+            document.getElementById('demo-modal-title').textContent = title;
+            modal.classList.remove('hidden');
+
+            const seekAndPlay = () => { video.currentTime = seconds; video.play(); };
+            if (video.src !== BUNNY_DEMO_VIDEO) {
+                video.src = BUNNY_DEMO_VIDEO;
+                video.addEventListener('loadedmetadata', seekAndPlay, { once: true });
+            } else {
+                seekAndPlay();
+            }
+        }
+
+        function closeDemoVideo() {
+            document.getElementById('demo-video').pause();
+            document.getElementById('demo-modal').classList.add('hidden');
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeDemoVideo();
+        });
+
+        document.getElementById('faq-container').addEventListener('click', e => {
+            const btn = e.target.closest('.demo-btn');
+            if (!btn) return;
+            const item = DEMO_LIST[Number(btn.dataset.demoIdx)];
+            if (item) openDemoVideo(item.time, item.title);
+        });
+
         // ── FAQ Accordion ──────────────────────────────────────────────────────
+        // A altura de abertura é calculada a partir do conteúdo real (scrollHeight)
+        // e o fecho força max-height/padding de volta a 0 explicitamente, para que
+        // a resposta fique sempre completamente escondida (nunca "meio aberta").
         function toggleFAQ(btn) {
             const item   = btn.closest('.faq-item');
-            const answer = btn.nextElementSibling;
+            const answer = item.querySelector('.faq-answer');
             const isOpen = item.classList.contains('open');
 
             // Close all
             document.querySelectorAll('.faq-item.open').forEach(el => {
                 el.classList.remove('open');
-                el.querySelector('.faq-answer')?.classList.remove('open');
+                const a = el.querySelector('.faq-answer');
+                if (a) a.style.maxHeight = '0px';
             });
 
             if (!isOpen) {
                 item.classList.add('open');
-                answer.classList.add('open');
+                answer.style.maxHeight = answer.scrollHeight + 'px';
                 // Smooth scroll into view
                 setTimeout(() => item.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
             }
@@ -792,18 +817,29 @@
                 name:     document.getElementById('t-name').value,
                 email:    document.getElementById('t-email').value,
                 category: document.getElementById('t-category').value,
-                message:  document.getElementById('t-message').value,
-                userAgent: navigator.userAgent,
-                timestamp: new Date().toISOString()
+                message:  document.getElementById('t-message').value
             };
 
-            // Simulate API call (replace with real endpoint when ready)
-            await new Promise(r => setTimeout(r, 1400));
+            try {
+                const token = localStorage.getItem('accessToken');
+                const res = await fetch('/api/tickets', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const r = await res.json();
+                if (!r.success) throw new Error(r.error || 'Falha ao enviar ticket');
 
-            const ticketNum = '#' + Math.floor(100000 + Math.random() * 900000);
-            document.getElementById('ticket-number').textContent = ticketNum;
-            document.getElementById('ticket-form').classList.add('hidden');
-            document.getElementById('ticket-success').classList.remove('hidden');
+                const ticketNum = '#' + String(r.data.id).slice(0, 8).toUpperCase();
+                document.getElementById('ticket-number').textContent = ticketNum;
+                document.getElementById('ticket-form').classList.add('hidden');
+                document.getElementById('ticket-success').classList.remove('hidden');
+            } catch (err) {
+                alert(err.message || 'Não foi possível enviar o ticket. Tente novamente.');
+            }
 
             btn.disabled  = false;
             btn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar Ticket';

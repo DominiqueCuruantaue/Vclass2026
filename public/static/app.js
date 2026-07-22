@@ -35,7 +35,26 @@ const api = {
     getDashboard: async () => apiRequest('/progress/dashboard', 'GET'),
     getLessonProgress: async (lessonId) => apiRequest(`/progress/lesson/${lessonId}`, 'GET'),
     updateLessonProgress: async (lessonId, data) => apiRequest(`/progress/lesson/${lessonId}`, 'POST', data),
-    getRecommendations: async () => apiRequest('/progress/recommendations', 'GET')
+    getRecommendations: async () => apiRequest('/progress/recommendations', 'GET'),
+    getActivity: async () => apiRequest('/progress/activity', 'GET')
+  },
+  favorites: {
+    list:   async () => apiRequest('/favorites', 'GET'),
+    get:    async (lessonId) => apiRequest(`/favorites/${lessonId}`, 'GET'),
+    toggle: async (lessonId) => apiRequest(`/favorites/${lessonId}`, 'POST'),
+    remove: async (lessonId) => apiRequest(`/favorites/${lessonId}`, 'DELETE')
+  },
+  bookmarks: {
+    listForLesson: async (lessonId) => apiRequest(`/bookmarks?lesson_id=${lessonId}`, 'GET'),
+    listAll: async () => apiRequest('/bookmarks', 'GET'),
+    create:  async (data) => apiRequest('/bookmarks', 'POST', data),
+    remove:  async (id) => apiRequest(`/bookmarks/${id}`, 'DELETE')
+  },
+  comments: {
+    list:   async (lessonId) => apiRequest(`/comments/lesson/${lessonId}`, 'GET'),
+    create: async (lessonId, data) => apiRequest(`/comments/lesson/${lessonId}`, 'POST', data),
+    like:   async (id) => apiRequest(`/comments/${id}/like`, 'POST'),
+    remove: async (id) => apiRequest(`/comments/${id}`, 'DELETE')
   }
 };
 
@@ -94,32 +113,57 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
 }
 
 // ─── Auth Helpers ─────────────────────────────────────────────────────────────
+// window.name sobrevive a recarregar/navegar dentro da MESMA aba, mas é sempre
+// reposto a "" quando o processo do navegador é reiniciado — mesmo que o Chrome/
+// Firefox restaurem as abas, cookies e o localStorage ("Continuar de onde parei").
+// Guardamos um marcador aleatório no login e exigimos que ele bata certo com
+// window.name em cada carregamento; se não bater, a sessão pertence a um
+// navegador/processo anterior e forçamos novo login.
+const SESSION_MARKER_KEY = 'vclass_session_marker';
+
+function _armBrowserSessionMarker() {
+  const marker = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  localStorage.setItem(SESSION_MARKER_KEY, marker);
+  window.name = `vclass:${marker}`;
+}
+
+function _isSameBrowserInstance() {
+  const marker = localStorage.getItem(SESSION_MARKER_KEY);
+  return !!marker && window.name === `vclass:${marker}`;
+}
+
+function _clearAuthStorage() {
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('user');
+  localStorage.removeItem('authTime');
+  localStorage.removeItem(SESSION_MARKER_KEY);
+  ['vclass_token','vclass_user','vclass_auth'].forEach(k => localStorage.removeItem(k));
+}
+
 function saveAuth(authData) {
   localStorage.setItem('accessToken', authData.accessToken);
   // refreshToken é gerido pelo servidor via cookie HttpOnly — não armazenar aqui
   localStorage.setItem('user', JSON.stringify(authData.user));
   localStorage.setItem('authTime', Date.now().toString());
+  _armBrowserSessionMarker();
 }
 
 function _doLogout() {
-  localStorage.removeItem('accessToken');
-  localStorage.removeItem('user');
-  localStorage.removeItem('authTime');
-  ['vclass_token','vclass_user','vclass_auth'].forEach(k => localStorage.removeItem(k));
+  _clearAuthStorage();
+  window.name = '';
   window.location.replace('/login.html');
 }
 
 function logout() {
   // 1. Limpar dados locais IMEDIATAMENTE (não depender do fetch)
-  localStorage.removeItem('accessToken');
-  localStorage.removeItem('user');
-  localStorage.removeItem('authTime');
-  ['vclass_token','vclass_user','vclass_auth'].forEach(k => localStorage.removeItem(k));
+  _clearAuthStorage();
+  window.name = '';
 
-  // 2. Notificar o servidor em background (fire-and-forget)
-  const token = null; // já removemos, usar o valor antes de apagar
+  // 2. Notificar o servidor em background (fire-and-forget) — credentials:'include'
+  // garante o envio do cookie HttpOnly para o refresh token ser revogado no servidor
   fetch(API_BASE_URL + '/auth/logout', {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' }
   }).catch(() => {}); // ignorar erros de rede
 
@@ -130,6 +174,11 @@ function logout() {
 function isAuthenticated() {
   const token = localStorage.getItem('accessToken');
   if (!token) return false;
+  if (!_isSameBrowserInstance()) {
+    // Sessão herdada de uma janela/processo anterior do navegador — inválida.
+    _clearAuthStorage();
+    return false;
+  }
   // Decode JWT and check exp client-side
   // Se expirado, o próximo apiRequest tentará refresh via cookie HttpOnly
   try {
@@ -259,13 +308,47 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// ─── Offline Banner ───────────────────────────────────────────────────────────
+// Mostra um aviso quando a conexão cai, com atalho para os arquivos já
+// transferidos (não força navegação — o aluno decide se quer sair da página).
+function showOfflineBanner() {
+  if (document.getElementById('vclass-offline-banner') || window.location.pathname === '/transfers.html') return;
+  const bar = document.createElement('div');
+  bar.id = 'vclass-offline-banner';
+  bar.className = 'fixed top-0 inset-x-0 z-[60] bg-amber-500 text-white text-sm font-medium flex items-center justify-center gap-3 py-2 px-4 shadow';
+  bar.innerHTML = `
+    <i class="fas fa-triangle-exclamation"></i>
+    <span>Você está offline — algum conteúdo pode não carregar.</span>
+    <button onclick="window.location.href='/transfers.html'" class="underline font-semibold">Ver Transferências</button>`;
+  document.body.prepend(bar);
+}
+function hideOfflineBanner() {
+  document.getElementById('vclass-offline-banner')?.remove();
+}
+window.addEventListener('online', hideOfflineBanner);
+window.addEventListener('offline', showOfflineBanner);
+document.addEventListener('DOMContentLoaded', () => { if (!navigator.onLine) showOfflineBanner(); });
+
 // ─── Global Navbar ────────────────────────────────────────────────────────────
 function getNavbarHTML(activePage = '') {
-  const links = [
+  // Professor/admin vêem o menu do Painel do Criador em qualquer página partilhada
+  // (Perfil, Notificações, Ajuda, etc.) — não o menu de navegação do estudante.
+  const user = getCurrentUser();
+  const isTeacher = user && (user.role === 'teacher' || user.role === 'admin');
+
+  const links = isTeacher ? [
+    { href: '/creator-dashboard.html', icon: 'fa-th-large',   label: 'Visão Geral', key: 'creator-dashboard' },
+    { href: '/creator-content.html',   icon: 'fa-layer-group',label: 'Conteúdos',   key: 'creator-content' },
+    { href: '/creator-students.html',  icon: 'fa-users',      label: 'Alunos',      key: 'creator-students' },
+    { href: '/creator-analytics.html', icon: 'fa-chart-bar',  label: 'Analytics',   key: 'creator-analytics' },
+    { href: '/creator-earnings.html',  icon: 'fa-coins',      label: 'Ganhos',      key: 'creator-earnings' },
+  ] : [
     { href: '/dashboard.html', icon: 'fa-home', label: 'Dashboard', key: 'dashboard' },
     { href: '/browse.html', icon: 'fa-book', label: 'Conteúdo', key: 'browse' },
     { href: '/progress.html', icon: 'fa-chart-line', label: 'Progresso', key: 'progress' },
     { href: '/library.html', icon: 'fa-book-open', label: 'Biblioteca', key: 'library' },
+    { href: '/bookmarks.html', icon: 'fa-bookmark', label: 'Marcadores', key: 'bookmarks' },
+    { href: '/transfers.html', icon: 'fa-cloud-download-alt', label: 'Transferências', key: 'transfers' },
     { href: '/achievements.html', icon: 'fa-trophy', label: 'Conquistas', key: 'achievements' },
   ];
 
@@ -280,7 +363,7 @@ function getNavbarHTML(activePage = '') {
       <div class="flex items-center justify-between h-16">
         <!-- Logo + Links -->
         <div class="flex items-center space-x-6">
-          <a href="/dashboard.html" class="flex items-center space-x-2 flex-shrink-0">
+          <a href="${isTeacher ? '/creator-dashboard.html' : '/dashboard.html'}" class="flex items-center space-x-2 flex-shrink-0">
             <div class="w-8 h-8 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-lg flex items-center justify-center shadow">
               <i class="fas fa-graduation-cap text-white text-sm"></i>
             </div>
@@ -318,12 +401,19 @@ function getNavbarHTML(activePage = '') {
                 <a href="/profile.html" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition gap-3">
                   <i class="fas fa-user text-purple-500 w-4 text-center"></i> Meu Perfil
                 </a>
+                ${isTeacher ? `
+                <a href="/creator-analytics.html" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition gap-3">
+                  <i class="fas fa-chart-bar text-blue-500 w-4 text-center"></i> Analytics
+                </a>
+                <a href="/creator-earnings.html" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-yellow-50 hover:text-yellow-700 transition gap-3">
+                  <i class="fas fa-coins text-yellow-500 w-4 text-center"></i> Ganhos
+                </a>` : `
                 <a href="/progress.html" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition gap-3">
                   <i class="fas fa-chart-line text-blue-500 w-4 text-center"></i> Progresso
                 </a>
                 <a href="/achievements.html" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-yellow-50 hover:text-yellow-700 transition gap-3">
                   <i class="fas fa-trophy text-yellow-500 w-4 text-center"></i> Conquistas
-                </a>
+                </a>`}
                 <a href="/help.html" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition gap-3">
                   <i class="fas fa-question-circle text-gray-400 w-4 text-center"></i> Ajuda
                 </a>
@@ -403,8 +493,9 @@ function _updateNavbarUser() {
     el.textContent = user.email || '';
   });
 
-  // Show creator panel link for teachers and admins
-  if (user.role === 'teacher' || user.role === 'admin') {
+  // Link "Painel do Criador" no dropdown: só para admin — professores já veem o
+  // menu do criador directamente no topo da navbar (ver getNavbarHTML), seria redundante.
+  if (user.role === 'admin') {
     document.querySelectorAll('#nav-creator-section').forEach(el => {
       el.style.display = 'block';
     });

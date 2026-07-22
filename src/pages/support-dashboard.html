@@ -103,7 +103,6 @@
         <div class="nav-section mt-4">Acesso Rápido</div>
         <a href="/dashboard.html" class="nav-item"><i class="fas fa-graduation-cap"></i> Plataforma</a>
         <a href="/help.html" class="nav-item"><i class="fas fa-question-circle"></i> Base de Conhec.</a>
-        <a href="/admin-dashboard.html" class="nav-item"><i class="fas fa-shield-alt"></i> Admin Panel</a>
     </nav>
 
     <div class="mt-auto p-4" style="position:absolute;bottom:0;left:0;right:0;border-top:1px solid rgba(255,255,255,0.08)">
@@ -305,12 +304,14 @@
             </select>
             <select id="filter-category" onchange="filterTickets()" class="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-cyan-400 bg-white">
                 <option value="all">Todas as categorias</option>
-                <option value="player">Player</option>
-                <option value="account">Conta</option>
-                <option value="exercises">Exercícios</option>
-                <option value="library">Biblioteca</option>
+                <option value="account">Conta e acesso</option>
+                <option value="video">Vídeo</option>
+                <option value="exercises">Exercícios e notas</option>
+                <option value="content">Conteúdo</option>
+                <option value="progress">Progresso e XP</option>
                 <option value="technical">Técnico</option>
-                <option value="general">Geral</option>
+                <option value="billing">Pagamento / plano</option>
+                <option value="other">Outro</option>
             </select>
         </div>
 
@@ -569,8 +570,8 @@ function timeAgo(iso) {
     return `${Math.floor(diff/86400)}d atrás`
 }
 
-const CATEGORY_LABELS = { player:'Player', account:'Conta', exercises:'Exercícios', library:'Biblioteca', technical:'Técnico', general:'Geral' }
-const CATEGORY_COLORS = { player:'bg-blue-100 text-blue-700', account:'bg-purple-100 text-purple-700', exercises:'bg-green-100 text-green-700', library:'bg-orange-100 text-orange-700', technical:'bg-gray-100 text-gray-700', general:'bg-pink-100 text-pink-700' }
+const CATEGORY_LABELS = { account:'Conta e acesso', video:'Vídeo', exercises:'Exercícios', content:'Conteúdo', progress:'Progresso', technical:'Técnico', billing:'Pagamento', other:'Outro' }
+const CATEGORY_COLORS = { account:'bg-purple-100 text-purple-700', video:'bg-blue-100 text-blue-700', exercises:'bg-green-100 text-green-700', content:'bg-orange-100 text-orange-700', progress:'bg-indigo-100 text-indigo-700', technical:'bg-gray-100 text-gray-700', billing:'bg-yellow-100 text-yellow-700', other:'bg-pink-100 text-pink-700' }
 const PRIORITY_COLORS = { high:'badge-high', medium:'badge-medium', low:'badge-low' }
 const STATUS_COLORS   = { open:'badge-open', in_progress:'badge-progress', resolved:'badge-resolved' }
 const PRIORITY_LABELS = { high:'Alta', medium:'Média', low:'Baixa' }
@@ -583,8 +584,8 @@ function avatarColor(name = '') {
 }
 
 // ── API helper ───────────────────────────────────────────────────
-async function api(path, opts = {}) {
-    const token = localStorage.getItem('vclass_token')
+async function supportApi(path, opts = {}) {
+    const token = localStorage.getItem('accessToken')
     const res = await fetch(path, {
         ...opts,
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...(opts.headers || {}) }
@@ -594,7 +595,7 @@ async function api(path, opts = {}) {
 
 // ── LOAD OVERVIEW ─────────────────────────────────────────────────
 async function loadOverview() {
-    const r = await api('/api/support/stats')
+    const r = await supportApi('/api/support/stats')
     if (!r.success) return
 
     const d = r.data
@@ -628,7 +629,7 @@ async function loadOverview() {
         </div>`).join('')
 
     // Urgent tickets
-    const ticketsR = await api('/api/support/tickets?status=open')
+    const ticketsR = await supportApi('/api/support/tickets?status=open')
     if (ticketsR.success) {
         const urgent = ticketsR.data.tickets.filter(t => t.priority === 'high').slice(0, 4)
         document.getElementById('urgent-tickets-list').innerHTML = urgent.length === 0
@@ -677,7 +678,7 @@ async function loadTickets(params = {}) {
     const search   = document.getElementById('ticket-search')?.value   || ''
 
     const q = new URLSearchParams({ status, priority, category, search })
-    const r = await api(`/api/support/tickets?${q}`)
+    const r = await supportApi(`/api/support/tickets?${q}`)
     if (!r.success) return
 
     _tickets = r.data.tickets
@@ -704,7 +705,7 @@ function setStatusFilter(val, btn) {
 // ── OPEN TICKET MODAL ─────────────────────────────────────────────
 async function openTicket(id) {
     _activeTicketId = id
-    const r = await api(`/api/support/tickets/${id}`)
+    const r = await supportApi(`/api/support/tickets/${id}`)
     if (!r.success) return
 
     const t = r.data
@@ -744,7 +745,7 @@ function closeModal() { document.getElementById('ticket-modal').classList.remove
 
 async function updateTicketStatus(status) {
     if (!_activeTicketId) return
-    const r = await api(`/api/support/tickets/${_activeTicketId}`, { method: 'PATCH', body: JSON.stringify({ status }) })
+    const r = await supportApi(`/api/support/tickets/${_activeTicketId}`, { method: 'PATCH', body: JSON.stringify({ status }) })
     if (r.success) { showToast(`Ticket marcado como: ${STATUS_LABELS[status]}`); closeModal(); loadTickets(); loadOverview() }
     else showToast('Erro ao actualizar ticket', 'error')
 }
@@ -752,7 +753,7 @@ async function updateTicketStatus(status) {
 async function sendReply() {
     const reply = document.getElementById('reply-text').value.trim()
     if (!reply || !_activeTicketId) return
-    const r = await api(`/api/support/tickets/${_activeTicketId}`, { method: 'PATCH', body: JSON.stringify({ response: reply }) })
+    const r = await supportApi(`/api/support/tickets/${_activeTicketId}`, { method: 'PATCH', body: JSON.stringify({ response: reply }) })
     if (r.success) { showToast('Resposta enviada!'); document.getElementById('reply-text').value = ''; openTicket(_activeTicketId) }
     else showToast('Erro ao enviar resposta', 'error')
 }
@@ -763,7 +764,7 @@ async function loadUsers() {
     const status = document.getElementById('filter-user-status')?.value || 'all'
 
     const q = new URLSearchParams({ search, status })
-    const r = await api(`/api/support/users?${q}`)
+    const r = await supportApi(`/api/support/users?${q}`)
     if (!r.success) return
 
     const { users, stats } = r.data
@@ -843,7 +844,7 @@ function openUserActions(id, name, email, status) {
 }
 
 async function userAction(action, id) {
-    const r = await api(`/api/support/users/${id}/${action}`, { method: 'POST' })
+    const r = await supportApi(`/api/support/users/${id}/${action}`, { method: 'POST' })
     document.getElementById('user-modal').classList.remove('open')
     if (r.success) {
         const msgs = { 'reset-password': `Senha temporária: ${r.data?.temp_password}`, 'block': 'Conta bloqueada', 'unblock': 'Conta desbloqueada' }
@@ -859,7 +860,7 @@ function sendEmail(email) {
 
 // ── LOAD ANNOUNCEMENTS ────────────────────────────────────────────
 async function loadAnnouncements() {
-    const r = await api('/api/support/announcements')
+    const r = await supportApi('/api/support/announcements')
     if (!r.success) return
     const el = document.getElementById('announcements-list')
     const AUDIENCE = { all:'Todos', students:'Estudantes', teachers:'Professores', mz:'Moçambique', ao:'Angola' }
@@ -880,7 +881,7 @@ async function sendAnnouncement() {
     const audience= document.getElementById('ann-audience').value
     if (!title || !message) { showToast('Preencha título e mensagem', 'error'); return }
 
-    const r = await api('/api/support/announcements', { method: 'POST', body: JSON.stringify({ title, message, audience }) })
+    const r = await supportApi('/api/support/announcements', { method: 'POST', body: JSON.stringify({ title, message, audience }) })
     if (r.success) {
         showToast('Aviso enviado com sucesso!')
         document.getElementById('ann-title').value = ''

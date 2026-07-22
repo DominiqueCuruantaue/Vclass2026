@@ -7,6 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-geo@3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
     <link href="/static/styles.css" rel="stylesheet">
     <style>
         :root { --admin: #1e1b4b; --admin-mid: #312e81; --accent: #7c3aed; }
@@ -53,6 +55,11 @@
         .pill-student  { background:#ede9fe; color:#5b21b6; }
         .pill-teacher  { background:#dbeafe; color:#1d4ed8; }
         .pill-admin    { background:#fef3c7; color:#92400e; }
+        .pill-support  { background:#cffafe; color:#0e7490; }
+        .pill-editor   { background:#fce7f3; color:#9d174d; }
+        .pill-finance  { background:#dcfce7; color:#15803d; }
+        .pill-moderator{ background:#ffedd5; color:#c2410c; }
+        .pill-country_manager { background:#e0e7ff; color:#3730a3; }
         .pill-published{ background:#d1fae5; color:#065f46; }
         .pill-draft    { background:#fef9c3; color:#854d0e; }
         .pill-archived { background:#f1f5f9; color:#475569; }
@@ -230,11 +237,18 @@
                 <i class="fas fa-sync-alt" id="refresh-icon"></i>
             </button>
             <!-- Notifications -->
-            <div class="relative">
-                <button onclick="showTab('alerts')" class="text-gray-400 hover:text-purple-600 transition">
+            <div class="relative" id="notif-bell-wrap">
+                <button onclick="toggleNotifDropdown(event)" class="text-gray-400 hover:text-purple-600 transition">
                     <i class="fas fa-bell text-lg"></i>
                     <span id="topbar-alert-badge" class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center hidden">!</span>
                 </button>
+                <div id="notif-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                        <span class="text-sm font-bold text-gray-800">Notificações</span>
+                        <button onclick="showTab('alerts'); closeNotifDropdown();" class="text-xs text-purple-600 hover:underline">Ver todas →</button>
+                    </div>
+                    <div id="notif-dropdown-list" class="max-h-96 overflow-y-auto divide-y divide-gray-50"></div>
+                </div>
             </div>
         </header>
 
@@ -369,7 +383,15 @@
                                 <option value="student">Estudantes</option>
                                 <option value="teacher">Professores</option>
                                 <option value="admin">Administradores</option>
+                                <option value="support">Suporte</option>
+                                <option value="editor">Editores</option>
+                                <option value="finance">Financeiro</option>
+                                <option value="moderator">Moderadores</option>
+                                <option value="country_manager">Gestores de País</option>
                             </select>
+                            <button onclick="openCreateUserModal()" class="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition">
+                                <i class="fas fa-user-plus mr-1"></i> Criar Utilizador
+                            </button>
                         </div>
                     </div>
 
@@ -410,6 +432,50 @@
                         </table>
                     </div>
                 </div>
+
+                <!-- Modal: criar conta de utilizador -->
+                <div id="create-user-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 hidden">
+                    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+                        <div class="flex items-center justify-between p-6 border-b border-gray-100">
+                            <h2 class="text-lg font-bold text-gray-900">Criar Utilizador</h2>
+                            <button onclick="closeCreateUserModal()" class="text-gray-400 hover:text-gray-600 transition">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                        <form id="create-user-form" onsubmit="submitCreateUser(event)" class="p-6 space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">Nome completo</label>
+                                <input type="text" id="cu-name" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">Email</label>
+                                <input type="email" id="cu-email" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">Password</label>
+                                <input type="password" id="cu-password" required minlength="8" placeholder="Mín. 8 caracteres, maiúscula, minúscula e número"
+                                       class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">Telefone (opcional)</label>
+                                <input type="text" id="cu-phone" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">Papel</label>
+                                <select id="cu-role" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400"></select>
+                            </div>
+                            <div id="cu-error" class="text-xs text-red-600 hidden"></div>
+                            <div class="flex gap-2 pt-2">
+                                <button type="submit" class="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition">
+                                    <i class="fas fa-check mr-1"></i> Criar Conta
+                                </button>
+                                <button type="button" onclick="closeCreateUserModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition">
+                                    Cancelar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
 
             <!-- ══ CONTENT TAB ═══════════════════════════════════════ -->
@@ -421,6 +487,7 @@
                             <select id="status-filter" onchange="filterContent()"
                                     style="border:1.5px solid #e2e8f0;border-radius:10px;padding:7px 12px;font-size:.84rem;outline:none;">
                                 <option value="">Todos os estados</option>
+                                <option value="pending_review">Aguardam Aprovação</option>
                                 <option value="published">Publicados</option>
                                 <option value="draft">Rascunhos</option>
                                 <option value="archived">Arquivados</option>
@@ -473,6 +540,31 @@
                     <div class="section-card p-6 skeleton h-40"></div>
                     <div class="section-card p-6 skeleton h-40"></div>
                     <div class="section-card p-6 skeleton h-40"></div>
+                </div>
+            </div>
+
+            <!-- ══ MODAL: Mapa do país ══════════════════════════════════ -->
+            <div id="country-map-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(15,23,42,.55)" onclick="if(event.target===this) closeCountryMap()">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
+                    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                        <div class="flex items-center gap-3">
+                            <span id="cm-flag" class="text-2xl"></span>
+                            <div>
+                                <div class="font-bold text-gray-900" id="cm-name">—</div>
+                                <div class="text-xs text-gray-400" id="cm-total">—</div>
+                            </div>
+                        </div>
+                        <button onclick="closeCountryMap()" class="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="p-6">
+                        <div id="cm-map-wrap"></div>
+                        <p class="text-xs text-gray-400 mt-4 flex items-start gap-1.5">
+                            <i class="fas fa-info-circle mt-0.5"></i>
+                            <span>O total de utilizadores é real (vindo da base de dados). A distribuição por cidade é ilustrativa — ainda não guardamos a localização exacta de cada utilizador.</span>
+                        </p>
+                    </div>
                 </div>
             </div>
 
@@ -587,7 +679,7 @@
             <!-- ══ TEACHER VERIFICATION TAB ═══════════════════════ -->
             <div id="tab-teachers" class="hidden">
                 <!-- Stats de candidaturas -->
-                <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6" id="tv-stats-grid">
+                <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-4 mb-6" id="tv-stats-grid">
                     <div class="section-card p-4 text-center">
                         <div class="text-2xl font-bold text-gray-800" id="tv-total">—</div>
                         <div class="text-xs text-gray-500 mt-1">Total</div>
@@ -612,6 +704,10 @@
                         <div class="text-2xl font-bold text-orange-600" id="tv-flagged">—</div>
                         <div class="text-xs text-gray-500 mt-1">Sinalizados</div>
                     </div>
+                    <div class="section-card p-4 text-center">
+                        <div class="text-2xl font-bold text-blue-500" id="tv-direct">—</div>
+                        <div class="text-xs text-gray-500 mt-1">Contas Diretas</div>
+                    </div>
                 </div>
 
                 <!-- Filtros -->
@@ -630,6 +726,7 @@
                             <option value="info_requested">Info Solicitada</option>
                             <option value="approved">Aprovados</option>
                             <option value="rejected">Rejeitados</option>
+                            <option value="inactive">Conta Inativa</option>
                         </select>
                         <select id="tv-filter-country" class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400" onchange="filterTeacherApps()">
                             <option value="all">Todos os países</option>
@@ -797,9 +894,10 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-xs font-semibold text-gray-700 mb-1">Nº de páginas</label>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">Nº de páginas <span id="lib-f-pages-auto" class="text-green-600 font-normal hidden">(detectado automaticamente)</span></label>
                                 <input id="lib-f-pages" type="number" min="1" placeholder="Ex: 240"
                                     class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400">
+                                <input id="lib-f-size" type="hidden">
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-3">
@@ -818,7 +916,7 @@
                         </div>
                         <!-- Upload de ficheiro -->
                         <div>
-                            <label class="block text-xs font-semibold text-gray-700 mb-1">Ficheiro PDF <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">Ficheiro <span class="text-red-500">*</span></label>
                             <!-- Zona de drop -->
                             <div id="lib-drop-zone"
                                 class="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition"
@@ -827,10 +925,10 @@
                                 ondragleave="this.classList.remove('border-purple-400','bg-purple-50')"
                                 ondrop="libHandleDrop(event)">
                                 <i class="fas fa-cloud-upload-alt text-2xl text-gray-300 mb-1"></i>
-                                <p class="text-xs text-gray-500">Clique ou arraste o PDF aqui</p>
-                                <p class="text-xs text-gray-400">Máx. 100 MB</p>
+                                <p class="text-xs text-gray-500">Clique ou arraste o ficheiro aqui</p>
+                                <p class="text-xs text-gray-400">PDF, Word, Excel, PowerPoint, imagens ou ZIP · Máx. 50 MB</p>
                             </div>
-                            <input type="file" id="lib-file-input" accept=".pdf,.doc,.docx" class="hidden" onchange="libUploadFile(this.files[0])">
+                            <input type="file" id="lib-file-input" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.zip" class="hidden" onchange="libUploadFile(this.files[0])">
                             <!-- Barra de progresso -->
                             <div id="lib-upload-progress" class="hidden mt-2">
                                 <div class="flex items-center gap-2 text-xs text-gray-600 mb-1">
@@ -934,6 +1032,38 @@ let allContent = [];
     setInterval(updateClock, 1000);
 
     await loadData();
+
+    // Vindo de uma notificação ("Lição aguarda aprovação") — abre já na aba certa,
+    // filtrado por estado, e destaca a linha da lição específica.
+    const qp = new URLSearchParams(window.location.search);
+    const qTab    = qp.get('tab');
+    const qStatus = qp.get('status');
+    const qLesson = qp.get('lesson');
+    if (qTab) {
+        // Definir o filtro de estado da aba Professores ANTES de mudar de aba,
+        // porque showTab('teachers') dispara loadTeacherApplications() de forma
+        // assíncrona — loadTeacherApplications() reaplica este filtro quando os
+        // dados chegarem (ver comentário lá).
+        if (qTab === 'teachers' && qStatus) {
+            const tvStatusSelect = document.getElementById('tv-filter-status');
+            if (tvStatusSelect) tvStatusSelect.value = qStatus;
+        }
+        showTab(qTab);
+        if (qStatus && qTab === 'content') {
+            const statusSelect = document.getElementById('status-filter');
+            if (statusSelect) { statusSelect.value = qStatus; filterContent(); }
+        }
+        if (qLesson) {
+            setTimeout(() => {
+                const row = document.querySelector(`tr[data-lesson-id="${qLesson}"]`);
+                if (row) {
+                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    row.classList.add('highlight-row');
+                    setTimeout(() => row.classList.remove('highlight-row'), 3200);
+                }
+            }, 200);
+        }
+    }
 })();
 
 function updateClock() {
@@ -965,11 +1095,16 @@ async function loadData() {
         renderTopLessons(DATA.top_lessons);
         initActivityChart();
 
-        // Badge
-        const draftCount = DATA.stats?.draft_lessons || 0;
-        if (draftCount > 0) {
-            document.getElementById('badge-content').textContent = draftCount;
+        // Badge — rascunhos + lições pendentes de aprovação (estas são as mais urgentes)
+        const draftCount   = DATA.stats?.draft_lessons   || 0;
+        const pendingCount = DATA.stats?.pending_lessons || 0;
+        const contentBadgeCount = draftCount + pendingCount;
+        if (contentBadgeCount > 0) {
+            document.getElementById('badge-content').textContent = contentBadgeCount;
             document.getElementById('badge-content').classList.remove('hidden');
+        }
+        if (pendingCount > 0) {
+            document.getElementById('topbar-alert-badge').classList.remove('hidden');
         }
 
         const alertCount = (DATA.system_alerts || []).filter(a => a.level === 'warning' || a.level === 'error').length;
@@ -992,10 +1127,25 @@ async function loadData() {
         document.getElementById('cs-draft').textContent     = (DATA.stats?.draft_lessons || 0).toLocaleString('pt');
         document.getElementById('cs-total').textContent     = (DATA.stats?.total_lessons || 0).toLocaleString('pt');
 
-        // prefill arrays
-        allUsers = DATA.recent_users || [];
-        allContent = DATA.recent_lessons || [];
+        // Utilizadores: lista completa real (não só os 8 "recentes" do dashboard)
+        try {
+            const usersRes = await fetch('/api/admin/users?limit=100', { headers: { 'Authorization': `Bearer ${token}` } });
+            const usersJson = await usersRes.json();
+            allUsers = usersJson.success ? (usersJson.data || []) : (DATA.recent_users || []);
+        } catch {
+            allUsers = DATA.recent_users || [];
+        }
         renderUsersTable(allUsers);
+
+        // Conteúdo: lista real de lições (não os dados de exemplo do dashboard),
+        // para as lições novas dos professores aparecerem para validação.
+        try {
+            const contentRes = await fetch('/api/admin/content', { headers: { 'Authorization': `Bearer ${token}` } });
+            const contentJson = await contentRes.json();
+            allContent = contentJson.success ? (contentJson.data || []) : (DATA.recent_lessons || []);
+        } catch {
+            allContent = DATA.recent_lessons || [];
+        }
         renderContentTable(allContent);
         renderCountries(DATA.countries || []);
         renderAnalytics();
@@ -1025,7 +1175,7 @@ function renderKPIs(stats) {
     const cards = [
         { label:'Total Utilizadores',   val:stats.total_users,         sub:`+${stats.new_users_week} esta semana`, icon:'fa-users',      color:'#7c3aed', bg:'#ede9fe' },
         { label:'Estudantes',           val:stats.total_students,      sub:`${stats.total_teachers} professores`,  icon:'fa-graduation-cap', color:'#2563eb', bg:'#dbeafe' },
-        { label:'Lições Publicadas',    val:stats.published_lessons,   sub:`${stats.draft_lessons} rascunhos`,     icon:'fa-play-circle', color:'#16a34a', bg:'#d1fae5' },
+        { label:'Lições Publicadas',    val:stats.published_lessons,   sub:`${stats.draft_lessons} rascunhos · ${stats.pending_lessons||0} em revisão`, icon:'fa-play-circle', color:'#16a34a', bg:'#d1fae5' },
         { label:'Visualizações Totais', val:stats.total_views,         sub:`${stats.views_today} hoje`,            icon:'fa-eye',         color:'#0891b2', bg:'#cffafe' },
         { label:'Exercícios Feitos',    val:stats.total_exercises_done,sub:`Média: ${stats.avg_score}%`,           icon:'fa-tasks',       color:'#d97706', bg:'#fef3c7' },
         { label:'Países Activos',       val:stats.active_countries,    sub:`de ${stats.total_countries} países`,   icon:'fa-globe-africa',color:'#dc2626', bg:'#fee2e2' },
@@ -1152,7 +1302,7 @@ function renderTopLessons(lessons) {
                         color:${i===0?'#92400e':i===1?'#374151':i===2?'#9d174d':'#6b7280'}">${i+1}</div>
             <div class="flex-1 min-w-0">
                 <div class="text-sm font-semibold text-gray-800 truncate">${escapeHtml(l.title)}</div>
-                <div class="text-xs text-gray-400">${escapeHtml(l.subject)} · Pontuação média: ${escapeHtml(l.score)}%</div>
+                <div class="text-xs text-gray-400">${escapeHtml(l.subject||'—')} · Pontuação média: ${l.score != null ? escapeHtml(l.score) + '%' : '—'}</div>
                 <div class="mini-bar mt-1.5">
                     <div class="mini-bar-fill bg-purple-500" style="width:${Math.round((l.views/max)*100)}%"></div>
                 </div>
@@ -1200,13 +1350,60 @@ function renderAlertsTab(alerts) {
 
 function alertIcon(l) { return { warning:'fa-exclamation-triangle', success:'fa-check-circle', error:'fa-times-circle', info:'fa-info-circle' }[l] || 'fa-bell'; }
 function alertColor(l){ return { warning:'#d97706', success:'#16a34a', error:'#dc2626', info:'#2563eb' }[l] || '#7c3aed'; }
+// Ícone por tipo de notificação (mais específico que o ícone genérico por nível)
+function alertTypeIcon(t){ return { teacher_application:'fa-user-check', lesson_review:'fa-book', new_users:'fa-users' }[t] || null; }
+
+// ═══════════════════════════════════════════════════════════════════
+// SINO DE NOTIFICAÇÕES (dropdown no topbar)
+// ═══════════════════════════════════════════════════════════════════
+function renderNotifDropdown(alerts) {
+    const list = document.getElementById('notif-dropdown-list');
+    if (!alerts?.length) { list.innerHTML = '<p class="text-xs text-gray-400 text-center py-8">Sem notificações</p>'; return; }
+    list.innerHTML = alerts.slice(0, 8).map(a => `
+        <div class="px-4 py-3 hover:bg-gray-50 transition cursor-pointer" onclick="handleNotifClick('${escapeAttr(a.action_url||'')}')">
+            <div class="flex items-start gap-2">
+                <i class="fas ${alertTypeIcon(a.type) || alertIcon(a.level)} mt-0.5 flex-shrink-0" style="color:${alertColor(a.level)}"></i>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-medium text-gray-800">${escapeHtml(a.msg)}</p>
+                    <p class="text-xs text-gray-400 mt-0.5">${VClass.formatRelativeTime(a.time)}</p>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function handleNotifClick(actionUrl) {
+    closeNotifDropdown();
+    if (actionUrl) window.location.href = actionUrl;
+}
+
+function toggleNotifDropdown(ev) {
+    ev.stopPropagation();
+    const dd = document.getElementById('notif-dropdown');
+    dd.classList.toggle('hidden');
+    if (!dd.classList.contains('hidden')) renderNotifDropdown(DATA?.system_alerts || []);
+}
+
+function closeNotifDropdown() { document.getElementById('notif-dropdown')?.classList.add('hidden'); }
+
+document.addEventListener('click', (ev) => {
+    const wrap = document.getElementById('notif-bell-wrap');
+    if (wrap && !wrap.contains(ev.target)) closeNotifDropdown();
+});
 
 // ═══════════════════════════════════════════════════════════════════
 // USERS TABLE (full)
 // ═══════════════════════════════════════════════════════════════════
+const ALL_ROLES = ['student','teacher','admin','support','editor','finance','moderator','country_manager'];
+
 function renderUsersTable(users) {
     const FLAG = { mz:'🇲🇿', ao:'🇦🇴', pt:'🇵🇹', br:'🇧🇷', cv:'🇨🇻' };
-    document.getElementById('users-tbody').innerHTML = users.length ? users.map(u => `
+    document.getElementById('users-tbody').innerHTML = users.length ? users.map(u => {
+        // GET /api/admin/users devolve linhas cruas do Supabase (is_active/country_code);
+        // o dashboard devolve já normalizado (active/country) — aceitar as duas formas.
+        const isActive = u.active !== undefined ? u.active : !!u.is_active;
+        const country  = u.country !== undefined ? u.country : u.country_code;
+        return `
         <tr>
             <td>
                 <div class="flex items-center gap-2">
@@ -1216,26 +1413,27 @@ function renderUsersTable(users) {
             </td>
             <td class="text-gray-500 text-xs">${escapeHtml(u.email)}</td>
             <td><span class="pill pill-${escapeAttr(u.role)}">${escapeHtml(roleLabel(u.role))}</span></td>
-            <td>${FLAG[u.country] || escapeHtml(u.country) || '—'}</td>
+            <td>${FLAG[country] || escapeHtml(country) || '—'}</td>
             <td>
-                <span class="pill ${u.active ? 'pill-active' : 'pill-inactive'}">
-                    ${u.active ? 'Activo' : 'Inactivo'}
+                <span class="pill ${isActive ? 'pill-active' : 'pill-inactive'}">
+                    ${isActive ? 'Activo' : 'Inactivo'}
                 </span>
             </td>
             <td class="text-gray-400 text-xs">${VClass.formatRelativeTime(u.joined||u.created_at)}</td>
             <td>
                 <div class="flex gap-1">
-                    <button onclick="toggleUser('${u.id}', ${!u.active})"
-                            class="btn-sm ${u.active ? 'btn-danger' : 'btn-success'}" title="${u.active ? 'Desativar' : 'Ativar'}">
-                        <i class="fas fa-${u.active ? 'ban' : 'check'}"></i>
+                    <button onclick="toggleUser('${u.id}', ${!isActive})"
+                            class="btn-sm ${isActive ? 'btn-danger' : 'btn-success'}" title="${isActive ? 'Desativar' : 'Ativar'}">
+                        <i class="fas fa-${isActive ? 'ban' : 'check'}"></i>
                     </button>
-                    <button onclick="changeRole('${u.id}', '${u.role}')"
-                            class="btn-sm btn-ghost" title="Alterar papel">
-                        <i class="fas fa-user-cog"></i>
-                    </button>
+                    <select onchange="changeRole('${u.id}', this.value)" title="Alterar papel"
+                            class="text-xs border border-gray-200 rounded-lg px-1.5 py-1 outline-none focus:border-purple-400 bg-white">
+                        ${ALL_ROLES.map(r => `<option value="${r}" ${r === u.role ? 'selected' : ''}>${escapeHtml(roleLabel(r))}</option>`).join('')}
+                    </select>
                 </div>
             </td>
-        </tr>`).join('') :
+        </tr>`;
+    }).join('') :
         `<tr><td colspan="7" class="text-center py-8 text-gray-400">Nenhum utilizador encontrado</td></tr>`;
 }
 
@@ -1268,10 +1466,16 @@ async function toggleUser(id, isActive) {
     } catch (e) { showToast('Erro: ' + e.message, 'error'); }
 }
 
-async function changeRole(id, currentRole) {
-    const roles = ['student','teacher','admin'];
-    const next = roles[(roles.indexOf(currentRole) + 1) % roles.length];
-    if (!confirm(`Alterar papel para "${roleLabel(next)}"?`)) return;
+// Ativar/desativar uma conta de professor "directa" (sem candidatura KYT) a partir da aba Professores
+async function toggleDirectAccount(userId, isActive) {
+    await toggleUser(userId, isActive);
+    closeTvModal();
+    loadTeacherApplications();
+}
+
+async function changeRole(id, next) {
+    const u0 = allUsers.find(x => x.id === id);
+    if (!confirm(`Alterar papel para "${roleLabel(next)}"?`)) { filterUsers(); return; }
     const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
     try {
         const res = await fetch(`/api/admin/users/${id}`, {
@@ -1281,11 +1485,58 @@ async function changeRole(id, currentRole) {
         });
         const json = await res.json();
         if (!json.success) throw new Error(json.error);
-        const u = allUsers.find(x => x.id === id);
-        if (u) u.role = next;
+        if (u0) u0.role = next;
         filterUsers();
         showToast(`Papel alterado para ${roleLabel(next)}`, 'success');
-    } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+    } catch (e) { showToast('Erro: ' + e.message, 'error'); filterUsers(); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CRIAR UTILIZADOR (qualquer papel, incl. staff: support/editor/finance/moderator/country_manager)
+// ═══════════════════════════════════════════════════════════════════
+function openCreateUserModal() {
+    document.getElementById('create-user-form').reset();
+    document.getElementById('cu-error').classList.add('hidden');
+    const roleSelect = document.getElementById('cu-role');
+    roleSelect.innerHTML = ALL_ROLES.map(r => `<option value="${r}">${escapeHtml(roleLabel(r))}</option>`).join('');
+    roleSelect.value = 'support';
+    document.getElementById('create-user-modal').classList.remove('hidden');
+}
+
+function closeCreateUserModal() {
+    document.getElementById('create-user-modal').classList.add('hidden');
+}
+
+async function submitCreateUser(ev) {
+    ev.preventDefault();
+    const errEl = document.getElementById('cu-error');
+    errEl.classList.add('hidden');
+
+    const payload = {
+        full_name: document.getElementById('cu-name').value.trim(),
+        email: document.getElementById('cu-email').value.trim(),
+        password: document.getElementById('cu-password').value,
+        phone: document.getElementById('cu-phone').value.trim() || undefined,
+        role: document.getElementById('cu-role').value
+    };
+
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
+    try {
+        const res = await fetch('/api/admin/users', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || 'Erro ao criar utilizador');
+
+        closeCreateUserModal();
+        showToast(json.message || 'Utilizador criado', 'success');
+        await loadData();
+    } catch (e) {
+        errEl.textContent = e.message;
+        errEl.classList.remove('hidden');
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1293,7 +1544,7 @@ async function changeRole(id, currentRole) {
 // ═══════════════════════════════════════════════════════════════════
 function renderContentTable(lessons) {
     document.getElementById('content-tbody').innerHTML = lessons.length ? lessons.map(l => `
-        <tr>
+        <tr data-lesson-id="${escapeAttr(l.id)}">
             <td class="font-medium max-w-xs"><div class="truncate" title="${escapeAttr(l.title)}">${escapeHtml(l.title)}</div></td>
             <td class="text-gray-500">${escapeHtml(l.subject||'—')}</td>
             <td class="text-gray-500">${escapeHtml(l.teacher||'—')}</td>
@@ -1307,6 +1558,13 @@ function renderContentTable(lessons) {
             <td class="text-gray-400 text-xs">${VClass.formatRelativeTime(l.created)}</td>
             <td>
                 <div class="flex gap-1">
+                    ${l.status === 'pending_review' ? `
+                    <button onclick="changeContentStatus('${l.id}','published')" class="btn-sm btn-success" title="Aprovar e publicar">
+                        <i class="fas fa-check"></i> Aprovar
+                    </button>
+                    <button onclick="changeContentStatus('${l.id}','draft')" class="btn-sm btn-ghost" title="Rejeitar (volta para rascunho do professor)">
+                        <i class="fas fa-times"></i> Rejeitar
+                    </button>` : ''}
                     ${l.status === 'draft' ? `
                     <button onclick="changeContentStatus('${l.id}','published')" class="btn-sm btn-success" title="Publicar">
                         <i class="fas fa-check"></i>
@@ -1351,10 +1609,126 @@ async function changeContentStatus(id, status) {
 // ═══════════════════════════════════════════════════════════════════
 // COUNTRIES
 // ═══════════════════════════════════════════════════════════════════
+let COUNTRIES_DATA = [];
+
+// Cidades de referência por país (coordenadas geográficas reais) — usadas só
+// para distribuir visualmente o total real de utilizadores no mapa (ver
+// openCountryMap). A silhueta do país vem do world-atlas (topojson) e as
+// cidades são projectadas sobre ela, para que os pontos caiam nas regiões
+// certas em vez de posições arbitrárias.
+const COUNTRY_CITIES = {
+    mz: [
+        { name: 'Maputo',   lon: 32.5732, lat: -25.9692, pct: .55 },
+        { name: 'Beira',    lon: 34.8489, lat: -19.7933, pct: .30 },
+        { name: 'Nampula',  lon: 39.2666, lat: -15.1165, pct: .15 },
+    ],
+    ao: [
+        { name: 'Luanda',  lon: 13.2343, lat: -8.8383,  pct: .60 },
+        { name: 'Huambo',  lon: 15.7397, lat: -12.7756, pct: .25 },
+        { name: 'Lobito',  lon: 13.5456, lat: -12.3646, pct: .15 },
+    ],
+    pt: [
+        { name: 'Lisboa',  lon: -8.9899, lat: 38.8704, pct: .55 },
+        { name: 'Coimbra', lon: -8.4103, lat: 40.2033, pct: .30 },
+        { name: 'Porto',   lon: -8.6291, lat: 41.1579, pct: .15 },
+    ],
+    br: [
+        { name: 'São Paulo',      lon: -46.6333, lat: -23.5505, pct: .50 },
+        { name: 'Rio de Janeiro', lon: -43.2041, lat: -22.9139, pct: .30 },
+        { name: 'Brasília',       lon: -47.8825, lat: -15.7942, pct: .20 },
+    ],
+    cv: [
+        { name: 'Praia',   lon: -23.5087, lat: 14.9330, pct: .50 },
+        { name: 'Mindelo', lon: -24.9956, lat: 16.8901, pct: .30 },
+        { name: 'Sal',     lon: -22.9067, lat: 16.7333, pct: .20 },
+    ],
+};
+
+// Código ISO 3166-1 numérico de cada país — é o `id` usado pelo world-atlas
+// para identificar as features do topojson.
+const COUNTRY_ISO_NUM = { mz: 508, ao: 24, pt: 620, br: 76, cv: 132 };
+
+// 50m (não 110m) porque a resolução mais baixa omite países pequenos como
+// Cabo Verde do topojson.
+const WORLD_ATLAS_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json';
+let _worldAtlasPromise = null;
+function loadWorldAtlas() {
+    if (!_worldAtlasPromise) {
+        _worldAtlasPromise = fetch(WORLD_ATLAS_URL).then(r => r.json());
+    }
+    return _worldAtlasPromise;
+}
+
+async function openCountryMap(code) {
+    const c = COUNTRIES_DATA.find(x => x.code === code);
+    if (!c) return;
+
+    document.getElementById('cm-flag').textContent = c.flag;
+    document.getElementById('cm-name').textContent  = c.name;
+    document.getElementById('cm-total').textContent = `${c.students.toLocaleString('pt')} estudantes activos (real)`;
+    document.getElementById('country-map-modal').classList.remove('hidden');
+
+    const wrap = document.getElementById('cm-map-wrap');
+    const cities = COUNTRY_CITIES[code];
+
+    if (!cities || c.students === 0) {
+        wrap.innerHTML = `<p class="text-sm text-gray-400 text-center py-10">Sem utilizadores registados neste país ainda.</p>`;
+        return;
+    }
+
+    wrap.innerHTML = `<p class="text-sm text-gray-400 text-center py-10"><i class="fas fa-spinner fa-spin mr-2"></i>A carregar mapa...</p>`;
+
+    let projection = null;
+    let shapeD = '';
+    try {
+        const topology = await loadWorldAtlas();
+        const geojson = topojson.feature(topology, topology.objects.countries);
+        const feature = geojson.features.find(f => Number(f.id) === COUNTRY_ISO_NUM[code]);
+        if (feature) {
+            projection = d3.geoMercator().fitSize([300, 300], feature);
+            shapeD = d3.geoPath(projection)(feature);
+        }
+    } catch (e) {
+        console.error('Erro ao carregar mapa do país:', e);
+    }
+
+    // Se entretanto o utilizador abriu outro país, não pisar o resultado desse.
+    if (document.getElementById('cm-name').textContent !== c.name) return;
+
+    const maxPct = Math.max(...cities.map(city => city.pct));
+    const points = cities.map(city => {
+        const count  = Math.round(c.students * city.pct);
+        const radius = 6 + (city.pct / maxPct) * 14;
+        const [x, y] = projection ? projection([city.lon, city.lat]) : [150, 150];
+        return `
+            <g>
+                <circle cx="${x}" cy="${y}" r="${radius}" fill="#7c3aed" fill-opacity="0.18" stroke="#7c3aed" stroke-width="1.5"></circle>
+                <circle cx="${x}" cy="${y}" r="4" fill="#7c3aed"></circle>
+                <text x="${x}" y="${y - radius - 6}" text-anchor="middle" font-size="10" font-weight="700" fill="#4c1d95">${escapeHtml(city.name)}</text>
+                <text x="${x}" y="${y - radius + 6}" text-anchor="middle" font-size="9" fill="#7c3aed">${count.toLocaleString('pt')}</text>
+            </g>`;
+    }).join('');
+
+    const countryShape = shapeD
+        ? `<path d="${shapeD}" fill="#ede9fe" stroke="#c4b5fd" stroke-width="1.5"></path>`
+        : '';
+
+    wrap.innerHTML = `
+        <svg viewBox="0 0 300 300" class="w-full" style="max-height:320px;background:#faf5ff;border-radius:16px;border:1px solid #e9d5ff">
+            ${countryShape}
+            ${points}
+        </svg>`;
+}
+
+function closeCountryMap() {
+    document.getElementById('country-map-modal').classList.add('hidden');
+}
+
 function renderCountries(countries) {
+    COUNTRIES_DATA = countries;
     const maxStudents = Math.max(...countries.map(c => c.students), 1);
     document.getElementById('countries-grid').innerHTML = countries.map(c => `
-        <div class="section-card p-6 fade-up">
+        <div class="section-card p-6 fade-up" onclick="openCountryMap('${escapeAttr(c.code)}')" style="cursor:pointer" title="Ver mapa de ${escapeAttr(c.name)}">
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-3">
                     <span class="flag">${escapeHtml(c.flag)}</span>
@@ -1375,7 +1749,7 @@ function renderCountries(countries) {
                 </div>
                 <div class="flex justify-between text-sm mt-2">
                     <span class="text-gray-500">Lições</span>
-                    <span class="font-semibold text-gray-700">${c.lessons}</span>
+                    <span class="font-semibold text-gray-700">${c.lessons != null ? c.lessons : '—'}</span>
                 </div>
             </div>
         </div>
@@ -1438,8 +1812,8 @@ function renderTopLessonsAnalytics(lessons) {
                     <div class="flex-1 mini-bar">
                         <div class="mini-bar-fill" style="width:${Math.round((l.views/max)*100)}%;background:${['#7c3aed','#2563eb','#16a34a','#d97706','#dc2626'][i]}"></div>
                     </div>
-                    <span class="text-xs text-gray-400 flex-shrink-0">${escapeHtml(l.subject)}</span>
-                    <span class="text-xs font-bold text-gray-600 flex-shrink-0">${escapeHtml(l.score)}%</span>
+                    <span class="text-xs text-gray-400 flex-shrink-0">${escapeHtml(l.subject||'—')}</span>
+                    <span class="text-xs font-bold text-gray-600 flex-shrink-0">${l.score != null ? escapeHtml(l.score) + '%' : '—'}</span>
                 </div>
             </div>
         </div>
@@ -1624,8 +1998,8 @@ async function unlinkGradeSubject(gsId) {
 // ═══════════════════════════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════════════════════════
-function roleLabel(r)   { return { student:'Estudante', teacher:'Professor', admin:'Admin' }[r] || r; }
-function statusLabel(s) { return { published:'Publicada', draft:'Rascunho', archived:'Arquivada' }[s] || s; }
+function roleLabel(r)   { return { student:'Estudante', teacher:'Professor', admin:'Admin', support:'Suporte', editor:'Editor', finance:'Financeiro', moderator:'Moderador', country_manager:'Gestor de País' }[r] || r; }
+function statusLabel(s) { return { published:'Publicada', draft:'Rascunho', archived:'Arquivada', pending_review:'Aguarda Aprovação' }[s] || s; }
 
 function avatarColor(name) {
     const colors = ['#7c3aed','#2563eb','#16a34a','#d97706','#dc2626','#0891b2','#7c3aed'];
@@ -1682,13 +2056,16 @@ async function loadTeacherApplications() {
             document.getElementById('tv-approved').textContent = s.approved;
             document.getElementById('tv-rejected').textContent = s.rejected;
             document.getElementById('tv-flagged').textContent  = s.flagged;
+            document.getElementById('tv-direct').textContent   = s.direct_accounts || 0;
             const badge = document.getElementById('badge-teachers');
             if (s.pending > 0) { badge.textContent = s.pending; badge.classList.remove('hidden'); }
         }
 
         if (appsData.success) {
             tvApps = appsData.data.applications || [];
-            renderTeacherTable(tvApps);
+            // Reaplica o filtro actual (útil quando se chega aqui via deep-link
+            // de uma notificação, que já define tv-filter-status antes de carregar)
+            filterTeacherApps();
         }
     } catch(e) { console.error('TV load error:', e); }
 }
@@ -1723,15 +2100,18 @@ function renderTeacherTable(apps) {
         under_review:   { cls:'pill-review',    lbl:'Em Análise' },
         info_requested: { cls:'pill-info',      lbl:'Info Pedida' },
         approved:       { cls:'pill-approved',  lbl:'Aprovado' },
-        rejected:       { cls:'pill-rejected',  lbl:'Rejeitado' }
+        rejected:       { cls:'pill-rejected',  lbl:'Rejeitado' },
+        inactive:       { cls:'pill-inactive',  lbl:'Conta Inativa' }
     };
     const degreeShort = { licenciatura:'Lic.', mestrado:'Mestre', doutoramento:'PhD', bacharel:'Bach.', outro:'Outro' };
 
     tbody.innerHTML = apps.map(a => {
+        const isDirect = a.source === 'direct_account';
         const s = statusMap[a.status] || { cls:'', lbl: a.status };
         const score = a.score != null ? `<span class="font-bold ${a.score>=70?'text-green-600':a.score>=50?'text-yellow-600':'text-red-600'}">${a.score}</span>` : '<span class="text-gray-300">—</span>';
         const flag  = a.flagged ? '<i class="fas fa-flag text-red-400 text-xs ml-1" title="Sinalizado"></i>' : '';
         const certBadge = a.has_teaching_cert ? '<i class="fas fa-certificate text-amber-400 text-xs ml-1" title="Tem certificado de docência"></i>' : '';
+        const directBadge = isDirect ? '<i class="fas fa-user-shield text-blue-400 text-xs ml-1" title="Conta criada diretamente, sem candidatura KYT"></i>' : '';
         const subjects = (a.subjects||[]).slice(0,2).join(', ') + ((a.subjects||[]).length > 2 ? '...' : '');
         const date = new Date(a.submitted_at).toLocaleDateString('pt-PT',{day:'2-digit',month:'short'});
         return `<tr>
@@ -1740,7 +2120,7 @@ function renderTeacherTable(apps) {
                     <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
                          style="background:${escapeAttr(avatarColor(a.full_name))}">${escapeHtml((a.full_name||'?')[0].toUpperCase())}</div>
                     <div>
-                        <div class="font-semibold text-sm">${escapeHtml(a.full_name)}${flag}</div>
+                        <div class="font-semibold text-sm">${escapeHtml(a.full_name)}${flag}${directBadge}</div>
                         <div class="text-xs text-gray-400">${escapeHtml(a.email)}</div>
                     </div>
                 </div>
@@ -1755,7 +2135,7 @@ function renderTeacherTable(apps) {
                     <button onclick="openTvModal('${escapeAttr(a.id)}')" class="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs hover:bg-purple-200 transition font-medium">
                         <i class="fas fa-eye"></i>
                     </button>
-                    ${a.status==='pending'||a.status==='under_review'||a.status==='info_requested' ? `
+                    ${!isDirect && (a.status==='pending'||a.status==='under_review'||a.status==='info_requested') ? `
                     <button onclick="quickApprove('${a.id}')" class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200 transition font-medium">✓</button>
                     <button onclick="quickReject('${a.id}')" class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200 transition font-medium">✕</button>
                     ` : ''}
@@ -1769,6 +2149,47 @@ function openTvModal(appOrId) {
     // Aceita objecto (legacy) ou id (novo) — quando id, faz lookup em tvApps
     const app = typeof appOrId === 'string' ? tvApps.find(x => x.id === appOrId) : appOrId;
     if (!app) { console.warn('openTvModal: app not found', appOrId); return; }
+
+    // Conta criada diretamente (sem candidatura KYT) — modal simplificado,
+    // só com a ação de ativar/desativar (reutiliza toggleUser da aba Utilizadores)
+    if (app.source === 'direct_account') {
+        const isActive = app.status === 'approved';
+        document.getElementById('tv-modal-content').innerHTML = `
+            <div class="space-y-5">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold flex-shrink-0"
+                         style="background:${escapeAttr(avatarColor(app.full_name))}">${escapeHtml((app.full_name||'?')[0].toUpperCase())}</div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">${escapeHtml(app.full_name)}</h3>
+                        <p class="text-sm text-gray-500">${escapeHtml(app.email)} ${app.phone ? '· ' + escapeHtml(app.phone) : ''}</p>
+                    </div>
+                </div>
+                <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-gray-700">
+                    <i class="fas fa-info-circle text-blue-400 mr-1"></i>
+                    Esta conta de professor foi criada diretamente (promoção manual ou dados antigos), sem passar
+                    pela candidatura KYT — por isso não existem qualificações/documentos para rever aqui.
+                </div>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div class="bg-gray-50 rounded-xl p-4">
+                        <div class="font-semibold text-gray-700 mb-1 text-xs uppercase">Estado</div>
+                        <span class="pill ${isActive ? 'pill-approved' : 'pill-inactive'}">${isActive ? 'Aprovado (conta ativa)' : 'Conta Inativa'}</span>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-4">
+                        <div class="font-semibold text-gray-700 mb-1 text-xs uppercase">Conta criada em</div>
+                        <div class="text-gray-600">${new Date(app.submitted_at).toLocaleDateString('pt-PT')}</div>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                    <button onclick="toggleDirectAccount('${escapeAttr(app.user_id)}', ${!isActive})"
+                        class="px-4 py-2 ${isActive ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'} rounded-lg text-sm font-medium transition">
+                        <i class="fas ${isActive ? 'fa-user-slash' : 'fa-user-check'} mr-1"></i> ${isActive ? 'Desativar Conta' : 'Ativar Conta'}
+                    </button>
+                </div>
+            </div>`;
+        document.getElementById('tv-modal').classList.remove('hidden');
+        return;
+    }
+
     const stepLabels = { initial_screening:'Triagem Inicial', document_review:'Revisão de Docs', reference_check:'Verificação de Refs', interview:'Entrevista', final_review:'Revisão Final', completed:'Concluído' };
     const certText = app.has_teaching_cert ? '✅ Sim' + (app.teaching_cert_type ? ` (${app.teaching_cert_type})` : '') : '❌ Não';
     const flagHtml = app.flagged ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium"><i class="fas fa-flag"></i> Sinalizado</span>' : '';
@@ -1877,7 +2298,7 @@ async function reviewAction(id, newStatus) {
             body: JSON.stringify({ notes })
         });
         const data = await res.json();
-        if (data.success) { showToast('Candidatura aprovada! Email de boas-vindas enviado.','success'); closeTvModal(); loadTeacherApplications(); }
+        if (data.success) { showToast('Candidatura aprovada! ' + emailStatusMsg(data.data?.email_sent), 'success'); closeTvModal(); loadTeacherApplications(); }
         else showToast(data.error||'Erro','error');
         return;
     }
@@ -1890,6 +2311,11 @@ async function reviewAction(id, newStatus) {
     else showToast(data.error||'Erro','error');
 }
 
+// Mensagem honesta sobre o estado real do envio de email (evita afirmar sempre que foi enviado)
+function emailStatusMsg(emailSent) {
+    return emailSent ? 'Email enviado ao candidato.' : '⚠️ Não foi possível enviar o email ao candidato.';
+}
+
 async function rejectWithReason(id) {
     const reason = prompt('Motivo de rejeição (será comunicado ao candidato):');
     if (!reason) return;
@@ -1899,7 +2325,7 @@ async function rejectWithReason(id) {
         body: JSON.stringify({ reason, allow_reapply: true, reapply_after_months: 6 })
     });
     const data = await res.json();
-    if (data.success) { showToast('Candidatura rejeitada','info'); closeTvModal(); loadTeacherApplications(); }
+    if (data.success) { showToast('Candidatura rejeitada. ' + emailStatusMsg(data.data?.email_sent), 'info'); closeTvModal(); loadTeacherApplications(); }
     else showToast(data.error||'Erro','error');
 }
 
@@ -1912,7 +2338,7 @@ async function requestMoreInfo(id) {
         body: JSON.stringify({ message })
     });
     const data = await res.json();
-    if (data.success) { showToast('Pedido de informação enviado','success'); closeTvModal(); loadTeacherApplications(); }
+    if (data.success) { showToast('Pedido de informação enviado. ' + emailStatusMsg(data.data?.email_sent), 'success'); closeTvModal(); loadTeacherApplications(); }
     else showToast(data.error||'Erro','error');
 }
 
@@ -1954,6 +2380,8 @@ async function quickReject(id) {
         .pill-approved       { background:#f0fdf4; color:#065f46; border:1px solid #6ee7b7; }
         .pill-rejected       { background:#fef2f2; color:#991b1b; border:1px solid #fca5a5; }
         .pill-pending_review { background:#fff7ed; color:#9a3412; border:1px solid #fdba74; }
+        @keyframes rowHighlightPulse { 0%,100%{ background:#fff7ed; } 50%{ background:#fed7aa; } }
+        tr.highlight-row { animation: rowHighlightPulse 1s ease-in-out 3; }
     `;
     document.head.appendChild(style);
 })();
@@ -2213,7 +2641,13 @@ async function libUploadFile(file) {
         // Preencher campos automaticamente
         document.getElementById('lib-f-url').value = data.data.url;
         const kb = data.data.size_kb;
-        // preencher tamanho se houver campo
+        document.getElementById('lib-f-size').value = kb;
+        if (data.data.pages) {
+            document.getElementById('lib-f-pages').value = data.data.pages;
+            document.getElementById('lib-f-pages-auto').classList.remove('hidden');
+        } else {
+            document.getElementById('lib-f-pages-auto').classList.add('hidden');
+        }
         setTimeout(() => {
             prog.classList.add('hidden');
             done.classList.remove('hidden');
@@ -2231,6 +2665,8 @@ async function libUploadFile(file) {
 function libClearFile() {
     document.getElementById('lib-file-input').value = '';
     document.getElementById('lib-f-url').value = '';
+    document.getElementById('lib-f-size').value = '';
+    document.getElementById('lib-f-pages-auto').classList.add('hidden');
     document.getElementById('lib-file-done').classList.add('hidden');
     document.getElementById('lib-drop-zone').classList.remove('hidden');
     document.getElementById('lib-upload-bar').style.width = '0%';
@@ -2244,6 +2680,8 @@ async function openLibBookModal(id) {
     document.getElementById('lib-f-desc').value           = book?.description || '';
     document.getElementById('lib-f-cat').value            = book?.category || 'books';
     document.getElementById('lib-f-pages').value          = book?.pages || '';
+    document.getElementById('lib-f-pages-auto').classList.add('hidden');
+    document.getElementById('lib-f-size').value           = book?.file_size_kb || '';
     document.getElementById('lib-f-url').value            = book?.file_url || '';
     document.getElementById('lib-f-cover').value          = book?.cover_url || '';
     document.getElementById('lib-f-featured').checked    = book?.is_featured || false;
@@ -2274,6 +2712,7 @@ async function saveLibBook() {
         description: document.getElementById('lib-f-desc').value.trim() || null,
         category:    document.getElementById('lib-f-cat').value,
         pages:       parseInt(document.getElementById('lib-f-pages').value) || null,
+        file_size_kb:parseInt(document.getElementById('lib-f-size').value) || null,
         file_url:    document.getElementById('lib-f-url').value.trim() || null,
         cover_url:   document.getElementById('lib-f-cover').value.trim() || null,
         is_featured: document.getElementById('lib-f-featured').checked,
