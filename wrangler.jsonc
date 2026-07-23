@@ -1,3 +1,4 @@
+
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "vclass2026",
@@ -13,8 +14,8 @@
 	"kv_namespaces": [
 		{
 			"binding": "RATE_LIMIT",
-			"id": "3b7b3d313d06408f9c58005e1a7888fd",
-			"preview_id": "52e3065693f6493dae73a7f0f10e14a3",
+			"id": "f76508cb81b84f67be91eff695c802f6",
+			"preview_id": "98b0e06d13a5470bae3a6328e313e2e5",
 			"remote": false
 		}
 	]

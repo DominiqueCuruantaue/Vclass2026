@@ -1,5 +1,5 @@
 {
-  "name": "vclass",
+  "name": "vclass2026",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -7,7 +7,7 @@
     "build": "vite build",
     "postbuild": "node -e \"const fs=require('fs'),p=require('path');fs.readdirSync('dist').filter(f=>f.endsWith('.html')&&f!=='designs').forEach(f=>{const fp=p.join('dist',f);if(fs.statSync(fp).isFile())fs.unlinkSync(fp);});console.log('postbuild: HTMLs estáticos removidos de dist/')\"",
     "preview": "wrangler pages dev dist",
-    "deploy": "npm run build && wrangler pages deploy dist",
+    "deploy": "npm run build && wrangler pages deploy dist --project-name vclass2026",
     "deploy:prod": "npm run build && wrangler pages deploy dist --project-name vclass2026",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "types:gen": "npx supabase gen types typescript --project-id $env:SUPABASE_PROJECT_REF --schema public > src/types/database.ts",
