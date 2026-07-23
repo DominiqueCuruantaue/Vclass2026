@@ -943,7 +943,8 @@
                             <div id="lib-file-done" class="hidden mt-2 flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
                                 <i class="fas fa-check-circle"></i>
                                 <span id="lib-file-done-name" class="flex-1 truncate"></span>
-                                <button type="button" onclick="libClearFile()" class="text-gray-400 hover:text-red-500 ml-1"><i class="fas fa-times"></i></button>
+                                <button type="button" onclick="previewLibFile()" class="text-purple-600 hover:text-purple-800" title="Pré-visualizar / Modo leitor"><i class="fas fa-eye"></i></button>
+                                <button type="button" onclick="libClearFile()" class="text-gray-400 hover:text-red-500 ml-1" title="Remover"><i class="fas fa-times"></i></button>
                             </div>
                             <!-- URL manual (alternativa) -->
                             <div class="mt-2">
@@ -952,10 +953,26 @@
                                     class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400">
                             </div>
                         </div>
+                        <!-- Upload de capa -->
                         <div>
-                            <label class="block text-xs font-semibold text-gray-700 mb-1">URL da capa (imagem)</label>
-                            <input id="lib-f-cover" type="url" placeholder="https://..."
-                                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400">
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">Capa do livro</label>
+                            <div class="flex items-center gap-3">
+                                <div id="lib-cover-preview" class="hidden w-14 h-20 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0 bg-gray-50 items-center justify-center">
+                                    <img id="lib-cover-preview-img" class="hidden w-full h-full object-cover" alt="Pré-visualização da capa">
+                                    <i id="lib-cover-preview-icon" class="hidden fas fa-file-pdf text-red-400 text-xl"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <button type="button" onclick="document.getElementById('lib-cover-input').click()"
+                                        class="w-full border-2 border-dashed border-gray-200 rounded-lg px-3 py-2.5 text-xs text-gray-500 hover:border-purple-400 hover:bg-purple-50 transition text-center truncate">
+                                        <i class="fas fa-upload mr-1"></i><span id="lib-cover-btn-label">Escolher ficheiro da capa</span>
+                                    </button>
+                                    <p class="text-xs text-gray-400 mt-1">PDF, JPG ou PNG · Máx. 50 MB</p>
+                                    <div id="lib-cover-uploading" class="hidden text-xs text-purple-500 mt-1"><i class="fas fa-spinner fa-spin mr-1"></i>A enviar capa...</div>
+                                </div>
+                                <button type="button" id="lib-cover-clear-btn" onclick="libClearCover()" class="hidden text-gray-400 hover:text-red-500 flex-shrink-0" title="Remover capa"><i class="fas fa-times"></i></button>
+                            </div>
+                            <input type="file" id="lib-cover-input" accept=".pdf,.jpg,.jpeg,.png" class="hidden" onchange="libUploadCover(this.files[0])">
+                            <input type="hidden" id="lib-f-cover">
                         </div>
                         <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                             <input type="checkbox" id="lib-f-featured" class="rounded accent-purple-600">
@@ -968,6 +985,24 @@
                             <i class="fas fa-save mr-1"></i> Guardar
                         </button>
                     </div>
+                </div>
+            </div>
+
+            <!-- Modal: Pré-visualização / Modo Leitor -->
+            <div id="lib-preview-modal" class="fixed inset-0 bg-black/70 flex items-center justify-center z-[70] p-4 hidden">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden">
+                    <div class="flex items-center justify-between p-4 border-b border-gray-100 flex-shrink-0">
+                        <h3 class="text-base font-bold text-gray-900 truncate pr-4" id="lib-preview-title">Pré-visualização</h3>
+                        <div class="flex items-center gap-4 flex-shrink-0">
+                            <a id="lib-preview-open-tab" href="#" target="_blank" rel="noopener" class="text-xs text-purple-600 hover:underline whitespace-nowrap">
+                                <i class="fas fa-external-link-alt mr-1"></i>Abrir em nova aba
+                            </a>
+                            <button onclick="closeLibPreviewModal()" class="text-gray-400 hover:text-gray-600 transition">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex-1 bg-gray-100 overflow-auto" id="lib-preview-body"></div>
                 </div>
             </div>
 
@@ -2485,6 +2520,7 @@ function renderLibBooks(items) {
             </td>
             <td>
                 <div class="flex gap-1">
+                    <button onclick="previewLibBookRow('${b.id}')" class="btn-sm btn-ghost" title="Pré-visualizar / Modo leitor"><i class="fas fa-eye"></i></button>
                     <button onclick="openLibBookModal('${b.id}')" class="btn-sm btn-ghost" title="Editar"><i class="fas fa-pen"></i></button>
                     <button onclick="deleteLibBook('${b.id}')" class="btn-sm btn-danger" title="Apagar"><i class="fas fa-trash"></i></button>
                 </div>
@@ -2672,6 +2708,121 @@ function libClearFile() {
     document.getElementById('lib-upload-bar').style.width = '0%';
 }
 
+// ── Upload de capa (admin) ────────────────────────────────────────────────
+async function libUploadCover(file) {
+    if (!file) return;
+    const token      = localStorage.getItem('accessToken') || '';
+    const label      = document.getElementById('lib-cover-btn-label');
+    const uploading  = document.getElementById('lib-cover-uploading');
+    const preview    = document.getElementById('lib-cover-preview');
+    const img        = document.getElementById('lib-cover-preview-img');
+    const icon       = document.getElementById('lib-cover-preview-icon');
+    const clearBtn   = document.getElementById('lib-cover-clear-btn');
+
+    uploading.classList.remove('hidden');
+    try {
+        const fd = new FormData();
+        fd.append('file', file);
+        const res  = await fetch('/api/admin/library/upload', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: fd
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+
+        document.getElementById('lib-f-cover').value = data.data.url;
+        label.textContent = data.data.original_name || file.name;
+
+        preview.classList.remove('hidden');
+        preview.classList.add('flex');
+        if (file.type.startsWith('image/')) {
+            img.src = data.data.url;
+            img.classList.remove('hidden');
+            icon.classList.add('hidden');
+        } else {
+            img.classList.add('hidden');
+            icon.classList.remove('hidden');
+        }
+        clearBtn.classList.remove('hidden');
+    } catch (e) {
+        showToast('Erro no upload da capa: ' + e.message, 'error');
+    } finally {
+        uploading.classList.add('hidden');
+    }
+}
+
+function libClearCover() {
+    document.getElementById('lib-cover-input').value = '';
+    document.getElementById('lib-f-cover').value = '';
+    document.getElementById('lib-cover-btn-label').textContent = 'Escolher ficheiro da capa';
+    const preview = document.getElementById('lib-cover-preview');
+    preview.classList.remove('flex');
+    preview.classList.add('hidden');
+    document.getElementById('lib-cover-preview-img').classList.add('hidden');
+    document.getElementById('lib-cover-preview-icon').classList.add('hidden');
+    document.getElementById('lib-cover-clear-btn').classList.add('hidden');
+}
+
+// ── Pré-visualização / Modo leitor ─────────────────────────────────────────
+function openLibPreview(url, name) {
+    if (!url) { showToast('Nenhum ficheiro para pré-visualizar', 'warning'); return; }
+    document.getElementById('lib-preview-title').textContent = name || 'Pré-visualização';
+    document.getElementById('lib-preview-open-tab').href = url;
+    const body = document.getElementById('lib-preview-body');
+    body.innerHTML = '';
+
+    const isPdf = /\.pdf(\?|#|$)/i.test(url);
+    const isImg = /\.(jpe?g|png|gif|webp)(\?|#|$)/i.test(url);
+
+    if (isPdf) {
+        const iframe = document.createElement('iframe');
+        iframe.src = url;
+        iframe.className = 'w-full h-full border-0';
+        body.appendChild(iframe);
+    } else if (isImg) {
+        const wrap = document.createElement('div');
+        wrap.className = 'w-full h-full flex items-center justify-center p-4';
+        const img = document.createElement('img');
+        img.src = url;
+        img.className = 'max-w-full max-h-full object-contain rounded-lg shadow';
+        wrap.appendChild(img);
+        body.appendChild(wrap);
+    } else {
+        const wrap = document.createElement('div');
+        wrap.className = 'w-full h-full flex flex-col items-center justify-center text-center p-8 text-gray-500';
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-file-alt text-4xl mb-3 text-gray-300';
+        const msg = document.createElement('p');
+        msg.className = 'text-sm';
+        msg.textContent = 'Pré-visualização não disponível para este tipo de ficheiro.';
+        const link = document.createElement('a');
+        link.href = url; link.target = '_blank'; link.rel = 'noopener';
+        link.className = 'mt-3 text-sm text-purple-600 hover:underline';
+        link.textContent = 'Abrir em nova aba';
+        wrap.append(icon, msg, link);
+        body.appendChild(wrap);
+    }
+    document.getElementById('lib-preview-modal').classList.remove('hidden');
+}
+
+function closeLibPreviewModal() {
+    document.getElementById('lib-preview-modal').classList.add('hidden');
+    document.getElementById('lib-preview-body').innerHTML = '';
+}
+
+function previewLibFile() {
+    const url   = document.getElementById('lib-f-url').value.trim();
+    const title = document.getElementById('lib-f-title').value.trim() || 'Documento';
+    openLibPreview(url, title);
+}
+
+function previewLibBookRow(id) {
+    const b = ALL_LIB_BOOKS.find(x => x.id === id);
+    if (!b || !b.file_url) { showToast('Sem ficheiro para pré-visualizar', 'warning'); return; }
+    openLibPreview(b.file_url, b.title);
+}
+
 async function openLibBookModal(id) {
     const book = id ? ALL_LIB_BOOKS.find(b => b.id === id) : null;
     document.getElementById('lib-edit-id').value          = book?.id || '';
@@ -2683,7 +2834,6 @@ async function openLibBookModal(id) {
     document.getElementById('lib-f-pages-auto').classList.add('hidden');
     document.getElementById('lib-f-size').value           = book?.file_size_kb || '';
     document.getElementById('lib-f-url').value            = book?.file_url || '';
-    document.getElementById('lib-f-cover').value          = book?.cover_url || '';
     document.getElementById('lib-f-featured').checked    = book?.is_featured || false;
     document.getElementById('lib-modal-title').textContent = book ? 'Editar Material' : 'Novo Livro Oficial';
     // Reset estado de upload
@@ -2695,6 +2845,23 @@ async function openLibBookModal(id) {
         document.getElementById('lib-file-done-name').textContent = 'Ficheiro existente (pode substituir abaixo)';
     } else {
         document.getElementById('lib-file-done').classList.add('hidden');
+    }
+    // Reset/preencher estado da capa
+    libClearCover();
+    if (book?.cover_url) {
+        document.getElementById('lib-f-cover').value = book.cover_url;
+        document.getElementById('lib-cover-btn-label').textContent = 'Capa existente (clique para substituir)';
+        const coverPreview = document.getElementById('lib-cover-preview');
+        coverPreview.classList.remove('hidden');
+        coverPreview.classList.add('flex');
+        if (/\.(jpe?g|png|gif|webp)(\?|#|$)/i.test(book.cover_url)) {
+            const img = document.getElementById('lib-cover-preview-img');
+            img.src = book.cover_url;
+            img.classList.remove('hidden');
+        } else {
+            document.getElementById('lib-cover-preview-icon').classList.remove('hidden');
+        }
+        document.getElementById('lib-cover-clear-btn').classList.remove('hidden');
     }
     document.getElementById('lib-book-modal').classList.remove('hidden');
     // Recarregar disciplinas (aguardar para definir valores correctamente)

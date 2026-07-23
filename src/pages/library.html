@@ -62,6 +62,8 @@
         /* Modal */
         #book-modal { display: none; }
         #book-modal.open { display: flex; }
+        #reader-modal { display: none; }
+        #reader-modal.open { display: flex; }
     </style>
   <script src="/static/safe-dom.js"></script>
 </head>
@@ -193,6 +195,24 @@
                     <i class="fas fa-box-archive mr-2"></i>Guardar offline (para acesso sem internet)
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Reader Modal (modo leitor) -->
+    <div id="reader-modal" class="fixed inset-0 z-[70] items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden">
+            <div class="flex items-center justify-between p-4 border-b border-gray-100 flex-shrink-0">
+                <h3 class="text-base font-bold text-gray-900 truncate pr-4" id="reader-title">Leitor</h3>
+                <div class="flex items-center gap-4 flex-shrink-0">
+                    <a id="reader-open-tab" href="#" target="_blank" rel="noopener" class="text-xs text-purple-600 hover:underline whitespace-nowrap">
+                        <i class="fas fa-external-link-alt mr-1"></i>Abrir em nova aba
+                    </a>
+                    <button onclick="closeReaderModal()" class="text-gray-400 hover:text-gray-600 transition">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="flex-1 bg-gray-100 overflow-auto" id="reader-body"></div>
         </div>
     </div>
 
@@ -458,15 +478,60 @@
             activeBook = null;
         }
 
-        // ── Visualizar PDF ─────────────────────────────────────────
+        // ── Visualizar / Modo leitor ─────────────────────────────────
         function viewBook(id) {
             const b = id ? ALL_BOOKS.find(x => x.id === id) : activeBook;
             if (!b) return;
             if (b.file_url) {
-                window.open(b.file_url, '_blank', 'noopener');
+                openReaderModal(b.file_url, b.title);
             } else {
                 VClass.showNotification('Ficheiro ainda não disponível', 'warning');
             }
+        }
+
+        function openReaderModal(url, title) {
+            document.getElementById('reader-title').textContent = title || 'Leitor';
+            document.getElementById('reader-open-tab').href = url;
+            const body = document.getElementById('reader-body');
+            body.innerHTML = '';
+
+            const isPdf = /\.pdf(\?|#|$)/i.test(url);
+            const isImg = /\.(jpe?g|png|gif|webp)(\?|#|$)/i.test(url);
+
+            if (isPdf) {
+                const iframe = document.createElement('iframe');
+                iframe.src = url;
+                iframe.className = 'w-full h-full border-0';
+                body.appendChild(iframe);
+            } else if (isImg) {
+                const wrap = document.createElement('div');
+                wrap.className = 'w-full h-full flex items-center justify-center p-4';
+                const img = document.createElement('img');
+                img.src = url;
+                img.className = 'max-w-full max-h-full object-contain rounded-lg shadow';
+                wrap.appendChild(img);
+                body.appendChild(wrap);
+            } else {
+                const wrap = document.createElement('div');
+                wrap.className = 'w-full h-full flex flex-col items-center justify-center text-center p-8 text-gray-500';
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-file-alt text-4xl mb-3 text-gray-300';
+                const msg = document.createElement('p');
+                msg.className = 'text-sm';
+                msg.textContent = 'Pré-visualização não disponível para este tipo de ficheiro.';
+                const link = document.createElement('a');
+                link.href = url; link.target = '_blank'; link.rel = 'noopener';
+                link.className = 'mt-3 text-sm text-purple-600 hover:underline';
+                link.textContent = 'Abrir em nova aba';
+                wrap.append(icon, msg, link);
+                body.appendChild(wrap);
+            }
+            document.getElementById('reader-modal').classList.add('open');
+        }
+
+        function closeReaderModal() {
+            document.getElementById('reader-modal').classList.remove('open');
+            document.getElementById('reader-body').innerHTML = '';
         }
 
         // ── Descarregar ──────────────────────────────────────────────
@@ -513,6 +578,9 @@
         // Fechar modal clicando fora
         document.getElementById('book-modal').addEventListener('click', function(e) {
             if (e.target === this) closeModal();
+        });
+        document.getElementById('reader-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeReaderModal();
         });
 
         // ── Carregar filtros (disciplinas e classes) da API ────────
