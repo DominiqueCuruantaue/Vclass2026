@@ -5,6 +5,16 @@ import JSZip from 'jszip'
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 
 /**
+ * Verifica a assinatura mágica "%PDF-" no início do ficheiro.
+ * Apanha uploads de ficheiros corrompidos/inexistentes (ex: uma página de erro
+ * "File not found" guardada com extensão .pdf) antes de irem para o storage.
+ */
+export function isValidPdfSignature(buffer: ArrayBuffer): boolean {
+  const header = new Uint8Array(buffer.slice(0, 5))
+  return String.fromCharCode(...header) === '%PDF-'
+}
+
+/**
  * Tenta extrair o número de páginas de um PDF ou .docx.
  * .doc (formato binário legado) não é suportado — devolve null.
  */

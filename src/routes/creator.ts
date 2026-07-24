@@ -3,7 +3,7 @@ import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware } from '../middleware/auth'
 import { getSupabase } from '../config/supabase'
 import { createBunnyVideo, buildBunnyTusCredentials, getBunnyVideoStatus } from '../utils/bunny'
-import { extractPageCount } from '../utils/documentMeta'
+import { extractPageCount, isValidPdfSignature } from '../utils/documentMeta'
 
 function isDatabaseConfigured(env?: any): boolean {
   const hasUrl = !!(env?.SUPABASE_URL || process.env.SUPABASE_URL)
@@ -1520,6 +1520,10 @@ creator.post('/library/upload', async (c) => {
   const path     = `library/teachers/${user.id}/${Date.now()}_${safeName}`
 
   const buffer = await file.arrayBuffer()
+
+  const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+  if (isPdf && !isValidPdfSignature(buffer))
+    return c.json({ success: false, error: 'Ficheiro PDF inválido ou corrompido — verifique o ficheiro e tente novamente' }, 400)
 
   // Nº de páginas real, extraído do ficheiro (não confiar em input manual do utilizador)
   const pages = await extractPageCount(buffer, file.type, file.name)

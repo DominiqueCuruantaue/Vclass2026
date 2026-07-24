@@ -8,7 +8,7 @@ import type { ApiResponse } from '../types'
 import { revokeAllUserTokens } from '../utils/refreshTokens'
 import { isLessonVideoReady } from '../utils/bunny'
 import { hashPassword, validatePassword } from '../utils/password'
-import { extractPageCount } from '../utils/documentMeta'
+import { extractPageCount, isValidPdfSignature } from '../utils/documentMeta'
 
 const admin = new Hono<{ Bindings: CloudflareBindings }>()
 
@@ -800,6 +800,10 @@ admin.post('/library/upload', async (c) => {
   const path     = `library/${Date.now()}_${safeName}`
 
   const buffer = await file.arrayBuffer()
+
+  const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+  if (isPdf && !isValidPdfSignature(buffer))
+    return c.json<ApiResponse>({ success: false, error: 'Ficheiro PDF inválido ou corrompido — verifique o ficheiro e tente novamente' }, 400)
 
   // Nº de páginas real, extraído do ficheiro (não confiar em input manual do utilizador)
   const pages = await extractPageCount(buffer, file.type, file.name)

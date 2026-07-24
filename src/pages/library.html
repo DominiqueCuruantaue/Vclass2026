@@ -483,17 +483,26 @@
             const b = id ? ALL_BOOKS.find(x => x.id === id) : activeBook;
             if (!b) return;
             if (b.file_url) {
-                openReaderModal(b.file_url, b.title);
+                openReaderModal(b.file_url, b.title, b.cover_url);
             } else {
                 VClass.showNotification('Ficheiro ainda não disponível', 'warning');
             }
         }
 
-        function openReaderModal(url, title) {
+        function openReaderModal(url, title, coverUrl) {
             document.getElementById('reader-title').textContent = title || 'Leitor';
             document.getElementById('reader-open-tab').href = url;
             const body = document.getElementById('reader-body');
             body.innerHTML = '';
+
+            if (coverUrl) {
+                const cover = document.createElement('img');
+                cover.src = coverUrl;
+                cover.alt = '';
+                cover.className = 'w-full max-h-72 object-cover flex-shrink-0';
+                cover.onerror = () => cover.remove();
+                body.appendChild(cover);
+            }
 
             const isPdf = /\.pdf(\?|#|$)/i.test(url);
             const isImg = /\.(jpe?g|png|gif|webp)(\?|#|$)/i.test(url);
@@ -501,19 +510,23 @@
             if (isPdf) {
                 const iframe = document.createElement('iframe');
                 iframe.src = url;
-                iframe.className = 'w-full h-full border-0';
+                iframe.className = 'w-full border-0';
+                iframe.style.height = '80vh';
                 body.appendChild(iframe);
             } else if (isImg) {
                 const wrap = document.createElement('div');
-                wrap.className = 'w-full h-full flex items-center justify-center p-4';
+                wrap.className = 'w-full flex items-center justify-center p-4';
                 const img = document.createElement('img');
                 img.src = url;
-                img.className = 'max-w-full max-h-full object-contain rounded-lg shadow';
+                img.className = 'max-w-full object-contain rounded-lg shadow';
+                img.onerror = () => {
+                    wrap.innerHTML = '<p class="text-sm text-gray-400 py-12 text-center w-full">Não foi possível carregar a pré-visualização.</p>';
+                };
                 wrap.appendChild(img);
                 body.appendChild(wrap);
             } else {
                 const wrap = document.createElement('div');
-                wrap.className = 'w-full h-full flex flex-col items-center justify-center text-center p-8 text-gray-500';
+                wrap.className = 'w-full flex flex-col items-center justify-center text-center p-8 text-gray-500';
                 const icon = document.createElement('i');
                 icon.className = 'fas fa-file-alt text-4xl mb-3 text-gray-300';
                 const msg = document.createElement('p');

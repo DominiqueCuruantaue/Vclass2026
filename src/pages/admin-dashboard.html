@@ -2765,12 +2765,21 @@ function libClearCover() {
 }
 
 // ── Pré-visualização / Modo leitor ─────────────────────────────────────────
-function openLibPreview(url, name) {
+function openLibPreview(url, name, coverUrl) {
     if (!url) { showToast('Nenhum ficheiro para pré-visualizar', 'warning'); return; }
     document.getElementById('lib-preview-title').textContent = name || 'Pré-visualização';
     document.getElementById('lib-preview-open-tab').href = url;
     const body = document.getElementById('lib-preview-body');
     body.innerHTML = '';
+
+    if (coverUrl) {
+        const cover = document.createElement('img');
+        cover.src = coverUrl;
+        cover.alt = '';
+        cover.className = 'w-full max-h-72 object-cover flex-shrink-0';
+        cover.onerror = () => cover.remove();
+        body.appendChild(cover);
+    }
 
     const isPdf = /\.pdf(\?|#|$)/i.test(url);
     const isImg = /\.(jpe?g|png|gif|webp)(\?|#|$)/i.test(url);
@@ -2778,19 +2787,23 @@ function openLibPreview(url, name) {
     if (isPdf) {
         const iframe = document.createElement('iframe');
         iframe.src = url;
-        iframe.className = 'w-full h-full border-0';
+        iframe.className = 'w-full border-0';
+        iframe.style.height = '80vh';
         body.appendChild(iframe);
     } else if (isImg) {
         const wrap = document.createElement('div');
-        wrap.className = 'w-full h-full flex items-center justify-center p-4';
+        wrap.className = 'w-full flex items-center justify-center p-4';
         const img = document.createElement('img');
         img.src = url;
-        img.className = 'max-w-full max-h-full object-contain rounded-lg shadow';
+        img.className = 'max-w-full object-contain rounded-lg shadow';
+        img.onerror = () => {
+            wrap.innerHTML = '<p class="text-sm text-gray-400 py-12 text-center w-full">Não foi possível carregar a pré-visualização.</p>';
+        };
         wrap.appendChild(img);
         body.appendChild(wrap);
     } else {
         const wrap = document.createElement('div');
-        wrap.className = 'w-full h-full flex flex-col items-center justify-center text-center p-8 text-gray-500';
+        wrap.className = 'w-full flex flex-col items-center justify-center text-center p-8 text-gray-500';
         const icon = document.createElement('i');
         icon.className = 'fas fa-file-alt text-4xl mb-3 text-gray-300';
         const msg = document.createElement('p');
@@ -2814,13 +2827,14 @@ function closeLibPreviewModal() {
 function previewLibFile() {
     const url   = document.getElementById('lib-f-url').value.trim();
     const title = document.getElementById('lib-f-title').value.trim() || 'Documento';
-    openLibPreview(url, title);
+    const cover = document.getElementById('lib-f-cover').value.trim();
+    openLibPreview(url, title, cover);
 }
 
 function previewLibBookRow(id) {
     const b = ALL_LIB_BOOKS.find(x => x.id === id);
     if (!b || !b.file_url) { showToast('Sem ficheiro para pré-visualizar', 'warning'); return; }
-    openLibPreview(b.file_url, b.title);
+    openLibPreview(b.file_url, b.title, b.cover_url);
 }
 
 async function openLibBookModal(id) {
