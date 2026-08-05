@@ -27,7 +27,6 @@ function removeStaticHtmlPlugin() {
         if (removed > 0) console.log(`[remove-static-html] Removidos ${removed} ficheiro(s) HTML estático(s) de dist/`)
 
         // Reescreve _routes.json para deixar o worker lidar com todas as rotas HTML
-        // (o auto-gerado excluía /login.html, /register.html, etc., causando 404 após a remoção)
         const routesPath = join(distDir, '_routes.json')
         const routes = {
           version: 1,
@@ -43,6 +42,7 @@ function removeStaticHtmlPlugin() {
   }
 }
 
+// Configuração Única do Vite
 export default defineConfig({
   plugins: [
     build(),
@@ -51,5 +51,9 @@ export default defineConfig({
       entry: 'src/index.tsx'
     }),
     removeStaticHtmlPlugin()
-  ]
+  ],
+  // Garante que o Vite processe os CSS do flag-icons e noExternal para o Hono/Cloudflare SSR
+  ssr: {
+    noExternal: ['flag-icons'],
+  }
 })

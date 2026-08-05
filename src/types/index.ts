@@ -10,6 +10,8 @@ export type QuestionType = 'multiple_choice' | 'true_false' | 'essay'
 
 export type PlanType = 'free' | 'basic' | 'premium'
 
+import "flag-icons/css/flag-icons.min.css";
+
 export interface User {
   id: string
   email: string

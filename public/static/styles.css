@@ -1,9 +1,11 @@
 /* VClass Custom Styles */
 
 :root {
-  --primary-color: #667eea;
-  --secondary-color: #764ba2;
-  --success-color: #10b981;
+  --primary-color: #10B981;
+  --secondary-color: #22C55E;
+  --dark-bg: #0F172A;
+  --electric-blue: #2563EB;
+  --success-color: #22c55e;
   --danger-color: #ef4444;
   --warning-color: #f59e0b;
   --info-color: #3b82f6;

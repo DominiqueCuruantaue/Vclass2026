@@ -6,558 +6,465 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>VClass — Educação Digital para África e Brasil</title>
+  <title>VClass — O teu futuro começa com o conhecimento</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: {
+              950: '#0a1628',
+              900: '#0d1e33',
+              800: '#122a44',
+            },
+            brand: {
+              50: '#f0fdf4',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/css/flag-icons.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
   <style>
-    :root {
-      --purple: #7c3aed;
-      --purple-dark: #5b21b6;
-      --purple-light: #ede9fe;
-      --blue: #2563eb;
-      --green: #16a34a;
-    }
-
-    * { box-sizing: border-box; }
-
-    body { font-family: 'Inter', system-ui, sans-serif; background: #fff; overflow-x: hidden; }
-
-    /* ── NAVBAR ── */
-    .navbar {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      background: rgba(255,255,255,0.95);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(0,0,0,0.07);
-      transition: box-shadow .3s;
-    }
-    .navbar.scrolled { box-shadow: 0 4px 24px rgba(0,0,0,0.10); }
-
-    /* ── HERO ── */
-    .hero-bg {
-      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 40%, #312e81 70%, #4c1d95 100%);
-      position: relative; overflow: hidden;
-    }
-    .hero-bg::before {
-      content: '';
-      position: absolute; inset: 0;
-      background: radial-gradient(ellipse 80% 60% at 70% 50%, rgba(124,58,237,0.35) 0%, transparent 70%),
-                  radial-gradient(ellipse 50% 40% at 20% 80%, rgba(37,99,235,0.25) 0%, transparent 60%);
-    }
-    .hero-grid {
-      position: absolute; inset: 0; opacity: .06;
-      background-image: linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px),
-                        linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px);
-      background-size: 48px 48px;
-    }
-    .hero-badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
-      backdrop-filter: blur(8px); border-radius: 99px;
-      padding: 6px 16px; font-size: .78rem; color: #e0e7ff; font-weight: 600;
-    }
-    .hero-badge span { background: #a78bfa; border-radius: 99px; padding: 2px 8px; color: #fff; font-size: .72rem; }
-
-    .btn-primary {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: linear-gradient(135deg, #7c3aed, #5b21b6);
-      color: #fff; border-radius: 14px; padding: 14px 28px;
-      font-weight: 700; font-size: .95rem; border: none; cursor: pointer;
-      transition: all .25s; box-shadow: 0 8px 24px rgba(124,58,237,.4);
-      text-decoration: none;
-    }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(124,58,237,.5); }
-
-    .btn-outline {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: rgba(255,255,255,0.10); border: 1.5px solid rgba(255,255,255,0.35);
-      color: #fff; border-radius: 14px; padding: 13px 24px;
-      font-weight: 600; font-size: .95rem; cursor: pointer;
-      transition: all .25s; text-decoration: none; backdrop-filter: blur(8px);
-    }
-    .btn-outline:hover { background: rgba(255,255,255,0.18); }
-
-    /* ── FLOATING CARDS ── */
-    .float-card {
-      background: rgba(255,255,255,0.10);
-      border: 1px solid rgba(255,255,255,0.18);
-      backdrop-filter: blur(12px);
-      border-radius: 16px; padding: 14px 18px;
-      color: #fff;
-    }
-    @keyframes float1 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
-    @keyframes float2 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-14px)} }
-    @keyframes float3 { 0%,100%{transform:translateY(-6px)} 50%{transform:translateY(6px)} }
-    .f1 { animation: float1 4s ease-in-out infinite; }
-    .f2 { animation: float2 5s ease-in-out infinite .8s; }
-    .f3 { animation: float3 3.5s ease-in-out infinite .4s; }
-
-    /* ── COUNTERS ── */
-    .stat-card {
-      background: #fff; border-radius: 20px;
-      box-shadow: 0 4px 32px rgba(0,0,0,0.07);
-      border: 1px solid #f1f5f9;
-      padding: 28px 24px; text-align: center;
-      transition: transform .25s, box-shadow .25s;
-    }
-    .stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.11); }
-
-    /* ── FLAGS ── */
-    .flag-pill {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: #f8fafc; border: 1.5px solid #e2e8f0;
-      border-radius: 99px; padding: 8px 16px;
-      font-size: .85rem; font-weight: 600; color: #374151;
-      transition: all .2s;
-    }
-    .flag-pill:hover { border-color: #7c3aed; background: #f5f3ff; color: #7c3aed; transform: translateY(-2px); }
-
-    /* ── FEATURES ── */
-    .feature-card {
-      background: #fff; border-radius: 20px;
-      border: 1.5px solid #f1f5f9;
-      padding: 28px; transition: all .25s;
-    }
-    .feature-card:hover { border-color: #c4b5fd; box-shadow: 0 8px 32px rgba(124,58,237,0.10); transform: translateY(-3px); }
-
-    /* ── TESTIMONIALS ── */
-    .testimonial {
-      background: #fff; border-radius: 20px;
-      border: 1.5px solid #f1f5f9;
-      padding: 24px; position: relative;
-      transition: box-shadow .25s;
-    }
-    .testimonial:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.08); }
-
-    /* ── PLANS ── */
-    .plan-card {
-      background: #fff; border-radius: 24px;
-      border: 2px solid #e2e8f0;
-      padding: 32px 28px; transition: all .25s;
-    }
-    .plan-card:hover { transform: translateY(-4px); box-shadow: 0 16px 48px rgba(0,0,0,.10); }
-    .plan-card.featured {
-      background: linear-gradient(145deg, #4c1d95, #7c3aed);
-      border-color: #7c3aed;
-      box-shadow: 0 20px 60px rgba(124,58,237,0.35);
-    }
-
-    /* ── FOOTER ── */
-    .footer-link { color: #9ca3af; font-size: .875rem; text-decoration: none; transition: color .2s; }
-    .footer-link:hover { color: #e5e7eb; }
-
-    /* ── MOBILE NAV ── */
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .card-hover { transition: transform .2s ease, box-shadow .2s ease; }
+    .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 30px -10px rgba(0,0,0,0.15); }
+    .fade-slide { animation: fadeSlide .5s ease both; }
+    @keyframes fadeSlide { from { opacity:0; transform: translateY(8px);} to {opacity:1; transform: translateY(0);} }
+    ::-webkit-scrollbar { height: 6px; }
     #mobile-menu { display: none; }
     #mobile-menu.open { display: block; }
-
-    /* ── SECTION HEADINGS ── */
-    .section-label {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: #f5f3ff; color: #7c3aed;
-      border-radius: 99px; padding: 5px 14px;
-      font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
-    }
-
-    /* ── SCROLL REVEAL ── */
-    .reveal { opacity: 0; transform: translateY(24px); transition: opacity .6s ease, transform .6s ease; }
-    .reveal.visible { opacity: 1; transform: translateY(0); }
-
-    @media (max-width: 768px) {
-      .hero-visual { display: none; }
-      .hero-text { text-align: center; }
-      .hero-text .flex { justify-content: center; }
-    }
+    #testimonial-track::-webkit-scrollbar { display: none; }
+    #testimonial-track { scrollbar-width: none; }
   </style>
   <script src="/static/safe-dom.js"></script>
 </head>
-<body>
+<body class="bg-white text-slate-800">
 
 <!-- ═══════════════════════════════ NAVBAR ═══════════════════════════════ -->
-<nav class="navbar" id="navbar">
-  <div class="max-w-7xl mx-auto px-5 py-3.5 flex items-center justify-between">
+<header class="bg-navy-950 sticky top-0 z-50 transition-shadow" id="navbar">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-6">
     <!-- Logo -->
-    <a href="/home.html" class="flex items-center gap-2.5 no-underline">
-      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 to-purple-800 flex items-center justify-center shadow-sm">
-        <i class="fas fa-graduation-cap text-white text-sm"></i>
-      </div>
-      <div>
-        <span class="text-lg font-black text-gray-900">VClass</span>
-        <span class="hidden sm:inline text-xs text-gray-400 ml-1.5">Educação Digital</span>
-      </div>
+    <a href="/home.html" class="flex items-center gap-2 shrink-0 no-underline">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+        <path d="M2 4 L12 20 L22 4" stroke="#22c55e" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="text-white font-extrabold text-xl tracking-tight">VClass</span>
     </a>
 
-    <!-- Desktop Nav -->
-    <div class="hidden md:flex items-center gap-7">
-      <a href="#sobre" class="text-sm font-medium text-gray-600 hover:text-purple-600 transition">Sobre</a>
-      <a href="#funcionalidades" class="text-sm font-medium text-gray-600 hover:text-purple-600 transition">Funcionalidades</a>
-      <a href="#planos" class="text-sm font-medium text-gray-600 hover:text-purple-600 transition">Planos</a>
-      <a href="/browse.html" class="text-sm font-medium text-gray-600 hover:text-purple-600 transition">Explorar</a>
-    </div>
+    <!-- Nav links -->
+    <nav class="hidden lg:flex items-center gap-8 text-slate-200 text-[15px] font-medium">
+      <a href="/browse.html" class="hover:text-white transition">Explorar</a>
+      <a href="#funcionalidades" class="hover:text-white transition">Funcionalidades</a>
+      <a href="#planos" class="hover:text-white transition">Planos</a>
+      <a href="#sobre" class="hover:text-white transition">Sobre</a>
+    </nav>
 
-    <!-- CTA Buttons -->
-    <div class="hidden md:flex items-center gap-3">
-      <a href="/login.html" class="px-4 py-2 text-sm font-semibold text-gray-700 hover:text-purple-600 transition">Entrar</a>
-      <a href="/register.html" class="px-4 py-2 bg-purple-600 text-white text-sm font-bold rounded-xl hover:bg-purple-700 transition shadow-sm">
-        Começar Grátis
-      </a>
+    <!-- Search + actions -->
+    <div class="hidden md:flex items-center gap-3 flex-1 justify-end max-w-md">
+      <div class="relative w-full max-w-[220px]">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-3.5-3.5"/></svg>
+        <input type="text" placeholder="Pesquisar cursos..." class="w-full bg-navy-900 text-slate-200 placeholder-slate-500 text-sm rounded-full pl-9 pr-4 py-2 border border-white/10 focus:outline-none focus:ring-2 focus:ring-brand-500">
+      </div>
     </div>
-
-    <!-- Hamburger -->
-    <button onclick="document.getElementById('mobile-menu').classList.toggle('open')" class="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100">
-      <i class="fas fa-bars text-lg"></i>
-    </button>
+    <div class="flex items-center gap-3 shrink-0">
+      <a href="/login.html" class="hidden sm:inline-block text-slate-200 text-sm font-medium border border-white/20 rounded-full px-5 py-2 hover:bg-white/5 transition">Entrar</a>
+      <a href="/register.html" class="bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-full px-5 py-2 transition shadow-lg shadow-brand-600/20">Começar Grátis</a>
+      <button onclick="document.getElementById('mobile-menu').classList.toggle('open')" class="lg:hidden p-2 rounded-lg text-slate-200 hover:bg-white/5">
+        <i class="fas fa-bars text-lg"></i>
+      </button>
+    </div>
   </div>
 
   <!-- Mobile menu -->
-  <div id="mobile-menu" class="md:hidden border-t border-gray-100 bg-white px-5 pb-5">
-    <div class="flex flex-col gap-1 pt-3">
-      <a href="#sobre"           class="py-2.5 text-sm font-medium text-gray-700 hover:text-purple-600">Sobre</a>
-      <a href="#funcionalidades" class="py-2.5 text-sm font-medium text-gray-700 hover:text-purple-600">Funcionalidades</a>
-      <a href="#planos"          class="py-2.5 text-sm font-medium text-gray-700 hover:text-purple-600">Planos</a>
-      <a href="/browse.html"     class="py-2.5 text-sm font-medium text-gray-700 hover:text-purple-600">Explorar</a>
+  <div id="mobile-menu" class="lg:hidden border-t border-white/10 bg-navy-950 px-6 pb-5">
+    <div class="relative mt-3 mb-1">
+      <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-3.5-3.5"/></svg>
+      <input type="text" placeholder="Pesquisar cursos..." class="w-full bg-navy-900 text-slate-200 placeholder-slate-500 text-sm rounded-full pl-9 pr-4 py-2 border border-white/10 focus:outline-none focus:ring-2 focus:ring-brand-500">
+    </div>
+    <div class="flex flex-col gap-1 pt-2">
+      <a href="/browse.html"     class="py-2.5 text-sm font-medium text-slate-200 hover:text-white">Explorar</a>
+      <a href="#cursos"          class="py-2.5 text-sm font-medium text-slate-200 hover:text-white">Cursos</a>
+      <a href="#funcionalidades" class="py-2.5 text-sm font-medium text-slate-200 hover:text-white">Funcionalidades</a>
+      <a href="#planos"          class="py-2.5 text-sm font-medium text-slate-200 hover:text-white">Planos</a>
+      <a href="#sobre"           class="py-2.5 text-sm font-medium text-slate-200 hover:text-white">Sobre</a>
       <div class="flex gap-3 mt-3">
-        <a href="/login.html"    class="flex-1 text-center py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700">Entrar</a>
-        <a href="/register.html" class="flex-1 text-center py-2.5 bg-purple-600 text-white rounded-xl text-sm font-bold">Começar Grátis</a>
+        <a href="/login.html"    class="flex-1 text-center py-2.5 border border-white/20 rounded-full text-sm font-semibold text-slate-200">Entrar</a>
+        <a href="/register.html" class="flex-1 text-center py-2.5 bg-brand-600 text-white rounded-full text-sm font-bold">Começar Grátis</a>
       </div>
     </div>
   </div>
-</nav>
+</header>
 
 
 <!-- ═══════════════════════════════ HERO ═══════════════════════════════ -->
-<section class="hero-bg min-h-screen flex items-center pt-16" id="inicio">
-  <div class="hero-grid"></div>
-  <div class="relative max-w-7xl mx-auto px-5 py-20 w-full">
-    <div class="grid lg:grid-cols-2 gap-16 items-center">
+<section class="bg-navy-950 relative" id="inicio">
+  <div class="max-w-7xl mx-auto px-6 pt-14 pb-24 grid lg:grid-cols-[1.1fr_1fr] gap-12 items-center relative z-10">
 
-      <!-- Left — Text -->
-      <div class="hero-text">
-        <div class="hero-badge mb-6">
-          <i class="fas fa-globe-africa"></i>
-          <span>NOVO</span>
-          Agora disponível em 5 países
-        </div>
+    <!-- Left text -->
+    <div class="fade-slide">
+      <h1 class="text-white text-4xl sm:text-5xl font-extrabold leading-[1.1] tracking-tight">
+        O teu futuro<br>
+        começa com o<br>
+        <span class="text-brand-500">conhecimento</span>
+      </h1>
+      <p class="text-slate-300 mt-6 text-lg max-w-md leading-relaxed">
+        Aprende online, cresce mais rápido. VClass leva formação de qualidade a mais pessoas, em todos os lugares.
+      </p>
 
-        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black text-white leading-tight mb-6">
-          Aprende com<br>
-          <span class="text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-cyan-300">
-            qualidade real,
-          </span><br>
-          a preços justos.
-        </h1>
+      <div className="mt-6">
+  <p className="text-slate-400 text-sm mb-2">
+    Disponível em:
+  </p>
 
-        <p class="text-lg text-slate-300 mb-8 max-w-lg leading-relaxed">
-          Plataforma de educação digital feita para Moçambique, Angola, Brasil, Portugal e Cabo Verde.
-          Aulas alinhadas ao currículo nacional de cada país.
-        </p>
+  <div className="flex flex-wrap items-center gap-4 text-slate-200 text-sm">
 
-        <div class="flex flex-wrap gap-4 mb-10">
-          <a href="/register.html" class="btn-primary">
-            <i class="fas fa-rocket text-sm"></i>
-            Começar Grátis
-          </a>
-          <a href="/browse.html" class="btn-outline">
-            <i class="fas fa-compass text-sm"></i>
-            Explorar Aulas
-          </a>
-        </div>
+    <span className="flex items-center gap-2">
+      <span className="fi fi-mz"></span>
+      Moçambique
+    </span>
 
-        <!-- Social proof -->
-        <div class="flex flex-wrap items-center gap-6">
-          <div class="flex -space-x-2">
-            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 border-2 border-white/30 flex items-center justify-center text-white text-xs font-bold">A</div>
-            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 border-2 border-white/30 flex items-center justify-center text-white text-xs font-bold">C</div>
-            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-violet-400 to-violet-600 border-2 border-white/30 flex items-center justify-center text-white text-xs font-bold">M</div>
-            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-rose-400 to-rose-600 border-2 border-white/30 flex items-center justify-center text-white text-xs font-bold">+</div>
+    <span className="flex items-center gap-2">
+      <span className="fi fi-pt"></span>
+      Portugal
+    </span>
+
+    <span className="flex items-center gap-2">
+      <span className="fi fi-ao"></span>
+      Angola
+    </span>
+
+    <span className="flex items-center gap-2">
+      <span className="fi fi-cv"></span>
+      Cabo Verde
+    </span>
+
+
+  </div>
+</div>
+        
+        
+
+      <div class="flex flex-wrap items-center gap-4 mt-8">
+        <a href="/register.html" class="bg-brand-600 hover:bg-brand-700 transition text-white font-semibold rounded-full pl-6 pr-5 py-3 flex items-center gap-2 shadow-lg shadow-brand-600/20">
+          Começar Grátis
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+        <a href="#funcionalidades" class="border border-white/20 hover:bg-white/5 transition text-white font-semibold rounded-full pl-6 pr-5 py-3 flex items-center gap-2">
+          Ver como funciona
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M10 8l6 4-6 4V8z" fill="currentColor" stroke="none"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <!-- Right: photo + floating cards, side by side (normal flow so they never overlap) -->
+    <div class="flex flex-wrap justify-center lg:justify-end items-start gap-6 fade-slide" style="animation-delay:.1s">
+      <!-- Photo of the student — soft-edged so it blends into the dark hero instead of sitting on top of it -->
+      <div class="relative w-[240px] sm:w-[270px] lg:w-[290px] shrink-0">
+        <!-- Ambient glow: extends the photo's own green tone into the hero so there's no visible rectangle seam -->
+        <div class="absolute -inset-16 sm:-inset-20 rounded-full pointer-events-none" style="z-index:0; background:radial-gradient(ellipse 60% 55% at 50% 42%, rgba(34,197,94,0.28) 0%, rgba(13,30,51,0.22) 45%, transparent 75%); filter:blur(28px);"></div>
+
+        <!-- Giant translucent "V" brand mark behind the photo -->
+        <svg class="absolute pointer-events-none" style="z-index:1; top:-8%; left:50%; transform:translateX(-50%); width:150%; height:auto; opacity:.14;" viewBox="0 0 100 100" fill="#22c55e">
+          <path d="M8,0 L34,0 L50,52 L66,0 L92,0 L58,100 L42,100 Z"/>
+        </svg>
+
+        <img
+          src="/static/images/hero-student.png"
+          alt="Estudante sorrindo a usar o telemóvel"
+          class="relative w-full h-auto object-contain"
+          style="z-index:10; mask-image:radial-gradient(ellipse 88% 92% at 50% 40%, black 65%, transparent 100%); -webkit-mask-image:radial-gradient(ellipse 88% 92% at 50% 40%, black 65%, transparent 100%);"
+        >
+      </div>
+
+      <!-- Floating cards: stacked column beside the photo, never on top of it -->
+      <div class="hidden sm:flex flex-col gap-4 shrink-0 w-[220px]">
+
+        <!-- IA Tutora -->
+        <div class="bg-white rounded-2xl shadow-xl px-5 py-4 flex items-start gap-3 w-full card-hover">
+          <div class="bg-navy-900 rounded-xl p-2 shrink-0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><circle cx="9" cy="14" r="1.3" fill="#22c55e" stroke="none"/><circle cx="15" cy="14" r="1.3" fill="#22c55e" stroke="none"/><path d="M12 8V4M9 4h6"/></svg>
           </div>
           <div>
-            <div class="flex gap-0.5 mb-0.5">
-              <i class="fas fa-star text-yellow-400 text-xs"></i>
-              <i class="fas fa-star text-yellow-400 text-xs"></i>
-              <i class="fas fa-star text-yellow-400 text-xs"></i>
-              <i class="fas fa-star text-yellow-400 text-xs"></i>
-              <i class="fas fa-star text-yellow-400 text-xs"></i>
-            </div>
-            <p class="text-slate-300 text-xs">+11.000 estudantes activos</p>
+            <p class="font-bold text-navy-950 text-sm">IA Tutora</p>
+            <p class="text-slate-500 text-xs mt-0.5">Te acompanha no teu progresso</p>
           </div>
         </div>
-      </div>
 
-      <!-- Right — Visual -->
-      <div class="hero-visual relative flex justify-center items-center">
-        <!-- Central dashboard mock -->
-        <div class="relative w-full max-w-md">
-
-          <!-- Main card -->
-          <div class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 shadow-2xl">
-            <div class="flex items-center gap-3 mb-5">
-              <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center">
-                <i class="fas fa-play text-white text-sm"></i>
-              </div>
-              <div>
-                <p class="text-white font-bold text-sm">A aprender agora</p>
-                <p class="text-slate-400 text-xs">Matemática — 10ª Classe</p>
-              </div>
-              <div class="ml-auto">
-                <span class="bg-green-500/20 text-green-300 text-xs font-bold px-2.5 py-1 rounded-full border border-green-500/30">AO VIVO</span>
-              </div>
-            </div>
-
-            <!-- Progress bar -->
-            <div class="mb-4">
-              <div class="flex justify-between text-xs text-slate-400 mb-1.5">
-                <span>Trigonometria — Capítulo 3</span>
-                <span class="text-violet-300 font-semibold">72%</span>
-              </div>
-              <div class="h-2 bg-white/10 rounded-full overflow-hidden">
-                <div class="h-full w-[72%] bg-gradient-to-r from-violet-400 to-cyan-400 rounded-full"></div>
-              </div>
-            </div>
-
-            <!-- Subject pills -->
-            <div class="flex flex-wrap gap-2">
-              <span class="bg-blue-500/20 text-blue-300 text-xs px-3 py-1.5 rounded-lg border border-blue-500/30 font-medium">📐 Geometria</span>
-              <span class="bg-emerald-500/20 text-emerald-300 text-xs px-3 py-1.5 rounded-lg border border-emerald-500/30 font-medium">🔬 Física</span>
-              <span class="bg-violet-500/20 text-violet-300 text-xs px-3 py-1.5 rounded-lg border border-violet-500/30 font-medium">📝 Português</span>
-              <span class="bg-amber-500/20 text-amber-300 text-xs px-3 py-1.5 rounded-lg border border-amber-500/30 font-medium">🌍 Geografia</span>
-            </div>
+        <!-- Aulas em vídeo -->
+        <div class="bg-white rounded-2xl shadow-xl px-5 py-3 flex items-center gap-3 w-full card-hover">
+          <div class="bg-brand-600 rounded-lg p-2 shrink-0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
           </div>
+          <p class="font-semibold text-navy-950 text-sm whitespace-nowrap">Aulas em vídeo</p>
+        </div>
 
-          <!-- Floating card 1 — AI Chat -->
-          <div class="float-card f1 absolute -top-8 -right-6 w-52">
-            <div class="flex items-center gap-2.5 mb-2">
-              <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center flex-shrink-0">
-                <i class="fas fa-robot text-white text-xs"></i>
-              </div>
-              <span class="text-white text-xs font-bold">IA Tutora</span>
-              <span class="ml-auto w-2 h-2 bg-green-400 rounded-full"></span>
-            </div>
-            <p class="text-slate-300 text-xs leading-relaxed">"Óptimo! Vamos resolver esta equação passo a passo…"</p>
+        <!-- Exercícios interativos -->
+        <div class="bg-white rounded-2xl shadow-xl px-5 py-3 flex items-center gap-3 w-full card-hover">
+          <div class="bg-brand-50 border border-brand-200 rounded-lg p-2 shrink-0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M11 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-5"/><path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4z"/></svg>
           </div>
-
-          <!-- Floating card 2 — Progress -->
-          <div class="float-card f2 absolute -bottom-8 -left-6 w-44">
-            <div class="flex items-center gap-2 mb-2">
-              <i class="fas fa-trophy text-amber-400 text-sm"></i>
-              <span class="text-white text-xs font-bold">Esta semana</span>
-            </div>
-            <div class="text-2xl font-black text-white mb-0.5">12</div>
-            <div class="text-slate-400 text-xs">aulas concluídas</div>
-            <div class="flex gap-1 mt-2">
-              <div class="h-1.5 flex-1 rounded-full bg-violet-500"></div>
-              <div class="h-1.5 flex-1 rounded-full bg-violet-500"></div>
-              <div class="h-1.5 flex-1 rounded-full bg-violet-500"></div>
-              <div class="h-1.5 flex-1 rounded-full bg-violet-400 opacity-60"></div>
-              <div class="h-1.5 flex-1 rounded-full bg-white/20"></div>
-              <div class="h-1.5 flex-1 rounded-full bg-white/20"></div>
-              <div class="h-1.5 flex-1 rounded-full bg-white/20"></div>
-            </div>
-          </div>
-
-          <!-- Floating card 3 — Certificate -->
-          <div class="float-card f3 absolute top-1/2 -right-16 w-40">
-            <div class="flex items-center gap-2 mb-1.5">
-              <i class="fas fa-certificate text-yellow-400 text-sm"></i>
-              <span class="text-white text-xs font-bold">Certificado</span>
-            </div>
-            <p class="text-slate-300 text-xs">Matemática 9ª Classe</p>
-            <div class="mt-2 bg-yellow-400/20 rounded-lg px-2 py-1 text-center">
-              <span class="text-yellow-300 text-xs font-bold">✓ Aprovado</span>
-            </div>
-          </div>
+          <p class="font-semibold text-navy-950 text-sm whitespace-nowrap">Exercícios interativos</p>
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- Bottom wave -->
-    <div class="absolute bottom-0 left-0 right-0">
-      <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" class="w-full h-16">
-        <path d="M0 80L1440 80L1440 30C1200 70 800 10 600 40C400 70 200 20 0 50L0 80Z" fill="#f8fafc"/>
-      </svg>
+  <!-- Stats bar -->
+  <div class="max-w-6xl mx-auto px-6 relative z-20 -mb-16 sm:-mb-10">
+    <div class="bg-white rounded-3xl shadow-2xl px-8 py-8 grid grid-cols-2 sm:grid-cols-4 gap-8">
+      <div class="flex items-center gap-3">
+        <div class="bg-brand-50 rounded-xl p-3">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6"/><circle cx="17" cy="8" r="2.5" opacity=".6"/><path d="M16 14.2c2.9.4 5 2.6 5 5.8" opacity=".6"/></svg>
+        </div>
+        <div>
+          <p class="font-extrabold text-xl text-navy-950">11.000+</p>
+          <p class="text-slate-500 text-sm">Estudantes</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="bg-blue-50 rounded-xl p-3">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M9 20h6M12 18v2"/><path d="M10 10l4 2-4 2z" fill="#2563eb" stroke="none"/></svg>
+        </div>
+        <div>
+          <p class="font-extrabold text-xl text-navy-950">500+</p>
+          <p class="text-slate-500 text-sm">Aulas Online</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="bg-brand-50 rounded-xl p-3">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/></svg>
+        </div>
+        <div>
+          <p class="font-extrabold text-xl text-navy-950">50+</p>
+          <p class="text-slate-500 text-sm">Professores</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="bg-blue-50 rounded-xl p-3">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18 15 15 0 010-18z"/></svg>
+        </div>
+        <div>
+          <p class="font-extrabold text-xl text-navy-950">5</p>
+          <p class="text-slate-500 text-sm">Países</p>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
-
-<!-- ═══════════════════════════════ STATS ═══════════════════════════════ -->
-<section class="bg-slate-50 py-16" id="sobre">
-  <div class="max-w-7xl mx-auto px-5">
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 reveal">
-      <div class="stat-card">
-        <div class="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <i class="fas fa-users text-purple-600 text-xl"></i>
-        </div>
-        <div class="text-3xl font-black text-gray-900 mb-1" id="cnt-students">11.307</div>
-        <div class="text-sm text-gray-500 font-medium">Estudantes Activos</div>
-      </div>
-      <div class="stat-card">
-        <div class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <i class="fas fa-video text-blue-600 text-xl"></i>
-        </div>
-        <div class="text-3xl font-black text-gray-900 mb-1">500+</div>
-        <div class="text-sm text-gray-500 font-medium">Aulas em Vídeo</div>
-      </div>
-      <div class="stat-card">
-        <div class="w-12 h-12 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <i class="fas fa-chalkboard-teacher text-green-600 text-xl"></i>
-        </div>
-        <div class="text-3xl font-black text-gray-900 mb-1">50+</div>
-        <div class="text-sm text-gray-500 font-medium">Professores Certificados</div>
-      </div>
-      <div class="stat-card">
-        <div class="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <i class="fas fa-globe-africa text-amber-600 text-xl"></i>
-        </div>
-        <div class="text-3xl font-black text-gray-900 mb-1">5</div>
-        <div class="text-sm text-gray-500 font-medium">Países Suportados</div>
-      </div>
-    </div>
-  </div>
-</section>
+<!-- spacer to offset overlapping stats card -->
+<div class="h-16 sm:h-10 bg-white"></div>
 
 
 <!-- ═══════════════════════════════ FUNCIONALIDADES ═══════════════════════════════ -->
-<section class="py-20 bg-slate-50" id="funcionalidades">
-  <div class="max-w-7xl mx-auto px-5">
-    <div class="text-center mb-14 reveal">
-      <div class="section-label mb-4"><i class="fas fa-star"></i> Funcionalidades</div>
-      <h2 class="text-3xl sm:text-4xl font-black text-gray-900 mb-4">
-        Tudo o que precisas para aprender
-      </h2>
-      <p class="text-gray-500 max-w-xl mx-auto">
-        De aulas em vídeo a exercícios interactivos com IA — a VClass tem tudo numa plataforma simples.
-      </p>
+<section id="funcionalidades" class="max-w-7xl mx-auto px-6 py-20">
+  <div class="text-center max-w-2xl mx-auto mb-14">
+    <h2 class="text-3xl sm:text-4xl font-extrabold text-navy-950">Tudo o que precisas para <span class="text-brand-600">aprender melhor</span></h2>
+    <p class="text-slate-500 mt-3">Uma experiência de aprendizagem moderna, prática e com suporte da inteligência artificial.</p>
+  </div>
+
+  <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-5">
+    <div class="border border-slate-200 rounded-2xl p-6 card-hover">
+      <div class="bg-brand-600 w-11 h-11 rounded-xl flex items-center justify-center mb-4">
+        <svg width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </div>
+      <h3 class="font-bold text-navy-950 mb-1">Aulas em vídeo</h3>
+      <p class="text-slate-500 text-sm">Conteúdos curtos, objetivos e aplicados.</p>
     </div>
-
-    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 reveal">
-      <div class="feature-card">
-        <div class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center mb-5">
-          <i class="fas fa-play-circle text-blue-600 text-xl"></i>
-        </div>
-        <h3 class="text-base font-black text-gray-900 mb-2">Aulas em Vídeo</h3>
-        <p class="text-gray-500 text-sm leading-relaxed">Mais de 500 vídeos de alta qualidade, organizados por classe, disciplina e capítulo.</p>
+    <div class="border border-slate-200 rounded-2xl p-6 card-hover">
+      <div class="bg-blue-100 w-11 h-11 rounded-xl flex items-center justify-center mb-4">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><circle cx="9" cy="14" r="1.2" fill="#2563eb" stroke="none"/><circle cx="15" cy="14" r="1.2" fill="#2563eb" stroke="none"/><path d="M12 8V4M9 4h6"/></svg>
       </div>
-
-      <div class="feature-card">
-        <div class="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center mb-5">
-          <i class="fas fa-robot text-purple-600 text-xl"></i>
-        </div>
-        <h3 class="text-base font-black text-gray-900 mb-2">Chat com IA Tutora</h3>
-        <p class="text-gray-500 text-sm leading-relaxed">Faz perguntas a qualquer hora. A IA explica os conceitos com exemplos do teu currículo.</p>
+      <h3 class="font-bold text-navy-950 mb-1">IA Tutora</h3>
+      <p class="text-slate-500 text-sm">Explica, responde e ajuda-te 24/7.</p>
+    </div>
+    <div class="border border-slate-200 rounded-2xl p-6 card-hover">
+      <div class="bg-amber-100 w-11 h-11 rounded-xl flex items-center justify-center mb-4">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><path d="M11 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-5"/><path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4z"/></svg>
       </div>
-
-      <div class="feature-card">
-        <div class="w-12 h-12 bg-green-100 rounded-2xl flex items-center justify-center mb-5">
-          <i class="fas fa-tasks text-green-600 text-xl"></i>
-        </div>
-        <h3 class="text-base font-black text-gray-900 mb-2">Exercícios Interactivos</h3>
-        <p class="text-gray-500 text-sm leading-relaxed">Testes, exercícios e quizzes com correcção automática e explicação de cada resposta.</p>
+      <h3 class="font-bold text-navy-950 mb-1">Exercícios</h3>
+      <p class="text-slate-500 text-sm">Pratica o que aprendes com feedback imediato.</p>
+    </div>
+    <div class="border border-slate-200 rounded-2xl p-6 card-hover">
+      <div class="bg-blue-100 w-11 h-11 rounded-xl flex items-center justify-center mb-4">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
       </div>
-
-      <div class="feature-card">
-        <div class="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center mb-5">
-          <i class="fas fa-file-pdf text-amber-600 text-xl"></i>
-        </div>
-        <h3 class="text-base font-black text-gray-900 mb-2">Download de PDFs</h3>
-        <p class="text-gray-500 text-sm leading-relaxed">Guarda os resumos e fichas para estudar offline, onde quiseres e quando quiseres.</p>
+      <h3 class="font-bold text-navy-950 mb-1">Acompanhamento</h3>
+      <p class="text-slate-500 text-sm">Vê o teu progresso em tempo real.</p>
+    </div>
+    <div class="border border-slate-200 rounded-2xl p-6 card-hover">
+      <div class="bg-brand-50 w-11 h-11 rounded-xl flex items-center justify-center mb-4">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M9 13l-2 8 5-3 5 3-2-8"/></svg>
       </div>
-
-      <div class="feature-card">
-        <div class="w-12 h-12 bg-rose-100 rounded-2xl flex items-center justify-center mb-5">
-          <i class="fas fa-chart-line text-rose-600 text-xl"></i>
-        </div>
-        <h3 class="text-base font-black text-gray-900 mb-2">Acompanhamento de Progresso</h3>
-        <p class="text-gray-500 text-sm leading-relaxed">Vê o teu progresso por disciplina, semana e mês. Identifica onde precisas de mais atenção.</p>
-      </div>
-
-      <div class="feature-card">
-        <div class="w-12 h-12 bg-teal-100 rounded-2xl flex items-center justify-center mb-5">
-          <i class="fas fa-certificate text-teal-600 text-xl"></i>
-        </div>
-        <h3 class="text-base font-black text-gray-900 mb-2">Certificados de Conclusão</h3>
-        <p class="text-gray-500 text-sm leading-relaxed">Obtém certificados reconhecidos ao completar módulos e disciplinas completas.</p>
-      </div>
+      <h3 class="font-bold text-navy-950 mb-1">Certificados</h3>
+      <p class="text-slate-500 text-sm">Comprova as tuas competências.</p>
     </div>
   </div>
 </section>
 
 
-<!-- ═══════════════════════════════ PARA PROFESSORES ═══════════════════════════════ -->
-<section class="py-20 bg-white">
-  <div class="max-w-7xl mx-auto px-5">
-    <div class="grid lg:grid-cols-2 gap-16 items-center reveal">
-      <!-- Visual -->
-      <div class="bg-gradient-to-br from-slate-900 to-purple-900 rounded-3xl p-8 relative overflow-hidden order-2 lg:order-1">
-        <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(circle at 2px 2px, white 1px, transparent 0); background-size: 32px 32px;"></div>
-        <div class="relative">
-          <!-- Earnings mock -->
-          <div class="bg-white/10 backdrop-blur rounded-2xl p-5 mb-4 border border-white/20">
-            <div class="flex items-center justify-between mb-4">
-              <span class="text-white font-bold text-sm">💰 Os teus Ganhos</span>
-              <span class="bg-green-500/20 text-green-300 text-xs px-2.5 py-1 rounded-full border border-green-500/30 font-semibold">+18% vs. mês passado</span>
-            </div>
-            <div class="text-4xl font-black text-white mb-1">MT 4.820</div>
-            <div class="text-slate-400 text-xs">Outubro 2025 · Comissão 40%</div>
-          </div>
-          <!-- Stats row -->
-          <div class="grid grid-cols-3 gap-3">
-            <div class="bg-white/10 rounded-xl p-3 text-center border border-white/10">
-              <div class="text-white font-black text-lg">312</div>
-              <div class="text-slate-400 text-xs">Alunos</div>
-            </div>
-            <div class="bg-white/10 rounded-xl p-3 text-center border border-white/10">
-              <div class="text-white font-black text-lg">48</div>
-              <div class="text-slate-400 text-xs">Lições</div>
-            </div>
-            <div class="bg-white/10 rounded-xl p-3 text-center border border-white/10">
-              <div class="text-violet-300 font-black text-lg">4.8⭐</div>
-              <div class="text-slate-400 text-xs">Avaliação</div>
-            </div>
-          </div>
-        </div>
+<!-- ═══════════════════════════════ Curriculos ═══════════════════════════════ -->
+<section id="cursos" class="max-w-7xl mx-auto px-6 pb-16">
+  <div class="flex items-center justify-between mb-6">
+    <h2 class="text-2xl sm:text-3xl font-extrabold text-navy-950">
+      Explore currículos académicos de cada país com acesso à VClass
+    </h2>
+
+    <a href="/browse.html"
+       class="hidden sm:flex items-center gap-1 text-brand-600 font-semibold text-sm hover:gap-2 transition-all">
+      Ver todos os currículos
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M5 12h14M13 6l6 6-6 6"/>
+      </svg>
+    </a>
+  </div>
+
+  <!-- Cards -->
+  <div class="flex flex-wrap justify-center gap-5">
+
+    <!-- Moçambique -->
+    <a href="/browse.html"
+       class="w-[230px] border border-slate-200 rounded-2xl px-5 py-4 flex items-center gap-3 card-hover no-underline bg-white">
+
+      <div class="w-11 h-11 rounded-lg bg-slate-100 flex items-center justify-center text-2xl">
+        🇲🇿
       </div>
 
-      <!-- Text -->
-      <div class="order-1 lg:order-2">
-        <div class="section-label mb-5"><i class="fas fa-chalkboard-teacher"></i> Para Professores</div>
-        <h2 class="text-3xl sm:text-4xl font-black text-gray-900 mb-5">
-          Ensina online.<br>Ganha de forma justa.
-        </h2>
-        <p class="text-gray-500 text-base leading-relaxed mb-8">
-          Cria as tuas lições, publica no teu ritmo e recebe 40% de comissão por cada aluno que te segue. Dashboard completo para acompanhar os teus ganhos e alunos.
-        </p>
-        <ul class="space-y-4 mb-8">
-          <li class="flex items-start gap-3">
-            <div class="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-              <i class="fas fa-check text-green-600 text-xs"></i>
-            </div>
-            <div>
-              <span class="font-semibold text-gray-800 text-sm">40% de comissão</span>
-              <span class="text-gray-500 text-sm"> — recebimento automático via M-Pesa, e-Mola ou Multicaixa</span>
-            </div>
-          </li>
-          <li class="flex items-start gap-3">
-            <div class="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-              <i class="fas fa-check text-green-600 text-xs"></i>
-            </div>
-            <div>
-              <span class="font-semibold text-gray-800 text-sm">Dashboard de analytics</span>
-              <span class="text-gray-500 text-sm"> — visualizações, completações e receita por lição</span>
-            </div>
-          </li>
-          <li class="flex items-start gap-3">
-            <div class="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-              <i class="fas fa-check text-green-600 text-xs"></i>
-            </div>
-            <div>
-              <span class="font-semibold text-gray-800 text-sm">Verificação simplificada</span>
-              <span class="text-gray-500 text-sm"> — aprovação em 48h após submissão de documentos</span>
-            </div>
-          </li>
-        </ul>
-        <a href="/register-teacher.html" class="inline-flex items-center gap-2 bg-gray-900 text-white px-6 py-3 rounded-xl font-bold hover:bg-gray-800 transition text-sm">
-          <i class="fas fa-chalkboard-teacher"></i>
-          Tornar-me Professor
-        </a>
+      <div>
+        <p class="font-bold text-navy-950 text-sm">Moçambique</p>
+        <p class="text-slate-400 text-xs">Até 12ª Classe</p>
+      </div>
+
+    </a>
+
+    <!-- Angola -->
+    <a href="/browse.html"
+       class="w-[230px] border border-slate-200 rounded-2xl px-5 py-4 flex items-center gap-3 card-hover no-underline bg-white">
+
+      <div class="w-11 h-11 rounded-lg bg-slate-100 flex items-center justify-center text-2xl">
+        🇦🇴
+      </div>
+
+      <div>
+        <p class="font-bold text-navy-950 text-sm">Angola</p>
+        <p class="text-slate-400 text-xs">Até ao 12º Nível</p>
+      </div>
+
+    </a>
+
+    <!-- Portugal -->
+    <a href="/browse.html"
+       class="w-[230px] border border-slate-200 rounded-2xl px-5 py-4 flex items-center gap-3 card-hover no-underline bg-white">
+
+      <div class="w-11 h-11 rounded-lg bg-slate-100 flex items-center justify-center text-2xl">
+        🇵🇹
+      </div>
+
+      <div>
+        <p class="font-bold text-navy-950 text-sm">Portugal</p>
+        <p class="text-slate-400 text-xs">3º Nível do Fundamental</p>
+      </div>
+
+    </a>
+
+    <!-- Brasil -->
+    <a href="/browse.html"
+       class="w-[230px] border border-slate-200 rounded-2xl px-5 py-4 flex items-center gap-3 card-hover no-underline bg-white">
+
+      <div class="w-11 h-11 rounded-lg bg-slate-100 flex items-center justify-center text-2xl">
+        🇧🇷
+      </div>
+
+      <div>
+        <p class="font-bold text-navy-950 text-sm">Brasil</p>
+        <p class="text-slate-400 text-xs">Até à 8ª Série</p>
+      </div>
+
+    </a>
+
+    <!-- Cabo Verde -->
+    <a href="/browse.html"
+       class="w-[230px] border border-slate-200 rounded-2xl px-5 py-4 flex items-center gap-3 card-hover no-underline bg-white">
+
+      <div class="w-11 h-11 rounded-lg bg-slate-100 flex items-center justify-center text-2xl">
+        🇨🇻
+      </div>
+
+      <div>
+        <p class="font-bold text-navy-950 text-sm">Cabo Verde</p>
+        <p class="text-slate-400 text-xs">12º Ano</p>
+      </div>
+
+    </a>
+
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════ IA TUTORA PROMO ═══════════════════════════════ -->
+<section class="max-w-7xl mx-auto px-6 pb-20">
+  <div class="bg-gradient-to-br from-brand-50 to-emerald-100/60 rounded-3xl p-8 sm:p-12 grid lg:grid-cols-[1fr_auto_1fr] gap-10 items-center">
+
+    <!-- left text -->
+    <div>
+      <h2 class="text-3xl font-extrabold text-navy-950 leading-tight">IA Tutora sempre<br>com você</h2>
+      <p class="text-slate-600 mt-4 max-w-sm">Tira dúvidas, resumos, exercícios e orientações personalizadas para o teu sucesso.</p>
+      <ul class="mt-5 space-y-2">
+        <li class="flex items-center gap-2 text-slate-700 text-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Explicações claras</li>
+        <li class="flex items-center gap-2 text-slate-700 text-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Trabalho de casa com ajuda</li>
+        <li class="flex items-center gap-2 text-slate-700 text-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Aprende ao teu ritmo</li>
+      </ul>
+      <a href="/register.html" class="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 transition text-white font-semibold rounded-full pl-6 pr-5 py-3 mt-7">
+        Experimenta a IA
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+
+    <!-- phone mockup -->
+    <div class="mx-auto bg-navy-950 rounded-[2rem] p-3 w-[240px] shadow-2xl">
+      <div class="bg-white rounded-[1.4rem] overflow-hidden">
+        <div class="bg-navy-950 text-white text-xs px-4 py-3 flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4"/></svg>
+          IA Tutora
+        </div>
+        <div class="p-3 space-y-2 min-h-[220px] bg-slate-50">
+          <div class="bg-white shadow-sm rounded-xl rounded-tl-none px-3 py-2 text-xs text-slate-700 max-w-[85%]">Olá! Em que posso ajudar-te hoje?</div>
+          <div class="bg-brand-600 text-white rounded-xl rounded-tr-none px-3 py-2 text-xs ml-auto max-w-[85%]">Explica o conceito de marketing digital</div>
+          <div class="bg-white shadow-sm rounded-xl rounded-tl-none px-3 py-2 text-xs text-slate-700 max-w-[90%]">Claro! O marketing digital é o conjunto de estratégias para promover produtos...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- right benefits -->
+    <div class="space-y-4">
+      <div class="flex items-center gap-3 bg-white rounded-xl px-4 py-3 shadow-sm">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        <span class="text-sm font-medium text-navy-950">Apoio 24/7</span>
+      </div>
+      <div class="flex items-center gap-3 bg-white rounded-xl px-4 py-3 shadow-sm">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-9 8.4A8.5 8.5 0 013 11.5 8.5 8.5 0 0112 3a8.4 8.4 0 019 8.5z"/></svg>
+        <span class="text-sm font-medium text-navy-950">Respostas inteligentes</span>
+      </div>
+      <div class="flex items-center gap-3 bg-white rounded-xl px-4 py-3 shadow-sm">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18 15 15 0 010-18z"/></svg>
+        <span class="text-sm font-medium text-navy-950">Idiomas: Português, Inglês e mais</span>
+      </div>
+      <div class="flex items-center gap-3 bg-white rounded-xl px-4 py-3 shadow-sm">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
+        <span class="text-sm font-medium text-navy-950">Modo motivação com IA</span>
       </div>
     </div>
   </div>
@@ -565,323 +472,200 @@
 
 
 <!-- ═══════════════════════════════ TESTEMUNHOS ═══════════════════════════════ -->
-<section class="py-20 bg-slate-50">
-  <div class="max-w-7xl mx-auto px-5">
-    <div class="text-center mb-14 reveal">
-      <div class="section-label mb-4"><i class="fas fa-heart"></i> Testemunhos</div>
-      <h2 class="text-3xl sm:text-4xl font-black text-gray-900">O que dizem os nossos alunos</h2>
-    </div>
-    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 reveal">
-      <div class="testimonial">
-        <div class="flex gap-0.5 mb-3">
-          <i class="fas fa-star text-yellow-400 text-sm"></i><i class="fas fa-star text-yellow-400 text-sm"></i>
-          <i class="fas fa-star text-yellow-400 text-sm"></i><i class="fas fa-star text-yellow-400 text-sm"></i>
-          <i class="fas fa-star text-yellow-400 text-sm"></i>
-        </div>
-        <p class="text-gray-700 text-sm leading-relaxed mb-4">"Passei no exame de Matemática com 18 valores depois de 2 meses a usar a VClass. As explicações são muito claras."</p>
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm font-bold">A</div>
-          <div>
-            <div class="font-bold text-gray-800 text-sm">Ana Sitoe</div>
-            <div class="text-gray-400 text-xs">12ª Classe · Maputo, MZ</div>
-          </div>
-        </div>
-      </div>
+<section id="sobre" class="max-w-7xl mx-auto px-6 pb-20">
+  <div class="flex items-center justify-between mb-8">
+    <h2 class="text-2xl sm:text-3xl font-extrabold text-navy-950">O que dizem os nossos <span class="text-brand-600">estudantes</span></h2>
+    <div class="hidden sm:flex text-amber-400 text-lg">★★★★★</div>
+  </div>
 
-      <div class="testimonial">
-        <div class="flex gap-0.5 mb-3">
-          <i class="fas fa-star text-yellow-400 text-sm"></i><i class="fas fa-star text-yellow-400 text-sm"></i>
-          <i class="fas fa-star text-yellow-400 text-sm"></i><i class="fas fa-star text-yellow-400 text-sm"></i>
-          <i class="fas fa-star text-yellow-400 text-sm"></i>
-        </div>
-        <p class="text-gray-700 text-sm leading-relaxed mb-4">"O preço é muito acessível para quem está em Angola. Valeu cada kwanza, o conteúdo é de muito boa qualidade."</p>
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center text-white text-sm font-bold">C</div>
+  <div class="relative">
+    <button onclick="scrollTestimonials(-1)" aria-label="Anterior" class="hidden sm:flex absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full w-9 h-9 items-center justify-center hover:bg-slate-50">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div id="testimonial-track" class="flex gap-6 overflow-x-auto scroll-smooth pb-2">
+      <div class="border border-slate-200 rounded-2xl p-6 min-w-[300px] flex-1 card-hover">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-11 h-11 rounded-full bg-gradient-to-br from-amber-300 to-amber-500 flex items-center justify-center text-white font-bold">CM</div>
           <div>
-            <div class="font-bold text-gray-800 text-sm">Carlos Mendes</div>
-            <div class="text-gray-400 text-xs">10ª Classe · Luanda, AO</div>
+            <p class="font-bold text-navy-950 text-sm">Carlos M.</p>
+            <p class="text-brand-600 text-xs flex items-center gap-1">● Tecnologia</p>
           </div>
         </div>
+        <p class="text-slate-600 text-sm leading-relaxed">"A VClass mudou a forma como aprendo. Os cursos são práticos e a IA ajuda muito!"</p>
       </div>
-
-      <div class="testimonial">
-        <div class="flex gap-0.5 mb-3">
-          <i class="fas fa-star text-yellow-400 text-sm"></i><i class="fas fa-star text-yellow-400 text-sm"></i>
-          <i class="fas fa-star text-yellow-400 text-sm"></i><i class="fas fa-star text-yellow-400 text-sm"></i>
-          <i class="fas fa-star text-yellow-400 text-sm"></i>
-        </div>
-        <p class="text-gray-700 text-sm leading-relaxed mb-4">"A IA tutora é incrível! Perguntei sobre derivadas às 23h e recebi uma explicação completa com exemplos."</p>
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white text-sm font-bold">M</div>
+      <div class="border border-slate-200 rounded-2xl p-6 min-w-[300px] flex-1 card-hover">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-11 h-11 rounded-full bg-gradient-to-br from-rose-300 to-rose-500 flex items-center justify-center text-white font-bold">AP</div>
           <div>
-            <div class="font-bold text-gray-800 text-sm">Mariana Costa</div>
-            <div class="text-gray-400 text-xs">3º EM · São Paulo, BR</div>
+            <p class="font-bold text-navy-950 text-sm">Ana Paula</p>
+            <p class="text-brand-600 text-xs flex items-center gap-1">● Marketing</p>
           </div>
         </div>
+        <p class="text-slate-600 text-sm leading-relaxed">"Consigo equilibrar os meus estudos com o trabalho. A plataforma é incrível!"</p>
+      </div>
+      <div class="border border-slate-200 rounded-2xl p-6 min-w-[300px] flex-1 card-hover">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-11 h-11 rounded-full bg-gradient-to-br from-orange-300 to-orange-500 flex items-center justify-center text-white font-bold">JT</div>
+          <div>
+            <p class="font-bold text-navy-950 text-sm">Jorge T.</p>
+            <p class="text-brand-600 text-xs flex items-center gap-1">● Design</p>
+          </div>
+        </div>
+        <p class="text-slate-600 text-sm leading-relaxed">"Aprendi Design do zero e já estou a trabalhar em projetos reais."</p>
       </div>
     </div>
+    <button onclick="scrollTestimonials(1)" aria-label="Seguinte" class="hidden sm:flex absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full w-9 h-9 items-center justify-center hover:bg-slate-50">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+    </button>
   </div>
 </section>
 
 
 <!-- ═══════════════════════════════ PLANOS ═══════════════════════════════ -->
-<section class="py-20 bg-white" id="planos">
-  <div class="max-w-7xl mx-auto px-5">
-    <div class="text-center mb-14 reveal">
-      <div class="section-label mb-4"><i class="fas fa-tag"></i> Preços</div>
-      <h2 class="text-3xl sm:text-4xl font-black text-gray-900 mb-4">
-        Planos para todos os orçamentos
-      </h2>
-      <p class="text-gray-500 max-w-xl mx-auto mb-8">Preços ajustados para África e Brasil. Sem contratos, cancela quando quiseres.</p>
-
-      <!-- Toggle -->
-      <div class="inline-flex items-center bg-gray-100 rounded-full p-1 gap-1">
-        <button id="btn-monthly" onclick="setPricing('monthly')"
-          class="px-5 py-2 rounded-full text-sm font-semibold transition bg-white text-purple-700 shadow-sm">
-          Mensal
-        </button>
-        <button id="btn-yearly" onclick="setPricing('yearly')"
-          class="px-5 py-2 rounded-full text-sm font-semibold transition text-gray-600">
-          Anual <span class="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full ml-1">-30%</span>
-        </button>
-      </div>
+<section id="planos" class="max-w-7xl mx-auto px-6 pb-20">
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+    <h2 class="text-2xl sm:text-3xl font-extrabold text-navy-950">Escolhe o plano ideal para ti</h2>
+    <div class="flex items-center gap-2 bg-slate-100 rounded-full p-1">
+      <button onclick="setBilling('mensal')" id="btn-mensal" class="billing-btn px-4 py-1.5 rounded-full text-sm font-semibold bg-white shadow text-navy-950">Mensal</button>
+      <button onclick="setBilling('anual')" id="btn-anual" class="billing-btn px-4 py-1.5 rounded-full text-sm font-semibold text-slate-500 flex items-center gap-2">Anual <span class="bg-brand-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">-20%</span></button>
     </div>
-
-    <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto reveal">
-
-      <!-- Free -->
-      <div class="plan-card">
-        <div class="w-11 h-11 bg-gray-100 rounded-2xl flex items-center justify-center mb-5">
-          <i class="fas fa-seedling text-gray-500 text-lg"></i>
-        </div>
-        <h3 class="text-xl font-black text-gray-900 mb-1">Gratuito</h3>
-        <p class="text-gray-400 text-xs mb-5">Para começar sem risco</p>
-        <div class="mb-6">
-          <span class="text-4xl font-black text-gray-900">Grátis</span>
-          <span class="text-gray-400 text-sm ml-1">para sempre</span>
-        </div>
-        <ul class="space-y-3 mb-8">
-          <li class="flex items-center gap-2.5 text-sm text-gray-700"><i class="fas fa-check-circle text-green-500 text-xs w-4"></i>10 aulas por mês</li>
-          <li class="flex items-center gap-2.5 text-sm text-gray-700"><i class="fas fa-check-circle text-green-500 text-xs w-4"></i>Exercícios básicos</li>
-          <li class="flex items-center gap-2.5 text-sm text-gray-700"><i class="fas fa-check-circle text-green-500 text-xs w-4"></i>Biblioteca (30 recursos)</li>
-          <li class="flex items-center gap-2.5 text-sm text-gray-400"><i class="fas fa-times text-gray-300 text-xs w-4"></i><span class="line-through">Download de PDFs</span></li>
-          <li class="flex items-center gap-2.5 text-sm text-gray-400"><i class="fas fa-times text-gray-300 text-xs w-4"></i><span class="line-through">Chat com IA</span></li>
-        </ul>
-        <a href="/register.html" class="block w-full text-center border-2 border-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:border-gray-300 hover:bg-gray-50 transition text-sm">
-          Começar Grátis
-        </a>
-      </div>
-
-      <!-- Basic -->
-      <div class="plan-card border-blue-200 shadow-blue-100" style="box-shadow: 0 8px 32px rgba(37,99,235,0.12);">
-        <div class="w-11 h-11 bg-blue-100 rounded-2xl flex items-center justify-center mb-5">
-          <i class="fas fa-book-open text-blue-600 text-lg"></i>
-        </div>
-        <h3 class="text-xl font-black text-gray-900 mb-1">Básico</h3>
-        <p class="text-gray-400 text-xs mb-5">Para estudantes dedicados</p>
-        <div class="mb-2">
-          <div class="flex items-end gap-1">
-            <span class="text-gray-400 font-semibold">MT</span>
-            <span class="text-4xl font-black text-blue-600 plan-basic-price">99</span>
-            <span class="text-gray-400 text-sm mb-1 plan-period">/mês</span>
-          </div>
-        </div>
-        <p class="text-xs text-gray-400 mb-6 plan-basic-saving h-4">&nbsp;</p>
-        <ul class="space-y-3 mb-8">
-          <li class="flex items-center gap-2.5 text-sm text-gray-700"><i class="fas fa-check-circle text-green-500 text-xs w-4"></i>50 aulas por mês</li>
-          <li class="flex items-center gap-2.5 text-sm text-gray-700"><i class="fas fa-check-circle text-green-500 text-xs w-4"></i>Todos os exercícios</li>
-          <li class="flex items-center gap-2.5 text-sm text-gray-700"><i class="fas fa-check-circle text-green-500 text-xs w-4"></i>Biblioteca completa</li>
-          <li class="flex items-center gap-2.5 text-sm text-gray-700"><i class="fas fa-check-circle text-green-500 text-xs w-4"></i>Download de PDFs</li>
-          <li class="flex items-center gap-2.5 text-sm text-gray-700"><i class="fas fa-check-circle text-green-500 text-xs w-4"></i>Chat IA (30 msg/dia)</li>
-        </ul>
-        <a href="/plans.html" class="block w-full text-center bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition text-sm">
-          Subscrever Básico
-        </a>
-      </div>
-
-      <!-- Premium -->
-      <div class="plan-card featured relative overflow-hidden">
-        <div class="absolute top-0 right-0 bg-yellow-400 text-yellow-900 text-xs font-black px-4 py-1.5 rounded-bl-xl">
-          ⭐ POPULAR
-        </div>
-        <div class="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center mb-5">
-          <i class="fas fa-crown text-yellow-300 text-lg"></i>
-        </div>
-        <h3 class="text-xl font-black text-white mb-1">Premium</h3>
-        <p class="text-purple-300 text-xs mb-5">A experiência completa</p>
-        <div class="mb-2">
-          <div class="flex items-end gap-1">
-            <span class="text-purple-300 font-semibold">MT</span>
-            <span class="text-4xl font-black text-white plan-premium-price">199</span>
-            <span class="text-purple-300 text-sm mb-1 plan-period">/mês</span>
-          </div>
-        </div>
-        <p class="text-xs text-purple-300 mb-6 plan-premium-saving h-4">&nbsp;</p>
-        <ul class="space-y-3 mb-8">
-          <li class="flex items-center gap-2.5 text-sm text-white"><i class="fas fa-check-circle text-green-300 text-xs w-4"></i>Aulas ilimitadas</li>
-          <li class="flex items-center gap-2.5 text-sm text-white"><i class="fas fa-check-circle text-green-300 text-xs w-4"></i>Exercícios ilimitados</li>
-          <li class="flex items-center gap-2.5 text-sm text-white"><i class="fas fa-check-circle text-green-300 text-xs w-4"></i>Downloads ilimitados</li>
-          <li class="flex items-center gap-2.5 text-sm text-white"><i class="fas fa-check-circle text-green-300 text-xs w-4"></i>Chat IA ilimitado</li>
-          <li class="flex items-center gap-2.5 text-sm text-white"><i class="fas fa-check-circle text-green-300 text-xs w-4"></i>Certificados de conclusão</li>
-        </ul>
-        <a href="/plans.html" class="block w-full text-center bg-yellow-400 text-yellow-900 py-3 rounded-xl font-black hover:bg-yellow-300 transition text-sm">
-          Subscrever Premium
-        </a>
-      </div>
-    </div>
-
-    <p class="text-center text-gray-400 text-sm mt-8">
-      <a href="/plans.html" class="text-purple-600 hover:text-purple-700 font-semibold">
-        Ver comparação completa e outros métodos de pagamento <i class="fas fa-arrow-right ml-1 text-xs"></i>
-      </a>
-    </p>
   </div>
+
+  <div class="grid lg:grid-cols-3 gap-6">
+    <!-- Gratuito -->
+    <div class="border border-slate-200 rounded-2xl p-8 card-hover">
+      <h3 class="font-bold text-navy-950 text-lg">Gratuito</h3>
+      <p class="mt-3"><span class="text-3xl font-extrabold text-navy-950 price" data-mensal="0" data-anual="0">0 MT</span><span class="text-slate-400 text-sm">/mês</span></p>
+      <p class="text-slate-500 text-sm mt-2">Perfeito para começar</p>
+      <ul class="mt-6 space-y-3 text-sm">
+        <li class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Acesso a alguns cursos</li>
+        <li class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Conteúdos em vídeo</li>
+        <li class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Certificado básico</li>
+      </ul>
+      <a href="/register.html" class="block text-center border border-slate-300 hover:bg-slate-50 transition font-semibold rounded-full py-3 mt-8 text-navy-950">Começar Grátis</a>
+    </div>
+
+    <!-- Básico (destaque) -->
+    <div class="relative border-2 border-brand-600 rounded-2xl p-8 shadow-xl card-hover">
+      <span class="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand-600 text-white text-xs font-semibold px-4 py-1 rounded-full">Mais Popular</span>
+      <h3 class="font-bold text-navy-950 text-lg">Básico</h3>
+      <p class="mt-3"><span class="text-3xl font-extrabold text-navy-950 price" data-mensal="499" data-anual="399">99 MT</span><span class="text-slate-400 text-sm">/mês</span></p>
+      <p class="text-slate-500 text-sm mt-2">Acesso completo a todos os cursos</p>
+      <ul class="mt-6 space-y-3 text-sm">
+        <li class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Todos os cursos</li>
+        <li class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Exercícios e testes</li>
+        <li class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Certificados incluídos</li>
+        <li class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Suporte por email</li>
+      </ul>
+      <a href="/plans.html" class="block text-center bg-brand-600 hover:bg-brand-700 transition text-white font-semibold rounded-full py-3 mt-8">Escolher Plano</a>
+    </div>
+
+    <!-- Premium -->
+    <div class="border border-slate-200 rounded-2xl p-8 card-hover">
+      <h3 class="font-bold text-navy-950 text-lg">Premium</h3>
+      <p class="mt-3"><span class="text-3xl font-extrabold text-navy-950 price" data-mensal="999" data-anual="799">199 MT</span><span class="text-slate-400 text-sm">/mês</span></p>
+      <p class="text-slate-500 text-sm mt-2">Tudo do Básico + benefícios exclusivos</p>
+      <ul class="mt-6 space-y-3 text-sm">
+        <li class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Tutoria personalizada por IA</li>
+        <li class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Relatórios de progresso avançados</li>
+        <li class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Sem anúncios</li>
+        <li class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Suporte prioritário</li>
+      </ul>
+      <a href="/plans.html" class="block text-center border border-slate-300 hover:bg-slate-50 transition font-semibold rounded-full py-3 mt-8 text-navy-950">Escolher Plano</a>
+    </div>
+  </div>
+
+  <p class="text-center text-slate-400 text-sm mt-8">
+    <a href="/plans.html" class="text-brand-600 hover:text-brand-700 font-semibold">
+      Ver comparação completa e outros métodos de pagamento
+    </a>
+  </p>
 </section>
 
 
-<!-- ═══════════════════════════════ CTA FINAL ═══════════════════════════════ -->
-<section class="py-24 bg-gradient-to-br from-slate-900 via-purple-900 to-purple-800 relative overflow-hidden">
-  <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(circle at 2px 2px, white 1px, transparent 0); background-size: 40px 40px;"></div>
-  <div class="relative max-w-3xl mx-auto px-5 text-center reveal">
-    <div class="text-5xl mb-6">🚀</div>
-    <h2 class="text-3xl sm:text-4xl font-black text-white mb-5">
-      Começa a aprender hoje.<br>É gratuito.
-    </h2>
-    <p class="text-purple-200 text-lg mb-10 leading-relaxed">
-      Junta-te a mais de 11.000 estudantes de 5 países que já aprendem com a VClass.
-    </p>
-    <div class="flex flex-col sm:flex-row gap-4 justify-center">
-      <a href="/register.html" class="btn-primary text-base px-8 py-4">
-        <i class="fas fa-rocket"></i> Criar conta gratuita
+<!-- ═══════════════════════════════ CTA BANNER ═══════════════════════════════ -->
+<section class="max-w-7xl mx-auto px-6 pb-16">
+  <div class="bg-navy-950 rounded-3xl px-8 sm:px-12 py-10 flex flex-col sm:flex-row items-center justify-between gap-6">
+    <div class="flex items-center gap-4">
+      <span class="text-3xl">🎓</span>
+      <div>
+        <h3 class="text-white font-extrabold text-xl sm:text-2xl">Pronto para começar a tua jornada?</h3>
+        <p class="text-slate-400 text-sm mt-1">O conhecimento está a um clique de distância.</p>
+      </div>
+    </div>
+    <div class="flex flex-col items-center sm:items-end gap-2 shrink-0">
+      <a href="/register.html" class="bg-brand-600 hover:bg-brand-700 transition text-white font-semibold rounded-full pl-6 pr-5 py-3 flex items-center gap-2 whitespace-nowrap">
+        Criar a tua conta agora
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </a>
-      <a href="/browse.html" class="btn-outline text-base px-8 py-4">
-        <i class="fas fa-compass"></i> Explorar sem conta
-      </a>
+      <p class="text-slate-500 text-xs">Não precisas de cartão de crédito</p>
     </div>
   </div>
 </section>
 
 
 <!-- ═══════════════════════════════ FOOTER ═══════════════════════════════ -->
-<footer class="bg-gray-950 text-white py-14">
-  <div class="max-w-7xl mx-auto px-5">
-    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
-      <!-- Brand -->
-      <div class="lg:col-span-1">
-        <div class="flex items-center gap-2.5 mb-4">
-          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center">
-            <i class="fas fa-graduation-cap text-white text-sm"></i>
-          </div>
-          <span class="text-lg font-black">VClass</span>
-        </div>
-        <p class="text-gray-400 text-sm leading-relaxed mb-5">
-          Plataforma de educação digital para países lusófonos. Aulas alinhadas ao currículo nacional.
-        </p>
-        <div class="flex gap-3">
-          <a href="#" class="w-9 h-9 bg-gray-800 rounded-xl flex items-center justify-center text-gray-400 hover:text-white hover:bg-purple-600 transition">
-            <i class="fab fa-facebook-f text-sm"></i>
-          </a>
-          <a href="#" class="w-9 h-9 bg-gray-800 rounded-xl flex items-center justify-center text-gray-400 hover:text-white hover:bg-sky-500 transition">
-            <i class="fab fa-twitter text-sm"></i>
-          </a>
-          <a href="#" class="w-9 h-9 bg-gray-800 rounded-xl flex items-center justify-center text-gray-400 hover:text-white hover:bg-pink-600 transition">
-            <i class="fab fa-instagram text-sm"></i>
-          </a>
-          <a href="#" class="w-9 h-9 bg-gray-800 rounded-xl flex items-center justify-center text-gray-400 hover:text-white hover:bg-red-600 transition">
-            <i class="fab fa-youtube text-sm"></i>
-          </a>
-        </div>
-      </div>
+<footer class="bg-slate-50 border-t border-slate-200">
+  <div class="max-w-7xl mx-auto px-6 py-8 grid grid-cols-2 sm:grid-cols-5 gap-6 text-sm">
+    <div class="flex items-center gap-2 text-slate-600"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M4 12l5 5L20 6"/></svg><div><p class="font-semibold text-navy-950">Aprendizagem prática</p><p class="text-slate-400 text-xs">Focada em resultados reais</p></div></div>
+    <div class="flex items-center gap-2 text-slate-600"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M4 12l5 5L20 6"/></svg><div><p class="font-semibold text-navy-950">Professores experientes</p><p class="text-slate-400 text-xs">Especialistas na área</p></div></div>
+    <div class="flex items-center gap-2 text-slate-600"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M4 12l5 5L20 6"/></svg><div><p class="font-semibold text-navy-950">Comunidade ativa</p><p class="text-slate-400 text-xs">Aprende e cresce junto</p></div></div>
+    <div class="flex items-center gap-2 text-slate-600"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M4 12l5 5L20 6"/></svg><div><p class="font-semibold text-navy-950">Preços acessíveis</p><p class="text-slate-400 text-xs">Educação de qualidade para todos</p></div></div>
+    <div class="flex items-center gap-2 text-slate-600"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M4 12l5 5L20 6"/></svg><div><p class="font-semibold text-navy-950">Suporte dedicado</p><p class="text-slate-400 text-xs">Estamos aqui para ajudar</p></div></div>
+  </div>
 
-      <!-- Plataforma -->
-      <div>
-        <h4 class="text-sm font-bold text-white mb-4 uppercase tracking-wider">Plataforma</h4>
-        <ul class="space-y-2.5">
-          <li><a href="/browse.html"   class="footer-link">Explorar Conteúdo</a></li>
-          <li><a href="/dashboard.html" class="footer-link">Dashboard</a></li>
-          <li><a href="/plans.html"    class="footer-link">Planos e Preços</a></li>
-          <li><a href="/library.html"  class="footer-link">Biblioteca</a></li>
-          <li><a href="/progress.html" class="footer-link">O meu Progresso</a></li>
-        </ul>
-      </div>
-
-      <!-- Países -->
-      <div>
-        <h4 class="text-sm font-bold text-white mb-4 uppercase tracking-wider">Currículos</h4>
-        <ul class="space-y-2.5">
-          <li><a href="/browse.html" class="footer-link">🇲🇿 Moçambique</a></li>
-          <li><a href="/browse.html" class="footer-link">🇦🇴 Angola</a></li>
-          <li><a href="/browse.html" class="footer-link">🇧🇷 Brasil</a></li>
-          <li><a href="/browse.html" class="footer-link">🇵🇹 Portugal</a></li>
-          <li><a href="/browse.html" class="footer-link">🇨🇻 Cabo Verde</a></li>
-        </ul>
-      </div>
-
-      <!-- Suporte -->
-      <div>
-        <h4 class="text-sm font-bold text-white mb-4 uppercase tracking-wider">Suporte</h4>
-        <ul class="space-y-2.5">
-          <li><a href="/help.html"   class="footer-link">Centro de Ajuda</a></li>
-          <li><a href="/register-teacher.html" class="footer-link">Tornar-me Professor</a></li>
-          <li><a href="/register.html" class="footer-link">Criar Conta</a></li>
-          <li><a href="/login.html"  class="footer-link">Entrar</a></li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="border-t border-gray-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <p class="text-gray-500 text-sm">© 2025 VClass · Todos os direitos reservados</p>
-      <div class="flex items-center gap-2 text-gray-500 text-sm">
-        <i class="fas fa-heart text-rose-500 text-xs"></i>
-        <span>Feito para África e Brasil</span>
-        <span class="text-gray-700 mx-1">·</span>
-        <span>🇲🇿 🇦🇴 🇧🇷 🇵🇹 🇨🇻</span>
-      </div>
+  <div class="border-t border-slate-200">
+    <div class="max-w-7xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <a href="/home.html" class="flex items-center gap-2 no-underline">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M2 4 L12 20 L22 4" stroke="#16a34a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="text-navy-950 font-extrabold">VClass</span>
+      </a>
+      <p class="text-slate-400 text-xs">© 2026 VClass. Todos os direitos reservados.</p>
     </div>
   </div>
 </footer>
 
 
 <script>
-// ── Navbar scroll effect ────────────────────────────────────────────────
-window.addEventListener('scroll', () => {
-  document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 20);
-});
+// ── Testimonial carousel ────────────────────────────────────────────────
+function scrollTestimonials(dir) {
+  const track = document.getElementById('testimonial-track');
+  track.scrollBy({ left: dir * 320, behavior: 'smooth' });
+}
 
-// ── Smooth scroll ───────────────────────────────────────────────────────
+// ── Pricing billing toggle ──────────────────────────────────────────────
+function setBilling(period) {
+  document.querySelectorAll('.billing-btn').forEach(b => {
+    b.classList.remove('bg-white', 'shadow', 'text-navy-950');
+    b.classList.add('text-slate-500');
+  });
+  const active = document.getElementById('btn-' + period);
+  active.classList.add('bg-white', 'shadow', 'text-navy-950');
+  active.classList.remove('text-slate-500');
+
+  document.querySelectorAll('.price').forEach(el => {
+    const val = el.getAttribute('data-' + period);
+    el.textContent = val + ' MT';
+  });
+}
+
+// ── Smooth scroll for in-page anchors ───────────────────────────────────
 document.querySelectorAll('a[href^="#"]').forEach(a => {
   a.addEventListener('click', e => {
-    e.preventDefault();
-    const el = document.querySelector(a.getAttribute('href'));
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const target = a.getAttribute('href');
+    if (target.length < 2) return;
+    const el = document.querySelector(target);
+    if (el) {
+      e.preventDefault();
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   });
 });
 
-// ── Pricing toggle ──────────────────────────────────────────────────────
-function setPricing(mode) {
-  const isYearly = mode === 'yearly';
-  const monthly = { basic: 99,  premium: 199  };
-  const yearly  = { basic: 830, premium: 1670 };
-  const data    = isYearly ? yearly : monthly;
-  const label   = isYearly ? '/ano' : '/mês';
-
-  document.querySelectorAll('.plan-basic-price').forEach(el   => el.textContent = data.basic);
-  document.querySelectorAll('.plan-premium-price').forEach(el => el.textContent = data.premium);
-  document.querySelectorAll('.plan-period').forEach(el        => el.textContent = label);
-  document.querySelectorAll('.plan-basic-saving').forEach(el  => el.textContent = isYearly ? '💰 Poupas MT 358/ano' : '\u00a0');
-  document.querySelectorAll('.plan-premium-saving').forEach(el => el.textContent = isYearly ? '💰 Poupas MT 718/ano' : '\u00a0');
-
-  const btnM = document.getElementById('btn-monthly');
-  const btnY = document.getElementById('btn-yearly');
-  btnM.className = `px-5 py-2 rounded-full text-sm font-semibold transition ${!isYearly ? 'bg-white text-purple-700 shadow-sm' : 'text-gray-600'}`;
-  btnY.className = `px-5 py-2 rounded-full text-sm font-semibold transition ${isYearly  ? 'bg-white text-purple-700 shadow-sm' : 'text-gray-600'}`;
-}
-
-// ── Scroll reveal ───────────────────────────────────────────────────────
-const obs = new IntersectionObserver((entries) => {
-  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
-}, { threshold: 0.12 });
-document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+// ── Navbar shadow on scroll ──────────────────────────────────────────────
+window.addEventListener('scroll', () => {
+  document.getElementById('navbar').classList.toggle('shadow-lg', window.scrollY > 20);
+});
 </script>
 
 </body>

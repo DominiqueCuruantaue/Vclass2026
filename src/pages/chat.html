@@ -5,10 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat IA - VClass</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <link href="/static/styles.css" rel="stylesheet">
     <style>
-        .chat-bubble-user { background: linear-gradient(135deg, #7c3aed, #4f46e5); color: white; border-radius: 18px 4px 18px 18px; }
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .chat-bubble-user { background: linear-gradient(90deg, #2563EB, #3B82F6); color: white; border-radius: 18px 4px 18px 18px; }
         .chat-bubble-bot { background: #f3f4f6; color: #1f2937; border-radius: 4px 18px 18px 18px; }
         .chat-bubble-bot.error { background: #fef2f2; color: #991b1b; }
         .typing-dot { width:8px; height:8px; background:#9ca3af; border-radius:50%; display:inline-block; margin:0 2px; animation: bounce 1.4s infinite; }
@@ -17,7 +21,7 @@
         @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-8px)} }
         #chat-messages { height: calc(100vh - 280px); min-height: 400px; scroll-behavior: smooth; }
         .subject-chip { cursor:pointer; transition:all .2s; }
-        .subject-chip:hover, .subject-chip.active { background:#ede9fe; border-color:#7c3aed; color:#7c3aed; }
+        .subject-chip:hover, .subject-chip.active { background:#DBEAFE; border-color:#2563EB; color:#2563EB; }
         .msg-time { font-size:0.65rem; opacity:0.6; margin-top:4px; }
         .sidebar-open { transform: translateX(0); }
         @keyframes msgIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
@@ -34,14 +38,14 @@
         <div class="container mx-auto px-4">
             <div class="flex items-center justify-between h-14">
                 <div class="flex items-center space-x-4">
-                    <a href="/dashboard.html" class="flex items-center space-x-2 text-purple-600 hover:text-purple-700">
+                    <a href="/dashboard.html" class="flex items-center space-x-2 text-blue-600 hover:text-blue-700">
                         <i class="fas fa-arrow-left text-sm"></i>
                         <i class="fas fa-graduation-cap text-xl"></i>
                         <span class="font-bold text-gray-900">VClass</span>
                     </a>
                     <span class="text-gray-300">|</span>
                     <span class="text-sm font-semibold text-gray-700">
-                        <i class="fas fa-robot text-purple-600 mr-1"></i>
+                        <i class="fas fa-robot text-blue-600 mr-1"></i>
                         Assistente IA
                     </span>
                 </div>
@@ -49,7 +53,7 @@
                     <button onclick="clearChat()" class="px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100 rounded-lg transition">
                         <i class="fas fa-trash mr-1"></i> Limpar
                     </button>
-                    <button onclick="toggleHistory()" class="px-3 py-1.5 text-xs text-purple-600 hover:bg-purple-50 rounded-lg transition">
+                    <button onclick="toggleHistory()" class="px-3 py-1.5 text-xs text-blue-600 hover:bg-blue-50 rounded-lg transition">
                         <i class="fas fa-history mr-1"></i> Histórico
                     </button>
                 </div>
@@ -62,20 +66,20 @@
             <!-- Main chat -->
             <div class="flex-1 flex flex-col bg-white rounded-2xl shadow-sm overflow-hidden" style="min-height:calc(100vh - 120px)">
                 <!-- Chat header -->
-                <div class="bg-gradient-to-r from-purple-600 to-indigo-600 px-5 py-4 text-white">
+                <div class="bg-gradient-to-r from-blue-600 to-blue-500 px-5 py-4 text-white">
                     <div class="flex items-center space-x-3">
                         <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                             <i class="fas fa-robot text-lg"></i>
                         </div>
                         <div class="flex-1">
                             <h2 class="font-bold">Assistente VClass IA</h2>
-                            <p class="text-xs text-purple-200 flex items-center">
+                            <p class="text-xs text-blue-200 flex items-center">
                                 <span class="w-2 h-2 bg-green-400 rounded-full mr-1.5 animate-pulse"></span>
                                 <span class="online-badge">● Online</span> · Especializado em Matemática, Física, Química e mais
                             </p>
                         </div>
                         <div class="text-right">
-                            <p class="text-xs text-purple-200" id="msg-count">0 mensagens</p>
+                            <p class="text-xs text-blue-200" id="msg-count">0 mensagens</p>
                         </div>
                     </div>
                     <!-- Subject filter -->
@@ -91,11 +95,11 @@
                 <!-- Quick suggestions -->
                 <div class="border-b border-gray-100 px-5 py-3 bg-gray-50">
                     <div class="flex flex-wrap gap-2" id="suggestions">
-                        <button onclick="quickMsg('Explica-me as funções quadráticas')" class="px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-full hover:border-purple-400 hover:text-purple-600 transition">📐 Funções Quadráticas</button>
-                        <button onclick="quickMsg('Quais são as Leis de Newton?')" class="px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-full hover:border-purple-400 hover:text-purple-600 transition">⚡ Leis de Newton</button>
-                        <button onclick="quickMsg('Como funciona a tabela periódica?')" class="px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-full hover:border-purple-400 hover:text-purple-600 transition">🧪 Tabela Periódica</button>
-                        <button onclick="quickMsg('Dicas de estudo para o exame')" class="px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-full hover:border-purple-400 hover:text-purple-600 transition">📝 Dicas de Estudo</button>
-                        <button onclick="quickMsg('Como calcular derivadas?')" class="px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-full hover:border-purple-400 hover:text-purple-600 transition">📈 Derivadas</button>
+                        <button onclick="quickMsg('Explica-me as funções quadráticas')" class="px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-full hover:border-blue-400 hover:text-blue-600 transition">📐 Funções Quadráticas</button>
+                        <button onclick="quickMsg('Quais são as Leis de Newton?')" class="px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-full hover:border-blue-400 hover:text-blue-600 transition">⚡ Leis de Newton</button>
+                        <button onclick="quickMsg('Como funciona a tabela periódica?')" class="px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-full hover:border-blue-400 hover:text-blue-600 transition">🧪 Tabela Periódica</button>
+                        <button onclick="quickMsg('Dicas de estudo para o exame')" class="px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-full hover:border-blue-400 hover:text-blue-600 transition">📝 Dicas de Estudo</button>
+                        <button onclick="quickMsg('Como calcular derivadas?')" class="px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-full hover:border-blue-400 hover:text-blue-600 transition">📈 Derivadas</button>
                     </div>
                 </div>
 
@@ -103,11 +107,11 @@
                 <div id="chat-messages" class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
                     <!-- Welcome -->
                     <div class="flex items-end space-x-3 msg-new">
-                        <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <i class="fas fa-robot text-purple-600 text-sm"></i>
+                        <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-robot text-blue-600 text-sm"></i>
                         </div>
                         <div class="chat-bubble-bot px-4 py-3 max-w-lg">
-                            <p class="text-sm font-semibold text-purple-700 mb-1">Assistente VClass 🎓</p>
+                            <p class="text-sm font-semibold text-blue-700 mb-1">Assistente VClass 🎓</p>
                             <p class="text-sm">Olá! Sou o assistente inteligente do VClass. Estou aqui para ajudar com suas dúvidas académicas!</p>
                             <br>
                             <p class="text-sm">Posso te ajudar com:</p>
@@ -126,7 +130,7 @@
                 <!-- Input -->
                 <div class="border-t border-gray-100 px-5 py-4 bg-white">
                     <div id="subject-label" class="hidden mb-2">
-                        <span class="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-full">
+                        <span class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
                             <i class="fas fa-book mr-1"></i>
                             <span id="current-subject-text"></span>
                         </span>
@@ -134,14 +138,14 @@
                     <div class="flex items-end space-x-3">
                         <div class="flex-1 relative">
                             <textarea id="msg-input" rows="1"
-                                class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                                class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                                 placeholder="Faça uma pergunta... (Enter para enviar, Shift+Enter para nova linha)"
                                 style="max-height:120px; overflow-y:auto"
                                 onkeydown="handleKey(event)"
                                 oninput="autoResize(this)"></textarea>
                         </div>
                         <button onclick="sendMsg()" id="send-btn"
-                            class="w-11 h-11 bg-purple-600 hover:bg-purple-700 text-white rounded-xl flex items-center justify-center flex-shrink-0 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            class="w-11 h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex items-center justify-center flex-shrink-0 transition disabled:opacity-50 disabled:cursor-not-allowed">
                             <i class="fas fa-paper-plane text-sm"></i>
                         </button>
                     </div>
@@ -155,7 +159,7 @@
             <div id="history-panel" class="hidden lg:block w-64 flex-shrink-0">
                 <div class="bg-white rounded-2xl shadow-sm p-4 sticky top-20">
                     <h3 class="font-bold text-gray-900 text-sm mb-3">
-                        <i class="fas fa-history text-purple-600 mr-2"></i>Histórico
+                        <i class="fas fa-history text-blue-600 mr-2"></i>Histórico
                     </h3>
                     <div id="history-list" class="space-y-2 max-h-96 overflow-y-auto">
                         <p class="text-xs text-gray-400">Sem histórico ainda</p>
@@ -300,7 +304,7 @@
 
             if (sender === 'user') {
                 div.innerHTML = `
-                    <div class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-bold">${userInitials}</div>
+                    <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-bold">${userInitials}</div>
                     <div class="chat-bubble-user px-4 py-3 max-w-lg">
                         <p class="text-sm">${escHtml(text)}</p>
                         <p class="msg-time">${now}</p>
@@ -308,11 +312,11 @@
             } else {
                 const formattedText = formatBotText(text);
                 div.innerHTML = `
-                    <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <i class="fas fa-robot text-purple-600 text-sm"></i>
+                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-robot text-blue-600 text-sm"></i>
                     </div>
                     <div class="chat-bubble-bot px-4 py-3 max-w-lg group relative">
-                        <p class="text-sm font-semibold text-purple-700 mb-1">Assistente VClass</p>
+                        <p class="text-sm font-semibold text-blue-700 mb-1">Assistente VClass</p>
                         <div class="text-sm">${formattedText}</div>
                         <p class="msg-time">${now}</p>
                         <button onclick="copyMsg(this)" class="copy-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 text-xs transition" title="Copiar">
@@ -329,7 +333,7 @@
             const container = document.getElementById('chat-messages');
             const div = document.createElement('div');
             div.className = 'flex justify-center msg-new';
-            div.innerHTML = `<a href="/plans.html" class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-full transition">
+            div.innerHTML = `<a href="/plans.html" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-full transition">
                 <i class="fas fa-crown"></i> Ver planos e fazer upgrade
             </a>`;
             container.appendChild(div);
@@ -341,8 +345,8 @@
             div.id = 'typing';
             div.className = 'flex items-end space-x-3 msg-new';
             div.innerHTML = `
-                <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <i class="fas fa-robot text-purple-600 text-sm"></i>
+                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-robot text-blue-600 text-sm"></i>
                 </div>
                 <div class="chat-bubble-bot px-4 py-3">
                     <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>

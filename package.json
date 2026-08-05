@@ -22,6 +22,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
     "bcryptjs": "^2.4.3",
+    "flag-icons": "^7.5.0",
     "hono": "^4.12.12",
     "jsonwebtoken": "^9.0.2",
     "jszip": "^3.10.1",
