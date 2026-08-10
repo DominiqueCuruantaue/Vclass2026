@@ -15,6 +15,9 @@ dist/
 node_modules/
 .wrangler
 
+# Supabase CLI local state (project ref, pooler url — machine-specific, not app config)
+supabase/.temp/
+
 # env
 .env
 .env.production

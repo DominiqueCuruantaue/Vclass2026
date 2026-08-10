@@ -5,9 +5,10 @@
 import { Hono } from 'hono'
 import type { CloudflareBindings } from '../types/bindings'
 import { z } from 'zod'
-import { authMiddleware, requireAdmin, rateLimitMiddleware } from '../middleware/auth'
+import { authMiddleware, requireAdmin, requireRole, rateLimitMiddleware } from '../middleware/auth'
 import { hashPassword } from '../utils/password'
 import { getSupabase } from '../config/supabase'
+import { isValidPdfSignature } from '../utils/documentMeta'
 import type { ApiResponse } from '../types'
 import {
   sendEmail,
@@ -19,8 +20,13 @@ import {
 
 const tv = new Hono<{ Bindings: CloudflareBindings }>()
 
+const TEACHER_DOCS_BUCKET = 'vclass-teacher-docs'
+
 // Rate limiting: 10 candidaturas/hora durante o piloto (apertar para 3 quando entrar em produção)
 tv.use('/apply', rateLimitMiddleware(10, 3_600_000))
+// Uploads de documentos ocorrem antes da candidatura ser criada (sem auth) — limite mais
+// generoso porque um candidato pode falhar e tentar novamente várias vezes por ficheiro.
+tv.use('/apply/upload-document', rateLimitMiddleware(20, 3_600_000))
 
 // ──────────────────────────────────────────────────────────────────────────────
 //  Schema da candidatura — preserva o flow multi-etapa do PDF
@@ -57,7 +63,7 @@ const teacherApplicationSchema = z.object({
   subjects_other:     z.string().optional(),
 
   // Motivação & referências
-  motivation_letter:  z.string().min(200, 'Carta de motivação ≥ 200 caracteres').max(2000),
+  motivation_letter:  z.string().min(200, 'Carta de motivação ≥ 200 caracteres').max(500, 'Carta de motivação ≤ 500 caracteres'),
   reference_1_name:   z.string().min(3),
   reference_1_phone:  z.string().min(9),
   reference_1_role:   z.string().min(2),
@@ -75,8 +81,15 @@ const teacherApplicationSchema = z.object({
   password:           z.string().min(8, 'Senha deve ter pelo menos 8 caracteres'),
   confirm_password:   z.string(),
 
-  // Documentos (workaround piloto: link Drive na carta)
-  documents_link:     z.string().url('Link dos documentos deve ser uma URL válida').optional()
+  // Documentos — cada um é OU ficheiro carregado previamente via
+  // /apply/upload-document (devolve o storage_path a enviar aqui) OU um link
+  // externo colado directamente (Drive/Dropbox) — nunca os dois.
+  cv_storage_path:            z.string().optional(),
+  cv_original_name:           z.string().optional(),
+  cv_link:                    z.string().url('Link do currículo deve ser uma URL válida').optional(),
+  certificate_storage_path:   z.string().optional(),
+  certificate_original_name:  z.string().optional(),
+  certificate_link:           z.string().url('Link do certificado deve ser uma URL válida').optional()
 })
   .refine(d => d.password === d.confirm_password, { message: 'As senhas não coincidem', path: ['confirm_password'] })
   .refine(d => {
@@ -89,6 +102,8 @@ const teacherApplicationSchema = z.object({
     const currentYear = new Date().getFullYear()
     return d.graduation_year <= Math.max(currentYear, 2025)
   }, { message: 'Ano de conclusão não pode estar no futuro', path: ['graduation_year'] })
+  .refine(d => !!(d.cv_storage_path || d.cv_link), { message: 'Currículo é obrigatório — carregue um ficheiro ou cole um link', path: ['cv_storage_path'] })
+  .refine(d => !!(d.certificate_storage_path || d.certificate_link), { message: 'Certificado de habilitações é obrigatório — carregue um ficheiro ou cole um link', path: ['certificate_storage_path'] })
 
 // Validação de força de senha (≥8, maiús, min, dígito, especial)
 function validatePasswordStrict(pwd: string): { valid: boolean; message: string } {
@@ -98,6 +113,16 @@ function validatePasswordStrict(pwd: string): { valid: boolean; message: string 
   if (!/[0-9]/.test(pwd)) return { valid: false, message: 'Senha deve conter pelo menos um número' }
   if (!/[^A-Za-z0-9]/.test(pwd)) return { valid: false, message: 'Senha deve conter pelo menos um carácter especial (!@#$%...)' }
   return { valid: true, message: 'OK' }
+}
+
+// País gerido pelo utilizador autenticado — só relevante para country_manager
+// (admin não tem âmbito restrito, devolve null = sem filtro). Lido de
+// users.country_code em vez do JWT para reflectir mudanças de país sem exigir
+// novo login.
+async function getManagerCountry(supabase: any, user: any): Promise<string | null> {
+  if (user.role !== 'country_manager') return null
+  const { data } = await supabase.from('users').select('country_code').eq('id', user.id).maybeSingle()
+  return data?.country_code || null
 }
 
 // Auto-scoring (mantém o algoritmo original)
@@ -112,8 +137,8 @@ function autoScoreApplication(app: any): number {
   if (app.has_computer) score += 5
   if (app.has_internet) score += 5
   const letterLen = (app.motivation_letter || '').length
-  if (letterLen >= 800) score += 10
-  else if (letterLen >= 500) score += 7
+  if (letterLen >= 400) score += 10
+  else if (letterLen >= 300) score += 7
   else if (letterLen >= 200) score += 4
   if (app.available_hours >= 10) score += 5
   else if (app.available_hours >= 5) score += 3
@@ -211,7 +236,12 @@ tv.post('/apply', async (c) => {
         available_hours: data.available_hours,
         preferred_schedule: data.preferred_schedule,
         password_hash,
-        documents_link: data.documents_link || null,
+        cv_storage_path: data.cv_storage_path || null,
+        cv_original_name: data.cv_original_name || null,
+        cv_link: data.cv_link || null,
+        certificate_storage_path: data.certificate_storage_path || null,
+        certificate_original_name: data.certificate_original_name || null,
+        certificate_link: data.certificate_link || null,
         score,
         flagged,
         status: 'pending',
@@ -252,6 +282,68 @@ tv.post('/apply', async (c) => {
 })
 
 // ──────────────────────────────────────────────────────────────────────────────
+//  POST /apply/upload-document — upload de CV / certificado de habilitações
+//  Sem auth (candidato ainda não tem conta) — protegido por rate limit acima.
+//  Guarda no bucket privado 'vclass-teacher-docs'; devolve o storage_path para
+//  ser enviado no payload de /apply (a candidatura ainda não existe neste passo).
+// ──────────────────────────────────────────────────────────────────────────────
+tv.post('/apply/upload-document', async (c) => {
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'Database não configurada' }, 500)
+
+  let formData: FormData
+  try {
+    formData = await c.req.formData()
+  } catch {
+    return c.json<ApiResponse>({ success: false, error: 'Corpo inválido — envie multipart/form-data' }, 400)
+  }
+
+  const file = formData.get('file') as File | null
+  const docType = formData.get('doc_type') as string | null
+  if (!file || !file.name) return c.json<ApiResponse>({ success: false, error: 'Ficheiro não encontrado no pedido' }, 400)
+  if (docType !== 'cv' && docType !== 'certificate') {
+    return c.json<ApiResponse>({ success: false, error: 'doc_type deve ser "cv" ou "certificate"' }, 400)
+  }
+
+  const allowed = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ]
+  if (!allowed.includes(file.type) && !file.name.match(/\.(pdf|docx?)$/i)) {
+    return c.json<ApiResponse>({ success: false, error: 'Tipo de ficheiro não suportado — envie PDF ou Word' }, 400)
+  }
+
+  const MAX_MB = 10
+  if (file.size > MAX_MB * 1024 * 1024) {
+    return c.json<ApiResponse>({ success: false, error: `Ficheiro demasiado grande (máx ${MAX_MB} MB)` }, 400)
+  }
+
+  const buffer = await file.arrayBuffer()
+  const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+  if (isPdf && !isValidPdfSignature(buffer)) {
+    return c.json<ApiResponse>({ success: false, error: 'Ficheiro PDF inválido ou corrompido — verifique o ficheiro e tente novamente' }, 400)
+  }
+
+  const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_').replace(/_{2,}/g, '_')
+  const path = `pending/${crypto.randomUUID()}_${docType}_${safeName}`
+
+  const { error: upErr } = await supabase.storage
+    .from(TEACHER_DOCS_BUCKET)
+    .upload(path, buffer, { contentType: file.type || 'application/pdf', upsert: false })
+
+  if (upErr) {
+    console.error('Teacher doc upload error:', upErr)
+    return c.json<ApiResponse>({ success: false, error: 'Falha ao carregar o ficheiro' }, 500)
+  }
+
+  return c.json<ApiResponse>({
+    success: true,
+    data: { storage_path: path, original_name: file.name, size_kb: Math.round(file.size / 1024) }
+  }, 201)
+})
+
+// ──────────────────────────────────────────────────────────────────────────────
 //  GET /status/:email — tracking público da candidatura
 // ──────────────────────────────────────────────────────────────────────────────
 tv.get('/status/:email', async (c) => {
@@ -289,14 +381,22 @@ tv.get('/status/:email', async (c) => {
 })
 
 // ──────────────────────────────────────────────────────────────────────────────
-//  GET /applications — listar (admin)
+//  GET /applications — listar (admin vê todos os países; country_manager só
+//  vê candidaturas do seu próprio país — ver 3.4/5 em fluxo-funcionamento.txt)
 // ──────────────────────────────────────────────────────────────────────────────
-tv.get('/applications', authMiddleware, requireAdmin, async (c) => {
+tv.get('/applications', authMiddleware, requireRole('admin', 'country_manager'), async (c) => {
   const supabase = getSupabase(c.env)
   if (!supabase) return c.json<ApiResponse>({ success: false, error: 'Database não configurada' }, 500)
 
+  const user = c.get('user')
+  const managerCountry = await getManagerCountry(supabase, user)
+  if (user.role === 'country_manager' && !managerCountry) {
+    return c.json<ApiResponse>({ success: false, error: 'Gestor sem país atribuído' }, 403)
+  }
+
   const status  = c.req.query('status')  || 'all'
-  const country = c.req.query('country') || 'all'
+  // country_manager não escolhe o país pela query — está sempre preso ao seu.
+  const country = managerCountry || c.req.query('country') || 'all'
   const flagged = c.req.query('flagged')
   const search  = (c.req.query('search') || '').toLowerCase()
   const page    = parseInt(c.req.query('page') || '1')
@@ -360,11 +460,15 @@ tv.get('/applications', authMiddleware, requireAdmin, async (c) => {
     .sort((a: any, b: any) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
     .slice(0, limit)
 
-  // Stats globais (candidaturas reais + contas directas)
-  const { data: statsRows } = await supabase.from('teacher_applications').select('status, flagged')
+  // Stats (candidaturas reais + contas directas) — scoped ao país do gestor,
+  // globais para admin.
+  let statsQuery = supabase.from('teacher_applications').select('status, flagged, country_id')
+  if (managerCountry) statsQuery = statsQuery.eq('country_id', managerCountry)
+  const { data: statsRows } = await statsQuery
   const all = statsRows || []
-  const activeDirect = (teacherUsers || []).filter((u: any) => !linkedUserIds.has(u.id) && u.is_active).length
-  const inactiveDirect = (teacherUsers || []).filter((u: any) => !linkedUserIds.has(u.id) && !u.is_active).length
+  const scopedTeacherUsers = managerCountry ? (teacherUsers || []).filter((u: any) => u.country_code === managerCountry) : (teacherUsers || [])
+  const activeDirect = scopedTeacherUsers.filter((u: any) => !linkedUserIds.has(u.id) && u.is_active).length
+  const inactiveDirect = scopedTeacherUsers.filter((u: any) => !linkedUserIds.has(u.id) && !u.is_active).length
   const stats = {
     total: all.length + activeDirect + inactiveDirect,
     pending:        all.filter(a => a.status === 'pending').length,
@@ -383,12 +487,15 @@ tv.get('/applications', authMiddleware, requireAdmin, async (c) => {
 })
 
 // ──────────────────────────────────────────────────────────────────────────────
-//  GET /applications/:id — detalhe (admin)
+//  GET /applications/:id — detalhe (admin ou country_manager do mesmo país)
 // ──────────────────────────────────────────────────────────────────────────────
-tv.get('/applications/:id', authMiddleware, requireAdmin, async (c) => {
+tv.get('/applications/:id', authMiddleware, requireRole('admin', 'country_manager'), async (c) => {
   const id = c.req.param('id')
   const supabase = getSupabase(c.env)
   if (!supabase) return c.json<ApiResponse>({ success: false, error: 'Database não configurada' }, 500)
+
+  const user = c.get('user')
+  const managerCountry = await getManagerCountry(supabase, user)
 
   const { data: app, error } = await supabase
     .from('teacher_applications')
@@ -399,19 +506,47 @@ tv.get('/applications/:id', authMiddleware, requireAdmin, async (c) => {
   if (error || !app) {
     return c.json<ApiResponse>({ success: false, error: 'Candidatura não encontrada' }, 404)
   }
+  if (managerCountry && app.country_id !== managerCountry) {
+    return c.json<ApiResponse>({ success: false, error: 'Candidatura fora do seu país' }, 403)
+  }
 
   // Nunca retornar password_hash
   delete (app as any).password_hash
+
+  // Documentos carregados como ficheiro vivem num bucket privado — gerar signed URLs
+  // de curta duração só quando um admin abre a candidatura (nunca guardadas/reutilizadas).
+  const signedTtl = 600 // 10 min
+  const [cvSigned, certSigned] = await Promise.all([
+    app.cv_storage_path
+      ? supabase.storage.from(TEACHER_DOCS_BUCKET).createSignedUrl(app.cv_storage_path, signedTtl)
+      : Promise.resolve(null),
+    app.certificate_storage_path
+      ? supabase.storage.from(TEACHER_DOCS_BUCKET).createSignedUrl(app.certificate_storage_path, signedTtl)
+      : Promise.resolve(null)
+  ])
+  ;(app as any).cv_signed_url = cvSigned?.data?.signedUrl || null
+  ;(app as any).certificate_signed_url = certSigned?.data?.signedUrl || null
+
   return c.json<ApiResponse>({ success: true, data: app })
 })
 
 // ──────────────────────────────────────────────────────────────────────────────
-//  PATCH /applications/:id/review — alterar status / step / notas (admin)
+//  PATCH /applications/:id/review — alterar status / step / notas
+//  (admin, ou country_manager restrito às candidaturas do seu país)
 // ──────────────────────────────────────────────────────────────────────────────
-tv.patch('/applications/:id/review', authMiddleware, requireAdmin, async (c) => {
+tv.patch('/applications/:id/review', authMiddleware, requireRole('admin', 'country_manager'), async (c) => {
   const id = c.req.param('id')
   const supabase = getSupabase(c.env)
   if (!supabase) return c.json<ApiResponse>({ success: false, error: 'Database não configurada' }, 500)
+
+  const user = c.get('user')
+  const managerCountry = await getManagerCountry(supabase, user)
+  if (managerCountry) {
+    const { data: appCheck } = await supabase.from('teacher_applications').select('country_id').eq('id', id).maybeSingle()
+    if (!appCheck || appCheck.country_id !== managerCountry) {
+      return c.json<ApiResponse>({ success: false, error: 'Candidatura fora do seu país' }, 403)
+    }
+  }
 
   const body = await c.req.json() as { status?: string; verification_step?: string; admin_notes?: string; score?: number; flagged?: boolean }
   const update: any = {}
@@ -440,10 +575,11 @@ tv.patch('/applications/:id/review', authMiddleware, requireAdmin, async (c) => 
 })
 
 // ──────────────────────────────────────────────────────────────────────────────
-//  POST /applications/:id/approve (admin)
+//  POST /applications/:id/approve
+//  (admin, ou country_manager restrito às candidaturas do seu país)
 //  → cria conta de utilizador com role=teacher e password do candidato
 // ──────────────────────────────────────────────────────────────────────────────
-tv.post('/applications/:id/approve', authMiddleware, requireAdmin, async (c) => {
+tv.post('/applications/:id/approve', authMiddleware, requireRole('admin', 'country_manager'), async (c) => {
   const id = c.req.param('id')
   const admin = c.get('user')
   const supabase = getSupabase(c.env)
@@ -459,6 +595,10 @@ tv.post('/applications/:id/approve', authMiddleware, requireAdmin, async (c) => 
     .maybeSingle()
 
   if (fetchErr || !app) return c.json<ApiResponse>({ success: false, error: 'Candidatura não encontrada' }, 404)
+  const managerCountry = await getManagerCountry(supabase, admin)
+  if (managerCountry && app.country_id !== managerCountry) {
+    return c.json<ApiResponse>({ success: false, error: 'Candidatura fora do seu país' }, 403)
+  }
   if (app.status === 'approved') return c.json<ApiResponse>({ success: false, error: 'Candidatura já aprovada' }, 409)
 
   // Resolver country_id: candidatura guarda código ("mz"), users espera UUID (FK).
@@ -542,13 +682,22 @@ tv.post('/applications/:id/approve', authMiddleware, requireAdmin, async (c) => 
 })
 
 // ──────────────────────────────────────────────────────────────────────────────
-//  POST /applications/:id/reject (admin)
+//  POST /applications/:id/reject
+//  (admin, ou country_manager restrito às candidaturas do seu país)
 // ──────────────────────────────────────────────────────────────────────────────
-tv.post('/applications/:id/reject', authMiddleware, requireAdmin, async (c) => {
+tv.post('/applications/:id/reject', authMiddleware, requireRole('admin', 'country_manager'), async (c) => {
   const id = c.req.param('id')
   const admin = c.get('user')
   const supabase = getSupabase(c.env)
   if (!supabase) return c.json<ApiResponse>({ success: false, error: 'Database não configurada' }, 500)
+
+  const managerCountry = await getManagerCountry(supabase, admin)
+  if (managerCountry) {
+    const { data: appCheck } = await supabase.from('teacher_applications').select('country_id').eq('id', id).maybeSingle()
+    if (!appCheck || appCheck.country_id !== managerCountry) {
+      return c.json<ApiResponse>({ success: false, error: 'Candidatura fora do seu país' }, 403)
+    }
+  }
 
   const body = await c.req.json() as { reason: string; allow_reapply?: boolean; reapply_after_months?: number }
   if (!body.reason) return c.json<ApiResponse>({ success: false, error: 'Motivo de rejeição é obrigatório' }, 400)
@@ -585,12 +734,22 @@ tv.post('/applications/:id/reject', authMiddleware, requireAdmin, async (c) => {
 })
 
 // ──────────────────────────────────────────────────────────────────────────────
-//  POST /applications/:id/request-info (admin)
+//  POST /applications/:id/request-info
+//  (admin, ou country_manager restrito às candidaturas do seu país)
 // ──────────────────────────────────────────────────────────────────────────────
-tv.post('/applications/:id/request-info', authMiddleware, requireAdmin, async (c) => {
+tv.post('/applications/:id/request-info', authMiddleware, requireRole('admin', 'country_manager'), async (c) => {
   const id = c.req.param('id')
   const supabase = getSupabase(c.env)
   if (!supabase) return c.json<ApiResponse>({ success: false, error: 'Database não configurada' }, 500)
+
+  const user = c.get('user')
+  const managerCountry = await getManagerCountry(supabase, user)
+  if (managerCountry) {
+    const { data: appCheck } = await supabase.from('teacher_applications').select('country_id').eq('id', id).maybeSingle()
+    if (!appCheck || appCheck.country_id !== managerCountry) {
+      return c.json<ApiResponse>({ success: false, error: 'Candidatura fora do seu país' }, 403)
+    }
+  }
 
   const body = await c.req.json() as { message: string; required_documents?: string[] }
   if (!body.message) return c.json<ApiResponse>({ success: false, error: 'Mensagem é obrigatória' }, 400)

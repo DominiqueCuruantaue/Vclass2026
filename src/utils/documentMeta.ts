@@ -5,13 +5,23 @@ import JSZip from 'jszip'
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 
 /**
- * Verifica a assinatura mágica "%PDF-" no início do ficheiro.
+ * Verifica a assinatura mágica "%PDF-" no ficheiro.
  * Apanha uploads de ficheiros corrompidos/inexistentes (ex: uma página de erro
  * "File not found" guardada com extensão .pdf) antes de irem para o storage.
+ *
+ * Procura nos primeiros 1024 bytes, não só no byte 0 — o próprio spec do PDF
+ * (ISO 32000-1 §7.5.2) permite bytes de lixo/BOM antes do header, e vários
+ * geradores reais (scanners móveis, "Imprimir para PDF", LibreOffice) produzem
+ * ficheiros válidos com esse desvio.
  */
 export function isValidPdfSignature(buffer: ArrayBuffer): boolean {
-  const header = new Uint8Array(buffer.slice(0, 5))
-  return String.fromCharCode(...header) === '%PDF-'
+  const scanLength = Math.min(buffer.byteLength, 1024)
+  const bytes = new Uint8Array(buffer.slice(0, scanLength))
+  const sig = [0x25, 0x50, 0x44, 0x46, 0x2d] // "%PDF-"
+  for (let i = 0; i <= bytes.length - sig.length; i++) {
+    if (sig.every((b, j) => bytes[i + j] === b)) return true
+  }
+  return false
 }
 
 /**

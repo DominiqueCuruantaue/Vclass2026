@@ -2180,14 +2180,43 @@ function renderTeacherTable(apps) {
     }).join('');
 }
 
-function openTvModal(appOrId) {
+function renderTvDocLink(label, signedUrl, originalName, externalLink) {
+    if (signedUrl) {
+        return `<a href="${escapeAttr(signedUrl)}" target="_blank" rel="noopener" class="flex items-center gap-2 bg-gray-50 hover:bg-purple-50 border border-gray-200 hover:border-purple-300 rounded-xl p-3 transition group">
+            <i class="fas fa-file-arrow-down text-purple-500"></i>
+            <div class="min-w-0">
+                <div class="font-medium text-gray-800 truncate">${escapeHtml(label)}</div>
+                <div class="text-xs text-gray-400 truncate">${escapeHtml(originalName || 'Ver / descarregar')}</div>
+            </div>
+        </a>`;
+    }
+    if (externalLink) {
+        return `<a href="${escapeAttr(externalLink)}" target="_blank" rel="noopener" class="flex items-center gap-2 bg-gray-50 hover:bg-purple-50 border border-gray-200 hover:border-purple-300 rounded-xl p-3 transition">
+            <i class="fas fa-up-right-from-square text-purple-500"></i>
+            <div class="min-w-0">
+                <div class="font-medium text-gray-800 truncate">${escapeHtml(label)}</div>
+                <div class="text-xs text-gray-400 truncate">Abrir link externo</div>
+            </div>
+        </a>`;
+    }
+    return `<div class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl p-3 opacity-60">
+        <i class="fas fa-file-circle-xmark text-gray-400"></i>
+        <div>
+            <div class="font-medium text-gray-500">${escapeHtml(label)}</div>
+            <div class="text-xs text-gray-400">Não submetido</div>
+        </div>
+    </div>`;
+}
+
+async function openTvModal(appOrId) {
     // Aceita objecto (legacy) ou id (novo) — quando id, faz lookup em tvApps
-    const app = typeof appOrId === 'string' ? tvApps.find(x => x.id === appOrId) : appOrId;
-    if (!app) { console.warn('openTvModal: app not found', appOrId); return; }
+    const cached = typeof appOrId === 'string' ? tvApps.find(x => x.id === appOrId) : appOrId;
+    if (!cached) { console.warn('openTvModal: app not found', appOrId); return; }
 
     // Conta criada diretamente (sem candidatura KYT) — modal simplificado,
     // só com a ação de ativar/desativar (reutiliza toggleUser da aba Utilizadores)
-    if (app.source === 'direct_account') {
+    if (cached.source === 'direct_account') {
+        const app = cached;
         const isActive = app.status === 'approved';
         document.getElementById('tv-modal-content').innerHTML = `
             <div class="space-y-5">
@@ -2223,6 +2252,21 @@ function openTvModal(appOrId) {
             </div>`;
         document.getElementById('tv-modal').classList.remove('hidden');
         return;
+    }
+
+    // Candidatura real — busca o detalhe completo (carta de motivação, documentos com
+    // signed URLs geradas na hora) em vez de confiar apenas nos campos resumidos da lista.
+    document.getElementById('tv-modal-content').innerHTML = '<div class="text-center py-10 text-gray-400"><i class="fas fa-circle-notch fa-spin text-xl"></i></div>';
+    document.getElementById('tv-modal').classList.remove('hidden');
+
+    let app = cached;
+    try {
+        const token = localStorage.getItem('accessToken');
+        const res = await fetch(`/api/teacher-verification/applications/${cached.id}`, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (data.success) app = data.data;
+    } catch (err) {
+        console.error('Failed to load application detail', err);
     }
 
     const stepLabels = { initial_screening:'Triagem Inicial', document_review:'Revisão de Docs', reference_check:'Verificação de Refs', interview:'Entrevista', final_review:'Revisão Final', completed:'Concluído' };
@@ -2289,6 +2333,15 @@ function openTvModal(appOrId) {
             <div>
                 <div class="font-semibold text-gray-700 mb-2 text-xs uppercase">✉️ Carta de Motivação</div>
                 <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-gray-700 leading-relaxed max-h-36 overflow-y-auto">${app.motivation_letter || '—'}</div>
+            </div>
+
+            <!-- Documentos -->
+            <div>
+                <div class="font-semibold text-gray-700 mb-2 text-xs uppercase">📎 Documentos</div>
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                    ${renderTvDocLink('Currículo (CV)', app.cv_signed_url, app.cv_original_name, app.cv_link)}
+                    ${renderTvDocLink('Certificado de Habilitações', app.certificate_signed_url, app.certificate_original_name, app.certificate_link)}
+                </div>
             </div>
 
             <!-- Notas admin -->

@@ -89,6 +89,17 @@
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
         .step-panel { animation: fadeInUp 0.35s ease; }
         .strength-bar { height: 4px; border-radius: 2px; transition: all 0.3s; }
+
+        /* Document uploader (CV / Certificado) */
+        .doc-upload {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 1rem 0.75rem; min-height: 84px;
+            border: 1.5px dashed #d1d5db; border-radius: 0.625rem; cursor: pointer;
+            transition: all 0.2s; background: #fafafa;
+        }
+        .doc-upload:hover, .doc-upload.drag { border-color: #7c3aed; background: #faf5ff; }
+        .doc-upload.done { border-style: solid; border-color: #10b981; background: #f0fdf4; cursor: default; }
+        .doc-upload-idle, .doc-upload-busy, .doc-upload-done { display: flex; flex-direction: column; align-items: center; width: 100%; }
     </style>
   <script src="/static/safe-dom.js"></script>
 </head>
@@ -471,25 +482,75 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">
                     Carta de Motivação <span class="text-red-500">*</span>
-                    <span class="text-xs text-gray-400 ml-2">(<span id="letter-count">0</span>/2000 caracteres — mín. 200)</span>
+                    <span class="text-xs text-gray-400 ml-2">(<span id="letter-count">0</span>/500 caracteres — mín. 200)</span>
                 </label>
-                <textarea id="motivation_letter" class="input-plain" rows="6" maxlength="2000"
+                <textarea id="motivation_letter" class="input-plain" rows="5" maxlength="500"
                     placeholder="Descreva a sua motivação para ser professor na VClass, a sua experiência pedagógica, como pretende contribuir para a educação digital em África, e o que o distingue como educador..."
                     oninput="updateLetterCount()"></textarea>
                 <p class="error-msg" id="motivation_letter-error">Carta de motivação deve ter pelo menos 200 caracteres</p>
             </div>
 
-            <!-- Link dos documentos (piloto: Drive/Dropbox) -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1.5">
-                    Link dos Documentos (Google Drive / Dropbox / OneDrive) <span class="text-red-500">*</span>
-                </label>
-                <input type="url" id="documents_link" class="input-plain"
-                    placeholder="https://drive.google.com/drive/folders/...">
-                <p class="text-xs text-gray-500 mt-1">
-                    Crie uma pasta partilhada com: BI/Passaporte, Diploma, Certificado de docência (se aplicável), Comprovativos de experiência. Garanta que o link tem permissão de leitura para qualquer pessoa.
-                </p>
-                <p class="error-msg" id="documents_link-error">Link dos documentos é obrigatório (URL válida)</p>
+            <!-- Documentos: Currículo + Certificado de Habilitações — upload directo OU link externo (Drive/Dropbox) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                        Currículo (CV) <span class="text-red-500">*</span>
+                    </label>
+                    <div class="doc-upload" id="cv-dropzone" onclick="document.getElementById('cv-file').click()"
+                        ondragover="event.preventDefault(); this.classList.add('drag')"
+                        ondragleave="this.classList.remove('drag')"
+                        ondrop="handleDocDrop(event, 'cv')">
+                        <input type="file" id="cv-file" class="hidden" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="handleDocFile(this.files[0], 'cv')">
+                        <div id="cv-upload-idle" class="doc-upload-idle">
+                            <i class="fas fa-cloud-upload-alt text-xl text-gray-400"></i>
+                            <span class="text-xs text-gray-500 mt-1">Arraste ou clique para carregar<br>PDF ou Word (máx. 10 MB)</span>
+                        </div>
+                        <div id="cv-upload-busy" class="doc-upload-busy hidden">
+                            <i class="fas fa-circle-notch fa-spin text-purple-500"></i>
+                            <span class="text-xs text-gray-500 mt-1">A carregar...</span>
+                        </div>
+                        <div id="cv-upload-done" class="doc-upload-done hidden">
+                            <i class="fas fa-file-circle-check text-green-500 text-xl"></i>
+                            <span class="text-xs text-gray-700 mt-1 font-medium truncate w-full" id="cv-upload-name"></span>
+                            <button type="button" class="text-xs text-red-500 hover:underline mt-1" onclick="event.stopPropagation(); clearDoc('cv')">Remover</button>
+                        </div>
+                    </div>
+                    <div id="cv-link-mode" class="hidden">
+                        <input type="url" id="cv-link-input" placeholder="https://drive.google.com/..." class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" oninput="handleDocLinkInput('cv')">
+                    </div>
+                    <p class="error-msg" id="cv_doc-error">Carregue o ficheiro do currículo (PDF ou Word)</p>
+                    <button type="button" class="text-xs text-purple-600 hover:underline mt-1" id="cv-mode-toggle" onclick="toggleDocMode('cv')">ou colar um link (Drive/Dropbox)</button>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                        Certificado de Habilitações <span class="text-red-500">*</span>
+                    </label>
+                    <div class="doc-upload" id="certificate-dropzone" onclick="document.getElementById('certificate-file').click()"
+                        ondragover="event.preventDefault(); this.classList.add('drag')"
+                        ondragleave="this.classList.remove('drag')"
+                        ondrop="handleDocDrop(event, 'certificate')">
+                        <input type="file" id="certificate-file" class="hidden" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="handleDocFile(this.files[0], 'certificate')">
+                        <div id="certificate-upload-idle" class="doc-upload-idle">
+                            <i class="fas fa-cloud-upload-alt text-xl text-gray-400"></i>
+                            <span class="text-xs text-gray-500 mt-1">Arraste ou clique para carregar<br>PDF ou Word (máx. 10 MB)</span>
+                        </div>
+                        <div id="certificate-upload-busy" class="doc-upload-busy hidden">
+                            <i class="fas fa-circle-notch fa-spin text-purple-500"></i>
+                            <span class="text-xs text-gray-500 mt-1">A carregar...</span>
+                        </div>
+                        <div id="certificate-upload-done" class="doc-upload-done hidden">
+                            <i class="fas fa-file-circle-check text-green-500 text-xl"></i>
+                            <span class="text-xs text-gray-700 mt-1 font-medium truncate w-full" id="certificate-upload-name"></span>
+                            <button type="button" class="text-xs text-red-500 hover:underline mt-1" onclick="event.stopPropagation(); clearDoc('certificate')">Remover</button>
+                        </div>
+                    </div>
+                    <div id="certificate-link-mode" class="hidden">
+                        <input type="url" id="certificate-link-input" placeholder="https://drive.google.com/..." class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" oninput="handleDocLinkInput('certificate')">
+                    </div>
+                    <p class="error-msg" id="certificate_doc-error">Carregue o ficheiro do certificado (PDF ou Word)</p>
+                    <button type="button" class="text-xs text-purple-600 hover:underline mt-1" id="certificate-mode-toggle" onclick="toggleDocMode('certificate')">ou colar um link (Drive/Dropbox)</button>
+                </div>
             </div>
 
             <!-- Referências -->
@@ -829,6 +890,9 @@
     let hasComputer  = null;
     let hasInternet  = null;
     let digitalLiteracy = null;
+    // Documentos: cada um guarda OU um upload concluído { storage_path, original_name } OU um link colado { link } — nunca os dois
+    const docUploads = { cv: null, certificate: null };
+    const docMode = { cv: 'upload', certificate: 'upload' };
 
     const stepNames = ['Dados Pessoais','Qualificações','Experiência','Digital','Acesso','Revisão'];
 
@@ -907,8 +971,9 @@
             else { document.getElementById('teaching_levels-error').style.display='none'; }
             if (selectedSubjects.size === 0) { document.getElementById('subjects-error').style.display='block'; ok = false; }
             else { document.getElementById('subjects-error').style.display='none'; }
-            ok = checkRequired('motivation_letter', v => v.length >= 200, 'Carta de motivação deve ter pelo menos 200 caracteres', false, true) && ok;
-            ok = checkRequired('documents_link', v => /^https?:\/\/.+/i.test(v), 'Link dos documentos é obrigatório (URL válida começando por http(s)://)') && ok;
+            ok = checkRequired('motivation_letter', v => v.length >= 200 && v.length <= 500, 'Carta de motivação deve ter entre 200 e 500 caracteres', false, true) && ok;
+            ok = validateDoc('cv', 'Currículo') && ok;
+            ok = validateDoc('certificate', 'Certificado de habilitações') && ok;
             ok = checkRequired('reference_1_name', v => v.length >= 3, 'Nome da referência é obrigatório') && ok;
             ok = checkRequired('reference_1_phone', v => v.replace(/\D/g,'').length >= 9, 'Telefone é obrigatório') && ok;
             ok = checkRequired('reference_1_role', v => v.length >= 2, 'Cargo é obrigatório') && ok;
@@ -948,6 +1013,12 @@
         el?.classList.add('success');
         hideErr(id + '-error');
         return true;
+    }
+
+    function validateDoc(kind, label) {
+        if (docUploads[kind]) { hideErr(`${kind}_doc-error`); return true; }
+        showErr(`${kind}_doc-error`, `${label}: carregue o ficheiro (PDF ou Word) ou cole um link`);
+        return false;
     }
 
     function showErr(id, msg) {
@@ -1032,6 +1103,82 @@
         document.getElementById('letter-count').textContent = val.length;
     }
 
+    // ── Upload de documentos (CV / Certificado de Habilitações) ────────────────
+    function handleDocDrop(ev, kind) {
+        ev.preventDefault();
+        document.getElementById(`${kind}-dropzone`).classList.remove('drag');
+        const file = ev.dataTransfer.files?.[0];
+        if (file) handleDocFile(file, kind);
+    }
+
+    async function handleDocFile(file, kind) {
+        if (!file) return;
+        const allowedExt = /\.(pdf|docx?)$/i;
+        if (!allowedExt.test(file.name)) {
+            if (typeof VClass !== 'undefined') VClass.showNotification('Envie um ficheiro PDF ou Word', 'warning');
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            if (typeof VClass !== 'undefined') VClass.showNotification('Ficheiro demasiado grande (máx. 10 MB)', 'warning');
+            return;
+        }
+
+        document.getElementById(`${kind}-upload-idle`).classList.add('hidden');
+        document.getElementById(`${kind}-upload-busy`).classList.remove('hidden');
+
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('doc_type', kind);
+
+        try {
+            const res = await fetch('/api/teacher-verification/apply/upload-document', { method: 'POST', body: fd });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Falha ao carregar o ficheiro');
+
+            docUploads[kind] = { storage_path: data.data.storage_path, original_name: data.data.original_name };
+
+            document.getElementById(`${kind}-upload-busy`).classList.add('hidden');
+            document.getElementById(`${kind}-upload-done`).classList.remove('hidden');
+            document.getElementById(`${kind}-upload-name`).textContent = data.data.original_name;
+            document.getElementById(`${kind}-dropzone`).classList.add('done');
+            hideErr(`${kind}_doc-error`);
+        } catch (err) {
+            document.getElementById(`${kind}-upload-busy`).classList.add('hidden');
+            document.getElementById(`${kind}-upload-idle`).classList.remove('hidden');
+            if (typeof VClass !== 'undefined') VClass.showNotification(err.message || 'Falha ao carregar o ficheiro', 'error');
+        }
+    }
+
+    function clearDoc(kind) {
+        docUploads[kind] = null;
+        document.getElementById(`${kind}-upload-done`).classList.add('hidden');
+        document.getElementById(`${kind}-upload-idle`).classList.remove('hidden');
+        document.getElementById(`${kind}-dropzone`).classList.remove('done');
+        document.getElementById(`${kind}-file`).value = '';
+    }
+
+    function toggleDocMode(kind) {
+        docMode[kind] = docMode[kind] === 'upload' ? 'link' : 'upload';
+        const isLink = docMode[kind] === 'link';
+        docUploads[kind] = null;
+        document.getElementById(`${kind}-dropzone`).classList.toggle('hidden', isLink);
+        document.getElementById(`${kind}-link-mode`).classList.toggle('hidden', !isLink);
+        document.getElementById(`${kind}-mode-toggle`).textContent = isLink ? 'ou carregar um ficheiro' : 'ou colar um link (Drive/Dropbox)';
+        if (isLink) {
+            clearDoc(kind);
+            document.getElementById(`${kind}-link-input`).value = '';
+        } else {
+            document.getElementById(`${kind}-link-input`).value = '';
+        }
+        hideErr(`${kind}_doc-error`);
+    }
+
+    function handleDocLinkInput(kind) {
+        const val = document.getElementById(`${kind}-link-input`).value.trim();
+        docUploads[kind] = /^https?:\/\/.+/i.test(val) ? { link: val } : null;
+        if (docUploads[kind]) hideErr(`${kind}_doc-error`);
+    }
+
     function checkPwd() {
         const pwd = document.getElementById('password').value;
         const reqs = [
@@ -1082,7 +1229,7 @@
         if (hasComputer)  s += 5;
         if (hasInternet)  s += 5;
         const letter = document.getElementById('motivation_letter').value.length;
-        s += letter >= 800 ? 10 : letter >= 500 ? 7 : letter >= 200 ? 4 : 0;
+        s += letter >= 400 ? 10 : letter >= 300 ? 7 : letter >= 200 ? 4 : 0;
         const hours = parseInt(document.getElementById('available_hours').value) || 0;
         s += hours >= 10 ? 5 : hours >= 5 ? 3 : 0;
         return Math.min(s, 100);
@@ -1181,7 +1328,12 @@
             subjects:           [...selectedSubjects],
             subjects_other:     document.getElementById('subjects_other').value.trim(),
             motivation_letter:  document.getElementById('motivation_letter').value.trim(),
-            documents_link:     document.getElementById('documents_link').value.trim(),
+            cv_storage_path:           docUploads.cv?.storage_path,
+            cv_original_name:          docUploads.cv?.original_name,
+            cv_link:                   docUploads.cv?.link,
+            certificate_storage_path:  docUploads.certificate?.storage_path,
+            certificate_original_name: docUploads.certificate?.original_name,
+            certificate_link:          docUploads.certificate?.link,
             reference_1_name:   document.getElementById('reference_1_name').value.trim(),
             reference_1_phone:  document.getElementById('reference_1_phone').value.trim(),
             reference_1_role:   document.getElementById('reference_1_role').value.trim(),

@@ -4,9 +4,13 @@ VCLASS — FLUXO DE FUNCIONAMENTO DO SISTEMA
 Documento gerado a partir da leitura directa do código (rotas da API,
 páginas e schema do banco). Descreve o percurso de cada perfil de
 utilizador, da entrada na plataforma até às acções principais de cada um.
+Última actualização: 2026-08-07.
 
 Perfis cobertos: Estudante (consumidor) → Professor (criador de conteúdo)
-→ Administrador (gestão da plataforma).
+→ Administrador (gestão da plataforma) → Editor (revisão pedagógica) →
+Gestor de País → Financeiro → Moderador → Suporte. Estes últimos cinco
+são papéis de staff com painel próprio, geridos a partir do painel
+Admin (ver 3.4).
 
 ================================================================================
 1. ESTUDANTE — o consumidor de conteúdo
@@ -56,21 +60,43 @@ Perfis cobertos: Estudante (consumidor) → Professor (criador de conteúdo)
 2. PROFESSOR — o criador de conteúdo
 ================================================================================
 
-2.1 Duas portas de entrada (e uma inconsistência entre elas — ver secção 4)
+2.1 Porta de entrada única — candidatura formal obrigatória
 ----------------------------------------
-  Caminho A — Candidatura formal (o que a interface de /register.html
-  mostra): ao escolher "Professor" no registo, é redireccionado para
+  Ao escolher "Professor" no registo, é redireccionado para
   /register-teacher.html, um formulário extenso (formação académica,
-  experiência, disciplinas, referências, disponibilidade). Isto grava um
-  registo em `teacher_applications` com estado `pending`, SEM criar
-  conta em `users` ainda. Um admin analisa e aprova/rejeita
+  experiência, disciplinas, referências, disponibilidade, CV e
+  certificado de habilitações — ver 2.1.1). Isto grava um registo em
+  `teacher_applications` com estado `pending`, SEM criar conta em
+  `users` ainda. Um admin analisa e aprova/rejeita
   (/api/teacher-verification/applications/:id/approve|reject) — só na
   aprovação é criada a conta real do professor.
 
-  Caminho B — Directo pela API: o endpoint `/api/auth/register` aceita
-  `role: "teacher"` directamente, sem passar pela candidatura. Cria conta
-  imediatamente utilizável (`is_verified: false`, mas nada no sistema
-  bloqueia o acesso ao painel com base nisso).
+  O endpoint público `/api/auth/register` agora RECUSA `role: "teacher"`
+  directamente (`src/routes/auth.ts`, validação a seguir ao parse do
+  schema) — devolve erro a mandar o candidato para
+  /register-teacher.html. Isto fecha uma inconsistência que existia
+  antes (histórico em 9.1): já não é possível criar conta de professor
+  sem passar pela candidatura KYT, nem sequer pela API directa.
+
+2.1.1 Documentos da candidatura (CV e certificado)
+----------------------------------------
+  Cada candidato anexa currículo e certificado de habilitações de duas
+  formas possíveis — ficheiro carregado OU link externo (Drive/Dropbox),
+  nunca os dois:
+  - Upload real: `POST /api/teacher-verification/apply/upload-document`
+    (sem auth, protegido por rate-limit próprio) recebe o ficheiro
+    (PDF/Word, máx. 10 MB), valida a assinatura do PDF
+    (`isValidPdfSignature`) e grava no bucket privado Supabase
+    `vclass-teacher-docs` (migration 026) — devolve um `storage_path`
+    que é enviado junto com o resto do formulário em `/apply`.
+  - Link externo: alternativa quando o candidato prefere colar um link.
+  Um admin só consegue ler o documento no painel de moderação via
+  signed URL gerada pelo backend (service_role) — o bucket nega leitura
+  directa a `anon`/`authenticated`.
+
+  Antes de agosto/2026 esta candidatura aceitava apenas um link solto
+  (`documents_link`) como workaround do piloto — a migration 026
+  substitui isso por upload real.
 
 2.2 Painel do Criador (/creator-dashboard.html)
 ----------------------------------------
@@ -97,10 +123,15 @@ Perfis cobertos: Estudante (consumidor) → Professor (criador de conteúdo)
        e) Publicar — checklist de pré-publicação (título, vídeo pronto,
           pelo menos 1 exercício, etc.); o botão "Publicar Lição Agora"
           só fica activo quando os itens críticos estão completos.
-  3. Ao publicar, o professor muda o estado da lição directamente para
-     `published` (`PUT /api/creator/lesson/:id`) — a lição fica
-     imediatamente visível aos estudantes em /browse.html. Não há
-     aprovação de terceiros neste passo (ver observação na secção 4).
+  3. Ao "publicar", o professor não fica com a lição visível de
+     imediato: `PUT /api/creator/lesson/:id` intercepta o pedido de
+     `status: "published"` e grava antes `pending_review`
+     (`toSubmittableStatus` em `src/routes/creator.ts`) — entra na fila
+     real do Editor (/editor-dashboard.html, dados de `lessons` via
+     `/api/editor/*`, já não mock). Só um Editor/Admin
+     (`requireEditorOrAdmin`) muda o estado para `published` de facto,
+     o único estado visível aos estudantes em /browse.html. Isto fecha
+     a segunda inconsistência descrita no histórico da secção 9.1.
   4. A partir daí acompanha desempenho em Analytics, alunos matriculados
      em Alunos, e comissão gerada em Ganhos (40% do valor pago pelos
      alunos com plano Básico/Premium que consumiram o conteúdo,
@@ -111,8 +142,10 @@ Perfis cobertos: Estudante (consumidor) → Professor (criador de conteúdo)
 ================================================================================
 
 Não existe auto-registo de admin (bloqueado por design na API — só
-`student`/`teacher` podem self-registar). Uma conta admin só nasce por
-promoção manual directa na base de dados por outro admin/operador.
+`student` pode self-registar; professor tem o caminho próprio da
+candidatura). Uma conta admin só nasce por promoção feita por outro
+admin já existente — ver 3.4 para o mecanismo completo, partilhado
+pelos seis papéis de staff.
 
 Painel (/admin-dashboard.html) concentra:
   - Utilizadores — listar, activar/desactivar, mudar papel
@@ -126,13 +159,147 @@ Painel (/admin-dashboard.html) concentra:
     também pode publicar livros directamente como admin.
   - Estatísticas gerais da plataforma.
 
-Outros papéis de gestão existem em painéis próprios, fora do admin
-central: Editor (revisão de conteúdo — ver secção 4), Financeiro
-(pagamentos/subscrições), Gestor de País, Moderador (denúncias/banimentos),
-Suporte (tickets).
+3.4 Como nascem as contas de staff (Admin, Editor, Gestor de País,
+    Financeiro, Moderador, Suporte)
+----------------------------------------
+  Nenhum destes seis papéis é auto-registável — a validação em
+  `/api/auth/register` só aceita `role: "student"` (professor tem o seu
+  próprio caminho, ver 2.1). A única forma de criar ou promover uma
+  conta de staff é um admin já existente usar `POST /api/admin/users`
+  ou `PATCH /api/admin/users/:id` (painel Utilizadores), escolhendo um
+  dos papéis válidos: `admin`, `editor`, `country_manager`, `finance`,
+  `moderator`, `support`. Cada papel tem o seu próprio painel (fora do
+  admin central) e as suas próprias rotas protegidas por middleware
+  dedicado (`requireEditorOrAdmin`, `requireFinanceOrAdmin`, etc. em
+  `src/middleware/auth.ts`) — detalhados nas secções 4 a 8.
 
 ================================================================================
-4. O FLUXO FAZ SENTIDO? — avaliação
+4. EDITOR — revisão pedagógica antes da publicação
+================================================================================
+
+  Painel: /editor-dashboard.html · rotas: /api/editor/* · dados reais
+  da tabela `lessons` (ver correcção descrita em 9.1).
+
+  1. Fila de Revisão (`GET /api/editor/queue`, filtrável por
+     disciplina/país/pesquisa) lista as lições que o professor marcou
+     como prontas (`status: pending_review` — ver 2.3). Só aparecem
+     lições cujo vídeo já terminou o processamento no Bunny.net
+     (`isLessonVideoReady`); as que ainda estão a codificar ficam de
+     fora até estarem prontas.
+  2. Aprovar (`POST /api/editor/queue/:id/approve`) muda o estado da
+     lição para `published` — só a partir daqui fica visível aos
+     estudantes em /browse.html. Bloqueado com erro 409 se o vídeo
+     ainda não estiver pronto.
+  3. Rejeitar ou pedir alterações (`.../reject` ou
+     `.../request-changes`) exige sempre um comentário de feedback;
+     devolve a lição a `draft` e grava `review_action` +
+     `review_feedback`, que o professor vê no seu editor de lições.
+  4. Abas Aprovados/Rejeitados e estatísticas (`GET /api/editor/stats`)
+     — taxa de aprovação, contagens por disciplina e país.
+
+================================================================================
+5. GESTOR DE PAÍS — operação por mercado
+================================================================================
+
+  Painel: /country-dashboard.html · rotas: /api/country/* · âmbito
+  automaticamente restrito ao país do próprio gestor
+  (`users.country_code`, resolvido via `GET /api/country/me`); um
+  admin que aceda à mesma rota vê os 5 países.
+
+  1. Dashboard com métricas do seu país: alunos, professores, lições
+     publicadas, nota média, proporção premium/free, actividade
+     semanal, e alertas operacionais (ex.: "N professores sem lições
+     publicadas"). Usa dados reais quando o país já tem utilizadores
+     reais; caso contrário mostra um placeholder claramente identificado
+     como fictício.
+  2. Gestão de professores/utilizadores do país
+     (`GET /api/country/:id/teachers|users`), incluindo activar/
+     desactivar um professor (`PATCH /api/country/:id/teachers/:tid`).
+  3. Consulta do currículo do país (`GET /api/country/:id/curriculum`
+     — classes e disciplinas).
+  4. Envio de comunicado a todo o país (`POST /api/country/:id/
+     announcement`) — actualmente apenas de demonstração, não persiste.
+  5. Revisão de candidaturas de professor do seu país (aba Candidaturas em
+     /country-dashboard.html): vê a lista completa, abre o detalhe de cada
+     candidato (formação, experiência, carta de motivação, referências) e
+     descarrega o CV e o certificado de habilitações via signed URL gerada
+     na hora. Pode aprovar (cria a conta do professor), rejeitar ou pedir
+     mais informação — exactamente as mesmas acções que um admin tem em
+     3.4/2.1, mas os endpoints (`/api/teacher-verification/applications*`)
+     verificam sempre que a candidatura pertence ao país do gestor antes de
+     mostrar dados ou aceitar qualquer acção; candidaturas de outros países
+     devolvem 403.
+
+================================================================================
+6. FINANCEIRO — receita, subscrições e planos
+================================================================================
+
+  Painel: /finance-dashboard.html · rotas: /api/finance/*.
+
+  1. Estatísticas de receita (`GET /api/finance/stats`): MRR/ARR,
+     crescimento %, taxa de conversão, receita por país.
+  2. Listagem de subscrições e pagamentos
+     (`GET /api/finance/subscriptions|payments`) e detalhe mensal
+     (`GET /api/finance/revenue`).
+  3. Cancelamento de subscrição
+     (`POST /api/finance/subscriptions/:id/cancel`).
+  4. Edição de preços e funcionalidades dos planos
+     (`PATCH /api/finance/plans/:id`, `PUT /api/finance/plans/:id/
+     features`) — preços por moeda, nome, destaque ("popular"), CTA.
+
+  Nota: não existe ainda um sistema separado de "levantamentos" do
+  professor neste papel — os pagamentos geridos aqui são as
+  subscrições dos estudantes (planos Básico/Premium). A comissão do
+  professor (secção 2.3, passo 4) é uma peça distinta, ainda não
+  ligada a este painel.
+
+================================================================================
+7. MODERADOR — denúncias, chat e banimentos
+================================================================================
+
+  Painel: /moderator-dashboard.html · rotas: /api/moderator/*.
+
+  ⚠ Ao contrário de Editor/País/Financeiro/Suporte, este painel ainda
+  corre inteiramente sobre dados mock (`MOCK_*` em
+  `src/routes/moderator.ts`) — não há tabelas reais de denúncias, chat
+  moderável ou banimentos ligadas por trás. É a mesma situação que a
+  fila do Editor tinha antes da correcção registada em 9.1.
+
+  1. Fila de denúncias (`GET /api/moderator/reports`, filtrável por
+     estado/tipo — inapropriado, spam, assédio, fora de tópico),
+     `PATCH`/`POST .../resolve` para tratar cada caso.
+  2. Moderação de chat (`GET /api/moderator/messages`,
+     `DELETE .../messages/:id`).
+  3. Banimentos (`GET /banned`, `POST /ban` com duração ou permanente,
+     `DELETE /ban/:id` para reverter) e avisos (`POST /warn`).
+  4. Comunicados de moderação (`GET`/`POST /api/moderator/
+     announcements`).
+
+================================================================================
+8. SUPORTE — atendimento ao utilizador
+================================================================================
+
+  Painel: /support-dashboard.html · rotas: /api/support/* +
+  /api/tickets (público). Este é o único destes cinco papéis já
+  ligado de ponta a ponta a um fluxo real do lado do estudante.
+
+  1. Origem do ticket: /help.html publica em `POST /api/tickets`, sem
+     autenticação obrigatória (aceita nome/email de convidado ou
+     `user_id` de sessão activa) — cai na tabela `support_tickets`.
+  2. Fila de tickets (`GET /api/support/tickets`, filtrável por
+     estado/prioridade/categoria/pesquisa) com contagem decrescente de
+     SLA por prioridade: alta 4h, média 8h, baixa 24h.
+  3. Atendimento (`GET /tickets/:id` mostra a conversa completa;
+     `PATCH /tickets/:id` muda estado/prioridade e regista uma resposta
+     em `ticket_responses`).
+  4. Gestão de conta de estudante/professor: bloquear
+     (`POST /users/:id/block`), desbloquear (`/unblock`), repor senha
+     (`/reset-password` — gera senha temporária e revoga tokens
+     activos).
+  5. Comunicados (`GET`/`POST /api/support/announcements`).
+
+================================================================================
+9. O FLUXO FAZ SENTIDO? — avaliação (actualizado 2026-08-07)
 ================================================================================
 
 Em traços gerais, SIM — a espinha dorsal é coerente e bem pensada:
@@ -145,35 +312,45 @@ Em traços gerais, SIM — a espinha dorsal é coerente e bem pensada:
     (validação país×classe no registo) está bem integrada ao fluxo, não
     é um acrescento solto.
 
-Mas encontrei duas inconsistências reais que valem a pena resolver:
+9.1 Inconsistências já resolvidas
+----------------------------------------
+  Uma revisão anterior deste documento apontou duas falhas reais no
+  fluxo. Ambas foram corrigidas entretanto:
 
-  1. DUAS PORTAS DE ENTRADA PARA PROFESSOR, SÓ UMA COM VERIFICAÇÃO —
-     a interface manda todo professor pela candidatura (KYT) longa, mas
-     a API pública aceita `role: "teacher"` directamente sem candidatura
-     nenhuma. Ou seja, tecnicamente qualquer pessoa com acesso à API
-     (não à interface) cria uma conta de professor completa sem
-     verificação de qualificação nenhuma — o que invalida o propósito
-     de toda a candidatura KYT. Se a verificação é para ser obrigatória,
-     o endpoint `/api/auth/register` deveria recusar `role: "teacher"`
-     directamente e forçar sempre o caminho da candidatura.
+  1. DUAS PORTAS DE ENTRADA PARA PROFESSOR, SÓ UMA COM VERIFICAÇÃO
+     (RESOLVIDO) — `/api/auth/register` recusa agora `role: "teacher"`
+     directamente, forçando sempre o caminho da candidatura KYT
+     (ver 2.1). Já não é possível contornar a verificação via API.
 
-  2. FILA DE REVISÃO DO "EDITOR" NÃO ESTÁ LIGADA ÀS LIÇÕES REAIS —
-     o painel do Editor (Fila de Revisão/Aprovados/Rejeitados) lê de
-     dados mock (`MOCK_LESSONS_PENDING` em `src/routes/editor.ts`), não
-     da tabela `lessons` real. Entretanto, o professor já publica lições
-     reais directamente, sem passar por essa fila. Isto sugere que a
-     intenção original era ter um passo de revisão editorial antes da
-     publicação (como já acontece, correctamente, com os itens da
-     Biblioteca Digital — que passam por `pending_review` até
-     aprovação), mas essa peça nunca foi ligada de facto para lições de
-     vídeo. Hoje o painel do Editor mostra dados de exemplo que não
-     reflectem nenhuma lição publicada de verdade.
+  2. FILA DE REVISÃO DO "EDITOR" NÃO LIGADA ÀS LIÇÕES REAIS (RESOLVIDO)
+     — o painel do Editor lê hoje directamente da tabela `lessons`
+     (`src/routes/editor.ts`, `fetchReviewLessons`), e "Publicar" do
+     lado do professor grava `pending_review` em vez de `published`
+     (ver 2.3, passo 3). O mock só é usado como fallback quando a BD
+     não está configurada em ambiente local.
 
-Se a intenção é que todo professor passe por verificação de
-qualificação E toda lição passe por revisão editorial antes de ir ao
-ar, essas duas peças precisam de ser fechadas — hoje ambas existem na
-interface mas são contornáveis (a primeira via API directa, a segunda
-porque nunca chegou a ser ligada aos dados reais).
+9.2 Ponto em aberto — documentos da candidatura de professor
+----------------------------------------
+  Até esta actualização, o upload de CV/certificado de habilitações na
+  candidatura era um workaround de piloto (um único campo de link,
+  `documents_link`, sem validar se era mesmo um documento). A migration
+  026 e as alterações em `teacher-verification.ts`/`register-teacher.html`
+  substituem isso por upload real para um bucket privado com validação
+  de assinatura de PDF — ver 2.1.1. Falta apenas confirmar no painel
+  Admin (`admin-dashboard.html`) que a leitura desses documentos via
+  signed URL está exposta na UI de moderação de candidaturas.
+
+9.3 Ponto em aberto — painel do Moderador ainda é só mock
+----------------------------------------
+  Ao contrário dos outros quatro papéis de staff (Editor, Gestor de
+  País, Financeiro, Suporte), que já leem e escrevem dados reais, o
+  Moderador (secção 7) continua sobre arrays `MOCK_*` fixos em
+  `src/routes/moderator.ts` — não existem ainda tabelas de denúncias,
+  histórico de chat moderável nem banimentos. É estruturalmente a
+  mesma situação que a fila do Editor tinha antes da correcção descrita
+  em 9.1: a interface e as rotas existem, mas não estão ligadas a dados
+  reais. Se o objectivo é ter moderação de chat/denúncias a valer, esta
+  é a peça que falta fechar a seguir.
 
 ================================================================================
 FIM DO DOCUMENTO

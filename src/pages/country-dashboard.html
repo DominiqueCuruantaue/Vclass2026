@@ -37,6 +37,10 @@
     <button onclick="showTab('users')"      class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition text-sm font-medium">
       <i class="fas fa-users w-5 text-center text-blue-500"></i> Utilizadores
     </button>
+    <button onclick="showTab('applications')" class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition text-sm font-medium">
+      <i class="fas fa-user-clock w-5 text-center text-orange-500"></i> Candidaturas
+      <span class="ml-auto bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full hidden" id="applications-badge">0</span>
+    </button>
     <button onclick="showTab('curriculum')" class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition text-sm font-medium">
       <i class="fas fa-book-open w-5 text-center text-green-500"></i> Currículo
     </button>
@@ -120,6 +124,7 @@
   <div class="px-6 pt-6 border-b border-gray-200 bg-white mx-6 mt-6 rounded-t-2xl flex gap-6">
     <button onclick="showTab('overview')"    class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-amber-600 transition" id="tab-overview">Visão Geral</button>
     <button onclick="showTab('users')"       class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-amber-600 transition" id="tab-users">Utilizadores</button>
+    <button onclick="showTab('applications')" class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-amber-600 transition" id="tab-applications">Candidaturas</button>
     <button onclick="showTab('curriculum')"  class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-amber-600 transition" id="tab-curriculum">Currículo</button>
     <button onclick="showTab('content')"     class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-amber-600 transition" id="tab-content">Conteúdo</button>
     <button onclick="showTab('analytics')"   class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-amber-600 transition" id="tab-analytics">Análises</button>
@@ -169,6 +174,52 @@
           <th class="px-4 py-3 text-left rounded-r-xl">Estado</th>
         </tr></thead>
         <tbody id="users-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── Applications (candidaturas de professor) ─────────────────────────── -->
+  <section id="tab-content-applications" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
+    <div class="grid grid-cols-4 gap-3 mb-6">
+      <div class="bg-amber-50 border border-amber-100 rounded-xl p-3 text-center">
+        <div class="text-xl font-bold text-amber-700" id="app-stat-pending">0</div>
+        <div class="text-xs text-gray-500">Pendentes</div>
+      </div>
+      <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 text-center">
+        <div class="text-xl font-bold text-blue-700" id="app-stat-review">0</div>
+        <div class="text-xs text-gray-500">Em Análise</div>
+      </div>
+      <div class="bg-green-50 border border-green-100 rounded-xl p-3 text-center">
+        <div class="text-xl font-bold text-green-700" id="app-stat-approved">0</div>
+        <div class="text-xs text-gray-500">Aprovadas</div>
+      </div>
+      <div class="bg-red-50 border border-red-100 rounded-xl p-3 text-center">
+        <div class="text-xl font-bold text-red-700" id="app-stat-rejected">0</div>
+        <div class="text-xs text-gray-500">Rejeitadas</div>
+      </div>
+    </div>
+    <div class="flex gap-4 mb-6">
+      <input type="text" id="app-search" placeholder="Pesquisar candidato…" class="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300">
+      <select id="app-status-filter" class="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300">
+        <option value="all">Todos os estados</option>
+        <option value="pending">Pendente</option>
+        <option value="under_review">Em Análise</option>
+        <option value="info_requested">Info Pedida</option>
+        <option value="approved">Aprovada</option>
+        <option value="rejected">Rejeitada</option>
+      </select>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="bg-gray-50 text-gray-600">
+          <th class="px-4 py-3 text-left rounded-l-xl">Candidato</th>
+          <th class="px-4 py-3 text-left">Formação</th>
+          <th class="px-4 py-3 text-center">Score</th>
+          <th class="px-4 py-3 text-left">Estado</th>
+          <th class="px-4 py-3 text-left">Submetida</th>
+          <th class="px-4 py-3 text-left rounded-r-xl">Acções</th>
+        </tr></thead>
+        <tbody id="applications-tbody"></tbody>
       </table>
     </div>
   </section>
@@ -242,6 +293,18 @@
   </section>
 
 </main>
+
+<!-- ── Modal: detalhe da candidatura de professor ───────────────────────── -->
+<div id="app-modal" class="fixed inset-0 z-30 flex items-center justify-center p-4 hidden">
+  <div id="overlay" class="absolute inset-0" onclick="closeAppModal()"></div>
+  <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+    <div class="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+      <h3 class="font-bold text-gray-900">Candidatura de Professor</h3>
+      <button onclick="closeAppModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="app-modal-content" class="p-6"></div>
+  </div>
+</div>
 
 <script src="/static/app.js"></script>
 <script>
@@ -390,7 +453,185 @@ async function loadCountryData() {
 
   // Curriculum
   renderCurriculum()
+
+  // Candidaturas de professor pendentes de revisão — o backend já restringe
+  // automaticamente ao país do gestor (ver country_manager scoping em
+  // src/routes/teacher-verification.ts), por isso não é preciso passar country=.
+  await loadApplications()
 }
+
+let allApplications = []
+
+async function loadApplications() {
+  const res = await countryApi('/api/teacher-verification/applications?limit=50')
+  if (!res.success) return
+  allApplications = res.data.applications || []
+  const stats = res.data.stats || {}
+  document.getElementById('app-stat-pending').textContent  = stats.pending || 0
+  document.getElementById('app-stat-review').textContent   = stats.under_review || 0
+  document.getElementById('app-stat-approved').textContent = stats.approved || 0
+  document.getElementById('app-stat-rejected').textContent = stats.rejected || 0
+  const badge = document.getElementById('applications-badge')
+  const pendingTotal = (stats.pending || 0) + (stats.under_review || 0)
+  if (pendingTotal > 0) { badge.textContent = pendingTotal; badge.classList.remove('hidden') }
+  else badge.classList.add('hidden')
+  applyApplicationFilters()
+}
+
+function applyApplicationFilters() {
+  const q = (document.getElementById('app-search')?.value || '').toLowerCase()
+  const status = document.getElementById('app-status-filter')?.value || 'all'
+  let apps = allApplications
+  if (status !== 'all') apps = apps.filter(a => a.status === status)
+  if (q) apps = apps.filter(a => a.full_name?.toLowerCase().includes(q) || a.email?.toLowerCase().includes(q))
+  renderApplicationsTable(apps)
+}
+
+function renderApplicationsTable(apps) {
+  const tbody = document.getElementById('applications-tbody')
+  if (!apps.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-400 py-8">Nenhuma candidatura encontrada</td></tr>'
+    return
+  }
+  const statusMap = {
+    pending:        { cls:'bg-amber-100 text-amber-700', lbl:'Pendente' },
+    under_review:   { cls:'bg-blue-100 text-blue-700',   lbl:'Em Análise' },
+    info_requested: { cls:'bg-purple-100 text-purple-700', lbl:'Info Pedida' },
+    approved:       { cls:'bg-green-100 text-green-700', lbl:'Aprovada' },
+    rejected:       { cls:'bg-red-100 text-red-700',     lbl:'Rejeitada' }
+  }
+  const degreeShort = { licenciatura:'Lic.', mestrado:'Mestre', doutoramento:'PhD', bacharel:'Bach.', outro:'Outro' }
+  tbody.innerHTML = apps.map(a => {
+    const s = statusMap[a.status] || { cls:'bg-gray-100 text-gray-600', lbl:a.status }
+    const score = a.score != null ? `<span class="font-bold ${a.score>=70?'text-green-600':a.score>=50?'text-yellow-600':'text-red-600'}">${a.score}</span>` : '<span class="text-gray-300">—</span>'
+    const date = new Date(a.submitted_at).toLocaleDateString('pt-PT',{day:'2-digit',month:'short',year:'numeric'})
+    const canAct = ['pending','under_review','info_requested'].includes(a.status)
+    return `<tr class="border-b border-gray-100 hover:bg-gray-50">
+      <td class="px-4 py-3">
+        <div class="font-medium text-gray-800">${escapeHtml(a.full_name)}</div>
+        <div class="text-xs text-gray-400">${escapeHtml(a.email)}</div>
+      </td>
+      <td class="px-4 py-3 text-xs text-gray-600">${degreeShort[a.degree]||'—'}<div class="text-gray-400">${escapeHtml((a.degree_field||'').substring(0,24))}</div></td>
+      <td class="px-4 py-3 text-center">${score}/100</td>
+      <td class="px-4 py-3"><span class="text-xs px-2 py-0.5 rounded-full ${s.cls}">${s.lbl}</span></td>
+      <td class="px-4 py-3 text-xs text-gray-500">${date}</td>
+      <td class="px-4 py-3">
+        <div class="flex gap-1">
+          <button onclick="openAppModal('${escapeAttr(a.id)}')" class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200 transition font-medium"><i class="fas fa-eye"></i> Ver</button>
+          ${canAct ? `<button onclick="approveApp('${escapeAttr(a.id)}')" class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200 transition font-medium">✓</button>
+          <button onclick="rejectApp('${escapeAttr(a.id)}')" class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200 transition font-medium">✕</button>` : ''}
+        </div>
+      </td>
+    </tr>`
+  }).join('')
+}
+
+function renderDocLink(label, signedUrl, originalName) {
+  if (!signedUrl) {
+    return `<div class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl p-3 opacity-60">
+      <i class="fas fa-file-circle-xmark text-gray-400"></i>
+      <div><div class="font-medium text-gray-500 text-sm">${escapeHtml(label)}</div><div class="text-xs text-gray-400">Não submetido</div></div>
+    </div>`
+  }
+  return `<a href="${escapeAttr(signedUrl)}" target="_blank" rel="noopener" class="flex items-center gap-2 bg-gray-50 hover:bg-amber-50 border border-gray-200 hover:border-amber-300 rounded-xl p-3 transition">
+    <i class="fas fa-file-arrow-down text-amber-600"></i>
+    <div class="min-w-0"><div class="font-medium text-gray-800 text-sm truncate">${escapeHtml(label)}</div><div class="text-xs text-gray-400 truncate">${escapeHtml(originalName || 'Ver / descarregar')}</div></div>
+  </a>`
+}
+
+async function openAppModal(id) {
+  document.getElementById('app-modal-content').innerHTML = '<div class="text-center py-10 text-gray-400"><i class="fas fa-circle-notch fa-spin text-xl"></i></div>'
+  document.getElementById('app-modal').classList.remove('hidden')
+
+  const res = await countryApi(`/api/teacher-verification/applications/${id}`)
+  if (!res.success) {
+    document.getElementById('app-modal-content').innerHTML = `<p class="text-red-500 text-sm">${escapeHtml(res.error || 'Falha ao carregar candidatura')}</p>`
+    return
+  }
+  const a = res.data
+  const certText = a.has_teaching_cert ? '✅ Sim' + (a.teaching_cert_type ? ` (${escapeHtml(a.teaching_cert_type)})` : '') : '❌ Não'
+  const canAct = ['pending','under_review','info_requested'].includes(a.status)
+
+  document.getElementById('app-modal-content').innerHTML = `
+    <div class="space-y-5">
+      <div class="grid grid-cols-2 gap-4 text-sm">
+        <div><span class="text-gray-500">Nome:</span> <span class="font-medium">${escapeHtml(a.full_name)}</span></div>
+        <div><span class="text-gray-500">Email:</span> <span class="font-medium">${escapeHtml(a.email)}</span></div>
+        <div><span class="text-gray-500">Telefone:</span> <span class="font-medium">${escapeHtml(a.phone)}</span></div>
+        <div><span class="text-gray-500">BI/Cédula:</span> <span class="font-medium">${escapeHtml(a.national_id)}</span></div>
+        <div><span class="text-gray-500">Localização:</span> <span class="font-medium">${escapeHtml(a.city)}, ${escapeHtml(a.province)}</span></div>
+        <div><span class="text-gray-500">Score:</span> <span class="font-bold">${a.score ?? '—'}/100</span></div>
+        <div><span class="text-gray-500">Grau:</span> <span class="font-medium capitalize">${escapeHtml(a.degree)} — ${escapeHtml(a.degree_field)}</span></div>
+        <div><span class="text-gray-500">Instituição:</span> <span class="font-medium">${escapeHtml(a.institution)} (${a.graduation_year})</span></div>
+        <div><span class="text-gray-500">Experiência:</span> <span class="font-medium">${a.years_experience} anos</span></div>
+        <div><span class="text-gray-500">Cert. Docência:</span> <span class="font-medium">${certText}</span></div>
+        <div class="col-span-2"><span class="text-gray-500">Disciplinas:</span> <span class="font-medium">${(a.subjects||[]).map(escapeHtml).join(', ')}</span></div>
+        <div class="col-span-2"><span class="text-gray-500">Referência:</span> <span class="font-medium">${escapeHtml(a.reference_1_name)} — ${escapeHtml(a.reference_1_phone)} (${escapeHtml(a.reference_1_role)})</span></div>
+      </div>
+
+      <div>
+        <div class="font-semibold text-gray-700 mb-1 text-xs uppercase">Carta de Motivação</div>
+        <div class="bg-amber-50 border border-amber-100 rounded-xl p-3 text-sm text-gray-700 leading-relaxed max-h-32 overflow-y-auto">${escapeHtml(a.motivation_letter || '—')}</div>
+      </div>
+
+      <div>
+        <div class="font-semibold text-gray-700 mb-2 text-xs uppercase">📎 Documentos</div>
+        <div class="grid grid-cols-2 gap-3">
+          ${renderDocLink('Currículo (CV)', a.cv_signed_url, a.cv_original_name)}
+          ${renderDocLink('Certificado de Habilitações', a.certificate_signed_url, a.certificate_original_name)}
+        </div>
+      </div>
+
+      ${canAct ? `
+      <div class="flex gap-2 pt-2 border-t border-gray-100">
+        <button onclick="approveApp('${escapeAttr(a.id)}')" class="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-xl py-2 text-sm font-medium transition">
+          <i class="fas fa-check mr-1"></i> Aprovar
+        </button>
+        <button onclick="rejectApp('${escapeAttr(a.id)}')" class="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl py-2 text-sm font-medium transition">
+          <i class="fas fa-times mr-1"></i> Rejeitar
+        </button>
+        <button onclick="requestInfoApp('${escapeAttr(a.id)}')" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl py-2 text-sm font-medium transition">
+          <i class="fas fa-question-circle mr-1"></i> Pedir Info
+        </button>
+      </div>` : `<p class="text-xs text-gray-400 text-center pt-2 border-t border-gray-100">Candidatura já ${a.status === 'approved' ? 'aprovada' : 'rejeitada'} — sem acções disponíveis.</p>`}
+    </div>`
+}
+
+function closeAppModal() {
+  document.getElementById('app-modal').classList.add('hidden')
+}
+
+async function approveApp(id) {
+  if (!confirm('Aprovar esta candidatura? Isto cria a conta do professor imediatamente.')) return
+  const res = await countryApi(`/api/teacher-verification/applications/${id}/approve`, {
+    method: 'POST', body: JSON.stringify({ notes: 'Aprovado pelo gestor de país' })
+  })
+  if (res.success) { VClass.showNotification('Candidatura aprovada!', 'success'); closeAppModal(); loadApplications() }
+  else VClass.showNotification(res.error || 'Erro ao aprovar', 'error')
+}
+
+async function rejectApp(id) {
+  const reason = prompt('Motivo de rejeição (será comunicado ao candidato):')
+  if (!reason) return
+  const res = await countryApi(`/api/teacher-verification/applications/${id}/reject`, {
+    method: 'POST', body: JSON.stringify({ reason, allow_reapply: true, reapply_after_months: 6 })
+  })
+  if (res.success) { VClass.showNotification('Candidatura rejeitada.', 'info'); closeAppModal(); loadApplications() }
+  else VClass.showNotification(res.error || 'Erro ao rejeitar', 'error')
+}
+
+async function requestInfoApp(id) {
+  const message = prompt('Que informações adicionais são necessárias?')
+  if (!message) return
+  const res = await countryApi(`/api/teacher-verification/applications/${id}/request-info`, {
+    method: 'POST', body: JSON.stringify({ message })
+  })
+  if (res.success) { VClass.showNotification('Pedido de informação enviado.', 'success'); closeAppModal(); loadApplications() }
+  else VClass.showNotification(res.error || 'Erro', 'error')
+}
+
+document.getElementById('app-search')?.addEventListener('input', applyApplicationFilters)
+document.getElementById('app-status-filter')?.addEventListener('change', applyApplicationFilters)
 
 function applyUserFilters() {
   const q = (document.getElementById('user-search')?.value || '').toLowerCase()
@@ -453,13 +694,13 @@ function renderCurriculum() {
 }
 
 function showTab(name) {
-  ['overview','users','curriculum','content','analytics','alerts'].forEach(t => {
+  ['overview','users','applications','curriculum','content','analytics','alerts'].forEach(t => {
     document.getElementById(`tab-content-${t}`).style.display = 'none'
     document.getElementById(`tab-${t}`).classList.remove('active')
   })
   document.getElementById(`tab-content-${name}`).style.display = 'block'
   document.getElementById(`tab-${name}`).classList.add('active')
-  const titles = { overview:'Visão Geral', users:'Utilizadores', curriculum:'Currículo', content:'Conteúdo', analytics:'Análises', alerts:'Alertas' }
+  const titles = { overview:'Visão Geral', users:'Utilizadores', applications:'Candidaturas', curriculum:'Currículo', content:'Conteúdo', analytics:'Análises', alerts:'Alertas' }
   document.getElementById('page-title').textContent = titles[name] || name
 }
 
