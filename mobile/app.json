@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "VClass",
+    "slug": "vclass-mobile",
+    "scheme": "vclass",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "experiments": {
+      "typedRoutes": true
+    },
+    "plugins": [
+      "expo-router",
+      "expo-video",
+      "expo-secure-store"
+    ],
+    "extra": {
+      "apiBaseUrl": "http://localhost:3000"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vclass.mobile"
+    },
+    "android": {
+      "package": "com.vclass.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#0a1628",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
