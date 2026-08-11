@@ -7,6 +7,7 @@ import {
   Text,
   TextInput,
   TextInputProps,
+  TextProps,
   TouchableOpacity,
   View,
   ViewStyle,
@@ -19,21 +20,30 @@ export function Screen({
   children,
   scroll = true,
   style,
+  refreshControl,
 }: {
   children: React.ReactNode
   scroll?: boolean
   style?: ViewStyle
+  refreshControl?: any
 }) {
-  const Container = scroll ? ScrollView : View
+  if (!scroll) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={[styles.screen, style]}>{children}</View>
+      </SafeAreaView>
+    )
+  }
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <Container
+      <ScrollView
         style={[styles.screen, style]}
-        contentContainerStyle={scroll ? styles.scrollContent : undefined}
+        contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        refreshControl={refreshControl}
       >
         {children}
-      </Container>
+      </ScrollView>
     </SafeAreaView>
   )
 }
@@ -53,8 +63,12 @@ export function H1({ children }: { children: React.ReactNode }) {
 export function H2({ children }: { children: React.ReactNode }) {
   return <Text style={styles.h2}>{children}</Text>
 }
-export function Muted({ children, style }: { children: React.ReactNode; style?: any }) {
-  return <Text style={[styles.muted, style]}>{children}</Text>
+export function Muted({ children, style, ...rest }: { children: React.ReactNode; style?: any } & TextProps) {
+  return (
+    <Text style={[styles.muted, style]} {...rest}>
+      {children}
+    </Text>
+  )
 }
 
 // ── Botão ────────────────────────────────────────────────────────────────────

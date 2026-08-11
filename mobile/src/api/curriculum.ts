@@ -1,22 +1,30 @@
 import { apiRequest } from './client'
 import type { Country, Grade, Subject, Chapter, Lesson } from '@shared/types'
 
-// Espelha src/data/curriculum.ts (COUNTRIES/EDUCATION_LEVELS/GRADES) usado no
-// registo — endpoints públicos, sem auth.
-export interface CurriculumCountry { id: string; name: string; flag: string }
-export interface CurriculumLevel { id: string; countryId: string; name: string }
-export interface CurriculumGrade { id: string; levelId: string; name: string; order: number }
+// Espelha src/data/curriculum.ts (COUNTRIES/EDUCATION_LEVELS/GRADES) — usado
+// no registo. Todos públicos (sem auth): o candidato ainda não tem conta.
+export interface CurriculumCountry {
+  id: string; code: string; name: string; flag: string; currency: string
+  educationTerms: string; termCount: number; is_active: boolean
+}
+export interface CurriculumGrade { id: string; levelId: string; name: string; shortName: string; displayOrder: number }
+export interface CurriculumLevel {
+  id: string; countryId: string; name: string; shortName: string
+  description: string; ageRange: string; displayOrder: number
+  grades: CurriculumGrade[]
+}
 
 export function fetchCountries() {
   return apiRequest<CurriculumCountry[]>('/api/curriculum/countries', { auth: false })
 }
 
-export function fetchLevelsForCountry(countryId: string) {
-  return apiRequest<CurriculumLevel[]>(`/api/curriculum/countries/${countryId}/levels`)
-}
-
-export function fetchGradesForLevel(levelId: string) {
-  return apiRequest<CurriculumGrade[]>(`/api/curriculum/levels/${levelId}/grades`)
+// Árvore pública de níveis+classes de um país — usada para o selector de
+// classe no registo de estudante (GET /api/curriculum/tree/:countryId).
+export function fetchCountryLevels(countryId: string) {
+  return apiRequest<{ country: CurriculumCountry; curriculum: CurriculumLevel[] }>(
+    `/api/curriculum/tree/${countryId}`,
+    { auth: false }
+  )
 }
 
 // ── Navegação de conteúdo (src/routes/content.ts) — usada em /browse ──────────
