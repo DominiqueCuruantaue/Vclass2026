@@ -2314,8 +2314,8 @@ async function openTvModal(appOrId) {
                     <div class="space-y-1 text-gray-600">
                         <div><strong>Computador:</strong> ${app.has_computer?'✅':'❌'}</div>
                         <div><strong>Internet:</strong> ${app.has_internet?'✅':'❌'}</div>
-                        <div><strong>Disponibilidade:</strong> ${app.available_hours}h/semana</div>
-                        <div><strong>Horário:</strong> ${app.preferred_schedule}</div>
+                        ${app.available_hours ? `<div><strong>Disponibilidade:</strong> ${escapeHtml(app.available_hours)}h/semana</div>` : ''}
+                        ${app.preferred_schedule ? `<div><strong>Horário:</strong> ${escapeHtml(app.preferred_schedule)}</div>` : ''}
                     </div>
                 </div>
                 <div class="bg-gray-50 rounded-xl p-4">

@@ -86,11 +86,12 @@ export function teacherApplicationReceivedEmail(fullName: string) {
 
 export function teacherApplicationApprovedEmail(fullName: string, loginEmail: string) {
   return {
-    subject: '🎉 Candidatura aprovada — bem-vindo à VClass!',
-    html: emailLayout('Candidatura aprovada 🎉', `
-      <p>Parabéns, ${fullName}!</p>
-      <p>A sua candidatura foi <strong>aprovada</strong>. A sua conta de professor já está activa e pode
-      começar a criar e publicar aulas na plataforma imediatamente.</p>
+    subject: '🎉 Está de parabéns — foi aceite como professor na VClass!',
+    html: emailLayout('Está de parabéns! 🎉', `
+      <p>Olá ${fullName},</p>
+      <p>As suas competências vão de acordo com os requisitos que pretendemos — <strong>foi aceite como
+      professor da plataforma VClass</strong>! A sua conta já está activa e pode começar a criar e publicar
+      aulas imediatamente.</p>
       <p>Pode entrar com o email <strong>${loginEmail}</strong> e a password que definiu na candidatura, em
       <a href="https://vclass.mz/login.html" style="color:#7c3aed;">vclass.mz/login.html</a>.</p>
       <p>Bem-vindo à equipa VClass!</p>
@@ -98,19 +99,14 @@ export function teacherApplicationApprovedEmail(fullName: string, loginEmail: st
   }
 }
 
-export function teacherApplicationRejectedEmail(fullName: string, reason: string, allowReapply: boolean, reapplyAfterMonths: number) {
-  const reapplyHtml = allowReapply
-    ? `<p>Pode candidatar-se novamente após ${reapplyAfterMonths} meses.</p>`
-    : `<p>Não é possível submeter uma nova candidatura neste momento.</p>`
+export function teacherApplicationRejectedEmail(fullName: string) {
   return {
     subject: 'Resultado da sua candidatura — VClass',
     html: emailLayout('Candidatura não aprovada', `
       <p>Olá ${fullName},</p>
-      <p>Depois de analisar a sua candidatura, não foi possível aprová-la desta vez.</p>
-      <p style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;color:#991b1b;">
-        <strong>Motivo:</strong> ${reason}
-      </p>
-      ${reapplyHtml}
+      <p>Lamentamos, mas a sua candidatura não foi aceite porque os nossos serviços não têm vagas
+      disponíveis para as suas qualificações neste momento.</p>
+      <p>Caso abram espaços para oportunidades com os seus requisitos, iremos contactá-lo de volta.</p>
       <p>Obrigado pelo interesse em ensinar na VClass.</p>
     `)
   }

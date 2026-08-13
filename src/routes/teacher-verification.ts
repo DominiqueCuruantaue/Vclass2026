@@ -41,7 +41,6 @@ const teacherApplicationSchema = z.object({
   country_id:   z.string().min(2, 'País é obrigatório'),
   province:     z.string().min(2, 'Província é obrigatória'),
   city:         z.string().min(2, 'Cidade é obrigatória'),
-  address:      z.string().min(5, 'Endereço é obrigatório'),
 
   // Qualificações
   degree:             z.enum(['licenciatura', 'mestrado', 'doutoramento', 'bacharel', 'outro']),
@@ -74,8 +73,6 @@ const teacherApplicationSchema = z.object({
   digital_literacy:   z.enum(['basico', 'intermedio', 'avancado']),
   has_computer:       z.boolean(),
   has_internet:       z.boolean(),
-  available_hours:    z.number().int().min(1).max(40),
-  preferred_schedule: z.enum(['manha', 'tarde', 'noite', 'flexivel']),
 
   // Credenciais
   password:           z.string().min(8, 'Senha deve ter pelo menos 8 caracteres'),
@@ -140,8 +137,6 @@ function autoScoreApplication(app: any): number {
   if (letterLen >= 400) score += 10
   else if (letterLen >= 300) score += 7
   else if (letterLen >= 200) score += 4
-  if (app.available_hours >= 10) score += 5
-  else if (app.available_hours >= 5) score += 3
   return Math.min(score, 100)
 }
 
@@ -211,7 +206,6 @@ tv.post('/apply', async (c) => {
         country_id: data.country_id,
         province: data.province,
         city: data.city,
-        address: data.address,
         degree: data.degree,
         degree_field: data.degree_field,
         institution: data.institution,
@@ -233,8 +227,6 @@ tv.post('/apply', async (c) => {
         digital_literacy: data.digital_literacy,
         has_computer: data.has_computer,
         has_internet: data.has_internet,
-        available_hours: data.available_hours,
-        preferred_schedule: data.preferred_schedule,
         password_hash,
         cv_storage_path: data.cv_storage_path || null,
         cv_original_name: data.cv_original_name || null,
@@ -723,7 +715,7 @@ tv.post('/applications/:id/reject', authMiddleware, requireRole('admin', 'countr
 
   console.log(`[KYT] Rejeitada candidatura ${id} (motivo: ${body.reason})`)
 
-  const rejectedEmail = teacherApplicationRejectedEmail(data.full_name, data.rejection_reason || body.reason, !!data.allow_reapply, data.reapply_after_months || 6)
+  const rejectedEmail = teacherApplicationRejectedEmail(data.full_name)
   const emailResult = await sendEmail(c.env, { to: data.email, ...rejectedEmail })
 
   return c.json<ApiResponse>({
