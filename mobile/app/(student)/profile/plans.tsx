@@ -63,7 +63,7 @@ export default function PlansScreen() {
               {plan.display_price_monthly > 0 ? `${plan.display_price_monthly} ${plan.currency}/mês` : 'Grátis'}
             </Text>
             {plan.features?.map((f, i) => (
-              <Muted key={i}>• {f}</Muted>
+              <Muted key={i}>{f.included ? '✓' : '✗'} {f.text}</Muted>
             ))}
             {!isCurrent && plan.id !== 'free' ? (
               <View style={{ marginTop: 12 }}>

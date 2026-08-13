@@ -28,28 +28,30 @@ export function fetchCountryLevels(countryId: string) {
 }
 
 // ── Navegação de conteúdo (src/routes/content.ts) — usada em /browse ──────────
+// /api/content/* exige sessão (content.use('/*', authMiddleware) no backend) —
+// ao contrário de /api/curriculum/*, que é público para o fluxo de registo.
 export function fetchContentCountries() {
-  return apiRequest<Country[]>('/api/content/countries', { auth: false })
+  return apiRequest<Country[]>('/api/content/countries')
 }
 
 export function fetchEducationSystems(countryId: string) {
-  return apiRequest<{ id: string; name: string }[]>(`/api/content/education-systems/${countryId}`, { auth: false })
+  return apiRequest<{ id: string; name: string }[]>(`/api/content/education-systems/${countryId}`)
 }
 
 export function fetchGrades(educationSystemId: string) {
-  return apiRequest<{ id: string; name: string; level: number }[]>(`/api/content/grades/${educationSystemId}`, { auth: false })
+  return apiRequest<{ id: string; name: string; level: number }[]>(`/api/content/grades/${educationSystemId}`)
 }
 
 export function fetchSubjects(gradeId: string) {
-  return apiRequest<(Subject & { grade_subject_id: string })[]>(`/api/content/subjects/${gradeId}`, { auth: false })
+  return apiRequest<(Subject & { grade_subject_id: string })[]>(`/api/content/subjects/${gradeId}`)
 }
 
 export function fetchChapters(gradeSubjectId: string) {
-  return apiRequest<Chapter[]>(`/api/content/chapters/${gradeSubjectId}`, { auth: false })
+  return apiRequest<Chapter[]>(`/api/content/chapters/${gradeSubjectId}`)
 }
 
 export function fetchLessonsForChapter(chapterId: string) {
-  return apiRequest<Lesson[]>(`/api/content/lessons/${chapterId}`, { auth: false })
+  return apiRequest<Lesson[]>(`/api/content/lessons/${chapterId}`)
 }
 
 export function fetchLesson(lessonId: string) {

@@ -8,7 +8,7 @@ export interface PlanData {
   display_price_monthly: number
   display_price_yearly: number
   currency: string
-  features?: string[]
+  features?: { text: string; included: boolean }[]
 }
 
 export function fetchPlans(currency = 'mzn') {

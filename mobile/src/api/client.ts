@@ -1,8 +1,19 @@
 import Constants from 'expo-constants'
 import * as SecureStore from 'expo-secure-store'
+import { Platform } from 'react-native'
 import type { ApiResponse } from '@shared/types'
 
 const ACCESS_TOKEN_KEY = 'vclass_access_token'
+
+// expo-secure-store não tem suporte nativo na web (usa Keychain/Keystore) —
+// na web cai-se para localStorage, que é o equivalente razoável do browser.
+const tokenStorage = Platform.OS === 'web'
+  ? {
+      getItemAsync: async (key: string) => globalThis.localStorage?.getItem(key) ?? null,
+      setItemAsync: async (key: string, value: string) => globalThis.localStorage?.setItem(key, value),
+      deleteItemAsync: async (key: string) => globalThis.localStorage?.removeItem(key),
+    }
+  : SecureStore
 
 // Base URL: EXPO_PUBLIC_API_URL (build-time env) > app.json extra.apiBaseUrl > fallback local.
 // Em dispositivo físico/emulador, "localhost" não aponta para a máquina de desenvolvimento —
@@ -16,14 +27,14 @@ let accessToken: string | null = null
 let refreshPromise: Promise<string | null> | null = null
 
 export async function loadStoredToken(): Promise<string | null> {
-  accessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY)
+  accessToken = await tokenStorage.getItemAsync(ACCESS_TOKEN_KEY)
   return accessToken
 }
 
 export async function setAccessToken(token: string | null) {
   accessToken = token
-  if (token) await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, token)
-  else await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY)
+  if (token) await tokenStorage.setItemAsync(ACCESS_TOKEN_KEY, token)
+  else await tokenStorage.deleteItemAsync(ACCESS_TOKEN_KEY)
 }
 
 export function getAccessToken() {
