@@ -7,7 +7,9 @@ const DEFAULT_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:8081',
   'http://localhost:8082',
-  'https://vclass.pages.dev'
+  'https://vclass.co.mz',
+  'https://www.vclass.co.mz',
+  'https://vclass2026.pages.dev'
 ]
 
 /**

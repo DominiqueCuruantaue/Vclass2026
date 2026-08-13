@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import * as DocumentPicker from 'expo-document-picker'
 import { Link, router } from 'expo-router'
 import {
@@ -7,9 +7,11 @@ import {
   Button,
   Card,
   ChipSelect,
+  ErrorState,
   Field,
   H1,
   H2,
+  LoadingState,
   Muted,
   PasswordField,
   Screen,
@@ -38,6 +40,17 @@ const DIGITAL_LITERACY: { id: DigitalLiteracy; label: string }[] = [
   { id: 'basico', label: 'Básico' },
   { id: 'intermedio', label: 'Intermédio' },
   { id: 'avancado', label: 'Avançado' },
+]
+
+// Espelha a lista fixa de disciplinas de src/pages/register-teacher.html — nomes
+// exactos (não texto livre) para que "subjects" case com o resto do sistema
+// (currículo, filtros de conteúdo) em vez de variações ortográficas por professor.
+const SUBJECTS = [
+  'Matemática', 'Física', 'Química', 'Biologia', 'Ciências Naturais',
+  'Português', 'Literatura', 'História', 'Geografia', 'Filosofia',
+  'Inglês', 'Francês',
+  'Informática', 'Empreendedorismo', 'Educação Física', 'Artes Visuais',
+  'Economia', 'Contabilidade',
 ]
 
 interface DocState {
@@ -105,8 +118,36 @@ function DocumentUploader({
   )
 }
 
+function ConsentCheckbox({ checked, onToggle, label }: { checked: boolean; onToggle: () => void; label: string }) {
+  return (
+    <Pressable
+      style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}
+      onPress={onToggle}
+    >
+      <View
+        style={{
+          width: 20,
+          height: 20,
+          borderRadius: 4,
+          borderWidth: 1.5,
+          borderColor: checked ? colors.navy950 : colors.border,
+          backgroundColor: checked ? colors.navy950 : colors.surface,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginTop: 1,
+        }}
+      >
+        {checked ? <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>✓</Text> : null}
+      </View>
+      <Text style={{ flex: 1, fontSize: 13, color: colors.textMuted }}>{label}</Text>
+    </Pressable>
+  )
+}
+
 export default function RegisterTeacherScreen() {
   const [countries, setCountries] = useState<CurriculumCountry[]>([])
+  const [countriesLoading, setCountriesLoading] = useState(true)
+  const [countriesError, setCountriesError] = useState('')
 
   // Dados pessoais
   const [fullName, setFullName] = useState('')
@@ -124,18 +165,22 @@ export default function RegisterTeacherScreen() {
   const [institution, setInstitution] = useState('')
   const [graduationYear, setGraduationYear] = useState('')
   const [hasTeachingCert, setHasTeachingCert] = useState<boolean>()
+  const [teachingCertType, setTeachingCertType] = useState('')
 
   // Experiência
   const [yearsExperience, setYearsExperience] = useState('')
   const [currentSchool, setCurrentSchool] = useState('')
   const [teachingLevels, setTeachingLevels] = useState<TeachingLevel[]>([])
-  const [subjectsText, setSubjectsText] = useState('')
+  const [subjects, setSubjects] = useState<string[]>([])
+  const [subjectsOther, setSubjectsOther] = useState('')
 
   // Motivação e referências
   const [motivationLetter, setMotivationLetter] = useState('')
   const [ref1Name, setRef1Name] = useState('')
   const [ref1Phone, setRef1Phone] = useState('')
   const [ref1Role, setRef1Role] = useState('')
+  const [ref2Name, setRef2Name] = useState('')
+  const [ref2Phone, setRef2Phone] = useState('')
 
   // Competências digitais
   const [digitalLiteracy, setDigitalLiteracy] = useState<DigitalLiteracy>()
@@ -146,6 +191,11 @@ export default function RegisterTeacherScreen() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
 
+  // Termos — apenas validados no cliente (não persistidos no schema do backend)
+  const [acceptTerms, setAcceptTerms] = useState(false)
+  const [acceptAccuracy, setAcceptAccuracy] = useState(false)
+  const [acceptVerification, setAcceptVerification] = useState(false)
+
   // Documentos
   const [cvDoc, setCvDoc] = useState<DocState>({ link: '', uploading: false })
   const [certDoc, setCertDoc] = useState<DocState>({ link: '', uploading: false })
@@ -154,18 +204,33 @@ export default function RegisterTeacherScreen() {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
 
+  const loadCountries = () => {
+    setCountriesLoading(true)
+    setCountriesError('')
+    fetchCountries()
+      .then(setCountries)
+      .catch((e) => setCountriesError(e instanceof ApiError ? e.message : 'Não foi possível carregar a lista de países.'))
+      .finally(() => setCountriesLoading(false))
+  }
+
   useEffect(() => {
-    fetchCountries().then(setCountries).catch(() => setCountries([]))
+    loadCountries()
   }, [])
 
   function toggleTeachingLevel(level: TeachingLevel) {
     setTeachingLevels((prev) => (prev.includes(level) ? prev.filter((l) => l !== level) : [...prev, level]))
   }
 
+  function toggleSubject(subject: string) {
+    setSubjects((prev) => {
+      if (prev.includes(subject)) return prev.filter((s) => s !== subject)
+      if (prev.length >= 5) return prev
+      return [...prev, subject]
+    })
+  }
+
   async function handleSubmit() {
     setError('')
-
-    const subjects = subjectsText.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 5)
 
     if (!fullName.trim() || fullName.trim().length < 5) return setError('Nome completo obrigatório (mín. 5 caracteres).')
     if (!email.trim()) return setError('Email obrigatório.')
@@ -184,7 +249,7 @@ export default function RegisterTeacherScreen() {
     const yrsExp = parseInt(yearsExperience, 10)
     if (isNaN(yrsExp) || yrsExp < 0) return setError('Anos de experiência inválidos.')
     if (teachingLevels.length === 0) return setError('Selecciona pelo menos um nível de ensino.')
-    if (subjects.length === 0) return setError('Indica pelo menos uma disciplina (separadas por vírgula).')
+    if (subjects.length === 0) return setError('Selecciona pelo menos uma disciplina.')
     if (motivationLetter.trim().length < 200) return setError(`Carta de motivação deve ter pelo menos 200 caracteres (tens ${motivationLetter.trim().length}).`)
     if (motivationLetter.trim().length > 500) return setError('Carta de motivação deve ter no máximo 500 caracteres.')
     if (!ref1Name.trim() || !ref1Phone.trim() || !ref1Role.trim()) return setError('Preenche os dados da referência profissional.')
@@ -194,6 +259,7 @@ export default function RegisterTeacherScreen() {
     if (password !== confirmPassword) return setError('As senhas não coincidem.')
     if (!cvDoc.storagePath && !cvDoc.link.trim()) return setError('Currículo obrigatório — carrega um ficheiro ou cola um link.')
     if (!certDoc.storagePath && !certDoc.link.trim()) return setError('Certificado de habilitações obrigatório — carrega um ficheiro ou cola um link.')
+    if (!acceptTerms || !acceptAccuracy || !acceptVerification) return setError('Deve aceitar todos os termos para continuar.')
 
     setLoading(true)
     try {
@@ -211,14 +277,18 @@ export default function RegisterTeacherScreen() {
         institution: institution.trim(),
         graduation_year: gradYear,
         has_teaching_cert: hasTeachingCert,
+        teaching_cert_type: hasTeachingCert ? teachingCertType.trim() || undefined : undefined,
         years_experience: yrsExp,
         current_school: currentSchool.trim() || undefined,
         teaching_levels: teachingLevels,
         subjects,
+        subjects_other: subjectsOther.trim() || undefined,
         motivation_letter: motivationLetter.trim(),
         reference_1_name: ref1Name.trim(),
         reference_1_phone: ref1Phone.trim(),
         reference_1_role: ref1Role.trim(),
+        reference_2_name: ref2Name.trim() || undefined,
+        reference_2_phone: ref2Phone.trim() || undefined,
         digital_literacy: digitalLiteracy,
         has_computer: hasComputer,
         has_internet: hasInternet,
@@ -272,12 +342,18 @@ export default function RegisterTeacherScreen() {
       <Field label="Data de nascimento (AAAA-MM-DD)" placeholder="1990-05-20" value={birthDate} onChangeText={setBirthDate} />
       <Field label="Número do BI / Cartão de Cidadão" value={nationalId} onChangeText={setNationalId} />
       <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 6 }}>País</Text>
-      <ChipSelect
-        options={countries.map((c) => c.id)}
-        value={countryId}
-        onChange={setCountryId}
-        labels={Object.fromEntries(countries.map((c) => [c.id, `${c.flag} ${c.name}`]))}
-      />
+      {countriesLoading ? (
+        <LoadingState label="A carregar países…" />
+      ) : countriesError ? (
+        <ErrorState message={countriesError} onRetry={loadCountries} />
+      ) : (
+        <ChipSelect
+          options={countries.map((c) => c.id)}
+          value={countryId}
+          onChange={setCountryId}
+          labels={Object.fromEntries(countries.map((c) => [c.id, `${c.flag} ${c.name}`]))}
+        />
+      )}
       <View style={{ height: 12 }} />
       <Field label="Província" value={province} onChangeText={setProvince} />
       <Field label="Cidade" value={city} onChangeText={setCity} />
@@ -291,6 +367,15 @@ export default function RegisterTeacherScreen() {
       <Field label="Ano de conclusão" keyboardType="number-pad" value={graduationYear} onChangeText={setGraduationYear} />
       <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 6 }}>Tens certificado de habilitação para o ensino?</Text>
       <ChipSelect options={['sim', 'nao']} value={hasTeachingCert === undefined ? undefined : hasTeachingCert ? 'sim' : 'nao'} onChange={(v) => setHasTeachingCert(v === 'sim')} labels={{ sim: 'Sim', nao: 'Não' }} />
+      {hasTeachingCert ? (
+        <Field
+          label="Tipo/Nome do certificado"
+          placeholder="Ex: CFPEF, INIDE, Certificação UNESCO..."
+          value={teachingCertType}
+          onChangeText={setTeachingCertType}
+          style={{ marginTop: 12 }}
+        />
+      ) : null}
 
       <View style={{ height: 20 }} />
       <H2>Experiência</H2>
@@ -319,11 +404,38 @@ export default function RegisterTeacherScreen() {
           </Text>
         ))}
       </View>
+      <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 6 }}>
+        Disciplinas que lecciona ({subjects.length}/5)
+      </Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+        {SUBJECTS.map((s) => {
+          const active = subjects.includes(s)
+          return (
+            <Text
+              key={s}
+              onPress={() => toggleSubject(s)}
+              style={{
+                paddingHorizontal: 12,
+                paddingVertical: 7,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: active ? colors.navy950 : colors.surface,
+                color: active ? '#fff' : colors.text,
+                fontWeight: '600',
+                fontSize: 12,
+                overflow: 'hidden',
+              }}
+            >
+              {s}
+            </Text>
+          )
+        })}
+      </View>
       <Field
-        label="Disciplinas (separadas por vírgula, máx. 5)"
-        placeholder="Matemática, Física"
-        value={subjectsText}
-        onChangeText={setSubjectsText}
+        label="Outra disciplina não listada (opcional)"
+        value={subjectsOther}
+        onChangeText={setSubjectsOther}
       />
 
       <H2>Motivação e referências</H2>
@@ -338,6 +450,8 @@ export default function RegisterTeacherScreen() {
       <Field label="Nome da referência profissional" value={ref1Name} onChangeText={setRef1Name} />
       <Field label="Telefone da referência" keyboardType="phone-pad" value={ref1Phone} onChangeText={setRef1Phone} />
       <Field label="Cargo/relação da referência" placeholder="Ex: Director da escola" value={ref1Role} onChangeText={setRef1Role} />
+      <Field label="2ª referência — Nome (opcional, mas valorizado)" value={ref2Name} onChangeText={setRef2Name} />
+      <Field label="2ª referência — Telefone (opcional)" keyboardType="phone-pad" value={ref2Phone} onChangeText={setRef2Phone} />
 
       <H2>Competências digitais</H2>
       <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 6 }}>Literacia digital</Text>
@@ -364,7 +478,24 @@ export default function RegisterTeacherScreen() {
       <PasswordField label="Senha" value={password} onChangeText={setPassword} />
       <PasswordField label="Confirmar senha" value={confirmPassword} onChangeText={setConfirmPassword} />
 
-      {error ? <Text style={{ color: colors.danger, marginBottom: 12, fontSize: 13 }}>{error}</Text> : null}
+      <View style={{ height: 8 }} />
+      <ConsentCheckbox
+        checked={acceptTerms}
+        onToggle={() => setAcceptTerms((v) => !v)}
+        label="Aceito os Termos de Uso e a Política de Privacidade da VClass"
+      />
+      <ConsentCheckbox
+        checked={acceptAccuracy}
+        onToggle={() => setAcceptAccuracy((v) => !v)}
+        label="Declaro que todas as informações fornecidas são verídicas e assumo responsabilidade pela sua veracidade"
+      />
+      <ConsentCheckbox
+        checked={acceptVerification}
+        onToggle={() => setAcceptVerification((v) => !v)}
+        label="Autorizo a VClass a contactar as referências profissionais indicadas para efeitos de verificação"
+      />
+
+      {error ? <Text style={{ color: colors.danger, marginTop: 12, marginBottom: 12, fontSize: 13 }}>{error}</Text> : null}
 
       <Button title="Enviar candidatura" onPress={handleSubmit} loading={loading} />
 

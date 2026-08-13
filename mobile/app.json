@@ -17,7 +17,7 @@
       "expo-secure-store"
     ],
     "extra": {
-      "apiBaseUrl": "http://localhost:3000",
+      "apiBaseUrl": "https://vclass.co.mz",
       "router": {},
       "eas": {
         "projectId": "57f9e26b-4b4b-47dc-8b08-b3397ac29c84"

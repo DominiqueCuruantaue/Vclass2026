@@ -102,12 +102,28 @@ export async function apiRequest<T = any>(path: string, opts: RequestOptions = {
     })
   }
 
-  let res = await doFetch(accessToken)
+  let res: Response
+  try {
+    res = await doFetch(accessToken)
+  } catch (e) {
+    // fetch() rejeita (sem lançar Response) em falhas de rede/DNS/TLS — sem isto
+    // o erro escapa como Error genérico e os ecrãs mostram uma mensagem vaga
+    // em vez do problema real (ex: API_BASE_URL inatingível a partir do dispositivo).
+    const detail = e instanceof Error ? e.message : String(e)
+    throw new ApiError(`Não foi possível ligar a ${API_BASE_URL}. Verifica a tua ligação à internet. (${detail})`, 0)
+  }
 
   // Access token expirado — tenta renovar uma vez e repete o pedido.
   if (res.status === 401 && auth) {
     const newToken = await refreshAccessToken()
-    if (newToken) res = await doFetch(newToken)
+    if (newToken) {
+      try {
+        res = await doFetch(newToken)
+      } catch (e) {
+        const detail = e instanceof Error ? e.message : String(e)
+        throw new ApiError(`Não foi possível ligar a ${API_BASE_URL}. Verifica a tua ligação à internet. (${detail})`, 0)
+      }
+    }
   }
 
   let json: ApiResponse<T>
