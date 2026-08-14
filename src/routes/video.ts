@@ -25,11 +25,15 @@ video.use('/*', async (c, next) => {
 
 // ── Helpers ─────────────────────────────────────────────────
 
-// ── Secret padrão (substitua por env var VIDEO_SECRET em produção) ──────────
-const DEFAULT_VIDEO_SECRET = 'VCLASS_VIDEO_SECRET_2024_CHANGE_IN_PROD'
-
+// Sem fallback: um secret hardcoded e público no repositório anularia a
+// protecção HMAC (qualquer pessoa poderia forjar tokens de acesso a vídeo).
+// Falha alto e claro em vez de aceitar silenciosamente tokens forjados.
 function getVideoSecret(env?: Record<string, string>): string {
-  return env?.VIDEO_SECRET || DEFAULT_VIDEO_SECRET
+  const secret = env?.VIDEO_SECRET
+  if (!secret || secret.length < 32) {
+    throw new Error('VIDEO_SECRET not configured (must be set as Cloudflare secret with ≥32 chars)')
+  }
+  return secret
 }
 
 /** Gera um token de acesso ao vídeo assinado com HMAC-SHA256 */

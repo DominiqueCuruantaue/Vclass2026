@@ -3,10 +3,13 @@ import bcrypt from 'bcryptjs'
 
 /**
  * Cost target actual.
- * 12 rounds em 2026 ≈ ~250ms/hash em hardware típico — bom equilíbrio entre
- * resistência a brute-force offline e UX. Aumentar quando hardware acelerar.
+ * bcryptjs é JS puro (sem binding nativo) — o único disponível no runtime
+ * Cloudflare Workers. Com cost=12 o hash ultrapassava intermitentemente o
+ * limite de CPU do Worker (erro 1102 "exceeded resource limits"), fazendo
+ * login/registo falhar ao acaso. cost=10 mantém resistência forte a
+ * brute-force offline e cabe com margem no limite de CPU do Worker.
  */
-export const SALT_ROUNDS = 12
+export const SALT_ROUNDS = 10
 
 /**
  * Hash com o cost actual.
@@ -36,10 +39,13 @@ export function getHashRounds(hash: string): number | null {
 /**
  * Indica se um hash precisa de re-hash com o cost actual.
  * Usar após login bem-sucedido para migrar hashes antigos.
+ * Compara por diferença (não só "menor que") porque o cost-alvo já baixou
+ * uma vez (12→10, ver SALT_ROUNDS) — hashes antigos mais caros também
+ * precisam de ser regravados, não só os mais baratos.
  */
 export function needsRehash(hash: string): boolean {
   const rounds = getHashRounds(hash)
-  return rounds === null || rounds < SALT_ROUNDS
+  return rounds === null || rounds !== SALT_ROUNDS
 }
 
 /**

@@ -517,7 +517,7 @@ CREATE TABLE IF NOT EXISTS public.teacher_applications (
   country_id       varchar(10)  NOT NULL,
   province         varchar(100) NOT NULL,
   city             varchar(100) NOT NULL,
-  address          text         NOT NULL,
+  address          text,                                          -- opcional desde a migration 027
 
   -- Qualificações académicas
   degree              varchar(20)  NOT NULL CHECK (degree IN ('licenciatura','mestrado','doutoramento','bacharel','outro')),
@@ -547,8 +547,8 @@ CREATE TABLE IF NOT EXISTS public.teacher_applications (
   digital_literacy    varchar(20)  NOT NULL CHECK (digital_literacy IN ('basico','intermedio','avancado')),
   has_computer        boolean      NOT NULL DEFAULT false,
   has_internet        boolean      NOT NULL DEFAULT false,
-  available_hours     integer      NOT NULL CHECK (available_hours BETWEEN 1 AND 40),
-  preferred_schedule  varchar(20)  NOT NULL CHECK (preferred_schedule IN ('manha','tarde','noite','flexivel')),
+  available_hours     integer      CHECK (available_hours BETWEEN 1 AND 40),                                       -- opcional desde a migration 027
+  preferred_schedule  varchar(20)  CHECK (preferred_schedule IN ('manha','tarde','noite','flexivel')),              -- opcional desde a migration 027
 
   -- Credenciais (hash bcrypt da password do candidato — copiada para users.password_hash na aprovação)
   password_hash       varchar(255) NOT NULL,

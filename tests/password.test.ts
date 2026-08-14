@@ -73,8 +73,13 @@ describe('password — progressive rehash', () => {
   })
 
   it('needsRehash flags hashes below SALT_ROUNDS', async () => {
-    const old = await bcrypt.hash('x', 10)
+    const old = await bcrypt.hash('x', SALT_ROUNDS - 2)
     expect(needsRehash(old)).toBe(true)
+  })
+
+  it('needsRehash flags hashes above SALT_ROUNDS (downgrade after a cost reduction)', async () => {
+    const expensive = await bcrypt.hash('x', SALT_ROUNDS + 2)
+    expect(needsRehash(expensive)).toBe(true)
   })
 
   it('needsRehash returns false for hashes at the current cost', async () => {
@@ -86,7 +91,7 @@ describe('password — progressive rehash', () => {
     expect(needsRehash('not-a-hash')).toBe(true)
   })
 
-  it('SALT_ROUNDS is at least 12 (defesa contra brute-force offline)', () => {
-    expect(SALT_ROUNDS).toBeGreaterThanOrEqual(12)
+  it('SALT_ROUNDS is at least 10 (equilíbrio entre brute-force offline e limite de CPU do Worker)', () => {
+    expect(SALT_ROUNDS).toBeGreaterThanOrEqual(10)
   })
 })

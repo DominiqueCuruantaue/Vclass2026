@@ -13,11 +13,17 @@
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://vclass.co.mz"
+      },
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://vclass.co.mz"
+      },
       "android": {
         "buildType": "app-bundle"
       }

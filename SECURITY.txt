@@ -151,15 +151,17 @@ RESTRICTIVE que nega todo o acesso (SELECT/INSERT/UPDATE/DELETE) às roles
   - Upload para o Bunny.net Stream via TUS assinado: o browser recebe
     apenas uma assinatura HMAC com escopo limitado (videoId + expiração),
     NUNCA a master API key do Bunny
-  - GAP CONHECIDO: existe um fallback hardcoded
+  - [CORRIGIDO — auditoria mobile, 2026-08-14] O fallback hardcoded
     (`DEFAULT_VIDEO_SECRET = 'VCLASS_VIDEO_SECRET_2024_CHANGE_IN_PROD'`)
-    usado se a env var `VIDEO_SECRET` não estiver configurada. Ao contrário
-    do JWT_SECRET (que falha explicitamente se ausente/curto via
-    `requireSecret`), o VIDEO_SECRET falha silenciosamente para um valor
-    público e previsível. RECOMENDAÇÃO: aplicar o mesmo padrão de
-    `requireSecret` (falhar em vez de usar fallback) antes de ir para
-    produção — já documentado como obrigatório em `wrangler.jsonc`
-    ("VIDEO_SECRET, ≥32 chars"), mas não é enforced em runtime.
+    foi removido. `getVideoSecret()` agora usa o mesmo padrão de
+    `requireSecret` do JWT_SECRET: lança erro (500 tratado pelas rotas)
+    se `VIDEO_SECRET` estiver ausente ou tiver menos de 32 caracteres, em
+    vez de aceitar silenciosamente tokens forjados com um segredo público.
+    AÇÃO NECESSÁRIA ANTES DO DEPLOY: confirmar que `VIDEO_SECRET`
+    (≥32 chars aleatórios) está configurado como secret no Cloudflare
+    Pages do projecto — caso contrário, `/api/video/token` e as rotas de
+    streaming passam a devolver 500 (falha alto e claro, em vez de
+    vulnerabilidade silenciosa).
 
 2.7 Validação de entrada
 ----------------------------------------
@@ -242,13 +244,92 @@ RESTRICTIVE que nega todo o acesso (SELECT/INSERT/UPDATE/DELETE) às roles
   - Master API key do Bunny nunca sai do backend
 
 ================================================================================
-5. RESUMO DE LACUNAS CONHECIDAS (estado actual)
+5. CAMADA MOBILE (Expo/React Native — mobile/)
+================================================================================
+Auditoria de segurança mínima para testes reais (2026-08-14). App cobre
+apenas os papéis Estudante e Professor; fala exclusivamente com a mesma
+API Hono do backend web (nenhum acesso directo ao Supabase).
+
+5.1 Autenticação e sessão
+----------------------------------------
+  - Access token guardado com `expo-secure-store` (Keychain/Keystore) —
+    nunca em AsyncStorage. Na web (Expo Web), cai para `localStorage`,
+    mesmo padrão já usado pelo frontend web principal (`public/static/app.js`).
+  - Password NUNCA persistida no dispositivo — só enviada uma vez no
+    pedido de login/registo, por HTTPS.
+  - Refresh token vive apenas num cookie HttpOnly+Secure+SameSite=Strict
+    definido pelo backend (`src/routes/auth.ts`) — o app nunca lê nem
+    guarda o refresh token directamente; o RN mantém o cookie jar nativo.
+  - Renovação automática: 401 → `POST /api/auth/refresh` (via cookie) →
+    novo access token → repete o pedido original uma vez
+    (`mobile/src/api/client.ts`).
+  - Logout chama `/api/auth/logout` (revoga o refresh token no servidor)
+    e limpa o access token do SecureStore/localStorage.
+  - Rotas protegidas por layout: `app/(student)/_layout.tsx` e
+    `app/(teacher)/_layout.tsx` redirecionam para `/(auth)/login` se não
+    houver utilizador autenticado, e para `/` se o papel não corresponder
+    — não é possível chegar a um ecrã protegido só navegando pela URL/rota.
+
+5.2 Comunicação com a API
+----------------------------------------
+  - `API_BASE_URL` por defeito aponta para `https://vclass.co.mz`
+    (`app.json → extra.apiBaseUrl`) — só usa HTTP em desenvolvimento local
+    (`.env`, não commitado).
+  - Nenhuma secret/API key/credencial de backend no código do app —
+    verificado por busca em `mobile/src` e `mobile/app`.
+  - Respostas validadas (`res.ok && json.success`) antes de usar `json.data`;
+    erros de auth/autorização (401/403) tratados via `ApiError` com
+    mensagem amigável, sem expor detalhes internos.
+  - [CORRIGIDO] `mobile/eas.json` não fixava `EXPO_PUBLIC_API_URL` para os
+    perfis `preview`/`production` — um `.env` local de desenvolvimento
+    (`EXPO_PUBLIC_API_URL=http://localhost:...`) presente na máquina de
+    quem executa `eas build` teria prioridade sobre o valor seguro do
+    `app.json` e seria embutido no APK/bundle final. Corrigido fixando
+    `EXPO_PUBLIC_API_URL=https://vclass.co.mz` directamente nos perfis
+    `preview` e `production` do `eas.json` (mecanismo oficial do EAS).
+  - [CORRIGIDO] `mobile/.gitignore` só ignorava `.env*.local`, não o
+    `.env` simples (já coberto pelo `.gitignore` da raiz do monorepo, mas
+    não pelo do subprojecto `mobile/`, que é o que o EAS CLI considera).
+
+5.3 Autorização
+----------------------------------------
+  - Nenhuma decisão de permissão é tomada só no cliente: todas as rotas
+    chamadas pelo app (`mobile/src/api/*.ts`) são as mesmas rotas Hono do
+    backend, que revalidam o JWT e o papel do utilizador
+    (`authMiddleware`/`requireRole`) e filtram sempre por
+    `user.id`/`created_by` do lado do servidor (ver secção 2.3).
+
+5.4 Logs e código
+----------------------------------------
+  - Sem `console.log/warn/error` no código do app que exponha tokens,
+    senhas ou dados pessoais (verificado por busca em todo `mobile/src`
+    e `mobile/app`).
+  - Sem secrets hardcoded no código do app (verificado por busca).
+
+5.5 Lacunas remanescentes (não corrigíveis só no app)
+----------------------------------------
+  - O papel de staff (admin/editor/país/financeiro/moderador/suporte) não
+    tem painel mobile por desenho — utilizadores com esses papéis vêem um
+    ecrã "staff-unsupported" (comportamento intencional, não é bug).
+  - Nenhuma decisão de segurança nova depende de RLS diferente da já
+    documentada na secção 1.2 — o app não introduz nenhum acesso novo ao
+    Supabase.
+
+================================================================================
+6. RESUMO DE LACUNAS CONHECIDAS (estado actual)
 ================================================================================
   [CORRIGIDO]  RLS ausente/morto em 12 tabelas          → migration 016
   [CORRIGIDO]  Bug de sintaxe SQL (comentário sem abertura,
                migration 011, PARTE 1) — quebraria a criação do banco
-  [PENDENTE]   VIDEO_SECRET com fallback hardcoded em vez de falhar
-               explicitamente quando ausente (src/routes/video.ts)
+  [CORRIGIDO]  VIDEO_SECRET com fallback hardcoded em vez de falhar
+               explicitamente quando ausente (src/routes/video.ts) —
+               ver secção 2.6
+  [CORRIGIDO]  mobile/eas.json sem EXPO_PUBLIC_API_URL fixo em
+               preview/production — ver secção 5.2
+  [AÇÃO NECESSÁRIA ANTES DO DEPLOY] Confirmar `VIDEO_SECRET` (≥32 chars)
+               configurado como Cloudflare secret em produção — sem isto,
+               streaming de vídeo (web e mobile) devolve 500 até ser
+               configurado.
   [A CONFIRMAR] JWT_SECRET e demais segredos de produção devem ser
                rodados (novos valores) ao migrar para a nova conta Supabase,
                já que a conta antiga foi comprometida (senha perdida)
