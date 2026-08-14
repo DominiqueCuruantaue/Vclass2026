@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Linking, Text, TouchableOpacity, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { Badge, Button, Card, ErrorState, H2, LoadingState, Muted, Screen } from '../../../src/components/ui'
+import { Badge, Button, Card, ErrorState, H2, LoadingState, Muted, Screen, SubjectDot } from '../../../src/components/ui'
 import { colors } from '../../../src/theme/colors'
 import { fetchLibraryItem, registerLibraryDownload, type LibraryItem } from '../../../src/api/library'
 import { ApiError } from '../../../src/api/client'
@@ -32,8 +32,14 @@ export default function LibraryItemScreen() {
 
   return (
     <Screen>
-      <Text style={{ fontSize: 20, fontWeight: '800', color: colors.navy950, marginBottom: 6 }}>{item.title}</Text>
-      {item.author ? <Muted style={{ marginBottom: 12 }}>Por {item.author}</Muted> : null}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+        <SubjectDot color={item.subjects?.color} label={item.subjects?.name || item.title} size={44} />
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 20, fontWeight: '800', color: colors.navy950 }}>{item.title}</Text>
+          {item.subjects?.name ? <Muted>{item.subjects.name}</Muted> : null}
+          {item.author ? <Muted>Por {item.author}</Muted> : null}
+        </View>
+      </View>
 
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
         {item.pages ? <Badge text={`${item.pages} páginas`} /> : null}

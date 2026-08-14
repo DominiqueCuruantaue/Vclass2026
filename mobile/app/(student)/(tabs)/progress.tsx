@@ -1,8 +1,8 @@
 import React, { useCallback, useState } from 'react'
 import { RefreshControl, Text, TouchableOpacity, View } from 'react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
-import { Button, Card, EmptyState, ErrorState, H1, H2, LoadingState, Muted, ProgressBar, Screen } from '../../../src/components/ui'
-import { colors } from '../../../src/theme/colors'
+import { Button, Card, EmptyState, ErrorState, H1, H2, LoadingState, Muted, ProgressBar, Screen, SubjectDot } from '../../../src/components/ui'
+import { colors, FALLBACK_SUBJECT_COLOR } from '../../../src/theme/colors'
 import { fetchDashboard, fetchRecommendations, type DashboardData } from '../../../src/api/progress'
 import { ApiError } from '../../../src/api/client'
 import type { Lesson } from '@shared/types'
@@ -51,11 +51,14 @@ export default function ProgressScreen() {
         <Card>
           {data.subjectProgress.map((s: any, i: number) => (
             <View key={i} style={{ marginBottom: i === data.subjectProgress.length - 1 ? 0 : 16 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                <Text style={{ fontWeight: '600', color: colors.text }}>{s.subject_name || s.name || 'Disciplina'}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                  <SubjectDot color={s.subject_color} label={s.subject_name || s.name || 'Disciplina'} size={24} />
+                  <Text style={{ fontWeight: '600', color: colors.text }}>{s.subject_name || s.name || 'Disciplina'}</Text>
+                </View>
                 <Muted>{s.progress_percent ?? 0}%</Muted>
               </View>
-              <ProgressBar percent={s.progress_percent ?? 0} />
+              <ProgressBar percent={s.progress_percent ?? 0} color={s.subject_color || FALLBACK_SUBJECT_COLOR} />
             </View>
           ))}
         </Card>

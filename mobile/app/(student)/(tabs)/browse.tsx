@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { Text, TouchableOpacity, View } from 'react-native'
 import { useRouter } from 'expo-router'
-import { Badge, Card, EmptyState, ErrorState, H1, LoadingState, Muted, Screen } from '../../../src/components/ui'
-import { colors } from '../../../src/theme/colors'
+import { Badge, Card, EmptyState, ErrorState, H1, LoadingState, Muted, Screen, SubjectDot } from '../../../src/components/ui'
+import { colors, FALLBACK_SUBJECT_COLOR } from '../../../src/theme/colors'
 import {
   fetchContentCountries,
   fetchEducationSystems,
@@ -20,6 +20,7 @@ interface Crumb {
   step: Step
   id: string
   label: string
+  color?: string
 }
 
 export default function BrowseScreen() {
@@ -60,7 +61,7 @@ export default function BrowseScreen() {
     }
   }
 
-  function goInto(id: string, label: string) {
+  function goInto(id: string, label: string, color?: string) {
     const nextStep: Record<Step, Step> = {
       country: 'system',
       system: 'grade',
@@ -69,9 +70,14 @@ export default function BrowseScreen() {
       chapter: 'lessons',
       lessons: 'lessons',
     }
-    setPath((p) => [...p, { step, id, label }])
+    setPath((p) => [...p, { step, id, label, color }])
     setStep(nextStep[step])
   }
+
+  // Cor da disciplina seleccionada (passo 'subject' no caminho) — usada para dar
+  // um acento visual consistente aos capítulos/lições dessa disciplina, tal como
+  // no web cada disciplina mantém a sua cor ao longo da navegação.
+  const activeSubjectColor = path.find((c) => c.step === 'subject')?.color
 
   function goBack(index: number) {
     // index = -1 significa voltar à raiz (países)
@@ -106,7 +112,7 @@ export default function BrowseScreen() {
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 8, marginBottom: 16 }}>
         <Crumb label="Países" active={path.length === 0} onPress={() => goBack(-1)} />
         {path.map((c, i) => (
-          <Crumb key={i} label={c.label} active={i === path.length - 1} onPress={() => goBack(i)} />
+          <Crumb key={i} label={c.label} active={i === path.length - 1} color={c.color} onPress={() => goBack(i)} />
         ))}
       </View>
 
@@ -119,7 +125,7 @@ export default function BrowseScreen() {
       ) : step === 'lessons' ? (
         (items as Lesson[]).map((lesson) => (
           <TouchableOpacity key={lesson.id} onPress={() => selectLesson(lesson)}>
-            <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, borderLeftWidth: 4, borderLeftColor: activeSubjectColor || FALLBACK_SUBJECT_COLOR }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontWeight: '700', color: colors.text }}>{lesson.title}</Text>
                 {lesson.description ? <Muted numberOfLines={2}>{lesson.description}</Muted> : null}
@@ -130,12 +136,25 @@ export default function BrowseScreen() {
         ))
       ) : (
         items.map((item) => (
-          <TouchableOpacity key={itemIdKey(item)} onPress={() => goInto(itemIdKey(item), itemLabel(item))}>
-            <Card style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={{ fontWeight: '700', color: colors.text, fontSize: 15 }}>
-                {item.flag ? `${item.flag} ` : ''}
-                {itemLabel(item)}
-              </Text>
+          <TouchableOpacity
+            key={itemIdKey(item)}
+            onPress={() => goInto(itemIdKey(item), itemLabel(item), step === 'subject' ? item.color : activeSubjectColor)}
+          >
+            <Card
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                ...(step === 'chapter' ? { borderLeftWidth: 4, borderLeftColor: activeSubjectColor || FALLBACK_SUBJECT_COLOR } : null),
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                {step === 'subject' ? <SubjectDot color={item.color} label={itemLabel(item)} size={36} /> : null}
+                <Text style={{ fontWeight: '700', color: colors.text, fontSize: 15, flex: 1 }}>
+                  {item.flag ? `${item.flag} ` : ''}
+                  {itemLabel(item)}
+                </Text>
+              </View>
               <Text style={{ color: colors.textFaint }}>›</Text>
             </Card>
           </TouchableOpacity>
@@ -145,7 +164,7 @@ export default function BrowseScreen() {
   )
 }
 
-function Crumb({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+function Crumb({ label, active, color, onPress }: { label: string; active: boolean; color?: string; onPress: () => void }) {
   return (
     <TouchableOpacity onPress={onPress} style={{ marginRight: 6, marginBottom: 6 }}>
       <View
@@ -153,7 +172,7 @@ function Crumb({ label, active, onPress }: { label: string; active: boolean; onP
           paddingHorizontal: 10,
           paddingVertical: 5,
           borderRadius: 999,
-          backgroundColor: active ? colors.navy950 : '#f1f5f9',
+          backgroundColor: active ? color || colors.navy950 : '#f1f5f9',
         }}
       >
         <Text style={{ fontSize: 12, fontWeight: '600', color: active ? '#fff' : colors.textMuted }}>{label}</Text>

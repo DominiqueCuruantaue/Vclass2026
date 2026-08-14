@@ -13,7 +13,7 @@ import {
   ViewStyle,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { colors, radius } from '../theme/colors'
+import { colors, radius, FALLBACK_SUBJECT_COLOR } from '../theme/colors'
 
 // ── Layout ───────────────────────────────────────────────────────────────────
 export function Screen({
@@ -234,6 +234,28 @@ export function Badge({ text, tone = 'default' }: { text: string; tone?: 'defaul
   return (
     <View style={[styles.badge, { backgroundColor: toneColor.bg }]}>
       <Text style={{ color: toneColor.fg, fontSize: 12, fontWeight: '700' }}>{text}</Text>
+    </View>
+  )
+}
+
+// Indicador colorido de disciplina/categoria (mesma cor vinda da BD que o
+// web usa em browse.html/library.html) — círculo cheio com a inicial do nome.
+export function SubjectDot({ color, label, size = 40 }: { color?: string; label?: string; size?: number }) {
+  const c = color || FALLBACK_SUBJECT_COLOR
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: c,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Text style={{ color: '#fff', fontWeight: '800', fontSize: size * 0.42 }}>
+        {(label || '?').trim().charAt(0).toUpperCase()}
+      </Text>
     </View>
   )
 }

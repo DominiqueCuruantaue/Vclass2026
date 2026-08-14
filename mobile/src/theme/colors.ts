@@ -21,3 +21,18 @@ export const colors = {
 
 export const radius = { sm: 8, md: 12, lg: 16, xl: 24, pill: 999 } as const
 export const spacing = (n: number) => n * 4
+
+// Cor de fallback para disciplinas sem `color` definido na BD — mesmo valor
+// usado no web (ver subjectIcons em src/pages/browse.html).
+export const FALLBACK_SUBJECT_COLOR = '#7c3aed'
+
+/** Converte um hex (#rgb ou #rrggbb) em rgba(...) com a opacidade indicada. */
+export function withAlpha(hex: string, alpha: number): string {
+  const clean = (hex || '').replace('#', '')
+  const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean
+  const r = parseInt(full.slice(0, 2), 16)
+  const g = parseInt(full.slice(2, 4), 16)
+  const b = parseInt(full.slice(4, 6), 16)
+  if ([r, g, b].some((n) => Number.isNaN(n))) return hex
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}

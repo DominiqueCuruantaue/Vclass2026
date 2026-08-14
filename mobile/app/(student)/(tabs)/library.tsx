@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { Text, TouchableOpacity, View } from 'react-native'
 import { useRouter } from 'expo-router'
-import { ChipSelect, EmptyState, ErrorState, Card, Field, H1, LoadingState, Muted, Screen } from '../../../src/components/ui'
-import { colors } from '../../../src/theme/colors'
+import { ChipSelect, EmptyState, ErrorState, Card, Field, H1, LoadingState, Muted, Screen, SubjectDot } from '../../../src/components/ui'
+import { colors, FALLBACK_SUBJECT_COLOR } from '../../../src/theme/colors'
 import { fetchLibrary, type LibraryItem } from '../../../src/api/library'
 import { ApiError } from '../../../src/api/client'
 
@@ -60,10 +60,19 @@ export default function LibraryScreen() {
       ) : (
         items.map((item) => (
           <TouchableOpacity key={item.id} onPress={() => router.push(`/(student)/library/${item.id}`)}>
-            <Card style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+            <Card
+              style={{
+                flexDirection: 'row',
+                gap: 12,
+                alignItems: 'center',
+                borderLeftWidth: 4,
+                borderLeftColor: item.subjects?.color || FALLBACK_SUBJECT_COLOR,
+              }}
+            >
+              <SubjectDot color={item.subjects?.color} label={item.subjects?.name || item.title} />
               <View style={{ flex: 1 }}>
                 <Text style={{ fontWeight: '700', color: colors.text }}>{item.title}</Text>
-                {item.author ? <Muted>{item.author}</Muted> : null}
+                {item.subjects?.name ? <Muted>{item.subjects.name}</Muted> : item.author ? <Muted>{item.author}</Muted> : null}
                 <Muted style={{ marginTop: 4 }}>{item.downloads_count} downloads</Muted>
               </View>
             </Card>
