@@ -113,7 +113,7 @@
         <!-- Vista 1: Categorias -->
         <div id="view-categories">
             <h2 class="text-xl font-bold text-gray-900 mb-4">Categorias</h2>
-            <div id="category-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8"></div>
+            <div id="category-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"></div>
         </div>
 
         <!-- Vista 2: Classes do currículo (só dentro de "Livros do Ensino Geral") -->
@@ -212,12 +212,12 @@
 
         // ── Categorias ──────────────────────────────────────────────
         const CATEGORIES = [
-            { id: 'ensino_geral',        label: 'Livros do Ensino Geral',       icon: 'fa-graduation-cap', grad: 'from-purple-600 to-indigo-700', cover: '/static/images/library-covers/ensino-geral.jpg' },
-            { id: 'apostilas',           label: 'Apostilas',                    icon: 'fa-file-pdf',       grad: 'from-green-500 to-emerald-700', cover: '/static/images/library-covers/apostilas.jpg' },
-            { id: 'artigos',             label: 'Artigos',                      icon: 'fa-newspaper',      grad: 'from-blue-500 to-cyan-700',     cover: '/static/images/library-covers/artigos.jpg' },
-            { id: 'educacao_financeira', label: 'Livros sobre Educação Financeira', icon: 'fa-coins',       grad: 'from-amber-500 to-orange-600', cover: '/static/images/library-covers/educacao-financeira.jpg' },
-            { id: 'empreendedorismo',    label: 'Livros sobre Empreendedorismo',icon: 'fa-lightbulb',      grad: 'from-rose-500 to-pink-700',     cover: '/static/images/library-covers/empreendedorismo.jpg' },
-            { id: 'obras_poemas',        label: 'Obras e Poemas',               icon: 'fa-feather',        grad: 'from-fuchsia-500 to-purple-700', cover: '/static/images/library-covers/obras-poemas.jpg' },
+            { id: 'ensino_geral',        label: 'Livros do Ensino Geral',       icon: 'fa-graduation-cap', grad: 'from-purple-600 to-indigo-700', color: '#7c3aed', cover: '/static/images/library-covers/ensino-geral.jpg' },
+            { id: 'apostilas',           label: 'Apostilas',                    icon: 'fa-file-pdf',       grad: 'from-green-500 to-emerald-700', color: '#10b981', cover: '/static/images/library-covers/apostilas.jpg' },
+            { id: 'artigos',             label: 'Artigos',                      icon: 'fa-newspaper',      grad: 'from-blue-500 to-cyan-700',     color: '#3b82f6', cover: '/static/images/library-covers/artigos.jpg' },
+            { id: 'educacao_financeira', label: 'Livros sobre Educação Financeira', icon: 'fa-coins',       grad: 'from-amber-500 to-orange-600', color: '#f59e0b', cover: '/static/images/library-covers/educacao-financeira.jpg' },
+            { id: 'empreendedorismo',    label: 'Livros sobre Empreendedorismo',icon: 'fa-lightbulb',      grad: 'from-rose-500 to-pink-700',     color: '#f43f5e', cover: '/static/images/library-covers/empreendedorismo.jpg' },
+            { id: 'obras_poemas',        label: 'Obras e Poemas',               icon: 'fa-feather',        grad: 'from-fuchsia-500 to-purple-700', color: '#d946ef', cover: '/static/images/library-covers/obras-poemas.jpg' },
         ];
         const CATEGORY_LABEL = Object.fromEntries(CATEGORIES.map(c => [c.id, c.label]));
 
@@ -415,14 +415,19 @@
             const grid = document.getElementById('category-grid');
             grid.innerHTML = CATEGORIES.map(cat => {
                 const count = ALL_BOOKS.filter(b => b.category === cat.id).length;
-                return `<div class="book-card bg-white rounded-2xl shadow-sm overflow-hidden" onclick="openCategory('${cat.id}')">
-                    <div class="h-28 bg-gradient-to-br ${cat.grad} bg-cover bg-center flex items-center justify-center" style="background-image:url('${cat.cover}')"></div>
-                    <div class="p-5 flex items-center justify-between">
-                        <div>
-                            <h3 class="font-bold text-gray-900 mb-0.5">${cat.label}</h3>
-                            <p class="text-sm text-gray-500">${count} material${count !== 1 ? 'is' : ''}</p>
+                return `<div class="book-card bg-white rounded-2xl shadow overflow-hidden" onclick="openCategory('${cat.id}')">
+                    <div class="h-72 bg-gradient-to-br ${cat.grad} bg-cover bg-center" style="background-image:url('${cat.cover}')"></div>
+                    <div class="p-5">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full text-white" style="background:${cat.color}">${count} material${count !== 1 ? 'is' : ''}</span>
+                            <i class="fas ${cat.icon} text-gray-300"></i>
                         </div>
-                        <i class="fas fa-chevron-right text-gray-300"></i>
+                        <h3 class="font-bold text-gray-900 mb-1 line-clamp-1">${cat.label}</h3>
+                        <p class="text-xs text-gray-500 mb-2">Biblioteca Digital</p>
+                        <div class="flex items-center justify-between text-xs text-gray-400">
+                            <span><i class="fas fa-book mr-1"></i>Explorar categoria</span>
+                            <span><i class="fas fa-chevron-right"></i></span>
+                        </div>
                     </div>
                 </div>`;
             }).join('');
