@@ -45,16 +45,7 @@
         .featured-badge {
             position: absolute; top: 0.75rem; right: 0.75rem; z-index: 10;
         }
-        .category-tab {
-            transition: all 0.2s ease;
-        }
-        .category-tab.active {
-            background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
-            color: white;
-        }
         .star-rating { color: #fbbf24; font-size: 11px; }
-        .filter-badge { transition: all 0.2s; }
-        .filter-badge.active { background: #7c3aed; color: white; }
         .line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
         .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
@@ -86,7 +77,7 @@
                     <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-sm"></i>
                     <input type="text" id="search-input" placeholder="Buscar título, autor ou disciplina..."
                            class="pl-9 pr-4 py-2.5 rounded-lg text-gray-900 text-sm w-64 focus:ring-2 focus:ring-purple-300 focus:outline-none"
-                           oninput="applyFilters()">
+                           oninput="handleSearchInput()">
                 </div>
             </div>
         </div>
@@ -95,18 +86,10 @@
     <div class="container mx-auto px-4 md:px-6 py-8">
 
         <!-- Stats row -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="grid grid-cols-2 gap-4 mb-8">
             <div class="bg-white rounded-xl shadow-sm p-5 flex items-center gap-4">
-                <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center"><i class="fas fa-book text-blue-600 text-xl"></i></div>
-                <div><p class="text-xs text-gray-500">Livros</p><p class="text-2xl font-bold text-gray-900" id="stat-books">—</p></div>
-            </div>
-            <div class="bg-white rounded-xl shadow-sm p-5 flex items-center gap-4">
-                <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center"><i class="fas fa-file-pdf text-green-600 text-xl"></i></div>
-                <div><p class="text-xs text-gray-500">Apostilas</p><p class="text-2xl font-bold text-gray-900" id="stat-handouts">—</p></div>
-            </div>
-            <div class="bg-white rounded-xl shadow-sm p-5 flex items-center gap-4">
-                <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center"><i class="fas fa-tasks text-purple-600 text-xl"></i></div>
-                <div><p class="text-xs text-gray-500">Exercícios</p><p class="text-2xl font-bold text-gray-900" id="stat-exercises">—</p></div>
+                <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center"><i class="fas fa-book-open text-blue-600 text-xl"></i></div>
+                <div><p class="text-xs text-gray-500">Total de materiais</p><p class="text-2xl font-bold text-gray-900" id="stat-total">—</p></div>
             </div>
             <div class="bg-white rounded-xl shadow-sm p-5 flex items-center gap-4">
                 <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center"><i class="fas fa-download text-orange-600 text-xl"></i></div>
@@ -114,51 +97,55 @@
             </div>
         </div>
 
-        <!-- Filters -->
-        <div class="bg-white rounded-xl shadow-sm p-4 mb-6 flex flex-wrap items-center gap-3">
-            <!-- Category tabs -->
-            <div class="flex gap-2 flex-wrap">
-                <button class="category-tab active px-4 py-2 rounded-lg text-sm font-medium" onclick="setCategory('all', this)">
-                    <i class="fas fa-th-large mr-1.5"></i>Todos
-                </button>
-                <button class="category-tab px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600" onclick="setCategory('books', this)">
-                    <i class="fas fa-book mr-1.5"></i>Livros
-                </button>
-                <button class="category-tab px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600" onclick="setCategory('handouts', this)">
-                    <i class="fas fa-file-pdf mr-1.5"></i>Apostilas
-                </button>
-                <button class="category-tab px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600" onclick="setCategory('exercises', this)">
-                    <i class="fas fa-tasks mr-1.5"></i>Exercícios
-                </button>
-            </div>
-            <div class="flex gap-2 ml-auto flex-wrap">
-                <select id="subject-filter" class="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-purple-500 focus:outline-none" onchange="applyFilters()">
-                    <option value="">Todas as Disciplinas</option>
-                </select>
-                <select id="grade-filter" class="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-purple-500 focus:outline-none" onchange="applyFilters()">
-                    <option value="">Todas as Classes</option>
-                </select>
-            </div>
+        <!-- Breadcrumb -->
+        <div id="lib-breadcrumb" class="hidden mb-5">
+            <button onclick="goBack()" class="inline-flex items-center gap-2 text-sm font-semibold text-purple-600 hover:text-purple-800 transition">
+                <i class="fas fa-arrow-left"></i> <span id="lib-breadcrumb-text">Categorias</span>
+            </button>
         </div>
 
-        <!-- Featured -->
+        <!-- Featured (global em Categorias, filtrado dentro de uma categoria/classe) -->
         <div id="featured-section" class="mb-10">
             <h2 class="text-xl font-bold text-gray-900 mb-4"><i class="fas fa-star text-yellow-500 mr-2"></i>Em Destaque</h2>
             <div id="featured-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
         </div>
 
-        <!-- All books -->
-        <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-bold text-gray-900">Todos os Materiais</h2>
-            <span id="books-count" class="text-sm text-gray-500"></span>
+        <!-- Vista 1: Categorias -->
+        <div id="view-categories">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Categorias</h2>
+            <div id="category-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8"></div>
         </div>
-        <div id="books-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-8"></div>
 
-        <!-- Empty state -->
-        <div id="empty-state" class="hidden text-center py-20">
-            <i class="fas fa-search text-6xl text-gray-200 mb-4"></i>
-            <p class="text-xl text-gray-500">Nenhum material encontrado</p>
-            <p class="text-sm text-gray-400 mt-1">Tente ajustar os filtros ou a pesquisa</p>
+        <!-- Vista 2: Classes do currículo (só dentro de "Livros do Ensino Geral") -->
+        <div id="view-grades" class="hidden">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Livros do Ensino Geral — escolhe a tua classe</h2>
+            <div id="grade-notice" class="hidden mb-5 bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl p-4">
+                <i class="fas fa-info-circle mr-2"></i>Define o teu país e classe no perfil para veres os livros organizados pela tua classe.
+            </div>
+            <div id="grade-grid" class="space-y-8"></div>
+        </div>
+
+        <!-- Vista 3: Grelha de materiais (categoria ou classe seleccionada) -->
+        <div id="view-grid" class="hidden">
+            <!-- Filtros -->
+            <div class="bg-white rounded-xl shadow-sm p-4 mb-6 flex flex-wrap items-center justify-end gap-3">
+                <select id="subject-filter" class="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-purple-500 focus:outline-none" onchange="applyFilters()">
+                    <option value="">Todas as Disciplinas</option>
+                </select>
+            </div>
+
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold text-gray-900" id="grid-title">Materiais</h2>
+                <span id="books-count" class="text-sm text-gray-500"></span>
+            </div>
+            <div id="books-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-8"></div>
+
+            <!-- Empty state -->
+            <div id="empty-state" class="hidden text-center py-20">
+                <i class="fas fa-search text-6xl text-gray-200 mb-4"></i>
+                <p class="text-xl text-gray-500">Nenhum material encontrado</p>
+                <p class="text-sm text-gray-400 mt-1">Tente ajustar os filtros ou a pesquisa</p>
+            </div>
         </div>
     </div>
 
@@ -166,6 +153,7 @@
     <div id="book-modal" class="fixed inset-0 z-50 items-center justify-center bg-black/60 backdrop-blur-sm p-4">
         <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
             <div id="modal-cover" class="h-40 flex items-center justify-center relative">
+                <img id="modal-cover-img" class="hidden absolute inset-0 w-full h-full object-cover" alt="">
                 <div id="modal-cover-icon" class="text-5xl text-white/80"></div>
                 <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                 <button onclick="closeModal()" class="absolute top-4 right-4 w-8 h-8 bg-black/40 rounded-full flex items-center justify-center text-white hover:bg-black/60">
@@ -222,6 +210,17 @@
         if (!VClass.isAuthenticated()) window.location.href = '/login.html';
         VClass.initNavbar('library');
 
+        // ── Categorias ──────────────────────────────────────────────
+        const CATEGORIES = [
+            { id: 'ensino_geral',        label: 'Livros do Ensino Geral',       icon: 'fa-graduation-cap', grad: 'from-purple-600 to-indigo-700' },
+            { id: 'apostilas',           label: 'Apostilas',                    icon: 'fa-file-pdf',       grad: 'from-green-500 to-emerald-700' },
+            { id: 'artigos',             label: 'Artigos',                      icon: 'fa-newspaper',      grad: 'from-blue-500 to-cyan-700' },
+            { id: 'educacao_financeira', label: 'Livros sobre Educação Financeira', icon: 'fa-coins',       grad: 'from-amber-500 to-orange-600' },
+            { id: 'empreendedorismo',    label: 'Livros sobre Empreendedorismo',icon: 'fa-lightbulb',      grad: 'from-rose-500 to-pink-700' },
+            { id: 'obras_poemas',        label: 'Obras e Poemas',               icon: 'fa-feather',        grad: 'from-fuchsia-500 to-purple-700' },
+        ];
+        const CATEGORY_LABEL = Object.fromEntries(CATEGORIES.map(c => [c.id, c.label]));
+
         // ── Gradientes por disciplina ──────────────────────────────
         const SUBJECT_STYLES = {
             'Matemática': { grad:'from-purple-600 to-indigo-700', icon:'fa-calculator',   bg:'#7c3aed' },
@@ -238,15 +237,20 @@
         }
 
         // ── Estado global ──────────────────────────────────────────
-        let ALL_BOOKS      = [];   // dados da API
-        let currentCategory = 'all';
-        let activeBook      = null;
+        let ALL_BOOKS       = [];   // dados da API
+        let activeBook       = null;
+        let VIEW              = 'categories'; // categories | grades | grid
+        let currentCategory   = null;         // categoria seleccionada (null = pesquisa global)
+        let currentGradeId    = null;         // curriculum_grade_id seleccionado (só ensino_geral)
+        let isSearchMode      = false;
+        let CURRICULUM_LEVELS = null;         // cache da árvore curricular do país do aluno
+        let CURRICULUM_COUNTRY = null;
+        const CURRENT_USER = VClass.getCurrentUser ? VClass.getCurrentUser() : null;
         const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
 
         // ── Helpers ────────────────────────────────────────────────
         function bookSubject(b) { return b.subjects?.name || b.subject || ''; }
         function bookGrade(b)   { return b.grades?.name   || (b.grade ? b.grade + 'ª Classe' : ''); }
-        function bookGradeId(b) { return b.grade_id || ''; }
         function bookSubjectId(b) { return b.subject_id || ''; }
         function bookDownloads(b) { return b.downloads_count ?? b.downloads ?? 0; }
         function bookPages(b)   { return b.pages || '—'; }
@@ -264,25 +268,22 @@
 
         // ── Stats ──────────────────────────────────────────────────
         function updateStats(books) {
-            document.getElementById('stat-books').textContent     = books.filter(b => b.category === 'books').length;
-            document.getElementById('stat-handouts').textContent  = books.filter(b => b.category === 'handouts').length;
-            document.getElementById('stat-exercises').textContent = books.filter(b => b.category === 'exercises').length;
+            document.getElementById('stat-total').textContent = books.length;
             const total = books.reduce((s, b) => s + bookDownloads(b), 0);
             document.getElementById('stat-downloads').textContent = fmtDownloads(total);
         }
 
         // ── Capa do livro ──────────────────────────────────────────
+        // Quando existe cover_url, a capa real é a imagem principal (bem visível,
+        // sem gradiente por cima) para o aluno reconhecer o livro pela capa — o
+        // gradiente + ícone da disciplina é só o placeholder para quando não há capa.
         function coverHtml(b, tall = false) {
             const subj = bookSubject(b);
             const s    = subStyle(subj);
             const h    = tall ? 'h-72' : 'h-48';
             const escapedId = String(b.id).replace(/'/g, "\\'");
-            return `<div class="book-cover ${h} bg-gradient-to-br ${s.grad} flex flex-col items-center justify-center relative">
-                ${b.cover_url
-                    ? `<img src="${b.cover_url}" alt="" class="absolute inset-0 w-full h-full object-cover opacity-40">`
-                    : ''}
-                <i class="fas ${s.icon} text-5xl text-white/80 mb-2 relative z-10"></i>
-                <p class="text-white font-bold text-sm text-center px-4 line-clamp-2 relative z-10">${b.title}</p>
+
+            const actionsHtml = `
                 <div class="book-actions z-10">
                     <button onclick="event.stopPropagation();viewBook('${escapedId}')"
                         class="px-3 py-2 bg-white text-purple-700 rounded-lg text-sm font-semibold hover:bg-purple-50 transition">
@@ -292,8 +293,26 @@
                         class="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition">
                         <i class="fas fa-download mr-1"></i>Baixar
                     </button>
-                </div>
-                ${b.is_featured || b.featured ? `<div class="featured-badge"><span class="px-2 py-1 bg-yellow-400 text-yellow-900 text-xs font-bold rounded-full shadow"><i class="fas fa-star mr-1"></i>DESTAQUE</span></div>` : ''}
+                </div>`;
+            const featuredBadge = (b.is_featured || b.featured)
+                ? `<div class="featured-badge"><span class="px-2 py-1 bg-yellow-400 text-yellow-900 text-xs font-bold rounded-full shadow"><i class="fas fa-star mr-1"></i>DESTAQUE</span></div>`
+                : '';
+
+            if (b.cover_url) {
+                return `<div class="book-cover ${h} bg-gray-100 relative">
+                    <img src="${b.cover_url}" alt="" class="absolute inset-0 w-full h-full object-cover">
+                    <div class="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/85 via-black/25 to-transparent"></div>
+                    <p class="absolute bottom-3 left-0 right-0 text-white font-bold text-sm text-center px-4 line-clamp-2 z-10">${b.title}</p>
+                    ${actionsHtml}
+                    ${featuredBadge}
+                </div>`;
+            }
+
+            return `<div class="book-cover ${h} bg-gradient-to-br ${s.grad} flex flex-col items-center justify-center relative">
+                <i class="fas ${s.icon} text-5xl text-white/80 mb-2 relative z-10"></i>
+                <p class="text-white font-bold text-sm text-center px-4 line-clamp-2 relative z-10">${b.title}</p>
+                ${actionsHtml}
+                ${featuredBadge}
             </div>`;
         }
 
@@ -311,7 +330,7 @@
                     ${coverHtml(b, true)}
                     <div class="p-5">
                         <div class="flex items-center justify-between mb-2">
-                            <span class="px-2 py-1 text-xs font-semibold rounded-full text-white" style="background:${s.bg}">${subj || '—'}</span>
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full text-white" style="background:${s.bg}">${subj || CATEGORY_LABEL[b.category] || '—'}</span>
                             <span class="text-xs text-gray-400">${bookGrade(b)}</span>
                         </div>
                         <h3 class="font-bold text-gray-900 mb-1 line-clamp-1">${b.title}</h3>
@@ -338,7 +357,7 @@
             grid.innerHTML = nonFeat.map(b => {
                 const subj = bookSubject(b);
                 const s    = subStyle(subj);
-                const catLabel = { books:'Livro', handouts:'Apostila', exercises:'Exercícios' }[b.category] || b.category;
+                const catLabel = CATEGORY_LABEL[b.category] || b.category;
                 return `<div class="book-card bg-white rounded-2xl shadow-sm overflow-hidden" onclick="openModal('${b.id}')">
                     ${coverHtml(b)}
                     <div class="p-4">
@@ -357,19 +376,167 @@
             }).join('');
         }
 
+        // ── Navegação entre vistas ───────────────────────────────────
+        function switchView(view) {
+            VIEW = view;
+            document.getElementById('view-categories').classList.toggle('hidden', view !== 'categories');
+            document.getElementById('view-grades').classList.toggle('hidden', view !== 'grades');
+            document.getElementById('view-grid').classList.toggle('hidden', view !== 'grid');
+            updateBreadcrumb();
+        }
+
+        function updateBreadcrumb() {
+            const bc = document.getElementById('lib-breadcrumb');
+            const txt = document.getElementById('lib-breadcrumb-text');
+            if (VIEW === 'categories') { bc.classList.add('hidden'); return; }
+            bc.classList.remove('hidden');
+            if (VIEW === 'grades') { txt.textContent = 'Categorias'; return; }
+            // VIEW === 'grid'
+            if (!isSearchMode && currentCategory === 'ensino_geral' && currentGradeId) txt.textContent = 'Livros do Ensino Geral';
+            else txt.textContent = 'Categorias';
+        }
+
+        function goBack() {
+            if (VIEW === 'grid' && currentCategory === 'ensino_geral' && currentGradeId && !isSearchMode) { showGrades(); return; }
+            showCategories();
+        }
+
+        function showCategories() {
+            currentCategory = null;
+            currentGradeId  = null;
+            isSearchMode    = false;
+            document.getElementById('search-input').value = '';
+            switchView('categories');
+            renderCategoryCards();
+            renderFeatured(ALL_BOOKS);
+        }
+
+        function renderCategoryCards() {
+            const grid = document.getElementById('category-grid');
+            grid.innerHTML = CATEGORIES.map(cat => {
+                const count = ALL_BOOKS.filter(b => b.category === cat.id).length;
+                return `<div class="book-card bg-white rounded-2xl shadow-sm overflow-hidden" onclick="openCategory('${cat.id}')">
+                    <div class="h-28 bg-gradient-to-br ${cat.grad} flex items-center justify-center">
+                        <i class="fas ${cat.icon} text-4xl text-white/90"></i>
+                    </div>
+                    <div class="p-5 flex items-center justify-between">
+                        <div>
+                            <h3 class="font-bold text-gray-900 mb-0.5">${cat.label}</h3>
+                            <p class="text-sm text-gray-500">${count} material${count !== 1 ? 'is' : ''}</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-gray-300"></i>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function openCategory(catId) {
+            isSearchMode = false;
+            if (catId === 'ensino_geral') { showGrades(); return; }
+            openGrid(catId, null);
+        }
+
+        // ── Vista 2: Classes do currículo ────────────────────────────
+        async function showGrades() {
+            currentCategory = 'ensino_geral';
+            currentGradeId  = null;
+            isSearchMode    = false;
+            switchView('grades');
+            renderFeatured([]);
+
+            const countryId = CURRENT_USER?.country_code || '';
+            const notice = document.getElementById('grade-notice');
+            const grid   = document.getElementById('grade-grid');
+
+            if (!countryId) {
+                notice.classList.remove('hidden');
+                renderUngroupedGradeFallback();
+                return;
+            }
+            notice.classList.add('hidden');
+            grid.innerHTML = '<div class="text-center text-gray-400 py-10"><i class="fas fa-spinner fa-spin mr-2"></i>A carregar classes...</div>';
+
+            try {
+                if (!CURRICULUM_LEVELS || CURRICULUM_COUNTRY !== countryId) {
+                    const res  = await fetch(`/api/curriculum/tree/${countryId}`, { headers: { Authorization: `Bearer ${token}` } });
+                    const json = await res.json();
+                    if (!json.success) throw new Error(json.error || 'Erro ao carregar currículo');
+                    CURRICULUM_LEVELS  = json.data?.curriculum || [];
+                    CURRICULUM_COUNTRY = countryId;
+                }
+                renderGradeCards(CURRICULUM_LEVELS, CURRENT_USER?.grade_id || '');
+            } catch (e) {
+                console.warn('showGrades:', e);
+                grid.innerHTML = '<p class="text-center text-gray-400 py-10">Não foi possível carregar as classes do currículo.</p>';
+            }
+        }
+
+        function renderUngroupedGradeFallback() {
+            const grid = document.getElementById('grade-grid');
+            grid.innerHTML = '';
+            openGrid('ensino_geral', null);
+        }
+
+        function renderGradeCards(levels, myGradeId) {
+            const grid = document.getElementById('grade-grid');
+            const ensinoBooks = ALL_BOOKS.filter(b => b.category === 'ensino_geral');
+
+            const sections = (levels || []).map(level => {
+                const grades = (level.grades || []).slice().sort((a, b) => (a.displayOrder||0) - (b.displayOrder||0));
+                if (!grades.length) return '';
+                const cards = grades.map(g => {
+                    const count  = ensinoBooks.filter(b => b.curriculum_grade_id === g.id).length;
+                    const isMine = g.id === myGradeId;
+                    return `<div class="book-card bg-white rounded-xl shadow-sm p-4 flex items-center justify-between ${isMine ? 'ring-2 ring-purple-500' : ''}" onclick="openGrid('ensino_geral', '${g.id}')">
+                        <div>
+                            <p class="font-semibold text-gray-900">${g.name}${isMine ? ' <span class="text-xs text-purple-600 font-bold ml-1">— a tua classe</span>' : ''}</p>
+                            <p class="text-xs text-gray-400">${count} livro${count !== 1 ? 's' : ''}</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-gray-300"></i>
+                    </div>`;
+                }).join('');
+                return `<div>
+                    <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">${level.name}</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${cards}</div>
+                </div>`;
+            }).join('');
+
+            grid.innerHTML = sections || '<p class="text-center text-gray-400 py-10">Sem classes disponíveis para este currículo.</p>';
+        }
+
+        // ── Vista 3: Grelha ───────────────────────────────────────────
+        function findGradeName(gradeId) {
+            for (const level of (CURRICULUM_LEVELS || [])) {
+                const g = (level.grades || []).find(x => x.id === gradeId);
+                if (g) return g.name;
+            }
+            return '';
+        }
+
+        function openGrid(catId, gradeId) {
+            currentCategory = catId;
+            currentGradeId  = gradeId || null;
+            isSearchMode    = false;
+            switchView('grid');
+            const gradeName = gradeId ? findGradeName(gradeId) : '';
+            document.getElementById('grid-title').textContent =
+                gradeName ? `${CATEGORY_LABEL[catId]} — ${gradeName}` : (CATEGORY_LABEL[catId] || 'Materiais');
+            loadFilterOptions();
+            applyFilters();
+        }
+
         // ── Filtros ────────────────────────────────────────────────
         function getFiltered() {
             const q         = (document.getElementById('search-input').value || '').toLowerCase();
             const subjectId = document.getElementById('subject-filter').value;
-            const gradeId   = document.getElementById('grade-filter').value;
             return ALL_BOOKS.filter(b => {
-                const matchCat  = currentCategory === 'all' || b.category === currentCategory;
-                const matchSubj = !subjectId || bookSubjectId(b) === subjectId;
-                const matchGrad = !gradeId   || bookGradeId(b)   === gradeId;
-                const matchQ    = !q || b.title.toLowerCase().includes(q)
+                const matchCat   = isSearchMode || b.category === currentCategory;
+                const matchGrade = !currentGradeId || b.curriculum_grade_id === currentGradeId;
+                const matchSubj  = !subjectId || bookSubjectId(b) === subjectId;
+                const matchQ     = !q || b.title.toLowerCase().includes(q)
                                      || (b.author||'').toLowerCase().includes(q)
                                      || bookSubject(b).toLowerCase().includes(q);
-                return matchCat && matchSubj && matchGrad && matchQ;
+                return matchCat && matchGrade && matchSubj && matchQ;
             });
         }
 
@@ -379,14 +546,27 @@
             renderBooks(filtered);
         }
 
-        function setCategory(cat, btn) {
-            currentCategory = cat;
-            document.querySelectorAll('.category-tab').forEach(t => {
-                t.classList.remove('active');
-                t.classList.add('bg-gray-100', 'text-gray-600');
-            });
-            btn.classList.add('active');
-            btn.classList.remove('bg-gray-100', 'text-gray-600');
+        function handleSearchInput() {
+            const q = (document.getElementById('search-input').value || '').trim();
+            if (isSearchMode) {
+                if (!q) { showCategories(); return; }
+                applyFilters();
+                return;
+            }
+            if (VIEW === 'categories' || VIEW === 'grades') {
+                if (q) enterSearchMode(); else showCategories();
+                return;
+            }
+            applyFilters();
+        }
+
+        function enterSearchMode() {
+            currentCategory = null;
+            currentGradeId  = null;
+            isSearchMode    = true;
+            switchView('grid');
+            document.getElementById('grid-title').textContent = 'Resultados da pesquisa';
+            loadFilterOptions();
             applyFilters();
         }
 
@@ -397,12 +577,21 @@
             const b    = activeBook;
             const subj = bookSubject(b);
             const s    = subStyle(subj);
-            const catLabels = { books:'Livro', handouts:'Apostila', exercises:'Exercícios' };
 
-            document.getElementById('modal-cover').className =
-                `h-40 bg-gradient-to-br ${s.grad} flex items-center justify-center relative`;
-            document.getElementById('modal-cover-icon').innerHTML =
-                `<i class="fas ${s.icon} text-5xl text-white/80"></i>`;
+            const modalCoverImg = document.getElementById('modal-cover-img');
+            if (b.cover_url) {
+                document.getElementById('modal-cover').className = 'h-40 bg-gray-100 flex items-center justify-center relative';
+                modalCoverImg.src = b.cover_url;
+                modalCoverImg.classList.remove('hidden');
+                document.getElementById('modal-cover-icon').innerHTML = '';
+            } else {
+                document.getElementById('modal-cover').className =
+                    `h-40 bg-gradient-to-br ${s.grad} flex items-center justify-center relative`;
+                modalCoverImg.classList.add('hidden');
+                modalCoverImg.src = '';
+                document.getElementById('modal-cover-icon').innerHTML =
+                    `<i class="fas ${s.icon} text-5xl text-white/80"></i>`;
+            }
             document.getElementById('modal-title').textContent  = b.title;
             document.getElementById('modal-author').textContent = `Autor: ${b.author}`;
             document.getElementById('modal-desc').textContent   = b.description || b.desc || '';
@@ -413,7 +602,7 @@
             document.getElementById('modal-badges').innerHTML =
                 `${subj ? `<span class="px-2 py-1 text-xs font-semibold rounded-full text-white" style="background:${s.bg}">${subj}</span>` : ''}
                  ${bookGrade(b) ? `<span class="px-2 py-1 text-xs font-semibold bg-gray-100 text-gray-600 rounded-full">${bookGrade(b)}</span>` : ''}
-                 <span class="px-2 py-1 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full">${catLabels[b.category] || b.category}</span>`;
+                 <span class="px-2 py-1 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full">${CATEGORY_LABEL[b.category] || b.category}</span>`;
 
             document.getElementById('book-modal').classList.add('open');
             refreshOfflineButton(b.id);
@@ -596,41 +785,24 @@
             if (e.target === this) closeReaderModal();
         });
 
-        // ── Carregar filtros (disciplinas e classes) da API ────────
-        async function loadFilterOptions() {
+        // ── Carregar filtro de disciplina (a partir dos livros na memória) ──
+        function loadFilterOptions() {
             try {
-                // Carregar subjects a partir dos livros já na memória
                 const subjects = {};
-                const grades   = {};
                 ALL_BOOKS.forEach(b => {
                     if (b.subjects?.id) subjects[b.subjects.id] = b.subjects.name;
-                    if (b.grades?.id)   grades[b.grades.id]     = b.grades.name;
                 });
-
                 const subSel = document.getElementById('subject-filter');
-                const grdSel = document.getElementById('grade-filter');
-
-                if (Object.keys(subjects).length) {
-                    subSel.innerHTML = '<option value="">Todas as Disciplinas</option>' +
-                        Object.entries(subjects)
-                            .sort((a, b) => a[1].localeCompare(b[1]))
-                            .map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
-                }
-                if (Object.keys(grades).length) {
-                    grdSel.innerHTML = '<option value="">Todas as Classes</option>' +
-                        Object.entries(grades)
-                            .sort((a, b) => a[1].localeCompare(b[1], 'pt', { numeric: true }))
-                            .map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
-                }
+                const curSubject = subSel.value;
+                subSel.innerHTML = '<option value="">Todas as Disciplinas</option>' +
+                    Object.entries(subjects)
+                        .sort((a, b) => a[1].localeCompare(b[1]))
+                        .map(([id, name]) => `<option value="${id}"${id === curSubject ? ' selected' : ''}>${name}</option>`).join('');
             } catch (e) { console.warn('loadFilterOptions:', e); }
         }
 
         // ── Carregar livros da API ─────────────────────────────────
         async function loadLibrary() {
-            // Mostrar skeleton
-            document.getElementById('books-grid').innerHTML =
-                Array(8).fill('<div class="bg-white rounded-2xl shadow-sm overflow-hidden"><div class="h-48 bg-gray-200 animate-pulse"></div><div class="p-4 space-y-2"><div class="h-3 bg-gray-200 rounded animate-pulse"></div><div class="h-3 bg-gray-200 rounded animate-pulse w-3/4"></div></div></div>').join('');
-
             try {
                 const res  = await fetch('/api/library?limit=100', {
                     headers: { Authorization: `Bearer ${token}` }
@@ -641,14 +813,11 @@
 
                 ALL_BOOKS = json.data?.books || [];
                 updateStats(ALL_BOOKS);
-                await loadFilterOptions();
-                applyFilters();
+                showCategories();
             } catch (e) {
                 console.warn('Library API error:', e);
-                document.getElementById('books-grid').innerHTML = '';
-                document.getElementById('empty-state').classList.remove('hidden');
-                document.getElementById('empty-state').querySelector('p').textContent =
-                    'Não foi possível carregar a biblioteca. Tenta mais tarde.';
+                document.getElementById('category-grid').innerHTML =
+                    '<p class="col-span-full text-center text-gray-400 py-10">Não foi possível carregar a biblioteca. Tenta mais tarde.</p>';
             }
         }
 

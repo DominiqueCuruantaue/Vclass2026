@@ -1372,9 +1372,9 @@ creator.post('/library', async (c) => {
           file_url, file_size_kb, pages, cover_url } = body
 
   if (!title?.trim())    return c.json({ success: false, error: 'Título obrigatório' }, 400)
-  if (!category)         return c.json({ success: false, error: 'Categoria obrigatória (books|handouts|exercises)' }, 400)
-  if (!['handouts', 'exercises'].includes(category))
-    return c.json({ success: false, error: 'Professores só podem criar apostilas ou exercícios' }, 403)
+  if (!category)         return c.json({ success: false, error: 'Categoria obrigatória (apostilas)' }, 400)
+  if (category !== 'apostilas')
+    return c.json({ success: false, error: 'Professores só podem criar apostilas' }, 403)
 
   const { data, error } = await supabase
     .from('library_items')

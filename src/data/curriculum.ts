@@ -1579,6 +1579,25 @@ export const getChaptersBySubject = (subjectId: string, term?: number) =>
   CHAPTERS.filter(c => c.subjectId === subjectId && (term === undefined || c.term === term))
     .sort((a, b) => a.displayOrder - b.displayOrder);
 
+/**
+ * Indica se uma classe pertence ao ensino primário/fundamental — crianças
+ * até cerca de 12-13 anos (usa o limite superior de ageRange do nível de
+ * ensino a que a classe pertence). Fonte de verdade para decidir quem vê a
+ * dashboard simplificada/"divertida" em vez da dashboard normal — hoje só
+ * afecta mz-1c..mz-7c (únicas classes populadas nesse intervalo etário),
+ * mas estende-se automaticamente a outros países se as suas classes
+ * primárias (ao-ep, br-ef1, pt-eb1/eb2, cv-eb) vierem a ser adicionadas.
+ */
+export const isChildGrade = (gradeId: string): boolean => {
+  const grade = GRADES.find(g => g.id === gradeId)
+  if (!grade) return false
+  const level = EDUCATION_LEVELS.find(l => l.id === grade.levelId)
+  if (!level) return false
+  const ages = (level.ageRange.match(/\d+/g) || []).map(Number)
+  if (!ages.length) return false
+  return Math.max(...ages) <= 13
+}
+
 /** Retorna as disciplinas de um país + classe (via gradeId) */
 export const getCurriculumTree = (countryId: string) => {
   const levels = getLevelsByCountry(countryId);

@@ -25,7 +25,7 @@ library.use('/*', authMiddleware)
 
 const SELECT_FIELDS = `
   id, title, description, author, category,
-  subject_id, grade_id, file_url, file_size_kb, pages, cover_url,
+  subject_id, grade_id, curriculum_grade_id, file_url, file_size_kb, pages, cover_url,
   downloads_count, is_featured, status,
   created_by, approved_at, created_at,
   subjects:subject_id ( id, name, color ),
@@ -114,9 +114,14 @@ library.get('/stats', async (c) => {
 
   const items = data || []
   const stats = {
-    totalBooks:     items.filter(i => i.category === 'books').length,
-    totalHandouts:  items.filter(i => i.category === 'handouts').length,
-    totalExercises: items.filter(i => i.category === 'exercises').length,
+    byCategory: {
+      ensino_geral:         items.filter(i => i.category === 'ensino_geral').length,
+      apostilas:            items.filter(i => i.category === 'apostilas').length,
+      artigos:              items.filter(i => i.category === 'artigos').length,
+      educacao_financeira:  items.filter(i => i.category === 'educacao_financeira').length,
+      empreendedorismo:     items.filter(i => i.category === 'empreendedorismo').length,
+      obras_poemas:         items.filter(i => i.category === 'obras_poemas').length,
+    },
     totalDownloads: items.reduce((s, i) => s + (i.downloads_count || 0), 0),
   }
 

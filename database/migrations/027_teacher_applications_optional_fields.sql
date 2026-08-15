@@ -8,3 +8,4 @@ ALTER TABLE public.teacher_applications
   ALTER COLUMN address            DROP NOT NULL,
   ALTER COLUMN available_hours    DROP NOT NULL,
   ALTER COLUMN preferred_schedule DROP NOT NULL;
+ 

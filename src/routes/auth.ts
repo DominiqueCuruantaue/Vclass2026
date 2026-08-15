@@ -576,6 +576,116 @@ auth.patch('/profile', authMiddleware, async (c) => {
 })
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// Mudar de Classe/País — o aluno pode trocar o país/classe do currículo do seu
+// próprio perfil sem re-registo, até 5 vezes em qualquer janela de 365 dias
+// corridos. GET devolve o estado actual (quantas já usou, quando desbloqueia
+// se esgotou); POST efectiva a troca.
+// ═══════════════════════════════════════════════════════════════════════════════
+const CLASS_SWITCH_LIMIT = 5
+const CLASS_SWITCH_WINDOW_DAYS = 365
+
+async function getClassSwitchWindow(supabase: any, userId: string) {
+  const sinceIso = new Date(Date.now() - CLASS_SWITCH_WINDOW_DAYS * 24 * 3600 * 1000).toISOString()
+  const { data } = await supabase
+    .from('class_switch_log')
+    .select('created_at')
+    .eq('user_id', userId)
+    .gt('created_at', sinceIso)
+    .order('created_at', { ascending: true })
+
+  const used = data?.length || 0
+  const remaining = Math.max(0, CLASS_SWITCH_LIMIT - used)
+  const nextAvailableAt = used >= CLASS_SWITCH_LIMIT
+    ? new Date(new Date(data[0].created_at).getTime() + CLASS_SWITCH_WINDOW_DAYS * 24 * 3600 * 1000).toISOString()
+    : null
+
+  return { used, remaining, nextAvailableAt }
+}
+
+// GET /api/auth/class-switch-status
+auth.get('/class-switch-status', authMiddleware, async (c) => {
+  const authUser = c.get('user')
+  if (authUser.role !== 'student')
+    return c.json<ApiResponse>({ success: false, error: 'Apenas alunos podem trocar de classe' }, 403)
+
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'BD não configurada' }, 503)
+
+  const { data: dbUser, error } = await supabase
+    .from('users')
+    .select('country_code, grade_id')
+    .eq('id', authUser.id)
+    .single()
+
+  if (error || !dbUser) return c.json<ApiResponse>({ success: false, error: 'Utilizador não encontrado' }, 404)
+
+  const window = await getClassSwitchWindow(supabase, authUser.id)
+
+  return c.json<ApiResponse>({
+    success: true,
+    data: { country_code: dbUser.country_code, grade_id: dbUser.grade_id, ...window }
+  })
+})
+
+// POST /api/auth/class-switch
+auth.post('/class-switch', authMiddleware, async (c) => {
+  const authUser = c.get('user')
+  if (authUser.role !== 'student')
+    return c.json<ApiResponse>({ success: false, error: 'Apenas alunos podem trocar de classe' }, 403)
+
+  const body = await c.req.json().catch(() => ({}))
+  const { country_code, grade_id } = body as { country_code?: string; grade_id?: string }
+
+  if (!country_code || !grade_id || !isValidCountryGrade(country_code, grade_id))
+    return c.json<ApiResponse>({ success: false, error: 'País/classe inválidos' }, 400)
+
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'BD não configurada' }, 503)
+
+  const { data: dbUser, error: fetchError } = await supabase
+    .from('users')
+    .select('country_code, grade_id')
+    .eq('id', authUser.id)
+    .single()
+
+  if (fetchError || !dbUser) return c.json<ApiResponse>({ success: false, error: 'Utilizador não encontrado' }, 404)
+
+  if (dbUser.country_code === country_code && dbUser.grade_id === grade_id)
+    return c.json<ApiResponse>({ success: false, error: 'Já estás nessa classe' }, 400)
+
+  const isFirstTimeSet = !dbUser.country_code && !dbUser.grade_id
+  const window = await getClassSwitchWindow(supabase, authUser.id)
+
+  if (!isFirstTimeSet && window.remaining <= 0)
+    return c.json<ApiResponse>({
+      success: false,
+      error: 'Limite de trocas de classe atingido (5 por ano)',
+      data: { nextAvailableAt: window.nextAvailableAt }
+    }, 429)
+
+  const { error: updateError } = await supabase
+    .from('users')
+    .update({ country_code, grade_id, updated_at: new Date().toISOString() })
+    .eq('id', authUser.id)
+
+  if (updateError) return c.json<ApiResponse>({ success: false, error: updateError.message }, 500)
+
+  if (!isFirstTimeSet) {
+    await supabase.from('class_switch_log').insert({
+      user_id: authUser.id,
+      previous_country_code: dbUser.country_code,
+      previous_grade_id: dbUser.grade_id,
+      new_country_code: country_code,
+      new_grade_id: grade_id,
+    })
+  }
+
+  const remaining = isFirstTimeSet ? window.remaining : Math.max(0, window.remaining - 1)
+
+  return c.json<ApiResponse>({ success: true, data: { country_code, grade_id, remaining } })
+})
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // POST /api/auth/change-password
 // ═══════════════════════════════════════════════════════════════════════════════
 auth.post('/change-password', authMiddleware, async (c) => {

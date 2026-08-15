@@ -385,6 +385,11 @@ function getNavbarHTML(activePage = '') {
             <i class="fas fa-bell text-sm"></i>
             <span class="notif-badge absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full hidden"></span>
           </a>
+          ${!isTeacher ? `
+          <!-- Mudar de Classe -->
+          <button onclick="VClass.openClassSwitcher()" class="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition hidden md:flex" title="Mudar de Classe">
+            <i class="fas fa-right-left text-sm"></i>
+          </button>` : ''}
           <!-- User Dropdown -->
           <div class="relative" id="nav-user-menu">
             <button onclick="VClass.toggleNavDropdown()" class="flex items-center gap-2 p-1.5 rounded-xl hover:bg-gray-100 transition group" id="nav-user-btn">
@@ -469,6 +474,7 @@ function initNavbar(activePage = '') {
     document.body.insertAdjacentHTML('afterbegin', getNavbarHTML(activePage));
   }
   _updateNavbarUser();
+  _ensureClassSwitchModal();
 }
 
 function _updateNavbarUser() {
@@ -508,6 +514,178 @@ function _updateNavbarUser() {
   }
 }
 
+// ─── Mudar de Classe/País ────────────────────────────────────────────────────
+// Permite ao aluno trocar o país/classe do currículo do próprio perfil sem
+// re-registo (até 5 vezes / 365 dias — limite aplicado no servidor, ver
+// GET/POST /api/auth/class-switch-status|class-switch em src/routes/auth.ts).
+let _csGradesCache = {};
+let _csCurrent = { country_code: null, grade_id: null };
+
+function _classSwitchModalHtml() {
+  return `
+  <div id="class-switch-modal" class="fixed inset-0 z-[80] items-center justify-center bg-black/60 backdrop-blur-sm p-4" style="display:none">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+      <div class="flex items-center justify-between p-5 border-b border-gray-100">
+        <h3 class="text-lg font-bold text-gray-900"><i class="fas fa-right-left text-purple-600 mr-2"></i>Mudar de Classe</h3>
+        <button onclick="VClass.closeClassSwitcher()" class="text-gray-400 hover:text-gray-600 transition"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="p-5 space-y-4">
+        <p id="cs-current" class="text-sm text-gray-500"></p>
+        <div id="cs-quota" class="text-xs rounded-lg p-3"></div>
+        <div id="cs-form">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">País</label>
+            <select id="cs-country" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400" onchange="VClass._switchLoadGrades()">
+              <option value="" disabled selected>Selecione o país</option>
+              <option value="mz">🇲🇿 Moçambique</option>
+              <option value="ao">🇦🇴 Angola</option>
+              <option value="br">🇧🇷 Brasil</option>
+              <option value="pt">🇵🇹 Portugal</option>
+              <option value="cv">🇨🇻 Cabo Verde</option>
+            </select>
+          </div>
+          <div class="mt-3">
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Classe / Ano</label>
+            <select id="cs-grade" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400" disabled>
+              <option value="" disabled selected>Seleccione primeiro o país</option>
+            </select>
+          </div>
+        </div>
+        <p id="cs-error" class="text-xs text-red-600 hidden"></p>
+      </div>
+      <div class="flex gap-3 p-5 border-t border-gray-100">
+        <button onclick="VClass.closeClassSwitcher()" class="flex-1 py-2.5 border border-gray-200 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-50 transition">Cancelar</button>
+        <button id="cs-confirm-btn" onclick="VClass.confirmClassSwitch()" class="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-semibold transition">Confirmar</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function _ensureClassSwitchModal() {
+  if (document.getElementById('class-switch-modal')) return;
+  document.body.insertAdjacentHTML('beforeend', _classSwitchModalHtml());
+  document.getElementById('class-switch-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeClassSwitcher();
+  });
+}
+
+async function openClassSwitcher() {
+  _ensureClassSwitchModal();
+  const modal = document.getElementById('class-switch-modal');
+  modal.style.display = 'flex';
+
+  document.getElementById('cs-current').textContent = 'A carregar...';
+  document.getElementById('cs-quota').textContent = '';
+  document.getElementById('cs-quota').className = 'text-xs rounded-lg p-3';
+  document.getElementById('cs-error').classList.add('hidden');
+  document.getElementById('cs-form').classList.remove('hidden');
+  const btn = document.getElementById('cs-confirm-btn');
+  btn.disabled = false;
+  btn.textContent = 'Confirmar';
+
+  try {
+    const res = await apiRequest('/auth/class-switch-status', 'GET');
+    if (!res.success) throw new Error(res.error || 'Erro ao carregar estado');
+
+    _csCurrent = { country_code: res.data.country_code || null, grade_id: res.data.grade_id || null };
+    document.getElementById('cs-current').innerHTML = _csCurrent.country_code
+      ? `Classe actual: <b>${_csCurrent.country_code.toUpperCase()} — ${_csCurrent.grade_id || '—'}</b>`
+      : 'Ainda não definiste país/classe.';
+
+    if (res.data.remaining > 0) {
+      document.getElementById('cs-quota').className = 'text-xs rounded-lg p-3 bg-purple-50 text-purple-700';
+      document.getElementById('cs-quota').textContent = `Tens ${res.data.remaining} de 5 trocas disponíveis nos próximos 365 dias.`;
+    } else {
+      document.getElementById('cs-quota').className = 'text-xs rounded-lg p-3 bg-red-50 text-red-700';
+      const d = res.data.nextAvailableAt ? new Date(res.data.nextAvailableAt).toLocaleDateString('pt') : '';
+      document.getElementById('cs-quota').textContent = `Já usaste as 5 trocas permitidas este ano. Próxima disponível em ${d}.`;
+      document.getElementById('cs-form').classList.add('hidden');
+      btn.disabled = true;
+    }
+
+    if (_csCurrent.country_code) {
+      document.getElementById('cs-country').value = _csCurrent.country_code;
+      await _switchLoadGrades();
+      document.getElementById('cs-grade').value = _csCurrent.grade_id || '';
+    }
+  } catch (e) {
+    document.getElementById('cs-current').textContent = '';
+    document.getElementById('cs-error').textContent = e.message || 'Erro ao carregar estado';
+    document.getElementById('cs-error').classList.remove('hidden');
+  }
+}
+
+function closeClassSwitcher() {
+  const modal = document.getElementById('class-switch-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function _switchLoadGrades() {
+  const countryCode = document.getElementById('cs-country').value;
+  const gradeSelect = document.getElementById('cs-grade');
+  gradeSelect.disabled = true;
+  gradeSelect.innerHTML = '<option value="" disabled selected>A carregar...</option>';
+  if (!countryCode) return;
+
+  try {
+    let grades = _csGradesCache[countryCode];
+    if (!grades) {
+      const res = await fetch(`/api/curriculum/tree/${countryCode}`);
+      const json = await res.json();
+      if (!json.success) throw new Error('Erro ao carregar classes');
+      grades = [];
+      json.data.curriculum.forEach(level => level.grades.forEach(g => grades.push(g)));
+      _csGradesCache[countryCode] = grades;
+    }
+    gradeSelect.innerHTML = '<option value="" disabled selected>Seleccione a classe/ano</option>' +
+      grades.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+    gradeSelect.disabled = false;
+  } catch (e) {
+    gradeSelect.innerHTML = '<option value="" disabled selected>Erro ao carregar classes</option>';
+  }
+}
+
+async function confirmClassSwitch() {
+  const countryCode = document.getElementById('cs-country').value;
+  const gradeId = document.getElementById('cs-grade').value;
+  const errEl = document.getElementById('cs-error');
+  errEl.classList.add('hidden');
+
+  if (!countryCode || !gradeId) {
+    errEl.textContent = 'Escolhe o país e a classe.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  if (countryCode === _csCurrent.country_code && gradeId === _csCurrent.grade_id) {
+    errEl.textContent = 'Já estás nessa classe.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  const btn = document.getElementById('cs-confirm-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+  try {
+    const res = await apiRequest('/auth/class-switch', 'POST', { country_code: countryCode, grade_id: gradeId });
+    if (!res.success) throw new Error(res.error || 'Erro ao trocar de classe');
+
+    const user = getCurrentUser() || {};
+    user.country_code = res.data.country_code;
+    user.grade_id = res.data.grade_id;
+    localStorage.setItem('user', JSON.stringify(user));
+
+    showNotification('Classe alterada com sucesso!', 'success');
+    closeClassSwitcher();
+    setTimeout(() => window.location.reload(), 800);
+  } catch (e) {
+    errEl.textContent = e.message || 'Erro ao trocar de classe';
+    errEl.classList.remove('hidden');
+    btn.disabled = false;
+    btn.textContent = 'Confirmar';
+  }
+}
+
 function toggleNavDropdown() {
   const d = document.getElementById('nav-dropdown');
   if (d) d.classList.toggle('hidden');
@@ -532,7 +710,8 @@ window.VClass = {
   formatDuration, formatDate, formatRelativeTime, formatTime,
   showNotification, showLoading, hideLoading, updateProgressBar,
   debounce, storage, analytics,
-  initNavbar, toggleNavDropdown, toggleMobileMenu
+  initNavbar, toggleNavDropdown, toggleMobileMenu,
+  openClassSwitcher, closeClassSwitcher, confirmClassSwitch, _switchLoadGrades
 };
 
 console.log('VClass API client v2.0 loaded');

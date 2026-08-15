@@ -64,6 +64,22 @@
         /* ── Subject card (horizontal scroll) ── */
         .subj-card { flex-shrink: 0; width: 140px; border-radius: 14px; padding: 14px 12px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
         .subj-card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
+
+        /* ── Kids mode (1ª-7ª classe): dashboard mais simples, grande e divertida ── */
+        .kids-mode .dash-card { border-radius: 26px; }
+        .kids-mode h1 { font-size: 1.85rem; }
+        .kids-mode h2 { font-size: 1.05rem !important; }
+        .kids-mode .subj-card { width: 168px; }
+        .kids-mode .lesson-row { padding-top: 14px; padding-bottom: 14px; }
+        .kids-mode .lesson-thumb { width: 68px; height: 52px; }
+        .kids-mode .lesson-row p.text-sm { font-size: 0.95rem; }
+        .kids-mode .qnav { padding: 18px 12px !important; }
+        .kids-mode .qnav i { font-size: 1.5rem !important; }
+        .kids-mode .qnav span { font-size: 0.85rem !important; }
+        .kids-mode .stat-card { border-radius: 26px; }
+        .kids-mode #stats-container { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+        @keyframes bounce-in { 0% { transform: scale(0.9); } 60% { transform: scale(1.03); } 100% { transform: scale(1); } }
+        .kids-mode .stat-card, .kids-mode .dash-card { animation: bounce-in 0.4s ease; }
     </style>
   <script src="/static/safe-dom.js"></script>
 </head>
@@ -79,6 +95,22 @@
                     <i class="fas fa-graduation-cap text-2xl text-purple-600"></i>
                     <span class="text-xl font-bold text-gray-900">VClass</span>
                 </a>
+                <!-- Avatar do aluno (mostrado só no modo kids, 1ª-7ª classe) -->
+                <div id="kids-avatar" class="hidden w-10 h-10 rounded-full bg-gradient-to-br from-sky-400 to-blue-500 shadow-md items-center justify-center flex-shrink-0" title="O teu avatar">
+                    <svg viewBox="0 0 40 40" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6 39c0-7.4 6.3-11.5 14-11.5S34 31.6 34 39v1H6v-1z" fill="#f97316"/>
+                        <rect x="16" y="21" width="8" height="7" rx="3" fill="#e8a978"/>
+                        <circle cx="20" cy="16" r="10.5" fill="#f2b988"/>
+                        <circle cx="9.5" cy="17" r="2" fill="#f2b988"/>
+                        <circle cx="30.5" cy="17" r="2" fill="#f2b988"/>
+                        <path d="M9.3 16.5a10.5 10.5 0 0 1 21.4 0c-1.8-2.6-5-3.7-10.7-3.7s-8.9 1.1-10.7 3.7z" fill="#3b2a1a"/>
+                        <circle cx="16" cy="16" r="1.4" fill="#2b2118"/>
+                        <circle cx="24" cy="16" r="1.4" fill="#2b2118"/>
+                        <circle cx="13.5" cy="19.5" r="1.5" fill="#f4a58a" opacity="0.6"/>
+                        <circle cx="26.5" cy="19.5" r="1.5" fill="#f4a58a" opacity="0.6"/>
+                        <path d="M15 20c1.4 2 8.6 2 10 0" stroke="#8a4b2e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+                    </svg>
+                </div>
                 <div class="hidden md:flex items-center gap-1">
                     <a href="/dashboard.html" class="nav-link-active px-3 py-2 rounded-xl text-sm flex items-center gap-1.5">
                         <i class="fas fa-home"></i> Dashboard
@@ -239,8 +271,8 @@
                 </div>
             </section>
 
-            <!-- Actividade semanal (chart) -->
-            <section class="dash-card p-6">
+            <!-- Actividade semanal (chart) — escondida no modo kids (1ª-7ª classe), muito analítica para crianças pequenas -->
+            <section class="dash-card p-6" id="weekly-chart-section">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-base font-bold text-gray-900 flex items-center gap-2">
                         <span class="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
@@ -381,6 +413,23 @@
 if (!VClass.isAuthenticated()) { window.location.href = '/login.html'; }
 const _user = VClass.getCurrentUser();
 
+// ── Modo Kids (1ª-7ª classe, ~6-12 anos) ───────────────────────────────────
+// Espelha isChildGrade() em src/data/curriculum.ts (nível de ensino com
+// ageRange máximo ≤ 13 anos) — hoje só cobre Moçambique (únicas classes
+// desse intervalo etário já cadastradas no currículo estático). Actualizar
+// esta lista junto com curriculum.ts se outros países ganharem classes
+// primárias (ao-ep, br-ef1, pt-eb1/eb2, cv-eb).
+const CHILD_GRADE_IDS = new Set(['mz-1c', 'mz-2c', 'mz-3c', 'mz-4c', 'mz-5c', 'mz-6c', 'mz-7c']);
+const IS_KIDS_DASHBOARD = !!(_user && CHILD_GRADE_IDS.has(_user.grade_id));
+if (IS_KIDS_DASHBOARD) {
+    document.body.classList.add('kids-mode');
+    document.getElementById('sessions')?.remove();
+    document.getElementById('weekly-chart-section')?.remove();
+    const avatar = document.getElementById('kids-avatar');
+    avatar?.classList.remove('hidden');
+    avatar?.classList.add('flex');
+}
+
 // ── Dropdown ────────────────────────────────────────────────────────────────
 function toggleDropdown() { document.getElementById('user-dropdown').classList.toggle('open'); }
 document.addEventListener('click', e => {
@@ -403,11 +452,17 @@ function setupUserInfo() {
 // ── Greeting ────────────────────────────────────────────────────────────────
 function setGreeting() {
     const h = new Date().getHours();
-    const [g, e, sub] = h < 12
-        ? ['Bom dia', '☀️', 'Comece bem o dia com uma nova aula!']
-        : h < 18
-        ? ['Boa tarde', '🌤️', 'Continue a sua jornada de aprendizado!']
-        : ['Boa noite', '🌙', 'Mais uma aula antes de dormir?'];
+    const [g, e, sub] = IS_KIDS_DASHBOARD
+        ? (h < 12
+            ? ['Bom dia', '☀️', 'Vamos aprender uma coisa nova e divertida hoje? 🎈']
+            : h < 18
+            ? ['Boa tarde', '🎨', 'Que tal mais uma aventura de aprender hoje?']
+            : ['Boa noite', '🌙', 'Uma última aula antes de dormir? 🌟'])
+        : (h < 12
+            ? ['Bom dia', '☀️', 'Comece bem o dia com uma nova aula!']
+            : h < 18
+            ? ['Boa tarde', '🌤️', 'Continue a sua jornada de aprendizado!']
+            : ['Boa noite', '🌙', 'Mais uma aula antes de dormir?']);
     document.getElementById('greeting').textContent     = g;
     document.getElementById('greeting-emoji').textContent = e;
     document.getElementById('greeting-sub').textContent = sub;
@@ -469,8 +524,56 @@ function createChart() {
     });
 }
 
-// ── Stats ───────────────────────────────────────────────────────────────────
+// ── Stats (modo kids: 4 números grandes e divertidos — progresso e pontos,
+//    sem % nem minutos, que são abstractos demais para crianças pequenas) ──
+function renderKidsStats(s) {
+    const lessons = s.lessons_completed || 0;
+    const exs     = s.exercises_completed || 0;
+    const points  = lessons * 50 + exs * 20;
+    const streak  = getStreak();
+
+    document.getElementById('stats-container').innerHTML = `
+        <div class="stat-card dash-card p-6 bg-gradient-to-br from-purple-500 to-indigo-600 text-white">
+            <div class="text-4xl mb-2">🎉</div>
+            <p class="text-4xl font-extrabold count-animate" id="sl">0</p>
+            <p class="text-sm mt-1 font-semibold opacity-90">Lições Concluídas</p>
+        </div>
+        <div class="stat-card dash-card p-6 bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
+            <div class="text-4xl mb-2">📝</div>
+            <p class="text-4xl font-extrabold count-animate" id="se">0</p>
+            <p class="text-sm mt-1 font-semibold opacity-90">Exercícios Feitos</p>
+        </div>
+        <div class="stat-card dash-card p-6 bg-gradient-to-br from-amber-400 to-orange-500 text-white">
+            <div class="text-4xl mb-2">⭐</div>
+            <p class="text-4xl font-extrabold count-animate" id="sp">0</p>
+            <p class="text-sm mt-1 font-semibold opacity-90">Pontos Conquistados</p>
+        </div>
+        <div class="stat-card dash-card p-6 bg-gradient-to-br from-rose-500 to-pink-600 text-white">
+            <div class="text-4xl mb-2">🔥</div>
+            <p class="text-4xl font-extrabold count-animate" id="sk">0</p>
+            <p class="text-sm mt-1 font-semibold opacity-90">Dias Seguidos</p>
+        </div>`;
+
+    setTimeout(() => {
+        animateCounter(document.getElementById('sl'), lessons);
+        animateCounter(document.getElementById('se'), exs);
+        animateCounter(document.getElementById('sp'), points);
+        animateCounter(document.getElementById('sk'), streak);
+    }, 80);
+
+    animateCounter(document.getElementById('streak-count'), streak, ' dias');
+    animateCounter(document.getElementById('xp-count'), points);
+
+    const goal  = 3;
+    const today = Math.min(lessons, goal);
+    document.getElementById('daily-progress-text').textContent = `${today} / ${goal} aulas`;
+    document.getElementById('daily-progress-bar').style.width  = `${(today / goal) * 100}%`;
+    if (today >= goal) document.getElementById('daily-msg').textContent = '🎉 Meta do dia concluída! Parabéns!';
+}
+
 function renderStats(s) {
+    if (IS_KIDS_DASHBOARD) { renderKidsStats(s); return; }
+
     const mins    = Math.floor((s.total_time_spent_seconds || 0) / 60);
     const lessons = s.lessons_completed || 0;
     const exs     = s.exercises_completed || 0;
@@ -923,8 +1026,10 @@ async function libDownload(id) {
 // ── INIT ────────────────────────────────────────────────────────────────────
 setupUserInfo();
 setGreeting();
-createChart();
-Promise.all([loadDashboard(), loadSuggestedLessons(), loadPlanBanner(), loadSessions(), loadLibraryWidget()]);
+if (!IS_KIDS_DASHBOARD) createChart();
+const _initTasks = [loadDashboard(), loadSuggestedLessons(), loadPlanBanner(), loadLibraryWidget()];
+if (!IS_KIDS_DASHBOARD) _initTasks.push(loadSessions());
+Promise.all(_initTasks);
 updateNotifBadge();
 </script>
 </body>

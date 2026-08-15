@@ -9,6 +9,7 @@ import { revokeAllUserTokens } from '../utils/refreshTokens'
 import { isLessonVideoReady } from '../utils/bunny'
 import { hashPassword, validatePassword } from '../utils/password'
 import { extractPageCount, isValidPdfSignature } from '../utils/documentMeta'
+import { GRADES } from '../data/curriculum'
 
 const admin = new Hono<{ Bindings: CloudflareBindings }>()
 
@@ -749,13 +750,23 @@ admin.get('/stats/overview', async (c) => {
 
 const ADMIN_LIB_SELECT = `
   id, title, description, author, category,
-  subject_id, grade_id, file_url, file_size_kb, pages, cover_url,
+  subject_id, grade_id, curriculum_grade_id, file_url, file_size_kb, pages, cover_url,
   downloads_count, is_featured, status, rejection_reason,
   created_by, approved_by, approved_at, created_at, updated_at,
   subjects:subject_id ( id, name, color ),
   grades:grade_id     ( id, name, level ),
   creator:created_by  ( id, full_name, email )
 `
+
+const LIBRARY_CATEGORIES = ['ensino_geral', 'apostilas', 'artigos', 'educacao_financeira', 'empreendedorismo', 'obras_poemas']
+
+// curriculum_grade_id só é válido quando category = 'ensino_geral' — nos restantes casos é sempre null
+function resolveCurriculumGradeId(category: string, curriculum_grade_id: unknown): { ok: true, value: string | null } | { ok: false, error: string } {
+  if (category !== 'ensino_geral') return { ok: true, value: null }
+  if (!curriculum_grade_id) return { ok: true, value: null }
+  if (!GRADES.some(g => g.id === curriculum_grade_id)) return { ok: false, error: 'Classe curricular inválida' }
+  return { ok: true, value: String(curriculum_grade_id) }
+}
 
 function getSupabaseAdmin(env?: any) {
   return getSupabase(env)
@@ -883,12 +894,17 @@ admin.post('/library', async (c) => {
   if (!supabase) return c.json<ApiResponse>({ success: false, error: 'BD não configurada' }, 503)
 
   const body = await c.req.json().catch(() => ({}))
-  const { title, description, author, category, subject_id, grade_id,
+  const { title, description, author, category, subject_id, grade_id, curriculum_grade_id,
           file_url, file_size_kb, pages, cover_url, is_featured } = body
 
   if (!title?.trim())  return c.json<ApiResponse>({ success: false, error: 'Título obrigatório' }, 400)
   if (!author?.trim()) return c.json<ApiResponse>({ success: false, error: 'Autor obrigatório' }, 400)
   if (!category)       return c.json<ApiResponse>({ success: false, error: 'Categoria obrigatória' }, 400)
+  if (!LIBRARY_CATEGORIES.includes(category))
+    return c.json<ApiResponse>({ success: false, error: 'Categoria inválida' }, 400)
+
+  const curriculumGrade = resolveCurriculumGradeId(category, curriculum_grade_id)
+  if (!curriculumGrade.ok) return c.json<ApiResponse>({ success: false, error: curriculumGrade.error }, 400)
 
   // Admin pode publicar directamente
   const { data, error } = await supabase
@@ -900,6 +916,7 @@ admin.post('/library', async (c) => {
       category,
       subject_id:   subject_id   || null,
       grade_id:     grade_id     || null,
+      curriculum_grade_id: curriculumGrade.value,
       file_url:     file_url     || null,
       file_size_kb: file_size_kb || null,
       pages:        pages        || null,
@@ -926,11 +943,20 @@ admin.put('/library/:id', async (c) => {
   const id   = c.req.param('id')
   const body = await c.req.json().catch(() => ({}))
 
+  if (body.category !== undefined && !LIBRARY_CATEGORIES.includes(body.category))
+    return c.json<ApiResponse>({ success: false, error: 'Categoria inválida' }, 400)
+
   const allowed = ['title','description','author','category','subject_id','grade_id',
                    'file_url','file_size_kb','pages','cover_url','is_featured','status']
   const updates: Record<string, any> = {}
   for (const key of allowed) {
     if (body[key] !== undefined) updates[key] = body[key]
+  }
+
+  if (body.curriculum_grade_id !== undefined) {
+    const curriculumGrade = resolveCurriculumGradeId(body.category ?? 'ensino_geral', body.curriculum_grade_id)
+    if (!curriculumGrade.ok) return c.json<ApiResponse>({ success: false, error: curriculumGrade.error }, 400)
+    updates.curriculum_grade_id = curriculumGrade.value
   }
 
   const { data, error } = await supabase

@@ -813,9 +813,12 @@
                             </div>
                             <select id="lib-filter-cat" onchange="filterLibBooks()" class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400">
                                 <option value="">Todas as categorias</option>
-                                <option value="books">Livros</option>
-                                <option value="handouts">Apostilas</option>
-                                <option value="exercises">Exercícios</option>
+                                <option value="ensino_geral">Livros do Ensino Geral</option>
+                                <option value="apostilas">Apostilas</option>
+                                <option value="artigos">Artigos</option>
+                                <option value="educacao_financeira">Educação Financeira</option>
+                                <option value="empreendedorismo">Empreendedorismo</option>
+                                <option value="obras_poemas">Obras e Poemas</option>
                             </select>
                             <select id="lib-filter-status" onchange="filterLibBooks()" class="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400">
                                 <option value="">Todos os estados</option>
@@ -887,10 +890,13 @@
                         <div class="grid grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-xs font-semibold text-gray-700 mb-1">Categoria</label>
-                                <select id="lib-f-cat" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400">
-                                    <option value="books">Livro</option>
-                                    <option value="handouts">Apostila</option>
-                                    <option value="exercises">Exercícios</option>
+                                <select id="lib-f-cat" onchange="toggleLibCurriculumFields()" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400">
+                                    <option value="ensino_geral">Livro do Ensino Geral</option>
+                                    <option value="apostilas">Apostila</option>
+                                    <option value="artigos">Artigo</option>
+                                    <option value="educacao_financeira">Educação Financeira</option>
+                                    <option value="empreendedorismo">Empreendedorismo</option>
+                                    <option value="obras_poemas">Obras e Poemas</option>
                                 </select>
                             </div>
                             <div>
@@ -898,6 +904,21 @@
                                 <input id="lib-f-pages" type="number" min="1" placeholder="Ex: 240"
                                     class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400">
                                 <input id="lib-f-size" type="hidden">
+                            </div>
+                        </div>
+                        <!-- Classe do currículo (só para "Livro do Ensino Geral") -->
+                        <div id="lib-curriculum-fields" class="grid grid-cols-2 gap-3 hidden">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">País (currículo)</label>
+                                <select id="lib-f-cur-country" onchange="loadLibCurriculumGrades()" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400">
+                                    <option value="">— Escolher —</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">Classe (currículo)</label>
+                                <select id="lib-f-cur-grade" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400">
+                                    <option value="">— Escolher um país —</option>
+                                </select>
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-3">
@@ -2509,6 +2530,50 @@ async function loadLibCurriculumSelects() {
     } catch (e) { console.warn('loadLibCurriculumSelects failed:', e); }
 }
 
+// ── Currículo estático (país/classe) — só para categoria "Livro do Ensino Geral" ──
+let LIB_CUR_COUNTRIES = [];
+
+function toggleLibCurriculumFields() {
+    const isEnsinoGeral = document.getElementById('lib-f-cat').value === 'ensino_geral';
+    document.getElementById('lib-curriculum-fields').classList.toggle('hidden', !isEnsinoGeral);
+    if (isEnsinoGeral && !LIB_CUR_COUNTRIES.length) loadLibCurriculumCountries();
+}
+
+async function loadLibCurriculumCountries(selectedCountryId) {
+    const token = localStorage.getItem('accessToken') || '';
+    try {
+        const res  = await fetch('/api/curriculum/countries', { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (!data.success) return;
+        LIB_CUR_COUNTRIES = data.data || [];
+        const sel = document.getElementById('lib-f-cur-country');
+        sel.innerHTML = '<option value="">— Escolher —</option>' +
+            LIB_CUR_COUNTRIES.map(c => `<option value="${c.id}"${c.id === selectedCountryId ? ' selected' : ''}>${c.flag || ''} ${escapeHtml(c.name)}</option>`).join('');
+    } catch (e) { console.warn('loadLibCurriculumCountries failed:', e); }
+}
+
+async function loadLibCurriculumGrades(selectedGradeId) {
+    const token     = localStorage.getItem('accessToken') || '';
+    const countryId = document.getElementById('lib-f-cur-country').value;
+    const gradeSel  = document.getElementById('lib-f-cur-grade');
+    if (!countryId) {
+        gradeSel.innerHTML = '<option value="">— Escolher um país —</option>';
+        return;
+    }
+    gradeSel.innerHTML = '<option value="">A carregar...</option>';
+    try {
+        const res  = await fetch(`/api/curriculum/tree/${countryId}`, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+        const grades = (data.data?.curriculum || []).flatMap(level => level.grades || []);
+        gradeSel.innerHTML = '<option value="">— Escolher —</option>' +
+            grades.map(g => `<option value="${g.id}"${g.id === selectedGradeId ? ' selected' : ''}>${escapeHtml(g.name)}</option>`).join('');
+    } catch (e) {
+        console.warn('loadLibCurriculumGrades failed:', e);
+        gradeSel.innerHTML = '<option value="">Erro ao carregar classes</option>';
+    }
+}
+
 function switchLibTab(tab) {
     CURRENT_LIB_TAB = tab;
     document.getElementById('lib-panel-books').classList.toggle('hidden', tab !== 'books');
@@ -2547,9 +2612,26 @@ function filterLibBooks() {
     renderLibBooks(rows);
 }
 
-const LIB_CAT_LABEL = { books:'Livro', handouts:'Apostila', exercises:'Exercícios' };
+const LIB_CAT_LABEL = {
+    ensino_geral:        'Ensino Geral',
+    apostilas:           'Apostila',
+    artigos:             'Artigo',
+    educacao_financeira: 'Educação Financeira',
+    empreendedorismo:    'Empreendedorismo',
+    obras_poemas:        'Obras e Poemas',
+};
 const LIB_STATUS_LABEL = { published:'Publicado', draft:'Rascunho', pending_review:'Em Revisão', rejected:'Rejeitado' };
 const LIB_STATUS_PILL  = { published:'pill-published', draft:'pill-draft', pending_review:'pill-pending_review', rejected:'pill-rejected' };
+
+// Miniatura da capa (mostrada nas tabelas para o admin reconhecer o livro à vista) —
+// mesmo cover_url carregado no formulário via libUploadCover().
+function libCoverThumbHtml(b) {
+    return `<div class="w-8 h-11 rounded overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0 flex items-center justify-center">
+        ${b.cover_url
+            ? `<img src="${escapeAttr(b.cover_url)}" alt="" class="w-full h-full object-cover">`
+            : `<i class="fas fa-book text-gray-300 text-xs"></i>`}
+    </div>`;
+}
 
 function renderLibBooks(items) {
     const tbody = document.getElementById('lib-books-tbody');
@@ -2559,7 +2641,12 @@ function renderLibBooks(items) {
     }
     tbody.innerHTML = items.map(b => `
         <tr>
-            <td class="font-medium max-w-xs"><div class="truncate" title="${escapeAttr(b.title)}">${escapeHtml(b.title)}</div></td>
+            <td class="font-medium max-w-xs">
+                <div class="flex items-center gap-2">
+                    ${libCoverThumbHtml(b)}
+                    <div class="truncate" title="${escapeAttr(b.title)}">${escapeHtml(b.title)}</div>
+                </div>
+            </td>
             <td><span class="text-xs font-medium text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full">${escapeHtml(LIB_CAT_LABEL[b.category]||b.category)}</span></td>
             <td class="text-gray-500 text-xs">${escapeHtml(b.author||'—')}</td>
             <td class="text-gray-500 text-xs">${escapeHtml(b.subjects?.name||'—')}</td>
@@ -2607,8 +2694,13 @@ function renderLibQueue(items) {
     tbody.innerHTML = items.map(b => `
         <tr>
             <td class="font-medium max-w-xs">
-                <div class="truncate" title="${escapeAttr(b.title)}">${escapeHtml(b.title)}</div>
-                ${b.file_url ? `<a href="${escapeAttr(b.file_url)}" target="_blank" class="text-xs text-purple-600 hover:underline"><i class="fas fa-file-pdf mr-1"></i>Ver ficheiro</a>` : '<span class="text-xs text-orange-400"><i class="fas fa-exclamation-triangle mr-1"></i>Sem ficheiro</span>'}
+                <div class="flex items-center gap-2">
+                    ${libCoverThumbHtml(b)}
+                    <div class="min-w-0">
+                        <div class="truncate" title="${escapeAttr(b.title)}">${escapeHtml(b.title)}</div>
+                        ${b.file_url ? `<a href="${escapeAttr(b.file_url)}" target="_blank" class="text-xs text-purple-600 hover:underline"><i class="fas fa-file-pdf mr-1"></i>Ver ficheiro</a>` : '<span class="text-xs text-orange-400"><i class="fas fa-exclamation-triangle mr-1"></i>Sem ficheiro</span>'}
+                    </div>
+                </div>
             </td>
             <td><span class="text-xs font-medium text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full">${escapeHtml(LIB_CAT_LABEL[b.category]||b.category)}</span></td>
             <td class="text-gray-500 text-xs">
@@ -2896,7 +2988,7 @@ async function openLibBookModal(id) {
     document.getElementById('lib-f-title').value          = book?.title || '';
     document.getElementById('lib-f-author').value         = book?.author || '';
     document.getElementById('lib-f-desc').value           = book?.description || '';
-    document.getElementById('lib-f-cat').value            = book?.category || 'books';
+    document.getElementById('lib-f-cat').value            = book?.category || 'ensino_geral';
     document.getElementById('lib-f-pages').value          = book?.pages || '';
     document.getElementById('lib-f-pages-auto').classList.add('hidden');
     document.getElementById('lib-f-size').value           = book?.file_size_kb || '';
@@ -2935,6 +3027,16 @@ async function openLibBookModal(id) {
     await loadLibCurriculumSelects();
     document.getElementById('lib-f-subject').value = book?.subject_id || '';
     document.getElementById('lib-f-grade').value   = book?.grade_id   || '';
+
+    // Currículo estático (país/classe) — só relevante para "Livro do Ensino Geral"
+    toggleLibCurriculumFields();
+    if (document.getElementById('lib-f-cat').value === 'ensino_geral') {
+        const curGradeId = book?.curriculum_grade_id || '';
+        const curCountryId = curGradeId ? curGradeId.split('-')[0] : '';
+        await loadLibCurriculumCountries(curCountryId);
+        document.getElementById('lib-f-cur-country').value = curCountryId;
+        await loadLibCurriculumGrades(curGradeId);
+    }
 }
 function closeLibBookModal() { document.getElementById('lib-book-modal').classList.add('hidden'); }
 
@@ -2952,6 +3054,9 @@ async function saveLibBook() {
         is_featured: document.getElementById('lib-f-featured').checked,
         subject_id:  document.getElementById('lib-f-subject').value || null,
         grade_id:    document.getElementById('lib-f-grade').value || null,
+        curriculum_grade_id: document.getElementById('lib-f-cat').value === 'ensino_geral'
+            ? (document.getElementById('lib-f-cur-grade').value || null)
+            : null,
     };
     if (!body.title)  { showToast('Título obrigatório', 'error'); return; }
     if (!body.author) { showToast('Autor obrigatório', 'error'); return; }
