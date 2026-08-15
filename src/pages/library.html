@@ -212,12 +212,12 @@
 
         // ── Categorias ──────────────────────────────────────────────
         const CATEGORIES = [
-            { id: 'ensino_geral',        label: 'Livros do Ensino Geral',       icon: 'fa-graduation-cap', grad: 'from-purple-600 to-indigo-700' },
-            { id: 'apostilas',           label: 'Apostilas',                    icon: 'fa-file-pdf',       grad: 'from-green-500 to-emerald-700' },
-            { id: 'artigos',             label: 'Artigos',                      icon: 'fa-newspaper',      grad: 'from-blue-500 to-cyan-700' },
-            { id: 'educacao_financeira', label: 'Livros sobre Educação Financeira', icon: 'fa-coins',       grad: 'from-amber-500 to-orange-600' },
-            { id: 'empreendedorismo',    label: 'Livros sobre Empreendedorismo',icon: 'fa-lightbulb',      grad: 'from-rose-500 to-pink-700' },
-            { id: 'obras_poemas',        label: 'Obras e Poemas',               icon: 'fa-feather',        grad: 'from-fuchsia-500 to-purple-700' },
+            { id: 'ensino_geral',        label: 'Livros do Ensino Geral',       icon: 'fa-graduation-cap', grad: 'from-purple-600 to-indigo-700', cover: '/static/images/library-covers/ensino-geral.jpg' },
+            { id: 'apostilas',           label: 'Apostilas',                    icon: 'fa-file-pdf',       grad: 'from-green-500 to-emerald-700', cover: '/static/images/library-covers/apostilas.jpg' },
+            { id: 'artigos',             label: 'Artigos',                      icon: 'fa-newspaper',      grad: 'from-blue-500 to-cyan-700',     cover: '/static/images/library-covers/artigos.jpg' },
+            { id: 'educacao_financeira', label: 'Livros sobre Educação Financeira', icon: 'fa-coins',       grad: 'from-amber-500 to-orange-600', cover: '/static/images/library-covers/educacao-financeira.jpg' },
+            { id: 'empreendedorismo',    label: 'Livros sobre Empreendedorismo',icon: 'fa-lightbulb',      grad: 'from-rose-500 to-pink-700',     cover: '/static/images/library-covers/empreendedorismo.jpg' },
+            { id: 'obras_poemas',        label: 'Obras e Poemas',               icon: 'fa-feather',        grad: 'from-fuchsia-500 to-purple-700', cover: '/static/images/library-covers/obras-poemas.jpg' },
         ];
         const CATEGORY_LABEL = Object.fromEntries(CATEGORIES.map(c => [c.id, c.label]));
 
@@ -416,9 +416,7 @@
             grid.innerHTML = CATEGORIES.map(cat => {
                 const count = ALL_BOOKS.filter(b => b.category === cat.id).length;
                 return `<div class="book-card bg-white rounded-2xl shadow-sm overflow-hidden" onclick="openCategory('${cat.id}')">
-                    <div class="h-28 bg-gradient-to-br ${cat.grad} flex items-center justify-center">
-                        <i class="fas ${cat.icon} text-4xl text-white/90"></i>
-                    </div>
+                    <div class="h-28 bg-gradient-to-br ${cat.grad} bg-cover bg-center flex items-center justify-center" style="background-image:url('${cat.cover}')"></div>
                     <div class="p-5 flex items-center justify-between">
                         <div>
                             <h3 class="font-bold text-gray-900 mb-0.5">${cat.label}</h3>
