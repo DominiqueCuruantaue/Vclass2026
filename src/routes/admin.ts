@@ -971,14 +971,37 @@ admin.put('/library/:id', async (c) => {
   return c.json<ApiResponse>({ success: true, data })
 })
 
+// Extrai o path relativo dentro do bucket 'vclass-library' a partir de uma public URL do Supabase Storage
+function libraryStoragePath(url?: string | null): string | null {
+  if (!url) return null
+  const marker = '/vclass-library/'
+  const idx = url.indexOf(marker)
+  if (idx === -1) return null
+  return decodeURIComponent(url.slice(idx + marker.length))
+}
+
 // DELETE /api/admin/library/:id
 admin.delete('/library/:id', async (c) => {
   const supabase = getSupabaseAdmin(c.env)
   if (!supabase) return c.json<ApiResponse>({ success: false, error: 'BD não configurada' }, 503)
 
   const id = c.req.param('id')
+
+  const { data: item } = await supabase
+    .from('library_items')
+    .select('file_url, cover_url')
+    .eq('id', id)
+    .single()
+
   const { error } = await supabase.from('library_items').delete().eq('id', id)
   if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+
+  // Limpeza do storage é best-effort — a remoção do registo é o que importa para o utilizador
+  const paths = [libraryStoragePath(item?.file_url), libraryStoragePath(item?.cover_url)]
+    .filter((p): p is string => !!p)
+  if (paths.length) {
+    await supabase.storage.from('vclass-library').remove(paths).catch(() => {})
+  }
 
   return c.json<ApiResponse>({ success: true, data: null })
 })

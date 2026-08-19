@@ -938,10 +938,13 @@ function libCardHtml(b) {
     const icon    = isPdf ? 'fa-file-pdf' : 'fa-file-word';
     const grad    = isPdf ? 'from-red-500 to-rose-600' : 'from-blue-500 to-indigo-600';
     const idAttr  = String(b.id).replace(/'/g, "\\'");
+    const coverHtml = b.cover_url
+        ? `<img src="${b.cover_url}" alt="" class="absolute inset-0 w-full h-full object-cover">`
+        : `<i class="fas ${icon} text-3xl text-white/85"></i>`;
     return `
     <div class="flex-shrink-0 w-40 rounded-2xl border border-gray-100 overflow-hidden bg-white transition hover:-translate-y-1 hover:shadow-md">
         <div class="h-20 bg-gradient-to-br ${grad} flex items-center justify-center relative">
-            <i class="fas ${icon} text-3xl text-white/85"></i>
+            ${coverHtml}
             <span class="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 bg-black/30 text-white text-[10px] font-semibold rounded">${pages}p</span>
         </div>
         <div class="p-2.5">

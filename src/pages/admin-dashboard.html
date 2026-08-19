@@ -2918,16 +2918,20 @@ function openLibPreview(url, name, coverUrl) {
     body.innerHTML = '';
 
     if (coverUrl) {
+        const coverWrap = document.createElement('div');
+        coverWrap.className = 'w-full max-h-72 bg-gray-900 flex items-center justify-center flex-shrink-0 overflow-hidden';
         const cover = document.createElement('img');
         cover.src = coverUrl;
         cover.alt = '';
-        cover.className = 'w-full max-h-72 object-cover flex-shrink-0';
-        cover.onerror = () => cover.remove();
-        body.appendChild(cover);
+        cover.className = 'max-w-full max-h-72 object-contain';
+        cover.onerror = () => coverWrap.remove();
+        coverWrap.appendChild(cover);
+        body.appendChild(coverWrap);
     }
 
-    const isPdf = /\.pdf(\?|#|$)/i.test(url);
-    const isImg = /\.(jpe?g|png|gif|webp)(\?|#|$)/i.test(url);
+    const isPdf    = /\.pdf(\?|#|$)/i.test(url);
+    const isImg    = /\.(jpe?g|png|gif|webp)(\?|#|$)/i.test(url);
+    const isOffice = /\.(docx?|xlsx?|pptx?)(\?|#|$)/i.test(url);
 
     if (isPdf) {
         const iframe = document.createElement('iframe');
@@ -2946,6 +2950,12 @@ function openLibPreview(url, name, coverUrl) {
         };
         wrap.appendChild(img);
         body.appendChild(wrap);
+    } else if (isOffice) {
+        const iframe = document.createElement('iframe');
+        iframe.src = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+        iframe.className = 'w-full border-0';
+        iframe.style.height = '80vh';
+        body.appendChild(iframe);
     } else {
         const wrap = document.createElement('div');
         wrap.className = 'w-full flex flex-col items-center justify-center text-center p-8 text-gray-500';
