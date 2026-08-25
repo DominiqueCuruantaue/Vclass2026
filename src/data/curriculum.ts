@@ -415,45 +415,37 @@ export const CHAPTERS: Chapter[] = [
   // ══════════════════════════════════════════════════════════
 
   // ─── 1ª Classe — Língua Portuguesa ────────────────────────
-  { id:'mz1port-1', subjectId:'mz1-port', title:'Vogais e Consoantes',            description:'Reconhecimento oral e escrito das letras',                term:1, displayOrder:1 },
-  { id:'mz1port-2', subjectId:'mz1-port', title:'Sílabas Simples',                description:'Formação de sílabas e primeiras palavras',                 term:1, displayOrder:2 },
-  { id:'mz1port-3', subjectId:'mz1-port', title:'O Meu Nome e a Minha Família',   description:'Vocabulário do quotidiano e oralidade',                    term:1, displayOrder:3 },
-  { id:'mz1port-4', subjectId:'mz1-port', title:'Leitura de Palavras Simples',    description:'Consciência fonológica e decodificação',                   term:2, displayOrder:4 },
-  { id:'mz1port-5', subjectId:'mz1-port', title:'Escrita de Palavras',            description:'Cópia e ditado de palavras curtas',                        term:2, displayOrder:5 },
-  { id:'mz1port-6', subjectId:'mz1-port', title:'Higiene e Saúde',                description:'Vocabulário sobre cuidados com o corpo',                   term:2, displayOrder:6 },
-  { id:'mz1port-7', subjectId:'mz1-port', title:'Frases Simples',                 description:'Construção e leitura de frases curtas',                    term:3, displayOrder:7 },
-  { id:'mz1port-8', subjectId:'mz1-port', title:'Histórias Curtas',               description:'Compreensão oral de pequenas histórias',                   term:3, displayOrder:8 },
-  { id:'mz1port-9', subjectId:'mz1-port', title:'Revisão e Consolidação',         description:'Leitura e escrita do que foi aprendido no ano',            term:3, displayOrder:9 },
+  // Unidades 1-5 confirmadas pelo índice oficial do manual (1ª Classe, Moçambique)
+  { id:'mz1port-1', subjectId:'mz1-port', title:'Escola (1)',    description:'Expressões de cumprimento, despedida e identificação; vocabulário da escola (intervenientes, material e mobiliário escolar); noções de tamanho, altura, peso e lateralidade; grafismos livres, jogos e instruções simples; pedidos de permissão e desculpas', term:1, displayOrder:1 },
+  { id:'mz1port-2', subjectId:'mz1-port', title:'Família',      description:'Família e partes do corpo; higiene e cuidados pessoais; vestuário, divisões e mobiliário da casa; alimentos e refeições; introdução das vogais (i, u, o, e, a) e ditongos; leitura e escrita das letras m, p, t, l e n; prevenção de acidentes domésticos', term:2, displayOrder:2 },
+  { id:'mz1port-3', subjectId:'mz1-port', title:'Escola (2)',    description:'Posição, dias da semana, pedidos de desculpa e agradecimento, sentimentos e preferências; leitura e escrita das letras c, d, v, b, r e g', term:2, displayOrder:3 },
+  { id:'mz1port-4', subjectId:'mz1-port', title:'Comunidade',   description:'Lugares públicos, profissões e actividades comunitárias; meios de transporte, datas festivas e prevenção de acidentes; leitura e escrita das letras s, j, f, z, h, q e x', term:3, displayOrder:4 },
+  { id:'mz1port-5', subjectId:'mz1-port', title:'Ambiente',     description:'Cuidados com o ambiente, temperatura e cores; animais domésticos e selvagens; plantas, frutos e água; leitura e escrita das letras k, w e y; pontuação (ponto final, vírgula, ponto de interrogação) e acentuação (til)', term:3, displayOrder:5 },
 
   // ─── 1ª Classe — Matemática ───────────────────────────────
-  { id:'mz1mat-1', subjectId:'mz1-mat', title:'Números até 10',                  description:'Contagem, leitura e escrita',                              term:1, displayOrder:1 },
-  { id:'mz1mat-2', subjectId:'mz1-mat', title:'Noções Espaciais',                description:'Dentro/fora, perto/longe, em cima/em baixo',               term:1, displayOrder:2 },
-  { id:'mz1mat-3', subjectId:'mz1-mat', title:'Formas Geométricas Simples',      description:'Círculo, quadrado, triângulo e rectângulo',                term:1, displayOrder:3 },
-  { id:'mz1mat-4', subjectId:'mz1-mat', title:'Números até 20',                  description:'Contagem e sequência numérica',                            term:2, displayOrder:4 },
-  { id:'mz1mat-5', subjectId:'mz1-mat', title:'Adição Simples',                  description:'Juntar quantidades até 20',                                term:2, displayOrder:5 },
-  { id:'mz1mat-6', subjectId:'mz1-mat', title:'Subtracção Simples',              description:'Tirar quantidades até 20',                                 term:2, displayOrder:6 },
-  { id:'mz1mat-7', subjectId:'mz1-mat', title:'Números até 100',                 description:'Contagem por dezenas',                                     term:3, displayOrder:7 },
-  { id:'mz1mat-8', subjectId:'mz1-mat', title:'Comparação de Quantidades',       description:'Maior, menor e igual',                                     term:3, displayOrder:8 },
-  { id:'mz1mat-9', subjectId:'mz1-mat', title:'Resolução de Problemas do Quotidiano', description:'Situações simples de contar e calcular',             term:3, displayOrder:9 },
+  // Capítulos 1-6 confirmados pelo índice oficial do manual (1ª Classe, Moçambique)
+  { id:'mz1mat-1', subjectId:'mz1-mat', title:'Vocabulário Básico',              description:'Noção de quantidade — Muito e Pouco, Mais e Menos, Mais/Menos do que, Tanto como, Cheio e Vazio, Aumentar e Diminuir, Pôr e Tirar; Noção de tamanho — Grande e Pequeno, Maior/Menor e Igual, Comprido e Curto, Largo e Estreito, Alto e Baixo, Grosso e Fino; Noção de posição — À Frente e Atrás, À Esquerda e À Direita, Antes e Depois, Primeiro e Último, No Meio e Entre, Dentro/Fora e Fronteira, Em Cima/Em Baixo, Em Volta e Ao Lado; Noção de distância — Perto e Longe, Aproximar e Afastar; Noção de direcção e sentido — Para a Frente/Para Trás, Para a Direita/Para a Esquerda, Para Dentro/Para Fora, Para o Lado/Para Cima/Para Baixo; Noção de massa e peso — Pesado e Leve; Avaliação formativa', term:1, displayOrder:1 },
+  { id:'mz1mat-2', subjectId:'mz1-mat', title:'Números Naturais e Operações (1)', description:'Os Números Naturais de 1 a 5 — leitura, escrita, ordenação e comparação; Adição e subtracção de números naturais até 5; O Número Natural 0 (zero) — adição e subtracção até 5 incluindo o zero; Avaliação formativa', term:1, displayOrder:2 },
+  { id:'mz1mat-3', subjectId:'mz1-mat', title:'Espaço e Forma',                  description:'Figuras geométricas — linhas abertas e fechadas, linhas rectas e curvas, noção de rectângulo, triângulo e círculo; Avaliação formativa', term:2, displayOrder:3 },
+  { id:'mz1mat-4', subjectId:'mz1-mat', title:'Números Naturais e Operações (2)', description:'Os Números Naturais de 6 a 9; Adição e subtracção de números naturais até 9; O Número Natural 10 — noção de dezena, adição e subtracção até 10; Os Números Naturais 11 e 12 — composição e decomposição, noção de dúzia, cálculo mental de adição e subtracção até 12; Os Números Naturais 13, 14 e 15 — composição e decomposição, cálculo mental de adição e subtracção até 15; Os Números Naturais 16 a 20 — ordenação e comparação, composição e decomposição, cálculo mental de adição e subtracção até 20; Avaliação formativa', term:2, displayOrder:4 },
+  { id:'mz1mat-5', subjectId:'mz1-mat', title:'Grandezas e Medidas',            description:'Comprimento, capacidade-volume e massa — noções intuitivas de medição de comprimento, noção de metro, noções de capacidade-volume, noções de massa; Avaliação formativa', term:3, displayOrder:5 },
+  { id:'mz1mat-6', subjectId:'mz1-mat', title:'Números Naturais e Operações (3)', description:'Os Números Naturais de 21 a 50 — leitura e escrita; ordenação e comparação sem uso de sinais, até 50; composição e decomposição de números naturais até 50; cálculo mental da adição e subtracção, até 50; Avaliação formativa', term:3, displayOrder:6 },
 
   // ─── 2ª Classe — Língua Portuguesa ────────────────────────
-  { id:'mz2port-1', subjectId:'mz2-port', title:'Alfabeto e Ordem Alfabética',    description:'Reconhecimento e sequência das letras',                    term:1, displayOrder:1 },
-  { id:'mz2port-2', subjectId:'mz2-port', title:'Sílabas Complexas',             description:'Encontros consonantais e vocálicos',                       term:1, displayOrder:2 },
-  { id:'mz2port-3', subjectId:'mz2-port', title:'Leitura de Textos Curtos',      description:'Compreensão de pequenos textos ilustrados',                term:1, displayOrder:3 },
-  { id:'mz2port-4', subjectId:'mz2-port', title:'Produção de Frases e Pequenos Textos', description:'Escrita orientada de frases simples',                term:2, displayOrder:4 },
-  { id:'mz2port-5', subjectId:'mz2-port', title:'Substantivos e Adjectivos',     description:'Noções iniciais de classes de palavras',                   term:2, displayOrder:5 },
-  { id:'mz2port-6', subjectId:'mz2-port', title:'Relação com os Outros',         description:'Vocabulário de convivência e respeito',                    term:2, displayOrder:6 },
-  { id:'mz2port-7', subjectId:'mz2-port', title:'Pontuação Básica',              description:'Ponto final e ponto de interrogação',                      term:3, displayOrder:7 },
-  { id:'mz2port-8', subjectId:'mz2-port', title:'Leitura Expressiva de Histórias', description:'Entoação e compreensão de pequenas narrativas',          term:3, displayOrder:8 },
-  { id:'mz2port-9', subjectId:'mz2-port', title:'Revisão e Consolidação',        description:'Leitura e escrita do que foi aprendido no ano',             term:3, displayOrder:9 },
+  // Temas 1-4 confirmados pelo índice oficial do manual (2ª Classe, Moçambique) — livro completo (termina em Bibliografia)
+  { id:'mz2port-1', subjectId:'mz2-port', title:'A Minha Escola',   description:'O encontro, Pelo caminho, A queda da Vera, A Ana e o Paulo, A escola limpa, A casa do Guedes, Um passeio, As férias, A sala de aulas e Qual é a coisa qual é ela', term:1, displayOrder:1 },
+  { id:'mz2port-2', subjectId:'mz2-port', title:'A Minha Família',  description:'A minha família, O girassol, A lavra, O município de Cacuaco (I, II e III), Tenho fome, O trabalho é importante, Vamos cantar, A avó da Ana e Vamos recitar', term:1, displayOrder:2 },
+  { id:'mz2port-3', subjectId:'mz2-port', title:'O Mundo dos Animais', description:'Animais domésticos e selvagens, A utilidade dos animais, Tu falas, Vamos cantar, O sonho da Glória, As férias na aldeia (I e II), As formigas, Vamos recitar juntos, Uma visita e A trovoada', term:2, displayOrder:3 },
+  { id:'mz2port-4', subjectId:'mz2-port', title:'A Minha Saúde',    description:'Os alimentos (I e II), Vamos recitar, O Víctor está forte, No campo, Uma carta, A chuva, O mercado, A saúde, A higiene do nosso corpo (I e II), Asseio, As vacinas e Canções, curiosidades e provérbios', term:3, displayOrder:4 },
 
   // ─── 2ª Classe — Matemática ───────────────────────────────
-  { id:'mz2mat-1', subjectId:'mz2-mat', title:'Números até 100',                 description:'Leitura, escrita e ordenação',                             term:1, displayOrder:1 },
-  { id:'mz2mat-2', subjectId:'mz2-mat', title:'Adição com Transporte',           description:'Somar números com reagrupamento',                          term:1, displayOrder:2 },
-  { id:'mz2mat-3', subjectId:'mz2-mat', title:'Subtracção com Empréstimo',       description:'Subtrair números com reagrupamento',                       term:1, displayOrder:3 },
-  { id:'mz2mat-4', subjectId:'mz2-mat', title:'Dúzia e Dezena',                  description:'Agrupamentos de quantidades',                              term:2, displayOrder:4 },
-  { id:'mz2mat-5', subjectId:'mz2-mat', title:'Introdução à Multiplicação',      description:'Soma de parcelas iguais',                                  term:2, displayOrder:5 },
-  { id:'mz2mat-6', subjectId:'mz2-mat', title:'Medidas de Tempo',                description:'Dias, semanas e meses',                                    term:2, displayOrder:6 },
+  // Capítulos 1-2 confirmados pelo índice oficial do manual (2ª Classe, Moçambique); 3-9 ainda por confirmar com o restante do índice
+  { id:'mz2mat-1', subjectId:'mz2-mat', title:'Números Naturais e Operações (1)', description:'Contagem, leitura, escrita, ordenação e comparação de números naturais até 100; dezena e unidade; adição e subtracção na forma horizontal e vertical até 100; números ordinais até 20.º', term:1, displayOrder:1 },
+  { id:'mz2mat-6', subjectId:'mz2-mat', title:'Grandezas e Medidas (1)',          description:'O relógio e as horas inteiras; o calendário — dia, semana, mês e ano', term:1, displayOrder:2 },
+  { id:'mz2mat-2', subjectId:'mz2-mat', title:'Adição com Transporte',           description:'Somar números com reagrupamento',                          term:1, displayOrder:3 },
+  { id:'mz2mat-3', subjectId:'mz2-mat', title:'Subtracção com Empréstimo',       description:'Subtrair números com reagrupamento',                       term:1, displayOrder:4 },
+  { id:'mz2mat-4', subjectId:'mz2-mat', title:'Dúzia e Dezena',                  description:'Agrupamentos de quantidades',                              term:2, displayOrder:5 },
+  { id:'mz2mat-5', subjectId:'mz2-mat', title:'Introdução à Multiplicação',      description:'Soma de parcelas iguais',                                  term:2, displayOrder:6 },
   { id:'mz2mat-7', subjectId:'mz2-mat', title:'Números até 1000',                description:'Leitura, escrita e valor posicional',                      term:3, displayOrder:7 },
   { id:'mz2mat-8', subjectId:'mz2-mat', title:'Moeda Moçambicana',               description:'Reconhecimento e uso simples do metical',                  term:3, displayOrder:8 },
   { id:'mz2mat-9', subjectId:'mz2-mat', title:'Resolução de Problemas',          description:'Problemas do quotidiano com as operações aprendidas',      term:3, displayOrder:9 },
@@ -470,15 +462,16 @@ export const CHAPTERS: Chapter[] = [
   { id:'mz3port-9', subjectId:'mz3-port', title:'Revisão para a Avaliação Final do Ciclo', description:'Consolidação de leitura e escrita do 1º ciclo',    term:3, displayOrder:9 },
 
   // ─── 3ª Classe — Matemática ───────────────────────────────
-  { id:'mz3mat-1', subjectId:'mz3-mat', title:'Números até 1000',                description:'Valor posicional — unidades, dezenas e centenas',         term:1, displayOrder:1 },
-  { id:'mz3mat-2', subjectId:'mz3-mat', title:'Multiplicação — Tabuadas do 2 ao 5', description:'Memorização e aplicação das tabuadas',                  term:1, displayOrder:2 },
-  { id:'mz3mat-3', subjectId:'mz3-mat', title:'Divisão — Repartir em Partes Iguais', description:'Noção inicial de divisão',                              term:1, displayOrder:3 },
-  { id:'mz3mat-4', subjectId:'mz3-mat', title:'Tabuadas do 6 ao 10',             description:'Memorização e aplicação das tabuadas',                     term:2, displayOrder:4 },
-  { id:'mz3mat-5', subjectId:'mz3-mat', title:'Metade, Terça e Quarta Parte',    description:'Noções iniciais de fracção',                               term:2, displayOrder:5 },
-  { id:'mz3mat-6', subjectId:'mz3-mat', title:'Medidas de Comprimento',          description:'Metro e centímetro',                                       term:2, displayOrder:6 },
-  { id:'mz3mat-7', subjectId:'mz3-mat', title:'Medidas de Massa e Capacidade',   description:'Quilograma e litro',                                       term:3, displayOrder:7 },
-  { id:'mz3mat-8', subjectId:'mz3-mat', title:'Leitura de Tabelas e Gráficos Simples', description:'Organização e interpretação de dados',                term:3, displayOrder:8 },
-  { id:'mz3mat-9', subjectId:'mz3-mat', title:'Revisão para a Avaliação Final do Ciclo', description:'Consolidação das quatro operações e medidas',       term:3, displayOrder:9 },
+  // Temas 1-3, por trimestre, confirmados pela distribuição trimestral de conteúdos oficial (3ª Classe, Moçambique)
+  { id:'mz3mat-1', subjectId:'mz3-mat', title:'Números e Operações (1)',  description:'Estudo dos números naturais até 10 000 — retomada dos números até 1000, leitura, composição e decomposição em ordem e classes, escrita na tabela de posição e por extensão, antecessor e sucessor, comparação e ordenação, números ordinais até 100; Operações com números naturais — revisão da adição, adição por decomposição e por algoritmo (sem e com transporte), propriedade comutativa, revisão da subtracção, subtracção por algoritmo (sem e com empréstimo)', term:1, displayOrder:1 },
+  { id:'mz3mat-2', subjectId:'mz3-mat', title:'Geometria (1)',            description:'Pontos e rectas — revisão sobre localização e movimentação, noção de ponto, linhas, noção de recta e semi-recta, noção de segmento de recta, rectas paralelas e concorrentes, noção de circunferência', term:1, displayOrder:2 },
+  { id:'mz3mat-3', subjectId:'mz3-mat', title:'Grandezas e Medidas (1)',  description:'Medidas não padronizadas; medidas de comprimento; medidas de massa; medidas de capacidade', term:1, displayOrder:3 },
+  { id:'mz3mat-4', subjectId:'mz3-mat', title:'Números e Operações (2)',  description:'Revisão de multiplicação — multiplicação de números por 2, 4 e 8, multiplicação de números por 3, 6 e 9, algoritmo da multiplicação por número de dois algarismos, propriedade comutativa; divisão de números por um número de um algarismo e algoritmo da divisão', term:2, displayOrder:4 },
+  { id:'mz3mat-5', subjectId:'mz3-mat', title:'Geometria (2)',            description:'Ângulos — noção de ângulo, classificação de ângulos; Quadriláteros — quadriláteros, trapézio, paralelogramo, losango; Noção de simetria — simetria', term:2, displayOrder:5 },
+  { id:'mz3mat-6', subjectId:'mz3-mat', title:'Grandezas e Medidas (2)',  description:'Medidas de tempo — o dia, a hora, o minuto e o segundo; relação entre as unidades de tempo', term:2, displayOrder:6 },
+  { id:'mz3mat-7', subjectId:'mz3-mat', title:'Números e Operações (3)',  description:'Operações com números decimais — revisão de adição e subtracção, revisão de multiplicação e divisão, estudo de números decimais com até três casas, leitura das décimas, centésimas e milésimas, comparação e ordenação, adição e subtracção, multiplicação de números decimais e multiplicação por 10, 100 e 1000; Partes de unidade ou partes do todo — números agrupados e números partitivos', term:3, displayOrder:7 },
+  { id:'mz3mat-8', subjectId:'mz3-mat', title:'Geometria (3)',            description:'Sólidos geométricos — o cubo e o paralelepípedo, o cilindro e o cone, a esfera', term:3, displayOrder:8 },
+  { id:'mz3mat-9', subjectId:'mz3-mat', title:'Grandezas e Medidas (3)',  description:'Dinheiro (sistema monetário); Medidas de comprimento — o metro e os seus submúltiplos, o decímetro, o centímetro, o milímetro, múltiplos do metro, perímetro de polígonos; Medidas de capacidade — submúltiplos e múltiplos do litro; Medidas de peso — o grama e os seus múltiplos e submúltiplos, a tonelada', term:3, displayOrder:9 },
 
   // ─── 4ª Classe — Língua Portuguesa ────────────────────────
   { id:'mz4port-1', subjectId:'mz4-port', title:'Classes de Palavras',           description:'Substantivo, adjectivo e verbo',                           term:1, displayOrder:1 },
