@@ -171,16 +171,12 @@ curriculum.get('/countries', (c) => {
   return c.json({ success: true, data: getCountries() })
 })
 
-function clearStaticChapters(levels: any[]) {
-  levels.flatMap((l: any) => l.grades || [])
-        .flatMap((g: any) => g.subjects || [])
-        .forEach((s: any) => { s.chapters = [] })
-}
-
+// Árvore devolvida junta os capítulos oficiais estáticos (currículo real,
+// curriculum.ts) com os capítulos criados por professores na BD — os dois
+// convivem no mesmo array `subject.chapters` (dedupados por id).
 async function buildCountryTree(env: any, country: any) {
   const levels = getCurriculumTree(country.id)
   await mergeDbSubjectsIntoTree(env, [{ name: country.name, levels }])
-  clearStaticChapters(levels)
   await mergeDbChaptersIntoTree(env, levels)
   return levels
 }

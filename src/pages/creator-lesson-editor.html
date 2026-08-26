@@ -1345,13 +1345,8 @@
         let exerciseIdCounter = 1;
         let resourceIdCounter = 1;
 
-        // Dados curriculares carregados via API
+        // Dados curriculares carregados via API (capítulos estáticos + BD já mesclados)
         let CURRICULUM_DATA = null;
-        // Capítulos criados pelo professor (vindos de /api/creator/chapters)
-        let CREATOR_CHAPTERS = [];
-        // Mapa subjectId → nome da disciplina (construído a partir do currículo).
-        // Permite agrupar disciplinas iguais com IDs diferentes por classe.
-        let SUBJECT_NAME_BY_ID = {};
 
         // Cache para selects
         let _currCountry = '', _currLevel = '', _currGrade = '', _currSubjectId = '';
@@ -1368,7 +1363,6 @@
                 lessonData.title = LESSON_TITLE_INIT;
             }
             await loadCurriculumData();
-            await loadCreatorChapters();
 
             // Se LESSON_ID for um UUID real, carregar dados da BD
             if (lessonDbId) {
@@ -1518,19 +1512,16 @@
         // correspondente ao chapter_id guardado em lessonData e seleciona os
         // selects em cascata, permitindo que o professor veja e altere os campos.
         async function restoreCurriculumSelects() {
-            if (!lessonData.chapter_id || !CURRICULUM_DATA || !CREATOR_CHAPTERS) return;
+            if (!lessonData.chapter_id || !CURRICULUM_DATA) return;
 
-            // Encontrar o chapter nos capítulos do professor para obter grade_subject_id
-            const chapter = CREATOR_CHAPTERS.find(c => c.id === lessonData.chapter_id);
-            const gsId = chapter?.grade_subject_id;
-            if (!gsId) return;
-
-            // Percorrer o currículo para encontrar o país/nível/classe que tem este grade_subject_id
+            // Percorrer o currículo para encontrar o país/nível/classe/disciplina cujo
+            // array de capítulos (estáticos + BD, já mesclados por /api/curriculum/full)
+            // contém este chapter_id.
             let foundCountryId = null, foundLevelId = null, foundGradeId = null, foundSubjectId = null;
             outer: for (const country of CURRICULUM_DATA) {
                 for (const level of (country.levels || [])) {
                     for (const grade of (level.grades || [])) {
-                        const subj = (grade.subjects || []).find(s => s.id === gsId);
+                        const subj = (grade.subjects || []).find(s => (s.chapters || []).some(c => c.id === lessonData.chapter_id));
                         if (subj) {
                             foundCountryId  = country.id;
                             foundLevelId    = level.id;
@@ -1568,13 +1559,6 @@
                 const json = await res.json();
                 if (json.success) {
                     CURRICULUM_DATA = json.data;
-                    // Construir mapa subjectId → nome para todos os países/níveis/classes
-                    SUBJECT_NAME_BY_ID = {};
-                    CURRICULUM_DATA.forEach(country => country.levels?.forEach(level =>
-                        level.grades?.forEach(grade => grade.subjects?.forEach(s => {
-                            SUBJECT_NAME_BY_ID[s.id] = s.name;
-                        }))
-                    ));
                     populateCountries();
                 }
             } catch(e) {
@@ -1683,8 +1667,11 @@
             scheduleAutoSave();
         }
 
-        // Filtra os capítulos do professor pela disciplina seleccionada e popula o select.
-        // O slug dos capítulos criados começa por `${subjectId}-` (ver createChapter() em creator-content.html).
+        // Popula o select de capítulos com os capítulos oficiais do currículo
+        // (curriculum.ts, já embutidos em CURRICULUM_DATA por /api/curriculum/full)
+        // juntamente com quaisquer capítulos criados manualmente por professores
+        // para esta mesma disciplina/classe — os dois já vêm mesclados no array
+        // `subject.chapters` devolvido pelo backend.
         function renderChapterSelectForSubject(subjectId) {
             const sel = document.getElementById('field-chapter');
             const hint = document.getElementById('chapter-empty-hint');
@@ -1693,24 +1680,10 @@
                             : country_obj?.educationTerms === 'semestres'  ? 'Semestre'
                             : 'Trimestre';
 
-            // A página de Conteúdos deduplica disciplinas por nome, portanto
-            // um capítulo de "Matemática" pode ter sido gravado com slug
-            // `mz10-mat-…` mesmo que esta lição seja da 12ª. Por isso o
-            // filtro é por NOME da disciplina e não pelo id exacto:
-            //   slug → encontra subject estático cujo id é prefixo →
-            //          compara o nome desse subject com o nome do subject actual.
-            const selectedName = (SUBJECT_NAME_BY_ID[subjectId] || '').toLowerCase().trim();
-            const subjectIdsByName = {};
-            Object.entries(SUBJECT_NAME_BY_ID).forEach(([sid, sname]) => {
-                const k = (sname || '').toLowerCase().trim();
-                (subjectIdsByName[k] = subjectIdsByName[k] || []).push(sid.toLowerCase());
-            });
-            const candidateIds = subjectIdsByName[selectedName] || [subjectId.toLowerCase()];
-
-            const mine = (CREATOR_CHAPTERS || []).filter(ch => {
-                const slug = (ch.slug || '').toLowerCase();
-                return candidateIds.some(sid => slug.startsWith(sid + '-'));
-            });
+            const level = country_obj?.levels?.find(l => l.id === _currLevel);
+            const grade = level?.grades?.find(g => g.id === _currGrade);
+            const subject = grade?.subjects?.find(s => s.id === subjectId);
+            const mine = subject?.chapters || [];
 
             if (!mine.length) {
                 sel.innerHTML = '<option value="">— Sem capítulos para esta disciplina —</option>';
@@ -1720,16 +1693,18 @@
             }
             hint?.classList.add('hidden');
 
-            // Agrupar por trimestre quando disponível
-            const hasTerms = mine.some(c => c.trimester);
+            // Agrupar por trimestre quando disponível (capítulos estáticos usam
+            // `term`, capítulos vindos da BD usam `trimester` — normalizar)
+            const termOf = c => c.term ?? c.trimester ?? 0;
+            const hasTerms = mine.some(c => termOf(c));
             let options = `<option value="">Selecionar capítulo...</option>`;
             if (hasTerms) {
-                const terms = [...new Set(mine.map(c => c.trimester || 0))].sort();
+                const terms = [...new Set(mine.map(termOf))].sort();
                 terms.forEach(t => {
-                    const group = mine.filter(c => (c.trimester || 0) === t);
+                    const group = mine.filter(c => termOf(c) === t);
                     options += t ? `<optgroup label="── ${termLabel} ${t} ──">` : `<optgroup label="── Sem período ──">`;
                     options += group.map(c =>
-                        `<option value="${c.id}" data-term="${c.trimester || ''}" data-title="${(c.title||'').replace(/"/g,'&quot;')}">${c.title}</option>`
+                        `<option value="${c.id}" data-term="${termOf(c) || ''}" data-title="${(c.title||'').replace(/"/g,'&quot;')}">${c.title}</option>`
                     ).join('');
                     options += '</optgroup>';
                 });
@@ -1744,19 +1719,6 @@
             if (lessonData.chapter_id) {
                 sel.value = lessonData.chapter_id;
                 if (sel.value) onChapterChange();
-            }
-        }
-
-        async function loadCreatorChapters() {
-            try {
-                const token = localStorage.getItem('accessToken') || '';
-                const r = await fetch('/api/creator/chapters', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const d = await r.json();
-                if (d.success && Array.isArray(d.data)) CREATOR_CHAPTERS = d.data;
-            } catch (e) {
-                console.warn('loadCreatorChapters failed', e);
             }
         }
 
