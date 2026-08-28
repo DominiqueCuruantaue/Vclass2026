@@ -19,7 +19,7 @@
 			"remote": false
 		}
 	]
-	// Environment variables (set via wrangler secrets or .dev.vars):
+	// Environment variables (set via wrangler secrets ou .dev.vars):
 	// - SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
 	// - JWT_SECRET (≥16 chars)
 	// - VIDEO_SECRET (HMAC para tokens de vídeo curtos, ≥32 chars)
@@ -28,4 +28,6 @@
 	// - BUNNY_CDN_HOST       (ex: vz-xxxxxx.b-cdn.net — para signed HLS)
 	// - BUNNY_TOKEN_KEY      (Token Authentication Key da Library Security)
 	// - ALLOWED_ORIGINS (CSV de origens permitidas em CORS)
+	// - OPENAI_API_KEY, OPENAI_MODEL   (chat IA — assistente académico)
+	// - RESEND_API_KEY, RESEND_FROM_EMAIL (email transacional — candidaturas de professores)
 }
