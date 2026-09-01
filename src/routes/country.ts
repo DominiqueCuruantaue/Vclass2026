@@ -4,6 +4,7 @@ import { Hono } from 'hono'
 import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware, requireCountryManagerOrAdmin } from '../middleware/auth'
 import { getSupabase } from '../config/supabase'
+import { mockUsers } from '../middleware/database'
 import { EDUCATION_LEVELS, GRADES, SUBJECTS } from '../data/curriculum'
 import type { ApiResponse } from '../types'
 
@@ -14,6 +15,34 @@ country.use('/*', requireCountryManagerOrAdmin)
 function isDatabaseConfigured(env?: any): boolean {
   return !!(env?.SUPABASE_URL || process.env.SUPABASE_URL) &&
          !!(env?.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)
+}
+
+// País gerido pelo country_manager autenticado — null quando sem restrição
+// (admin). Mesmo padrão de src/routes/teacher-verification.ts
+// (getManagerCountry): lido de users.country_code para reflectir mudanças de
+// país sem exigir novo login; em modo demo (sem DB) usa mockUsers, indexado
+// pelo id do JWT.
+async function getManagerCountry(env: any, user: any): Promise<string | null> {
+  if (user.role !== 'country_manager') return null
+  if (!isDatabaseConfigured(env)) {
+    const demo = mockUsers.find(u => u.id === user.id) as any
+    return demo?.managed_country || demo?.country_id || null
+  }
+  const supabase = getSupabase(env)
+  if (!supabase) return null
+  const { data } = await supabase.from('users').select('country_code').eq('id', user.id).maybeSingle()
+  return data?.country_code || null
+}
+
+// Bloqueia country_manager de aceder/alterar o país :id quando não é o seu.
+// Devolve uma Response de 403 para o chamador propagar, ou null se pode prosseguir.
+async function assertCountryAccess(c: any, id: string): Promise<Response | null> {
+  const user = c.get('user')
+  const managerCountry = await getManagerCountry(c.env, user)
+  if (managerCountry && id !== managerCountry) {
+    return c.json<ApiResponse>({ success: false, error: 'Acesso restrito ao seu país' }, 403)
+  }
+  return null
 }
 
 // ── Currículo real (src/data/curriculum.ts) — classes e disciplinas por país ──
@@ -325,6 +354,8 @@ country.get('/me', async (c) => {
 // GET /api/country/:id/stats
 country.get('/:id/stats', async (c) => {
   const id = c.req.param('id')
+  const denied = await assertCountryAccess(c, id)
+  if (denied) return denied
   const cData = await getCountryPayload(c.env, id)
   if (!cData) return c.json<ApiResponse>({ success: false, error: 'País não encontrado' }, 404)
   return c.json<ApiResponse>({ success: true, data: cData })
@@ -333,6 +364,8 @@ country.get('/:id/stats', async (c) => {
 // GET /api/country/:id/teachers
 country.get('/:id/teachers', async (c) => {
   const id = c.req.param('id')
+  const denied = await assertCountryAccess(c, id)
+  if (denied) return denied
 
   if (!isDatabaseConfigured(c.env)) {
     const teachers = MOCK_TEACHERS[id] || []
@@ -394,6 +427,8 @@ country.get('/:id/teachers', async (c) => {
 // GET /api/country/:id/users — estudantes + professores reais deste país
 country.get('/:id/users', async (c) => {
   const id = c.req.param('id')
+  const denied = await assertCountryAccess(c, id)
+  if (denied) return denied
 
   if (!isDatabaseConfigured(c.env)) {
     const users = MOCK_USERS_COUNTRY[id] || []
@@ -443,7 +478,10 @@ country.get('/:id/users', async (c) => {
 
 // PATCH /api/country/:id/teachers/:tid — activar/desactivar professor
 country.patch('/:id/teachers/:tid', async (c) => {
+  const id = c.req.param('id')
   const tid = c.req.param('tid')
+  const denied = await assertCountryAccess(c, id)
+  if (denied) return denied
   const body = await c.req.json().catch(() => ({})) as { status?: string }
 
   if (!isDatabaseConfigured(c.env) || tid.startsWith('t-')) {
@@ -452,6 +490,13 @@ country.patch('/:id/teachers/:tid', async (c) => {
   }
   const supabase = getSupabase(c.env)
   if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+
+  // O :id do path já foi validado contra o país do gestor acima — falta ainda
+  // confirmar que o professor alvo (:tid) é mesmo desse país, e não de outro.
+  const { data: teacherRow } = await supabase.from('users').select('country_code').eq('id', tid).maybeSingle()
+  if (!teacherRow || teacherRow.country_code !== id) {
+    return c.json<ApiResponse>({ success: false, error: 'Professor não encontrado neste país' }, 404)
+  }
 
   const { error } = await supabase.from('users').update({ is_active: body.status !== 'inactive', updated_at: new Date().toISOString() }).eq('id', tid)
   if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
@@ -462,6 +507,8 @@ country.patch('/:id/teachers/:tid', async (c) => {
 // GET /api/country/:id/curriculum
 country.get('/:id/curriculum', async (c) => {
   const id = c.req.param('id')
+  const denied = await assertCountryAccess(c, id)
+  if (denied) return denied
   const cData = COUNTRIES_DATA[id]
   if (!cData) return c.json<ApiResponse>({ success: false, error: 'País não encontrado' }, 404)
   return c.json<ApiResponse>({
@@ -485,11 +532,14 @@ country.get('/list', async (c) => {
 
 // POST /api/country/:id/announcement — aviso específico do país
 country.post('/:id/announcement', async (c) => {
+  const id = c.req.param('id')
+  const denied = await assertCountryAccess(c, id)
+  if (denied) return denied
   const body = await c.req.json().catch(() => ({}))
   const agent = c.get('user')
   return c.json<ApiResponse>({
     success: true,
-    data: { ...body, country: c.req.param('id'), sent_by: agent?.full_name, sent_at: new Date().toISOString() },
+    data: { ...body, country: id, sent_by: agent?.full_name, sent_at: new Date().toISOString() },
     message: 'Aviso enviado ao país (modo demo)'
   }, 201)
 })

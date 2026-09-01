@@ -400,6 +400,9 @@
         function escAttr(s) { return s.replace(/'/g,'&#39;').replace(/"/g,'&quot;').substring(0,60); }
 
         function formatBotText(text) {
+            // Escapa HTML primeiro — o texto pode conter o input do próprio
+            // utilizador reflectido pelo backend (fallback local do chat).
+            text = escHtml(text);
             // Bold **text**
             text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             // Code blocks
@@ -478,8 +481,10 @@
 
             if (best && bestScore > 0) return best.response;
 
-            // Default
-            return `Boa pergunta! 🤔\n\nNão encontrei uma resposta específica sobre **"${escHtml(message.substring(0,50))}"** na minha base de conhecimento.\n\n**Sugestões:**\n• Reformule a pergunta com palavras-chave específicas\n• Escolha uma disciplina nos chips acima\n• Consulte diretamente as lições relacionadas\n\n**Tópicos disponíveis:** Funções, Equações, Newton, Tabela Periódica, Derivadas, Trigonometria, Células, DNA e muito mais!`;
+            // Default — texto NÃO escapado aqui: formatBotText() escapa todo o
+            // texto do bot (incluindo esta reflexão do input do utilizador)
+            // antes de o injectar no DOM, para nunca escapar duas vezes.
+            return `Boa pergunta! 🤔\n\nNão encontrei uma resposta específica sobre **"${message.substring(0,50)}"** na minha base de conhecimento.\n\n**Sugestões:**\n• Reformule a pergunta com palavras-chave específicas\n• Escolha uma disciplina nos chips acima\n• Consulte diretamente as lições relacionadas\n\n**Tópicos disponíveis:** Funções, Equações, Newton, Tabela Periódica, Derivadas, Trigonometria, Células, DNA e muito mais!`;
         }
 
         renderHistory();

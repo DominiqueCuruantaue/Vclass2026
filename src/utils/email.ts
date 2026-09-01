@@ -53,6 +53,17 @@ export async function sendEmail(env: any, input: SendEmailInput): Promise<SendEm
   }
 }
 
+// Escapa HTML antes de interpolar texto fornecido por utilizadores (nome do
+// candidato, mensagens de avaliadores) nos templates de email abaixo.
+function escapeHtml(str: string): string {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 // ── Layout base partilhado pelos templates ─────────────────────────────────
 function emailLayout(title: string, bodyHtml: string): string {
   return `
@@ -74,7 +85,7 @@ export function teacherApplicationReceivedEmail(fullName: string) {
   return {
     subject: 'Candidatura recebida — VClass',
     html: emailLayout('Candidatura recebida ✅', `
-      <p>Olá ${fullName},</p>
+      <p>Olá ${escapeHtml(fullName)},</p>
       <p>A sua candidatura para se tornar professor na VClass foi recebida com sucesso.</p>
       <p>A nossa equipa vai analisar as suas qualificações e referências. Assim que a revisão for concluída,
       vai receber <strong>outro email</strong> a informar se a sua candidatura foi aprovada — e, nesse caso,
@@ -88,11 +99,11 @@ export function teacherApplicationApprovedEmail(fullName: string, loginEmail: st
   return {
     subject: '🎉 Está de parabéns — foi aceite como professor na VClass!',
     html: emailLayout('Está de parabéns! 🎉', `
-      <p>Olá ${fullName},</p>
+      <p>Olá ${escapeHtml(fullName)},</p>
       <p>As suas competências vão de acordo com os requisitos que pretendemos — <strong>foi aceite como
       professor da plataforma VClass</strong>! A sua conta já está activa e pode começar a criar e publicar
       aulas imediatamente.</p>
-      <p>Pode entrar com o email <strong>${loginEmail}</strong> e a password que definiu na candidatura, em
+      <p>Pode entrar com o email <strong>${escapeHtml(loginEmail)}</strong> e a password que definiu na candidatura, em
       <a href="https://vclass.mz/login.html" style="color:#7c3aed;">vclass.mz/login.html</a>.</p>
       <p>Bem-vindo à equipa VClass!</p>
     `)
@@ -103,7 +114,7 @@ export function teacherApplicationRejectedEmail(fullName: string) {
   return {
     subject: 'Resultado da sua candidatura — VClass',
     html: emailLayout('Candidatura não aprovada', `
-      <p>Olá ${fullName},</p>
+      <p>Olá ${escapeHtml(fullName)},</p>
       <p>Lamentamos, mas a sua candidatura não foi aceite porque os nossos serviços não têm vagas
       disponíveis para as suas qualificações neste momento.</p>
       <p>Caso abram espaços para oportunidades com os seus requisitos, iremos contactá-lo de volta.</p>
@@ -114,14 +125,14 @@ export function teacherApplicationRejectedEmail(fullName: string) {
 
 export function teacherApplicationInfoRequestedEmail(fullName: string, message: string, requiredDocuments: string[]) {
   const docsHtml = requiredDocuments.length
-    ? `<ul>${requiredDocuments.map(d => `<li>${d}</li>`).join('')}</ul>`
+    ? `<ul>${requiredDocuments.map(d => `<li>${escapeHtml(d)}</li>`).join('')}</ul>`
     : ''
   return {
     subject: 'Precisamos de mais informação — candidatura VClass',
     html: emailLayout('Informação adicional necessária', `
-      <p>Olá ${fullName},</p>
+      <p>Olá ${escapeHtml(fullName)},</p>
       <p>Para continuar a análise da sua candidatura, precisamos de mais alguma informação:</p>
-      <p style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:12px 16px;">${message}</p>
+      <p style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:12px 16px;">${escapeHtml(message)}</p>
       ${docsHtml}
       <p>Responda a este pedido acompanhando a sua candidatura em
       <a href="https://vclass.mz/teacher-verification.html" style="color:#7c3aed;">vclass.mz/teacher-verification.html</a>.</p>

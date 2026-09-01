@@ -30,4 +30,6 @@
 	// - ALLOWED_ORIGINS (CSV de origens permitidas em CORS)
 	// - OPENAI_API_KEY, OPENAI_MODEL   (chat IA — assistente académico)
 	// - RESEND_API_KEY, RESEND_FROM_EMAIL (email transacional — candidaturas de professores)
+	// - ALLOW_DEMO_MODE ('true' para permitir login com a senha demo fixa quando o
+	//   Supabase não está configurado — deixar por definir/'false' em produção)
 }

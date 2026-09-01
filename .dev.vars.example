@@ -6,6 +6,12 @@
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-supabase-anon-key-here
 
+# Demo mode: if SUPABASE_URL/SUPABASE_ANON_KEY are left unset, login normally
+# refuses all requests. Set this to 'true' to allow logging in with the fixed
+# demo password (vclass2024) against the mock accounts in src/middleware/database.ts.
+# Leave unset (or 'false') in any production-like environment.
+ALLOW_DEMO_MODE=true
+
 # JWT Secret (REQUIRED)
 # Generate a strong secret: openssl rand -base64 32
 JWT_SECRET=your-super-secret-jwt-key-change-this

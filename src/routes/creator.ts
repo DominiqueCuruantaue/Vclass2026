@@ -699,12 +699,27 @@ creator.get('/students', async (c) => {
   const supabase = createSupabaseClient(c.env)
 
   try {
-    // 1) Buscar todos os alunos registados (role='student')
+    // 1) Buscar lições do criador — o professor só pode ver alunos que
+    // tenham progresso registado nas SUAS lições, nunca a tabela toda de
+    // estudantes da plataforma.
+    const { data: lessons } = await supabase.from('lessons').select('id').eq('created_by', user.id)
+    const lessonIds = (lessons ?? []).map((l: any) => l.id)
+    if (lessonIds.length === 0) return c.json({ success: true, data: [], total: 0, page, limit })
+
+    const { data: ownProgress } = await supabase
+      .from('student_progress')
+      .select('student_id')
+      .in('lesson_id', lessonIds)
+    const ownStudentIds = [...new Set((ownProgress ?? []).map((p: any) => p.student_id))]
+    if (ownStudentIds.length === 0) return c.json({ success: true, data: [], total: 0, page, limit })
+
+    // 2) Buscar, dentro desse conjunto restrito, os alunos activos (+ pesquisa)
     let usersQuery = supabase
       .from('users')
       .select('id, full_name, email, created_at', { count: 'exact' })
       .eq('role', 'student')
       .eq('is_active', true)
+      .in('id', ownStudentIds)
 
     if (search) {
       const safeSearch = search.replace(/[%,()]/g, '')
@@ -718,15 +733,11 @@ creator.get('/students', async (c) => {
     const students = studentsRaw ?? []
     if (students.length === 0) return c.json({ success: true, data: [], total: count ?? 0, page, limit })
 
-    // 2) Buscar lições do criador (para agregar progresso só nelas)
-    const { data: lessons } = await supabase.from('lessons').select('id').eq('created_by', user.id)
-    const lessonIds = (lessons ?? []).map((l: any) => l.id)
-
     // 3) Buscar progresso desses alunos nas lições do criador
     const studentIds = students.map((s: any) => s.id)
     let progressByStudent: Record<string, { sumPct: number; n: number; done: number; lastAt: number }> = {}
 
-    if (lessonIds.length > 0) {
+    {
       const { data: progress } = await supabase
         .from('student_progress')
         .select('student_id, lesson_id, status, progress_percent, updated_at')
@@ -1122,11 +1133,36 @@ creator.post('/video/upload-url', async (c) => {
 // Verifica o estado de processamento do vídeo no Bunny.net
 // ═════════════════════════════════════════════════════════════════════════════
 creator.get('/video/:videoId/status', async (c) => {
+  const user            = c.get('user') as any
   const videoId        = c.req.param('videoId')
   const bunnyApiKey    = (c.env as any)?.BUNNY_API_KEY    || process.env.BUNNY_API_KEY    || ''
   const bunnyLibraryId = (c.env as any)?.BUNNY_LIBRARY_ID || process.env.BUNNY_LIBRARY_ID || ''
   if (!bunnyApiKey || !bunnyLibraryId) {
     return c.json({ success: false, error: 'Bunny.net não configurado' }, 503)
+  }
+
+  // Se este videoId já está associado a uma lição guardada, essa lição tem de
+  // ser do professor autenticado — impede consultar o estado de vídeos de
+  // outros professores só por adivinhar/obter o GUID. Vídeos ainda em
+  // upload (sem lição guardada) não têm dono a verificar nesta tabela; o
+  // GUID é gerado pelo Bunny e só é devolvido ao próprio professor no
+  // momento da criação (POST /video/upload-url).
+  if (isDatabaseConfigured(c.env)) {
+    const supabase = createSupabaseClient(c.env)
+    const { data: owningLesson } = await supabase
+      .from('lessons')
+      .select('id')
+      .eq('video_id', videoId)
+      .eq('created_by', user.id)
+      .maybeSingle()
+    const { data: anyLesson } = await supabase
+      .from('lessons')
+      .select('id')
+      .eq('video_id', videoId)
+      .maybeSingle()
+    if (anyLesson && !owningLesson) {
+      return c.json({ success: false, error: 'Vídeo não encontrado' }, 404)
+    }
   }
 
   try {

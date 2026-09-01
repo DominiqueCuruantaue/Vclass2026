@@ -34,8 +34,18 @@ export const checkDatabase = async (c: Context, next: Next) => {
 // ══════════════════════════════════════════════════════════════════════════════
 //  Contas de demonstração (modo sem base de dados / Supabase não configurado)
 //  Senha universal: vclass2024
+//
+//  Por segurança, esta senha fixa só é aceite se ALLOW_DEMO_MODE='true' estiver
+//  definida explicitamente no ambiente (.dev.vars em local, secret/var no Cloudflare
+//  Pages para uma demo pública controlada). Isto evita que, se as credenciais do
+//  Supabase faltarem por engano em produção, o login caia silenciosamente para o
+//  modo demo e conceda acesso de admin a quem souber a senha fixa.
 // ══════════════════════════════════════════════════════════════════════════════
 export const DEMO_PASSWORD = 'vclass2024'
+
+export function isDemoModeAllowed(env?: any): boolean {
+  return (env?.ALLOW_DEMO_MODE || process.env.ALLOW_DEMO_MODE) === 'true'
+}
 
 export const mockUsers = [
   // ── Estudante — Moçambique ─────────────────────────────────────────────────

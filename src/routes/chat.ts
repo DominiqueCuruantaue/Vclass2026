@@ -176,6 +176,17 @@ O VClass é uma plataforma de educação premium para estudantes do ensino médi
   }
 ]
 
+// Escapa HTML antes de reflectir texto do utilizador numa resposta —
+// necessário porque o frontend (chat.html) injecta 'response' via innerHTML.
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 function localKbResponse(message: string, subject?: string): string {
   const lower = message.toLowerCase()
   let best: typeof LOCAL_KB[0] | null = null
@@ -192,7 +203,7 @@ function localKbResponse(message: string, subject?: string): string {
 
   if (best && bestScore > 0) return best.response
 
-  return `Boa pergunta sobre **"${message.substring(0, 60)}"**! 🤔
+  return `Boa pergunta sobre **"${escapeHtml(message.substring(0, 60))}"**! 🤔
 
 Não encontrei uma resposta específica na minha base local.
 

@@ -7,7 +7,7 @@ import { getSupabase } from '../config/supabase'
 import { hashPassword, verifyPassword, validatePassword, needsRehash } from '../utils/password'
 import { generateAccessToken, generateRefreshToken, verifyToken, verifyRefreshToken } from '../utils/jwt'
 import { storeRefreshToken, isRefreshTokenActive, revokeRefreshToken, revokeAllUserTokens } from '../utils/refreshTokens'
-import { mockUsers, DEMO_PASSWORD } from '../middleware/database'
+import { mockUsers, DEMO_PASSWORD, isDemoModeAllowed } from '../middleware/database'
 import { authMiddleware, rateLimitMiddleware } from '../middleware/auth'
 import { COUNTRIES, GRADES, EDUCATION_LEVELS } from '../data/curriculum'
 
@@ -245,6 +245,13 @@ auth.post('/login', async (c) => {
     
     // Check if database is configured
     if (!isDatabaseConfigured(c.env)) {
+      if (!isDemoModeAllowed(c.env)) {
+        return c.json<ApiResponse>({
+          success: false,
+          error: 'Database configuration missing'
+        }, 503)
+      }
+
       // DEMO MODE: Use mock users
       const demoUser = mockUsers.find(u => u.email === email)
       
@@ -488,7 +495,7 @@ auth.get('/me', authMiddleware, async (c) => {
   try {
     const user = c.get('user')
 
-    if (!isDatabaseConfigured(c.env)) {
+    if (!isDatabaseConfigured(c.env) && isDemoModeAllowed(c.env)) {
       const demoUser = mockUsers.find(u => u.id === user.id)
       if (!demoUser) {
         return c.json<ApiResponse>({ success: false, error: 'Utilizador não encontrado' }, 404)
@@ -707,7 +714,7 @@ auth.post('/change-password', authMiddleware, async (c) => {
       return c.json<ApiResponse>({ success: false, error: 'A nova senha tem de ser diferente da actual' }, 400)
     }
 
-    if (!isDatabaseConfigured(c.env)) {
+    if (!isDatabaseConfigured(c.env) && isDemoModeAllowed(c.env)) {
       // Demo mode: verificar senha demo
       if (current_password !== DEMO_PASSWORD) {
         return c.json<ApiResponse>({ success: false, error: 'Senha actual incorrecta' }, 400)
