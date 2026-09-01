@@ -4,13 +4,18 @@ VCLASS — FLUXO DE FUNCIONAMENTO DO SISTEMA
 Documento gerado a partir da leitura directa do código (rotas da API,
 páginas e schema do banco). Descreve o percurso de cada perfil de
 utilizador, da entrada na plataforma até às acções principais de cada um.
-Última actualização: 2026-08-07.
+Última actualização: 2026-09-01.
 
 Perfis cobertos: Estudante (consumidor) → Professor (criador de conteúdo)
 → Administrador (gestão da plataforma) → Editor (revisão pedagógica) →
 Gestor de País → Financeiro → Moderador → Suporte. Estes últimos cinco
 são papéis de staff com painel próprio, geridos a partir do painel
 Admin (ver 3.4).
+
+As secções 1 (Estudante) e 2 (Professor) descrevem o fluxo tal como existe
+na versão web. Ambos os papéis têm também uma app móvel nativa (Expo/React
+Native) que consome a mesma API — ver secção 10 para o que já está em
+paridade real e o que ainda é exclusivo da web.
 
 ================================================================================
 1. ESTUDANTE — o consumidor de conteúdo
@@ -351,6 +356,110 @@ Em traços gerais, SIM — a espinha dorsal é coerente e bem pensada:
   em 9.1: a interface e as rotas existem, mas não estão ligadas a dados
   reais. Se o objectivo é ter moderação de chat/denúncias a valer, esta
   é a peça que falta fechar a seguir.
+
+================================================================================
+10. APP MÓVEL (Expo/React Native) — Estudante e Professor
+================================================================================
+
+  Código em `mobile/` (Expo SDK 57 + expo-router). Cobre apenas os dois
+  perfis de consumo/criação — Estudante e Professor; os seis papéis de
+  staff (secções 3-8) continuam só na web: um utilizador com um desses
+  papéis que abra o app é redireccionado para um ecrã "papel não suportado"
+  (`mobile/app/index.tsx`, `(auth)/staff-unsupported.tsx`) — painéis densos
+  pensados para ecrã largo, sem versão mobile planeada.
+
+10.1 Arquitectura e ligação ao backend
+----------------------------------------
+  O app NUNCA fala com o Supabase directamente — só com a mesma API Hono
+  usada pela web (`src/routes/*.ts`), via `mobile/src/api/client.ts`. Não há
+  lógica de negócio duplicada nem outro backend.
+
+  URL base da API (`mobile/src/api/client.ts`, ordem de precedência):
+  `EXPO_PUBLIC_API_URL` (env de build) → `app.json` → `extra.apiBaseUrl` →
+  fallback local (`http://localhost:3000`). Em produção, `app.json` e os
+  perfis `preview`/`production` do `eas.json` já apontam para
+  `https://vclass.co.mz` — o mesmo domínio custom do Cloudflare Pages usado
+  pela web (`wrangler.jsonc`, projecto `vclass2026`). Um APK gerado com
+  `eas build --profile preview -p android` (ou o perfil `production`, que
+  gera `.aab`) liga-se assim directamente à produção, sem configuração
+  extra.
+
+  CORS (`src/middleware/cors.ts`) só é relevante para o alvo web do Expo
+  (`expo start --web`, portas 8081/8082 já na lista de origens); pedidos
+  nativos (Android/iOS) não passam pelo CORS do browser.
+
+10.2 Autenticação
+----------------------------------------
+  Mesmo par access/refresh token da web (`src/routes/auth.ts`): access token
+  JWT (8h) guardado com `expo-secure-store` (Keychain/Keystore); refresh
+  token (30 dias) num cookie `HttpOnly` que o stack de rede nativo do
+  iOS/Android mantém automaticamente entre pedidos ao mesmo host, tal como
+  um browser — sem bibliotecas extra de cookies. `mobile/src/api/client.ts`
+  intercepta uma resposta 401, chama `/api/auth/refresh` uma vez e repete o
+  pedido original. Falhas de rede (DNS/TLS/API incontactável) são expostas
+  com mensagem específica em vez de um erro genérico.
+
+  O gate `ALLOW_DEMO_MODE` (adicionado na correcção de segurança de
+  2026-08) aplica-se por igual: se o Supabase de produção alguma vez faltar
+  por engano, nem a web nem o mobile caem para a senha demo fixa a menos
+  que essa variável esteja explicitamente `true` no ambiente.
+
+10.3 Paridade com a web, por ecrã
+----------------------------------------
+  Dashboard e Progresso (Estudante) / Dashboard e Analytics (Professor) — as
+  telas de resumo de cada conta — foram trazidas a paridade real com dados
+  do servidor (não decorativos):
+    - Sequência de dias (🔥) calculada a partir do heatmap real de
+      `GET /api/progress/activity` (`mobile/src/utils/streak.ts`) — ao
+      contrário da web, que guarda a sequência em `localStorage` por
+      dispositivo (`vclass_streak` em `achievements.html`), o cálculo no
+      mobile usa dados do servidor e por isso é igual em qualquer aparelho
+      onde o aluno entre.
+    - Gráfico de actividade semanal (aluno) e de engajamento semanal
+      (`stats.weekly_by_day`, professor) com um componente de barras
+      próprio (`mobile/src/components/charts.tsx`, sobre `react-native-svg`
+      já presente no projecto — sem dependência nova).
+    - Heatmap de actividade (~12 semanas) e histórico recente
+      (lições + exercícios) no Progresso do aluno, e lista de "Lições
+      recentes" no Dashboard do professor.
+    - Funil de engajamento no Analytics do professor, quando o backend o
+      devolve (ver ponto em aberto abaixo).
+
+  Ecrãs ainda só na web, por ordem de prioridade sugerida para uma próxima
+  fase (não são bugs — são funcionalidades que o mobile ainda não tenta
+  replicar):
+    1. Biblioteca — categorias reais (`ensino_geral`, `apostilas`,
+       `artigos`, `educacao_financeira`, `empreendedorismo`,
+       `obras_poemas`) e secção de destaque; o mobile só filtra por
+       `books|handouts|exercises` (`mobile/src/api/library.ts`).
+    2. Conquistas — a web tem 12 conquistas reais com categorias e um
+       sistema de XP/rank baseado em `localStorage`; o mobile tem 5 badges
+       fixos sem XP/rank.
+    3. Notificações — filtros por tipo/estado, marcar tudo como lido,
+       navegação por `action_url`.
+    4. Definições de conta (aba própria em `/profile.html`): notificações,
+       autoplay, idioma/legendas, exportar/apagar dados.
+    5. Sessões online (Google Meet) do professor — agendar/gerir sessões
+       (`creator-students.html`, `/api/creator/session*`); sem ecrã nem
+       wrapper de API no mobile ainda.
+    6. Conteúdos do professor — painel de Materiais (apostilas/exercícios
+       submetidos para revisão), selecção em lote, exportação CSV de
+       alunos.
+    7. Aba "Recursos" do editor de lições do professor — anexos/PDFs; no
+       mobile mostra um aviso a pedir para usar a web
+       (`mobile/README.md`, "Limitações conhecidas").
+
+10.4 Ponto em aberto — Analytics do professor em produção
+----------------------------------------
+  `GET /api/creator/analytics` (`src/routes/creator.ts`) só devolve
+  funil/insights/melhores-lições reais quando corre em modo demo (sem
+  Supabase); com a base de dados configurada devolve
+  `{ kpi: {}, note: 'Analytics requer banco de dados configurado.' }` — ou
+  seja, esta limitação é do backend e afecta a web e o mobile por igual, um
+  professor em produção não vê analytics reais em nenhuma das duas
+  versões. Implementar as queries reais (funil de progresso, distribuição
+  de notas, mapa de actividade) neste endpoint é trabalho de backend
+  independente da app móvel.
 
 ================================================================================
 FIM DO DOCUMENTO

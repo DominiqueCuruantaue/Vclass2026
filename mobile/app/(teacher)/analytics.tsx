@@ -40,26 +40,53 @@ export default function AnalyticsScreen() {
       <ChipSelect options={PERIODS as unknown as string[]} value={period} onChange={(v) => setPeriod(v as any)} labels={LABELS} />
       <View style={{ height: 16 }} />
 
-      <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
-        <Card style={{ flex: 1 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+        <Card style={{ flexBasis: '47%', flexGrow: 1 }}>
           <Muted>Visualizações</Muted>
           <Text style={{ fontSize: 20, fontWeight: '800', color: colors.navy950 }}>{kpi.views ?? '—'}</Text>
         </Card>
-        <Card style={{ flex: 1 }}>
+        <Card style={{ flexBasis: '47%', flexGrow: 1 }}>
           <Muted>Conclusões</Muted>
           <Text style={{ fontSize: 20, fontWeight: '800', color: colors.navy950 }}>{kpi.completions ?? '—'}</Text>
         </Card>
-      </View>
-      <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
-        <Card style={{ flex: 1 }}>
+        <Card style={{ flexBasis: '47%', flexGrow: 1 }}>
           <Muted>Tempo médio assistido</Muted>
           <Text style={{ fontSize: 20, fontWeight: '800', color: colors.navy950 }}>{kpi.watch_min ?? '—'} min</Text>
         </Card>
-        <Card style={{ flex: 1 }}>
+        <Card style={{ flexBasis: '47%', flexGrow: 1 }}>
           <Muted>Nota média</Muted>
           <Text style={{ fontSize: 20, fontWeight: '800', color: colors.navy950 }}>{kpi.score ?? '—'}%</Text>
         </Card>
       </View>
+
+      {data?.funnel ? (
+        <>
+          <H2>Funil de engajamento</H2>
+          <Card>
+            {[
+              { label: 'Acedeu', value: data.funnel.accessed },
+              { label: 'Iniciou', value: data.funnel.started },
+              { label: 'Assistiu 80%', value: data.funnel.watched_80pct },
+              { label: 'Fez exercícios', value: data.funnel.did_exercises },
+              { label: 'Concluiu', value: data.funnel.completed },
+            ].map((step, i, arr) => {
+              const max = arr[0]?.value || 1
+              const pct = Math.round(((step.value ?? 0) / max) * 100)
+              return (
+                <View key={i} style={{ marginBottom: i === arr.length - 1 ? 0 : 10 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <Muted>{step.label}</Muted>
+                    <Muted>{step.value ?? 0}</Muted>
+                  </View>
+                  <View style={{ height: 8, borderRadius: 999, backgroundColor: '#e2e8f0', overflow: 'hidden' }}>
+                    <View style={{ width: `${pct}%`, height: '100%', borderRadius: 999, backgroundColor: colors.info }} />
+                  </View>
+                </View>
+              )
+            })}
+          </Card>
+        </>
+      ) : null}
 
       {data?.top_lessons?.length ? (
         <>

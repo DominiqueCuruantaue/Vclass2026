@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Dimensions, Text, TouchableOpacity, View } from 'react-native'
+import { Text, TouchableOpacity, View, useWindowDimensions } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
 import { useEvent } from 'expo'
 import { useVideoPlayer, VideoView } from 'expo-video'
@@ -11,11 +11,12 @@ import { fetchExercises, submitAnswer, type SubmitAnswerResult } from '../../../
 import { ApiError } from '../../../src/api/client'
 import type { Exercise, Lesson } from '@shared/types'
 
-const { width } = Dimensions.get('window')
-const VIDEO_HEIGHT = (width * 9) / 16
-
 export default function LessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
+  // useWindowDimensions (em vez de Dimensions.get('window') a nível de
+  // módulo) para o vídeo reajustar a altura em rotação/tablet/split-screen.
+  const { width } = useWindowDimensions()
+  const videoHeight = (width * 9) / 16
   const [lesson, setLesson] = useState<Lesson | null>(null)
   const [streamUrl, setStreamUrl] = useState<string | null>(null)
   const [exercises, setExercises] = useState<Exercise[]>([])
@@ -80,12 +81,12 @@ export default function LessonScreen() {
     <Screen scroll style={{ padding: 0 }}>
       {streamUrl ? (
         <VideoView
-          style={{ width, height: VIDEO_HEIGHT, backgroundColor: '#000' }}
+          style={{ width, height: videoHeight, backgroundColor: '#000' }}
           player={player}
           nativeControls
         />
       ) : (
-        <View style={{ width, height: VIDEO_HEIGHT, backgroundColor: colors.navy950, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ width, height: videoHeight, backgroundColor: colors.navy950, alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ color: '#fff', fontSize: 32 }}>🎬</Text>
           <Text style={{ color: colors.textFaint, marginTop: 8 }}>Vídeo indisponível de momento</Text>
         </View>

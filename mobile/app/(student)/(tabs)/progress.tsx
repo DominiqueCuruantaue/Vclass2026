@@ -1,16 +1,25 @@
 import React, { useCallback, useState } from 'react'
 import { RefreshControl, Text, TouchableOpacity, View } from 'react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
-import { Button, Card, EmptyState, ErrorState, H1, H2, LoadingState, Muted, ProgressBar, Screen, SubjectDot } from '../../../src/components/ui'
+import { Badge, Button, Card, EmptyState, ErrorState, H1, H2, LoadingState, Muted, ProgressBar, Screen, SubjectDot } from '../../../src/components/ui'
+import { ActivityHeatmap } from '../../../src/components/charts'
 import { colors, FALLBACK_SUBJECT_COLOR } from '../../../src/theme/colors'
-import { fetchDashboard, fetchRecommendations, type DashboardData } from '../../../src/api/progress'
+import { fetchDashboard, fetchRecommendations, fetchActivity, type DashboardData, type ActivityData } from '../../../src/api/progress'
+import { computeStreak } from '../../../src/utils/streak'
 import { ApiError } from '../../../src/api/client'
 import type { Lesson } from '@shared/types'
+
+const EVENT_LABEL: Record<string, string> = {
+  lesson_completed: 'Concluiu uma lição',
+  lesson_progress: 'Continuou a assistir',
+  exercise: 'Respondeu a um exercício',
+}
 
 export default function ProgressScreen() {
   const router = useRouter()
   const [data, setData] = useState<DashboardData | null>(null)
   const [recommendations, setRecommendations] = useState<Lesson[]>([])
+  const [activity, setActivity] = useState<ActivityData | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
@@ -18,12 +27,14 @@ export default function ProgressScreen() {
   const load = useCallback(async () => {
     setError('')
     try {
-      const [dashboard, recs] = await Promise.all([
+      const [dashboard, recs, act] = await Promise.all([
         fetchDashboard(),
         fetchRecommendations().catch(() => []),
+        fetchActivity().catch(() => null),
       ])
       setData(dashboard)
       setRecommendations(recs)
+      setActivity(act)
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Não foi possível carregar o progresso.')
     } finally {
@@ -31,6 +42,8 @@ export default function ProgressScreen() {
       setRefreshing(false)
     }
   }, [])
+
+  const streak = activity ? computeStreak(activity.heatmap) : 0
 
   useFocusEffect(useCallback(() => { load() }, [load]))
 
@@ -41,9 +54,50 @@ export default function ProgressScreen() {
     <Screen refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load() }} tintColor={colors.brand600} />}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <H1>O teu progresso</H1>
+        {streak > 0 ? <Badge text={`🔥 ${streak} ${streak === 1 ? 'dia' : 'dias'}`} tone="warning" /> : null}
       </View>
 
       <Button title="🏆 Ver conquistas" variant="outline" onPress={() => router.push('/(student)/achievements')} />
+
+      {activity && activity.heatmap.some((d) => d.count > 0) ? (
+        <>
+          <View style={{ height: 20 }} />
+          <H2>Actividade (últimas semanas)</H2>
+          <Card style={{ alignItems: 'flex-start' }}>
+            <ActivityHeatmap heatmap={activity.heatmap} />
+          </Card>
+        </>
+      ) : null}
+
+      {activity && activity.recentActivity.length > 0 ? (
+        <>
+          <View style={{ height: 20 }} />
+          <H2>Histórico recente</H2>
+          <Card>
+            {activity.recentActivity.slice(0, 8).map((ev, i) => (
+              <View
+                key={i}
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  paddingVertical: 8,
+                  borderTopWidth: i === 0 ? 0 : 1,
+                  borderTopColor: colors.border,
+                }}
+              >
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <Text style={{ fontWeight: '600', color: colors.text }} numberOfLines={1}>{ev.title}</Text>
+                  <Muted style={{ fontSize: 12 }}>{EVENT_LABEL[ev.type] || ev.type}</Muted>
+                </View>
+                {ev.type === 'exercise' ? (
+                  <Badge text={ev.correct ? 'Correcto' : 'Errado'} tone={ev.correct ? 'success' : 'danger'} />
+                ) : null}
+              </View>
+            ))}
+          </Card>
+        </>
+      ) : null}
 
       <View style={{ height: 20 }} />
       <H2>Por disciplina</H2>

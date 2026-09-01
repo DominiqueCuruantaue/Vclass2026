@@ -4,14 +4,20 @@ import { RefreshControl, Text, TouchableOpacity, View } from 'react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useAuth } from '../../../src/context/AuthContext'
 import { Badge, Card, EmptyState, ErrorState, H1, H2, LoadingState, Muted, ProgressBar, Screen, SubjectDot } from '../../../src/components/ui'
+import { BarChart } from '../../../src/components/charts'
 import { colors, FALLBACK_SUBJECT_COLOR } from '../../../src/theme/colors'
-import { fetchDashboard, type DashboardData } from '../../../src/api/progress'
+import { fetchDashboard, fetchActivity, type DashboardData, type ActivityDay } from '../../../src/api/progress'
+import { computeStreak } from '../../../src/utils/streak'
 import { ApiError } from '../../../src/api/client'
+
+const WEEKDAY_LABELS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
 
 export default function DashboardScreen() {
   const { user } = useAuth()
   const router = useRouter()
   const [data, setData] = useState<DashboardData | null>(null)
+  const [last7Days, setLast7Days] = useState<ActivityDay[]>([])
+  const [streak, setStreak] = useState(0)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
@@ -19,8 +25,12 @@ export default function DashboardScreen() {
   const load = useCallback(async () => {
     setError('')
     try {
-      const d = await fetchDashboard()
+      const [d, activity] = await Promise.all([fetchDashboard(), fetchActivity().catch(() => null)])
       setData(d)
+      if (activity) {
+        setLast7Days(activity.heatmap.slice(-7))
+        setStreak(computeStreak(activity.heatmap))
+      }
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Não foi possível carregar o dashboard.')
     } finally {
@@ -52,18 +62,33 @@ export default function DashboardScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand600} />}
     >
       <View style={{ marginBottom: 20 }}>
-        <H1>Olá, {firstName || 'estudante'} 👋</H1>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <H1>Olá, {firstName || 'estudante'} 👋</H1>
+          {streak > 0 ? <Badge text={`🔥 ${streak} ${streak === 1 ? 'dia' : 'dias'}`} tone="warning" /> : null}
+        </View>
         <Muted>Vamos continuar a aprender hoje?</Muted>
       </View>
 
-      <View style={{ flexDirection: 'row', gap: 12, marginBottom: 4 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
         <StatBox label="Lições completas" value={stats?.completedLessons ?? 0} />
         <StatBox label="Total de lições" value={stats?.totalLessons ?? 0} />
-      </View>
-      <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
         <StatBox label="Exercícios" value={stats?.totalExercises ?? 0} />
         <StatBox label="Nota média" value={`${stats?.averageScore ?? 0}%`} />
       </View>
+
+      {last7Days.length > 0 ? (
+        <>
+          <H2>Actividade da semana</H2>
+          <Card>
+            <BarChart
+              data={last7Days.map((d) => ({
+                label: WEEKDAY_LABELS[new Date(`${d.date}T00:00:00`).getDay()],
+                value: d.count,
+              }))}
+            />
+          </Card>
+        </>
+      ) : null}
 
       {data?.subjectProgress && data.subjectProgress.length > 0 ? (
         <>
@@ -112,7 +137,7 @@ export default function DashboardScreen() {
 
 function StatBox({ label, value }: { label: string; value: string | number }) {
   return (
-    <Card style={{ flex: 1, alignItems: 'center', paddingVertical: 20 }}>
+    <Card style={{ flexBasis: '47%', flexGrow: 1, alignItems: 'center', paddingVertical: 20 }}>
       <Text style={{ fontSize: 22, fontWeight: '800', color: colors.navy950 }}>{value}</Text>
       <Muted style={{ marginTop: 4, textAlign: 'center' }}>{label}</Muted>
     </Card>

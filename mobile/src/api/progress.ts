@@ -35,6 +35,26 @@ export function fetchRecommendations() {
   return apiRequest<Lesson[]>('/api/progress/recommendations')
 }
 
+export interface ActivityDay {
+  date: string
+  count: number
+}
+
+export interface ActivityEvent {
+  type: 'lesson_completed' | 'lesson_progress' | 'exercise'
+  title: string
+  time: string
+  progress?: number
+  correct?: boolean
+  points?: number
+  maxPoints?: number
+}
+
+export interface ActivityData {
+  heatmap: ActivityDay[]
+  recentActivity: ActivityEvent[]
+}
+
 export function fetchActivity() {
-  return apiRequest<any[]>('/api/progress/activity')
+  return apiRequest<ActivityData>('/api/progress/activity')
 }
