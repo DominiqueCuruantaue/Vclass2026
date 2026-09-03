@@ -6,6 +6,11 @@ import { authMiddleware, requireFinanceOrAdmin } from '../middleware/auth'
 import { getSupabase } from '../config/supabase'
 import { loadPlans, isDatabaseConfigured, FALLBACK_PLANS_DATA } from '../utils/plans'
 import { COUNTRIES } from '../data/curriculum'
+import { estimateTeacherEarnings, writeEstimatedLedgerEntries } from '../services/earningsAggregation'
+import { calculateReferralCommission, checkAttributionWindow } from '../services/referralEngine'
+import { determinePayout } from '../services/payoutEngine'
+import { runEstimatePhase, runValidatePhase, runApprovePhase, previousMonthPeriodMaputo } from '../services/settlementEngine'
+import { logEarningsAudit } from '../services/earningsAudit'
 import type { ApiResponse } from '../types'
 
 const finance = new Hono<{ Bindings: CloudflareBindings }>()
@@ -191,6 +196,100 @@ finance.post('/subscriptions/:id/cancel', async (c) => {
   return c.json<ApiResponse>({ success: true, message: 'Subscrição cancelada', data: { id, status: 'cancelled' } })
 })
 
+// ── POST /api/finance/subscriptions — registar uma subscrição manualmente ───
+// GAP CRÍTICO fechado aqui (ver blueprint, achado #13 da sessão 2): antes
+// desta rota, NADA no código alguma vez inseria uma linha em
+// `subscriptions` — só existia leitura e cancelamento. Sem gateway de
+// pagamento (Stripe/M-Pesa) integrado, este é o único ponto onde uma
+// subscrição paga passa a existir, e é portanto o único ponto de onde
+// `fn_record_watch_heartbeat` (Art. 5.3) alguma vez vê `hasEligibleFunding
+// = true` para um estudante real. A equipa financeira usa isto para
+// registar manualmente o que hoje já processa fora do sistema (M-Pesa,
+// transferência, etc.) — não inventa um gateway, só fecha o elo em falta
+// entre "o pagamento aconteceu" e "o sistema sabe disso".
+finance.post('/subscriptions', async (c) => {
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+
+  const body = await c.req.json().catch(() => ({})) as Record<string, any>
+  const { studentId, planType, amount, paymentProvider, paymentId, startedAt, expiresAt, fundingSource } = body
+
+  if (!studentId || !planType) {
+    return c.json<ApiResponse>({ success: false, error: 'studentId e planType são obrigatórios' }, 400)
+  }
+  if (!['free', 'basic', 'premium'].includes(planType)) {
+    return c.json<ApiResponse>({ success: false, error: 'planType inválido' }, 400)
+  }
+  const validFundingSources = [
+    'PAID_SUBSCRIPTION', 'INSTITUTIONAL_PAID', 'SPONSORED', 'FUNDED_SCHOLARSHIP',
+    'CORPORATE', 'GOVERNMENT_FUNDED', 'NGO_FUNDED', 'OTHER_ELIGIBLE'
+  ]
+  if (fundingSource && !validFundingSources.includes(fundingSource)) {
+    return c.json<ApiResponse>({ success: false, error: 'fundingSource inválido' }, 400)
+  }
+
+  const { data: student, error: studentErr } = await supabase.from('users').select('id, role').eq('id', studentId).maybeSingle()
+  if (studentErr) return c.json<ApiResponse>({ success: false, error: studentErr.message }, 500)
+  if (!student || student.role !== 'student') return c.json<ApiResponse>({ success: false, error: 'studentId não corresponde a um estudante' }, 400)
+
+  const user = c.get('user') as any
+  const { data: inserted, error } = await supabase
+    .from('subscriptions')
+    .insert({
+      student_id: studentId,
+      plan_type: planType,
+      status: 'active',
+      started_at: startedAt || new Date().toISOString(),
+      expires_at: expiresAt || null,
+      payment_provider: paymentProvider || null,
+      payment_id: paymentId || null,
+      amount: typeof amount === 'number' ? amount : null,
+      funding_source: fundingSource || 'PAID_SUBSCRIPTION'
+    })
+    .select('*')
+    .single()
+  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+
+  await logEarningsAudit(supabase, {
+    actorId: user?.id, action: 'CREATE_SUBSCRIPTION', entityType: 'subscriptions', entityId: inserted?.id,
+    after: { studentId, planType, amount, fundingSource: fundingSource || 'PAID_SUBSCRIPTION' }
+  })
+
+  return c.json<ApiResponse>({ success: true, message: 'Subscrição registada', data: inserted })
+})
+
+// ── PATCH /api/finance/subscriptions/:id — renovar/actualizar uma subscrição
+finance.patch('/subscriptions/:id', async (c) => {
+  const id = c.req.param('id')
+  if (!isDatabaseConfigured(c.env) || id.startsWith('demo-')) {
+    return c.json<ApiResponse>({ success: true, message: 'Subscrição actualizada (modo demo)', data: { id } })
+  }
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+
+  const body = await c.req.json().catch(() => ({})) as Record<string, any>
+  const updates: Record<string, any> = {}
+  if (body.status) updates.status = body.status
+  if (body.expiresAt) updates.expires_at = body.expiresAt
+  if (body.planType) updates.plan_type = body.planType
+  if (typeof body.amount === 'number') updates.amount = body.amount
+
+  if (Object.keys(updates).length === 0) {
+    return c.json<ApiResponse>({ success: false, error: 'Nada para actualizar' }, 400)
+  }
+
+  const { error } = await supabase.from('subscriptions').update(updates).eq('id', id)
+  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+
+  const user = c.get('user') as any
+  await logEarningsAudit(supabase, {
+    actorId: user?.id, action: 'UPDATE_SUBSCRIPTION', entityType: 'subscriptions', entityId: id, after: updates
+  })
+
+  return c.json<ApiResponse>({ success: true, message: 'Subscrição actualizada' })
+})
+
 // ── GET /api/finance/payments ─────────────────────────────────────────────────
 // Sem tabela de pagamentos dedicada: cada subscrição É o registo do pagamento
 // que a originou (amount/payment_provider/payment_id já vivem lá).
@@ -313,6 +412,530 @@ finance.put('/plans/:id/features', async (c) => {
   }
 
   return c.json<ApiResponse>({ success: true, message: 'Funcionalidades actualizadas com sucesso', data: { id, features } })
+})
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Teacher Earnings — administração (Política de Remuneração V1.0)
+// Endpoints do lado do professor ficam em src/routes/earnings.ts.
+// Estado do ledger: ESTIMATED → VALIDATING → APPROVED → PAID (Art. 29).
+// Só esta rota (requireFinanceOrAdmin) pode mover um lançamento para
+// APPROVED/PAID — o professor nunca marca os seus próprios ganhos.
+// ═════════════════════════════════════════════════════════════════════════════
+
+// ── GET /api/finance/earnings — listar lançamentos do ledger ────────────────
+finance.get('/earnings', async (c) => {
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+
+  const teacherId = c.req.query('teacherId')
+  const status = c.req.query('status')
+  const earningType = c.req.query('earningType')
+  const limit = Math.min(Number(c.req.query('limit')) || 50, 200)
+  const offset = Number(c.req.query('offset')) || 0
+
+  try {
+    // `users(full_name, email)` resolve automaticamente via PostgREST porque
+    // teacher_id é a única FK desta tabela para `users` (sem ambiguidade a
+    // exigir o nome explícito da constraint).
+    let query = supabase
+      .from('teacher_earnings_ledger')
+      .select('*, users(full_name, email)', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+
+    if (teacherId) query = query.eq('teacher_id', teacherId)
+    if (status) query = query.eq('status', status)
+    if (earningType) query = query.eq('earning_type', earningType)
+
+    const { data, error, count } = await query
+    if (error) throw new Error(error.message)
+
+    return c.json<ApiResponse>({ success: true, data: { entries: data || [], total: count || 0 } })
+  } catch (e: any) {
+    console.error('finance/earnings list error:', e)
+    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+  }
+})
+
+// ── POST /api/finance/earnings/estimate — calcular e gravar RCE+BQE dum período
+// Acção CALCULATION (Art. 28) — nunca aprova nem paga, só produz/actualiza
+// linhas ESTIMATED. Chamada manualmente pela equipa financeira enquanto não
+// houver Cron Trigger (PDR-007, em aberto).
+finance.post('/earnings/estimate', async (c) => {
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+
+  const body = await c.req.json().catch(() => ({})) as { teacherId?: string; periodStart?: string; periodEnd?: string }
+  if (!body.teacherId || !body.periodStart || !body.periodEnd) {
+    return c.json<ApiResponse>({ success: false, error: 'teacherId, periodStart e periodEnd são obrigatórios' }, 400)
+  }
+
+  try {
+    const estimate = await estimateTeacherEarnings(supabase, body.teacherId, body.periodStart, body.periodEnd)
+    await writeEstimatedLedgerEntries(supabase, estimate)
+    return c.json<ApiResponse>({ success: true, data: estimate, message: 'Estimativa calculada e gravada' })
+  } catch (e: any) {
+    console.error('finance/earnings/estimate error:', e)
+    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+  }
+})
+
+// ── POST /api/finance/earnings/close-period/:phase — fecho de período em lote
+// phase = estimate | validate | approve (ver src/services/settlementEngine.ts).
+// Alternativa admin-triggered ao mesmo agendamento que o GitHub Actions
+// chama via src/routes/settlementCron.ts (PDR-007) — útil para correr fora
+// do calendário ou reprocessar um período específico manualmente.
+finance.post('/earnings/close-period/:phase', async (c) => {
+  const phase = c.req.param('phase')
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+
+  const body = await c.req.json().catch(() => ({})) as { periodStart?: string; periodEnd?: string }
+  const { periodStart, periodEnd } = body.periodStart && body.periodEnd
+    ? { periodStart: body.periodStart, periodEnd: body.periodEnd }
+    : previousMonthPeriodMaputo()
+
+  const user = c.get('user') as any
+  try {
+    let result
+    if (phase === 'estimate') result = await runEstimatePhase(supabase, periodStart, periodEnd, user?.id)
+    else if (phase === 'validate') result = await runValidatePhase(supabase, periodStart, periodEnd, user?.id)
+    else if (phase === 'approve') result = await runApprovePhase(supabase, periodStart, periodEnd, user?.id)
+    else return c.json<ApiResponse>({ success: false, error: 'phase inválida (estimate|validate|approve)' }, 400)
+
+    return c.json<ApiResponse>({ success: true, data: result })
+  } catch (e: any) {
+    console.error(`finance/earnings/close-period/${phase} error:`, e)
+    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+  }
+})
+
+// ── POST /api/finance/earnings/:id/approve ───────────────────────────────────
+finance.post('/earnings/:id/approve', async (c) => {
+  const id = c.req.param('id')
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+
+  const { data: row, error: findErr } = await supabase.from('teacher_earnings_ledger').select('id, status').eq('id', id).maybeSingle()
+  if (findErr) return c.json<ApiResponse>({ success: false, error: findErr.message }, 500)
+  if (!row) return c.json<ApiResponse>({ success: false, error: 'Lançamento não encontrado' }, 404)
+  if (row.status === 'PAID') return c.json<ApiResponse>({ success: false, error: 'Lançamento já pago, não pode ser reaprovado' }, 409)
+
+  const { error } = await supabase
+    .from('teacher_earnings_ledger')
+    .update({ status: 'APPROVED', approved_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+
+  const user = c.get('user') as any
+  await logEarningsAudit(supabase, {
+    actorId: user?.id, action: 'APPROVE_EARNING', entityType: 'teacher_earnings_ledger', entityId: id,
+    before: { status: row.status }, after: { status: 'APPROVED' }
+  })
+
+  return c.json<ApiResponse>({ success: true, message: 'Lançamento aprovado', data: { id, status: 'APPROVED' } })
+})
+
+// ── GET /api/finance/earnings/payable?teacherId= — mínimo de 500 MZN (Art. 31)
+// Soma todos os lançamentos APPROVED ainda não PAID de um professor e aplica
+// a regra de payout mínimo. Não marca nada como PAID — só informa se, ao
+// fechar agora, haveria pagamento ou carry-forward (separa CALCULATION de
+// PAYOUT EXECUTION, secção 28 do prompt de implementação — a execução real
+// do pagamento é acção administrativa distinta, ainda não implementada, ver
+// blueprint PDR-007/Phase 8).
+finance.get('/earnings/payable', async (c) => {
+  const teacherId = c.req.query('teacherId')
+  if (!teacherId) return c.json<ApiResponse>({ success: false, error: 'teacherId é obrigatório' }, 400)
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+
+  try {
+    const { data, error } = await supabase
+      .from('teacher_earnings_ledger')
+      .select('gross_amount')
+      .eq('teacher_id', teacherId)
+      .eq('status', 'APPROVED')
+    if (error) throw new Error(error.message)
+
+    // Soma TODOS os APPROVED ainda não PAID. POST /payouts (abaixo) marca as
+    // linhas pagas como PAID, por isso este total exclui automaticamente
+    // pagamentos já efectuados — o que sobra em APPROVED é sempre,
+    // implicitamente, o carry-forward de períodos anteriores; não há um
+    // segundo parâmetro a somar.
+    const approvedTotal = (data || []).reduce((sum: number, row: any) => sum + Number(row.gross_amount), 0)
+    const decision = determinePayout(approvedTotal, 0)
+
+    return c.json<ApiResponse>({ success: true, data: decision })
+  } catch (e: any) {
+    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+  }
+})
+
+const PAYOUT_METHODS = ['mpesa', 'emola', 'bank_transfer', 'other']
+
+// ── POST /api/finance/payouts — registar pagamento já efectuado (Art. 31) ──
+// Secção 30 do prompt de implementação: não simular um gateway de
+// disbursement sem integração validada. Não integra M-Pesa/banco — a equipa
+// financeira processa a transferência manualmente e regista aqui a prova
+// (método + referência), tal como já se faz para subscriptions em
+// POST /finance/subscriptions. Paga sempre o saldo APPROVED completo do
+// professor de uma vez (fn_record_teacher_payout, migration 033) — nunca
+// parcial, e atómico contra pedidos concorrentes via advisory lock.
+finance.post('/payouts', async (c) => {
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+
+  const body = await c.req.json().catch(() => ({})) as {
+    teacherId?: string; method?: string; reference?: string; note?: string
+  }
+  if (!body.teacherId) return c.json<ApiResponse>({ success: false, error: 'teacherId é obrigatório' }, 400)
+  if (!body.method || !PAYOUT_METHODS.includes(body.method)) {
+    return c.json<ApiResponse>({ success: false, error: `method deve ser um de: ${PAYOUT_METHODS.join(', ')}` }, 400)
+  }
+
+  const user = c.get('user') as any
+  try {
+    const { data, error } = await supabase.rpc('fn_record_teacher_payout', {
+      p_teacher_id: body.teacherId,
+      p_method: body.method,
+      p_reference: body.reference || null,
+      p_note: body.note || null,
+      p_recorded_by: user.id
+    })
+    if (error) throw new Error(error.message)
+
+    const row = Array.isArray(data) ? data[0] : data
+    await logEarningsAudit(supabase, {
+      actorId: user?.id, action: 'RECORD_PAYOUT', entityType: 'teacher_payouts', entityId: row?.out_payout_id,
+      after: { teacherId: body.teacherId, amountMzn: row?.out_amount_mzn, entriesPaid: row?.out_entries_paid, method: body.method }
+    })
+
+    return c.json<ApiResponse>({
+      success: true,
+      data: { payoutId: row?.out_payout_id, amountMzn: row?.out_amount_mzn, entriesPaid: row?.out_entries_paid },
+      message: 'Pagamento registado'
+    })
+  } catch (e: any) {
+    console.error('finance/payouts error:', e)
+    const belowMinimum = /abaixo do mínimo/.test(e.message || '')
+    return c.json<ApiResponse>({ success: false, error: e.message }, belowMinimum ? 409 : 500)
+  }
+})
+
+// ── GET /api/finance/payouts?teacherId= — histórico de pagamentos ──────────
+finance.get('/payouts', async (c) => {
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+
+  const teacherId = c.req.query('teacherId')
+  const limit = Math.min(Number(c.req.query('limit')) || 50, 200)
+  const offset = Number(c.req.query('offset')) || 0
+
+  try {
+    let query = supabase
+      .from('teacher_payouts')
+      .select('*, teacher:users!teacher_payouts_teacher_id_fkey(full_name, email), recordedBy:users!teacher_payouts_recorded_by_fkey(full_name, email)', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+    if (teacherId) query = query.eq('teacher_id', teacherId)
+
+    const { data, error, count } = await query
+    if (error) throw new Error(error.message)
+    return c.json<ApiResponse>({ success: true, data: { payouts: data || [], total: count || 0 } })
+  } catch (e: any) {
+    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+  }
+})
+
+// ── POST /api/finance/earnings/adjustment — lançamento manual auditável ─────
+// Nunca apaga/edita um lançamento existente (secção 23/26 do prompt de
+// implementação) — cria sempre uma linha nova ADJUSTMENT ou REVERSAL.
+finance.post('/earnings/adjustment', async (c) => {
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+
+  const user = c.get('user') as any
+  const body = await c.req.json().catch(() => ({})) as {
+    teacherId?: string; amountMzn?: number; reason?: string; reversalOfId?: string
+  }
+  if (!body.teacherId || typeof body.amountMzn !== 'number' || !body.reason?.trim()) {
+    return c.json<ApiResponse>({ success: false, error: 'teacherId, amountMzn e reason são obrigatórios' }, 400)
+  }
+
+  const { data: inserted, error } = await supabase.from('teacher_earnings_ledger').insert({
+    teacher_id: body.teacherId,
+    earning_type: body.reversalOfId ? 'REVERSAL' : 'ADJUSTMENT',
+    gross_amount: body.amountMzn,
+    currency: 'MZN',
+    status: 'APPROVED',
+    policy_version: 'V1.0',
+    reversal_of_id: body.reversalOfId || null,
+    approved_at: new Date().toISOString(),
+    calculation_metadata: { reason: body.reason.trim(), createdByAdminId: user?.id }
+  }).select('id').single()
+  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+
+  await logEarningsAudit(supabase, {
+    actorId: user?.id, action: body.reversalOfId ? 'CREATE_REVERSAL' : 'CREATE_ADJUSTMENT',
+    entityType: 'teacher_earnings_ledger', entityId: inserted?.id,
+    after: { teacherId: body.teacherId, amountMzn: body.amountMzn, reversalOfId: body.reversalOfId || null },
+    reason: body.reason.trim()
+  })
+
+  return c.json<ApiResponse>({ success: true, message: 'Lançamento de ajuste criado' })
+})
+
+// ── GET /api/finance/referrals — listar atribuições de referência ───────────
+finance.get('/referrals', async (c) => {
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+
+  try {
+    const { data, error } = await supabase
+      .from('referral_attributions')
+      .select('id, student_id, teacher_id, referral_code, attributed_at, converted_at, commission_ledger_id')
+      .order('attributed_at', { ascending: false })
+      .limit(200)
+    if (error) throw new Error(error.message)
+    return c.json<ApiResponse>({ success: true, data: { attributions: data || [] } })
+  } catch (e: any) {
+    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+  }
+})
+
+// ── POST /api/finance/referrals/:studentId/convert ───────────────────────────
+// Regista a comissão da PRIMEIRA compra elegível do estudante referenciado
+// (Art. 21-24). Chamada manualmente pela equipa financeira quando processa a
+// subscrição — não existe ainda gateway de pagamento a disparar isto
+// automaticamente (ver PDR-002 no blueprint). Idempotente: uma atribuição só
+// converte uma vez (commission_ledger_id preenchido bloqueia repetições).
+finance.post('/referrals/:studentId/convert', async (c) => {
+  const studentId = c.req.param('studentId')
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+
+  const body = await c.req.json().catch(() => ({})) as { netEligibleRevenueMzn?: number }
+  if (typeof body.netEligibleRevenueMzn !== 'number' || body.netEligibleRevenueMzn < 0) {
+    return c.json<ApiResponse>({ success: false, error: 'netEligibleRevenueMzn é obrigatório e não pode ser negativo' }, 400)
+  }
+
+  const { data: attribution, error: findErr } = await supabase
+    .from('referral_attributions')
+    .select('id, teacher_id, attributed_at, converted_at')
+    .eq('student_id', studentId)
+    .maybeSingle()
+  if (findErr) return c.json<ApiResponse>({ success: false, error: findErr.message }, 500)
+  if (!attribution) return c.json<ApiResponse>({ success: false, error: 'Este estudante não tem professor referenciador atribuído' }, 404)
+  if (attribution.converted_at) return c.json<ApiResponse>({ success: false, error: 'Comissão já registada para esta atribuição — só a primeira compra conta (Art. 21-24)' }, 409)
+
+  const windowCheck = checkAttributionWindow(new Date(attribution.attributed_at), new Date())
+  if (!windowCheck.eligible) {
+    return c.json<ApiResponse>({ success: false, error: `Fora da janela de atribuição de 30 dias (${windowCheck.reason})` }, 409)
+  }
+
+  const commissionMzn = calculateReferralCommission(body.netEligibleRevenueMzn)
+
+  const { data: ledgerRow, error: ledgerErr } = await supabase
+    .from('teacher_earnings_ledger')
+    .insert({
+      teacher_id: attribution.teacher_id,
+      earning_type: 'REFERRAL_COMMISSION',
+      gross_amount: commissionMzn,
+      currency: 'MZN',
+      status: 'ESTIMATED',
+      policy_version: 'V1.0',
+      calculation_metadata: { studentId, netEligibleRevenueMzn: body.netEligibleRevenueMzn, ratePct: 15 }
+    })
+    .select('id')
+    .single()
+  if (ledgerErr || !ledgerRow) return c.json<ApiResponse>({ success: false, error: ledgerErr?.message || 'Falha ao gravar comissão' }, 500)
+
+  const { error: updateErr } = await supabase
+    .from('referral_attributions')
+    .update({ converted_at: new Date().toISOString(), commission_ledger_id: ledgerRow.id })
+    .eq('id', attribution.id)
+  if (updateErr) return c.json<ApiResponse>({ success: false, error: updateErr.message }, 500)
+
+  return c.json<ApiResponse>({ success: true, message: 'Comissão de referência registada', data: { commissionMzn, ledgerId: ledgerRow.id } })
+})
+
+// ── Fee de Embaixador (FEA, Art. 25) ─────────────────────────────────────────
+finance.get('/ambassador-fees', async (c) => {
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+  const { data, error } = await supabase.from('ambassador_fee_contracts').select('*').order('created_at', { ascending: false })
+  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  return c.json<ApiResponse>({ success: true, data: { contracts: data || [] } })
+})
+
+finance.post('/ambassador-fees', async (c) => {
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+  const user = c.get('user') as any
+  const body = await c.req.json().catch(() => ({})) as Record<string, any>
+  if (!body.teacherId || !body.amountMzn || !body.startDate || !body.endDate) {
+    return c.json<ApiResponse>({ success: false, error: 'teacherId, amountMzn, startDate e endDate são obrigatórios' }, 400)
+  }
+  const { data, error } = await supabase.from('ambassador_fee_contracts').insert({
+    teacher_id: body.teacherId,
+    amount_mzn: body.amountMzn,
+    start_date: body.startDate,
+    end_date: body.endDate,
+    contract_reference: body.contractReference || null,
+    notes: body.notes || null,
+    created_by: user?.id
+  }).select('*').single()
+  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  return c.json<ApiResponse>({ success: true, message: 'Contrato de embaixador criado', data })
+})
+
+// Transição para COMPLETED gera automaticamente o lançamento AMBASSADOR_FEE
+// no ledger (ESTIMATED) — sem isto, "suportar fee contratual" (secção 24)
+// ficava só com a tabela de contratos, sem nunca chegar ao professor.
+// Guardado contra duplicação: uma linha por contrato (metadata.contractId).
+finance.patch('/ambassador-fees/:id', async (c) => {
+  const id = c.req.param('id')
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+  const body = await c.req.json().catch(() => ({})) as { status?: string }
+  if (!body.status || !['ACTIVE', 'COMPLETED', 'CANCELLED'].includes(body.status)) {
+    return c.json<ApiResponse>({ success: false, error: 'status inválido' }, 400)
+  }
+
+  const { data: contract, error: findErr } = await supabase.from('ambassador_fee_contracts').select('*').eq('id', id).maybeSingle()
+  if (findErr) return c.json<ApiResponse>({ success: false, error: findErr.message }, 500)
+  if (!contract) return c.json<ApiResponse>({ success: false, error: 'Contrato não encontrado' }, 404)
+
+  const { error } = await supabase.from('ambassador_fee_contracts').update({ status: body.status }).eq('id', id)
+  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+
+  const user = c.get('user') as any
+  if (body.status === 'COMPLETED') {
+    const { data: existing } = await supabase
+      .from('teacher_earnings_ledger')
+      .select('id')
+      .eq('earning_type', 'AMBASSADOR_FEE')
+      .contains('calculation_metadata', { contractId: id })
+      .maybeSingle()
+
+    if (!existing) {
+      await supabase.from('teacher_earnings_ledger').insert({
+        teacher_id: contract.teacher_id,
+        earning_type: 'AMBASSADOR_FEE',
+        period_start: contract.start_date,
+        period_end: contract.end_date,
+        gross_amount: contract.amount_mzn,
+        currency: contract.currency,
+        status: 'ESTIMATED',
+        policy_version: 'V1.0',
+        calculation_metadata: { contractId: id, contractReference: contract.contract_reference }
+      })
+    }
+  }
+
+  await logEarningsAudit(supabase, {
+    actorId: user?.id, action: 'UPDATE_AMBASSADOR_FEE_STATUS', entityType: 'ambassador_fee_contracts', entityId: id,
+    before: { status: contract.status }, after: { status: body.status }
+  })
+
+  return c.json<ApiResponse>({ success: true, message: 'Estado do contrato actualizado' })
+})
+
+// ── Remuneração por Conteúdo Especial (RCEsp, Art. 25) ───────────────────────
+finance.get('/special-content', async (c) => {
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+  const { data, error } = await supabase.from('special_content_contracts').select('*').order('created_at', { ascending: false })
+  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  return c.json<ApiResponse>({ success: true, data: { contracts: data || [] } })
+})
+
+finance.post('/special-content', async (c) => {
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+  const user = c.get('user') as any
+  const body = await c.req.json().catch(() => ({})) as Record<string, any>
+  if (!body.teacherId || !body.contentReference || !body.amountMzn) {
+    return c.json<ApiResponse>({ success: false, error: 'teacherId, contentReference e amountMzn são obrigatórios' }, 400)
+  }
+  const { data, error } = await supabase.from('special_content_contracts').insert({
+    teacher_id: body.teacherId,
+    content_reference: body.contentReference,
+    amount_mzn: body.amountMzn,
+    period_start: body.periodStart || null,
+    period_end: body.periodEnd || null,
+    contract_reference: body.contractReference || null,
+    notes: body.notes || null,
+    created_by: user?.id
+  }).select('*').single()
+  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  return c.json<ApiResponse>({ success: true, message: 'Contrato de conteúdo especial criado', data })
+})
+
+// Transição para DELIVERED gera automaticamente o lançamento SPECIAL_CONTENT
+// no ledger (ESTIMATED) — mesmo raciocínio do endpoint de ambassador-fees acima.
+finance.patch('/special-content/:id', async (c) => {
+  const id = c.req.param('id')
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+  const body = await c.req.json().catch(() => ({})) as { status?: string }
+  if (!body.status || !['PENDING', 'DELIVERED', 'PAID', 'CANCELLED'].includes(body.status)) {
+    return c.json<ApiResponse>({ success: false, error: 'status inválido' }, 400)
+  }
+
+  const { data: contract, error: findErr } = await supabase.from('special_content_contracts').select('*').eq('id', id).maybeSingle()
+  if (findErr) return c.json<ApiResponse>({ success: false, error: findErr.message }, 500)
+  if (!contract) return c.json<ApiResponse>({ success: false, error: 'Contrato não encontrado' }, 404)
+
+  const { error } = await supabase.from('special_content_contracts').update({ status: body.status }).eq('id', id)
+  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+
+  const user = c.get('user') as any
+  if (body.status === 'DELIVERED') {
+    const { data: existing } = await supabase
+      .from('teacher_earnings_ledger')
+      .select('id')
+      .eq('earning_type', 'SPECIAL_CONTENT')
+      .contains('calculation_metadata', { contractId: id })
+      .maybeSingle()
+
+    if (!existing) {
+      await supabase.from('teacher_earnings_ledger').insert({
+        teacher_id: contract.teacher_id,
+        earning_type: 'SPECIAL_CONTENT',
+        period_start: contract.period_start,
+        period_end: contract.period_end,
+        gross_amount: contract.amount_mzn,
+        currency: contract.currency,
+        status: 'ESTIMATED',
+        policy_version: 'V1.0',
+        calculation_metadata: { contractId: id, contentReference: contract.content_reference, contractReference: contract.contract_reference }
+      })
+    }
+  }
+
+  await logEarningsAudit(supabase, {
+    actorId: user?.id, action: 'UPDATE_SPECIAL_CONTENT_STATUS', entityType: 'special_content_contracts', entityId: id,
+    before: { status: contract.status }, after: { status: body.status }
+  })
+
+  return c.json<ApiResponse>({ success: true, message: 'Estado do contrato actualizado' })
 })
 
 export default finance

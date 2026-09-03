@@ -6,7 +6,7 @@ import { useVideoPlayer, VideoView } from 'expo-video'
 import { Badge, Card, ErrorState, H2, LoadingState, Muted, Screen } from '../../../src/components/ui'
 import { colors, radius } from '../../../src/theme/colors'
 import { fetchLesson } from '../../../src/api/curriculum'
-import { getVideoStreamUrl, reportVideoProgress } from '../../../src/api/video'
+import { getVideoStreamUrl, reportVideoHeartbeat, reportVideoProgress, uuidv4 } from '../../../src/api/video'
 import { fetchExercises, submitAnswer, type SubmitAnswerResult } from '../../../src/api/exercises'
 import { ApiError } from '../../../src/api/client'
 import type { Exercise, Lesson } from '@shared/types'
@@ -28,7 +28,53 @@ export default function LessonScreen() {
   })
 
   const lastReport = useRef(0)
-  useEvent(player, 'timeUpdate', { currentTime: 0, bufferedPosition: 0 } as any)
+
+  // ─── Teacher Earnings V1 — heartbeat de consumo (Art. 6-13) ────────────
+  // Distinto do reportVideoProgress abaixo, que só serve para UX. Isto é a
+  // fonte financeira server-side da classificação VQ-R/VQ-P/VQ-B/VQ-NR/VNQ —
+  // nunca confiar em percentagens calculadas no cliente.
+  const sessionTokenRef = useRef<string | null>(null)
+  const lastHeartbeatAtRef = useRef<number | null>(null)
+  const heartbeatStartedRef = useRef(false)
+
+  function sendHeartbeat(eventType: 'play' | 'heartbeat' | 'pause' | 'resume' | 'ended') {
+    if (!id) return
+    if (!sessionTokenRef.current) sessionTokenRef.current = uuidv4()
+    const now = Date.now()
+    const deltaSeconds = lastHeartbeatAtRef.current ? Math.round((now - lastHeartbeatAtRef.current) / 1000) : 0
+    lastHeartbeatAtRef.current = now
+    reportVideoHeartbeat(id, {
+      sessionToken: sessionTokenRef.current,
+      eventType,
+      positionSeconds: Math.round(player.currentTime || 0),
+      deltaSeconds,
+    }).catch(() => {})
+  }
+
+  const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing })
+
+  useEffect(() => {
+    if (!streamUrl) return
+    let heartbeatInterval: ReturnType<typeof setInterval> | null = null
+    if (isPlaying) {
+      sendHeartbeat(heartbeatStartedRef.current ? 'resume' : 'play')
+      heartbeatStartedRef.current = true
+      heartbeatInterval = setInterval(() => sendHeartbeat('heartbeat'), 15000)
+    } else if (heartbeatStartedRef.current) {
+      sendHeartbeat('pause')
+    }
+    return () => {
+      if (heartbeatInterval) clearInterval(heartbeatInterval)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying, streamUrl])
+
+  useEffect(() => {
+    if (!streamUrl) return
+    const sub = player.addListener('playToEnd', () => sendHeartbeat('ended'))
+    return () => sub.remove()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [player, streamUrl])
 
   useEffect(() => {
     if (!id) return

@@ -1,0 +1,75 @@
+name: Teacher Earnings — Settlement Mensal
+
+# Substitui o Cron Trigger que o Cloudflare Pages não suporta nativamente
+# (PDR-007, ver VCLASS_TEACHER_EARNINGS_V1_IMPLEMENTATION_BLUEPRINT.md).
+# Chama /api/internal/settlement/:phase nos dias 1/7/15 (06:00 Africa/Maputo
+# = 04:00 UTC, sem horário de verão — PDR-006), sequenciando
+# ESTIMATED → VALIDATING → APPROVED do ciclo de earnings do mês anterior.
+#
+# Requer, em Settings > Secrets and variables > Actions:
+#   - VCLASS_API_BASE_URL    (ex: https://vclass2026.pages.dev)
+#   - SETTLEMENT_CRON_SECRET (tem de bater certo com o mesmo secret no Cloudflare Pages)
+
+on:
+  schedule:
+    - cron: '0 4 1 * *'   # dia 1 — fase "estimate"
+    - cron: '0 4 7 * *'   # dia 7 — fase "validate"
+    - cron: '0 4 15 * *'  # dia 15 — fase "approve"
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: 'Fase a correr manualmente'
+        required: true
+        type: choice
+        options: [estimate, validate, approve]
+      periodStart:
+        description: 'Início do período (YYYY-MM-DD, opcional — default: mês anterior)'
+        required: false
+      periodEnd:
+        description: 'Fim do período, exclusivo (YYYY-MM-DD, opcional)'
+        required: false
+
+jobs:
+  settle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determinar fase (agendada vs. manual)
+        id: phase
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "phase=${{ inputs.phase }}" >> "$GITHUB_OUTPUT"
+          else
+            case "${{ github.event.schedule }}" in
+              '0 4 1 * *')  echo "phase=estimate" >> "$GITHUB_OUTPUT" ;;
+              '0 4 7 * *')  echo "phase=validate" >> "$GITHUB_OUTPUT" ;;
+              '0 4 15 * *') echo "phase=approve"  >> "$GITHUB_OUTPUT" ;;
+              *) echo "Cron desconhecido: ${{ github.event.schedule }}"; exit 1 ;;
+            esac
+          fi
+
+      - name: Chamar endpoint de settlement
+        env:
+          BASE_URL: ${{ secrets.VCLASS_API_BASE_URL }}
+          SECRET:   ${{ secrets.SETTLEMENT_CRON_SECRET }}
+          PHASE:    ${{ steps.phase.outputs.phase }}
+          PERIOD_START: ${{ inputs.periodStart }}
+          PERIOD_END:   ${{ inputs.periodEnd }}
+        run: |
+          body='{}'
+          if [ -n "$PERIOD_START" ] && [ -n "$PERIOD_END" ]; then
+            body=$(printf '{"periodStart":"%s","periodEnd":"%s"}' "$PERIOD_START" "$PERIOD_END")
+          fi
+
+          http_status=$(curl -sS -o response.json -w '%{http_code}' \
+            -X POST "$BASE_URL/api/internal/settlement/$PHASE" \
+            -H "Content-Type: application/json" \
+            -H "x-settlement-secret: $SECRET" \
+            -d "$body")
+
+          echo "HTTP $http_status"
+          cat response.json
+
+          if [ "$http_status" -ge 400 ]; then
+            echo "::error::Settlement $PHASE falhou (HTTP $http_status)"
+            exit 1
+          fi

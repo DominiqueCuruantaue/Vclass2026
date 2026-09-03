@@ -1342,6 +1342,81 @@
         let vcDuration  = 0;      // duração total em segundos
         let vcProgressSaveTimer = null;
 
+        // ─── Teacher Earnings V1 — heartbeat de consumo (Art. 6-13) ──────────
+        // Distinto de vcScheduleSave()/onVideoEnded() acima: aqueles só
+        // guardam "onde ficou" para UX. Isto é a fonte financeira server-side
+        // da classificação VQ-R/VQ-P/VQ-B/VQ-NR/VNQ — nunca confiar em
+        // percentagens calculadas no cliente, só posição+delta reportados
+        // evento a evento (ver POST /api/video/:lessonId/heartbeat).
+        let vcSessionToken     = null;   // um UUID por sessão de reprodução (não sobrevive a reload)
+        let vcHeartbeatTimer   = null;
+        let vcLastHeartbeatAt  = null;   // Date.now() da última emissão — delta = tempo real decorrido
+        let vcHeartbeatStarted = false;  // primeiro evento da sessão é 'play', os seguintes 'resume'/'heartbeat'
+        const VC_HEARTBEAT_INTERVAL_MS = 15000;
+
+        function vcUuid() {
+            if (window.crypto?.randomUUID) return crypto.randomUUID();
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+                const r = Math.random() * 16 | 0;
+                return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+            });
+        }
+
+        async function vcSendHeartbeat(eventType) {
+            const v = document.getElementById('vclass-video');
+            if (!v) return;
+            if (!vcSessionToken) vcSessionToken = vcUuid();
+
+            const now = Date.now();
+            const deltaSeconds = vcLastHeartbeatAt ? Math.round((now - vcLastHeartbeatAt) / 1000) : 0;
+            vcLastHeartbeatAt = now;
+
+            try {
+                await fetch(`/api/video/${lessonId}/heartbeat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${VClass.getToken()}`
+                    },
+                    body: JSON.stringify({
+                        sessionToken:   vcSessionToken,
+                        eventType,
+                        positionSeconds: Math.round(v.currentTime || 0),
+                        deltaSeconds:    ['heartbeat', 'play', 'resume', 'ended'].includes(eventType) ? deltaSeconds : 0,
+                        eventId: vcUuid()
+                    })
+                });
+            } catch (e) { /* silent fail — nunca bloquear a reprodução por causa disto */ }
+        }
+
+        function vcStartHeartbeatLoop() {
+            clearInterval(vcHeartbeatTimer);
+            vcHeartbeatTimer = setInterval(() => vcSendHeartbeat('heartbeat'), VC_HEARTBEAT_INTERVAL_MS);
+        }
+
+        function vcStopHeartbeatLoop() {
+            clearInterval(vcHeartbeatTimer);
+            vcHeartbeatTimer = null;
+        }
+
+        function vcOnPlay() {
+            const eventType = vcHeartbeatStarted ? 'resume' : 'play';
+            vcHeartbeatStarted = true;
+            vcSendHeartbeat(eventType);
+            vcStartHeartbeatLoop();
+        }
+
+        function vcOnPause() {
+            vcStopHeartbeatLoop();
+            vcSendHeartbeat('pause');
+        }
+
+        function vcOnSeeked() {
+            // Reinicia o relógio do delta: o salto do seek não é tempo assistido.
+            vcLastHeartbeatAt = Date.now();
+            vcSendHeartbeat('seek');
+        }
+
         // ── Transferências offline (vídeo guardado no IndexedDB do dispositivo) ──
         let resolvedVideoUrl  = null;   // URL do stream resolvido, usada como fonte para a transferência
         let isOfflineVideo    = false;  // true quando a reproduzir a partir da cópia local
@@ -1839,10 +1914,13 @@
                 vclass_video.addEventListener('timeupdate', vcUpdateUI);
                 vclass_video.addEventListener('play', () => {
                     document.getElementById('vc-play-icon').className = 'fas fa-pause';
+                    vcOnPlay();
                 });
                 vclass_video.addEventListener('pause', () => {
                     document.getElementById('vc-play-icon').className = 'fas fa-play';
+                    vcOnPause();
                 });
+                vclass_video.addEventListener('seeked', vcOnSeeked);
                 vclass_video.addEventListener('ended', onVideoEnded);
                 vclass_video.addEventListener('durationchange', () => {
                     vcDuration = vclass_video.duration;
@@ -1875,6 +1953,8 @@
             const statusEl = document.getElementById('lesson-status');
             if (statusEl) statusEl.textContent = 'Concluída';
             clearInterval(vcProgressSaveTimer);
+            vcStopHeartbeatLoop();
+            vcSendHeartbeat('ended');
             // Guardar 100% no backend
             try {
                 await fetch(`/api/video/${lessonId}/progress`, {

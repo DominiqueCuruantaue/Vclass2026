@@ -32,6 +32,8 @@ import bookmarksRoutes from './routes/bookmarks'
 import commentsRoutes from './routes/comments'
 import sessionsRoutes from './routes/sessions'
 import pagesRoutes from './routes/pages'
+import earningsRoutes from './routes/earnings'
+import settlementCronRoutes from './routes/settlementCron'
 
 const app = new Hono<{ Bindings: CloudflareBindings }>()
 
@@ -118,6 +120,8 @@ app.route('/api/favorites', favoritesRoutes)
 app.route('/api/bookmarks', bookmarksRoutes)
 app.route('/api/comments', commentsRoutes)
 app.route('/api/sessions', sessionsRoutes)
+app.route('/api/earnings', earningsRoutes)
+app.route('/api/internal/settlement', settlementCronRoutes)
 
 // Health check
 app.get('/api/health', (c) => {

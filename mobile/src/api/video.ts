@@ -22,3 +22,31 @@ export function reportVideoProgress(lessonId: string, position: number, duration
     body: { position, duration, percent },
   })
 }
+
+export function uuidv4(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16)
+  })
+}
+
+export type VideoHeartbeatEventType = 'play' | 'heartbeat' | 'pause' | 'seek' | 'resume' | 'ended'
+
+// Fundação do Teacher Earnings V1 (Política de Remuneração e Comissões dos
+// Professores, Art. 6-13) — fonte financeira server-side da classificação
+// VQ-R/VQ-P/VQ-B/VQ-NR/VNQ. Distinto de reportVideoProgress acima, que só
+// serve para UX ("continuar de onde ficou").
+export function reportVideoHeartbeat(
+  lessonId: string,
+  params: {
+    sessionToken: string
+    eventType: VideoHeartbeatEventType
+    positionSeconds: number
+    deltaSeconds: number
+  }
+) {
+  return apiRequest(`/api/video/${lessonId}/heartbeat`, {
+    method: 'POST',
+    body: { ...params, eventId: uuidv4() },
+  })
+}

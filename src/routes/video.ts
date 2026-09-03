@@ -8,6 +8,7 @@ import { Hono } from 'hono'
 import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware } from '../middleware/auth'
 import { signBunnyPath, isBunnyConfigured } from '../utils/bunny'
+import { getSupabase } from '../config/supabase'
 import type { ApiResponse } from '../types'
 
 const video = new Hono<{ Bindings: CloudflareBindings }>()
@@ -359,6 +360,101 @@ video.post('/:lessonId/progress', async (c) => {
     })
   } catch (err) {
     console.error('progress error:', err)
+    return c.json<ApiResponse>({ success: false, error: 'Erro interno' }, 500)
+  }
+})
+
+// ============================================================
+//  POST /api/video/:lessonId/heartbeat
+//  Fundação do Teacher Earnings V1 (Política de Remuneração e Comissões
+//  dos Professores, Art. 6-13) — autoridade server-side sobre o consumo
+//  de vídeo. Distinta de /progress acima: aquela é só UX ("continuar
+//  de onde ficou"); esta é a fonte financeira da classificação VQ-R/
+//  VQ-P/VQ-B/VQ-NR/VNQ, feita atomicamente em
+//  fn_record_watch_heartbeat (database/migrations/030_teacher_earnings_
+//  foundation.sql). Nunca confiamos em "qualified"/"percent" vindos do
+//  cliente — só em posição + delta, e o servidor decide.
+//
+//  Body: { sessionToken, eventType, positionSeconds, deltaSeconds, eventId }
+//  eventId: gerado no cliente (uuid), garante idempotência em retries.
+// ============================================================
+video.post('/:lessonId/heartbeat', async (c) => {
+  try {
+    const user     = c.get('user')
+    const lessonId = c.req.param('lessonId')
+    const body     = await c.req.json().catch(() => ({}))
+    const { sessionToken, eventType, positionSeconds, deltaSeconds, eventId } = body
+
+    if (typeof sessionToken !== 'string' || sessionToken.length < 8) {
+      return c.json<ApiResponse>({ success: false, error: 'sessionToken inválido' }, 400)
+    }
+    if (typeof eventId !== 'string' || eventId.length < 8) {
+      return c.json<ApiResponse>({ success: false, error: 'eventId inválido' }, 400)
+    }
+    const validEventTypes = ['play', 'heartbeat', 'pause', 'seek', 'resume', 'ended']
+    if (typeof eventType !== 'string' || !validEventTypes.includes(eventType)) {
+      return c.json<ApiResponse>({ success: false, error: 'eventType inválido' }, 400)
+    }
+    if (typeof positionSeconds !== 'number' || positionSeconds < 0) {
+      return c.json<ApiResponse>({ success: false, error: 'positionSeconds inválido' }, 400)
+    }
+    const safeDelta = typeof deltaSeconds === 'number' && deltaSeconds >= 0 ? deltaSeconds : 0
+
+    // Só estudantes geram visualizações classificáveis financeiramente
+    // (Art. 5.2, Art. 32 — auto-visualizações por professores/admins não
+    // podem gerar remuneração). Outros papéis recebem 200 sem persistir
+    // no pipeline de classificação, para não quebrar preview/QA no player.
+    if (user.role !== 'student') {
+      return c.json<ApiResponse>({
+        success: true,
+        data: { lessonId, tracked: false, reason: 'non_student_role' }
+      })
+    }
+
+    const supabase = getSupabase(c.env)
+    if (!supabase) {
+      // Sem BD configurada (modo demo): aceitar sem persistir, como as
+      // restantes rotas deste ficheiro em modo demo.
+      return c.json<ApiResponse>({
+        success: true,
+        data: { lessonId, tracked: false, reason: 'demo_mode' }
+      })
+    }
+
+    const ip        = getClientIP(c as any)
+    const userAgent = c.req.header('user-agent')?.substring(0, 100) || ''
+
+    const { data, error } = await supabase.rpc('fn_record_watch_heartbeat', {
+      p_event_id: eventId,
+      p_session_token: sessionToken,
+      p_student_id: user.id,
+      p_lesson_id: lessonId,
+      p_event_type: eventType,
+      p_position_seconds: Math.round(positionSeconds),
+      p_delta_seconds: Math.round(safeDelta),
+      p_ip_address: ip,
+      p_user_agent: userAgent
+    })
+
+    if (error) {
+      console.error('heartbeat rpc error:', error)
+      return c.json<ApiResponse>({ success: false, error: 'Erro ao registar consumo' }, 500)
+    }
+
+    const row = Array.isArray(data) ? data[0] : data
+    return c.json<ApiResponse>({
+      success: true,
+      data: {
+        lessonId,
+        tracked: true,
+        effectiveWatchedSeconds: row?.out_effective_watched_seconds ?? null,
+        finalized: row?.out_finalized ?? false,
+        classification: row?.out_classification ?? null,
+        reasonCode: row?.out_reason_code ?? null
+      }
+    })
+  } catch (err) {
+    console.error('heartbeat error:', err)
     return c.json<ApiResponse>({ success: false, error: 'Erro interno' }, 500)
   }
 })

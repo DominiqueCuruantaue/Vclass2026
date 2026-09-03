@@ -84,7 +84,11 @@ const registerSchema = z.object({
   // o Explorar ao currículo do próprio estudante. Códigos curtos (ex: 'mz'),
   // não confundir com o country_id (UUID legado da tabela countries).
   country_code: z.string().optional(),
-  grade_id: z.string().optional()
+  grade_id: z.string().optional(),
+  // Código de referência de professor (Art. 21-24 da Política de Remuneração).
+  // Captura de atribuição de referral: ver comentário junto ao insert em
+  // referral_attributions mais abaixo.
+  referral_code: z.string().trim().min(4).max(12).optional()
 })
 
 // Confirma que grade_id pertence de facto ao país indicado em country_code
@@ -114,7 +118,7 @@ auth.post('/register', async (c) => {
       }, 400)
     }
     
-    const { email, password, full_name, role, country_id, phone, country_code, grade_id } = validation.data
+    const { email, password, full_name, role, country_id, phone, country_code, grade_id, referral_code } = validation.data
 
     if (role !== 'student') {
       return c.json<ApiResponse>({
@@ -206,6 +210,34 @@ auth.post('/register', async (c) => {
 
     await storeRefreshToken(supabase, user.id, refreshToken, requestMeta(c))
     setRefreshCookie(c, refreshToken)
+
+    // Captura de atribuição de referral (Art. 21-24, "entrada pelo link ou
+    // código individual"): UNIQUE(student_id) em referral_attributions
+    // garante primeiro-clique-vence (PDR-004) — esta é a ÚNICA tentativa de
+    // atribuição da vida do estudante, nunca é substituída depois. Falha aqui
+    // nunca bloqueia o registo (ex: código inexistente/inactivo, ou corrida
+    // improvável de duplo registo) — só regista quando é possível confirmar
+    // o código sem risco de deixar o utilizador sem conta criada.
+    if (referral_code) {
+      try {
+        const { data: codeRow } = await supabase
+          .from('referral_codes')
+          .select('teacher_id')
+          .eq('code', referral_code.toUpperCase())
+          .eq('active', true)
+          .maybeSingle()
+
+        if (codeRow?.teacher_id && codeRow.teacher_id !== user.id) {
+          await supabase.from('referral_attributions').insert({
+            student_id: user.id,
+            teacher_id: codeRow.teacher_id,
+            referral_code: referral_code.toUpperCase()
+          })
+        }
+      } catch (refErr) {
+        console.error('Referral attribution error (não bloqueia o registo):', refErr)
+      }
+    }
 
     return c.json<ApiResponse<AuthResponse>>({
       success: true,

@@ -31,3 +31,10 @@ RESEND_FROM_EMAIL=VClass <onboarding@resend.dev>
 # Optional: Payment Gateway (for future)
 STRIPE_SECRET_KEY=your-stripe-key
 STRIPE_WEBHOOK_SECRET=your-webhook-secret
+
+# Teacher Earnings — Monthly settlement (PDR-007)
+# Shared secret checked by POST /api/internal/settlement/:phase — must match
+# the SETTLEMENT_CRON_SECRET GitHub Actions secret used by
+# .github/workflows/teacher-earnings-settlement.yml. Generate with:
+# openssl rand -base64 32
+SETTLEMENT_CRON_SECRET=your-settlement-cron-secret

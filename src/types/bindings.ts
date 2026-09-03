@@ -36,6 +36,11 @@ export interface CloudflareBindings {
   RESEND_API_KEY?: string
   RESEND_FROM_EMAIL?: string
 
+  // Settlement mensal do Teacher Earnings (PDR-007) — segredo partilhado
+  // com o workflow do GitHub Actions que chama /api/internal/settlement/*
+  // (sem Cron Trigger nativo no Cloudflare Pages). Ver src/routes/settlementCron.ts.
+  SETTLEMENT_CRON_SECRET?: string
+
   // KV namespaces
   RATE_LIMIT?: KVNamespace
 }

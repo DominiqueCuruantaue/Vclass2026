@@ -1147,11 +1147,12 @@ creator.get('/video/:videoId/status', async (c) => {
   // upload (sem lição guardada) não têm dono a verificar nesta tabela; o
   // GUID é gerado pelo Bunny e só é devolvido ao próprio professor no
   // momento da criação (POST /video/upload-url).
+  let owningLessonId: string | null = null
   if (isDatabaseConfigured(c.env)) {
     const supabase = createSupabaseClient(c.env)
     const { data: owningLesson } = await supabase
       .from('lessons')
-      .select('id')
+      .select('id, video_duration')
       .eq('video_id', videoId)
       .eq('created_by', user.id)
       .maybeSingle()
@@ -1162,6 +1163,9 @@ creator.get('/video/:videoId/status', async (c) => {
       .maybeSingle()
     if (anyLesson && !owningLesson) {
       return c.json({ success: false, error: 'Vídeo não encontrado' }, 404)
+    }
+    if (owningLesson && !owningLesson.video_duration) {
+      owningLessonId = owningLesson.id
     }
   }
 
@@ -1181,11 +1185,26 @@ creator.get('/video/:videoId/status', async (c) => {
       3: 'transcoding', 4: 'ready', 5: 'error', 6: 'error',
       7: 'transcoding', 8: 'ready'
     }
+    const status = statusMap[v.status] || 'unknown'
+
+    // Bunny é a autoridade sobre a duração real do vídeo (em segundos). O
+    // professor nunca a introduz manualmente — sincronizamos aqui, assim que
+    // o processamento termina, para alimentar o pipeline de Teacher Earnings
+    // (VQ-R/VQ-P dependem de lessons.video_duration; ver migration 030).
+    if (status === 'ready' && owningLessonId && typeof v.length === 'number' && v.length > 0) {
+      const supabase = createSupabaseClient(c.env)
+      const { error: syncError } = await supabase
+        .from('lessons')
+        .update({ video_duration: Math.round(v.length) })
+        .eq('id', owningLessonId)
+      if (syncError) console.error('video_duration sync error:', syncError)
+    }
+
     return c.json({
       success: true,
       data: {
         videoId,
-        status:               statusMap[v.status] || 'unknown',
+        status,
         statusCode:           v.status,
         encodeProgress:       v.encodeProgress ?? 0,
         availableResolutions: v.availableResolutions || '',
