@@ -1,5 +1,7 @@
 import { Hono } from 'hono'
+import { getCookie } from 'hono/cookie'
 import type { CloudflareBindings } from '../types/bindings'
+import { verifyRefreshToken } from '../utils/jwt'
 
 const app = new Hono<{ Bindings: CloudflareBindings }>()
 
@@ -13,6 +15,40 @@ app.use('/*', async (c, next) => {
     c.res.headers.set('Expires', '0')
   }
 })
+
+// ── Guard de sessão para painéis privilegiados (achado F7 da auditoria 2026-08) ──
+// Reaproveita o cookie HttpOnly `vclass_rt` (já emitido no login/registo em auth.ts)
+// para exigir sessão válida no servidor antes de servir o HTML destes painéis —
+// antes só havia o guard client-side (`VClass.isAuthenticated()`), que um pedido
+// directo (curl, sem JS) contornava. A verificação é apenas "sessão válida"
+// (assinatura + expiração do refresh token); a autorização por role continua,
+// como sempre, a cargo da API que cada painel chama.
+function requireSession(c: any) {
+  const refreshToken = getCookie(c, 'vclass_rt')
+  if (!refreshToken) return false
+  return !!verifyRefreshToken(refreshToken, c.env?.JWT_SECRET)
+}
+
+app.use('/creator-dashboard.html', privilegedGuard)
+app.use('/creator-content.html', privilegedGuard)
+app.use('/creator-lesson-editor.html', privilegedGuard)
+app.use('/creator-students.html', privilegedGuard)
+app.use('/creator-analytics.html', privilegedGuard)
+app.use('/creator-earnings.html', privilegedGuard)
+app.use('/admin-dashboard.html', privilegedGuard)
+app.use('/support-dashboard.html', privilegedGuard)
+app.use('/editor-dashboard.html', privilegedGuard)
+app.use('/country-dashboard.html', privilegedGuard)
+app.use('/finance-dashboard.html', privilegedGuard)
+app.use('/moderator-dashboard.html', privilegedGuard)
+app.use('/teacher-verification.html', privilegedGuard)
+
+async function privilegedGuard(c: any, next: any) {
+  if (!requireSession(c)) {
+    return c.redirect('/login.html', 302)
+  }
+  await next()
+}
 
 // Import HTML content as raw strings (will be handled by build)
 import homeHtml from '../pages/home.html?raw'

@@ -74,12 +74,12 @@ creator.get('/dashboard', async (c) => {
     // Progresso de alunos nessas lições
     const { data: allProgress } = lessonIds.length
       ? await supabase
-          .from('lesson_progress')
-          .select('user_id, progress_percent, created_at')
+          .from('student_progress')
+          .select('student_id, progress_percent, created_at')
           .in('lesson_id', lessonIds)
       : { data: [] }
 
-    const uniqueStudents = new Set((allProgress ?? []).map((p: any) => p.user_id)).size
+    const uniqueStudents = new Set((allProgress ?? []).map((p: any) => p.student_id)).size
 
     // Score médio (aprovação) dos alunos com pelo menos 50% de progresso
     const progWithScore = (allProgress ?? []).filter((p: any) => p.progress_percent >= 50)
