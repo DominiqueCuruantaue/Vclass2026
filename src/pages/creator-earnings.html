@@ -362,10 +362,10 @@
 <div id="withdraw-modal" class="fixed inset-0 z-50 hidden">
   <div class="modal-bg absolute inset-0" onclick="closeWithdrawModal()"></div>
   <div class="relative flex items-center justify-center min-h-screen p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md relative z-10 overflow-hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md relative z-10 max-h-[90vh] flex flex-col overflow-hidden">
 
       <!-- Header -->
-      <div class="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-white">
+      <div class="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-white flex-shrink-0">
         <button onclick="closeWithdrawModal()" class="absolute top-4 right-4 text-white/70 hover:text-white">
           <i class="fas fa-times text-xl"></i>
         </button>
@@ -374,6 +374,7 @@
         <p class="text-green-100 text-sm mt-1">Saldo disponível: <strong id="modal-available">MT —</strong></p>
       </div>
 
+      <div class="overflow-y-auto">
       <div class="p-6 space-y-5" id="withdraw-step-form">
 
         <!-- Valor -->
@@ -474,6 +475,7 @@
         <button onclick="closeWithdrawModal()" class="w-full border border-gray-300 text-gray-700 py-3 rounded-xl font-semibold text-sm hover:bg-gray-50 transition">
           Fechar
         </button>
+      </div>
       </div>
     </div>
   </div>

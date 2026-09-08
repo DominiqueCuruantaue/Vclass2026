@@ -314,6 +314,34 @@ finance.get('/payments', async (c) => {
   }
 })
 
+// ── GET /api/finance/checkout-requests ────────────────────────────────────────
+// Referências geradas por POST /api/plans/subscribe (migration 034) — não
+// activam nada sozinhas, mas permitem confirmar aqui a referência que o
+// aluno diz ter usado antes de chamar POST /subscriptions com o mesmo valor
+// em paymentId. `matched` indica se já existe uma subscrição activa com essa
+// referência como payment_id.
+finance.get('/checkout-requests', async (c) => {
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+
+  const { data: requests, error } = await supabase
+    .from('payment_checkout_requests')
+    .select('id, user_id, plan_id, billing, currency, amount, payment_method, reference, created_at, users(full_name, email)')
+    .order('created_at', { ascending: false })
+    .limit(200)
+  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+
+  const references = (requests ?? []).map((r: any) => r.reference)
+  const { data: matchedSubs } = references.length
+    ? await supabase.from('subscriptions').select('payment_id').in('payment_id', references)
+    : { data: [] }
+  const matchedRefs = new Set((matchedSubs ?? []).map((s: any) => s.payment_id))
+
+  const data = (requests ?? []).map((r: any) => ({ ...r, matched: matchedRefs.has(r.reference) }))
+  return c.json<ApiResponse>({ success: true, data: { requests: data, total: data.length } })
+})
+
 // ── GET /api/finance/revenue ──────────────────────────────────────────────────
 finance.get('/revenue', async (c) => {
   try {

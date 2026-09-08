@@ -134,6 +134,24 @@ plans.post('/subscribe', authMiddleware, async (c) => {
   if (billing === 'yearly')  expiresAt.setFullYear(expiresAt.getFullYear() + 1)
   else                        expiresAt.setMonth(expiresAt.getMonth() + 1)
 
+  // Regista o pedido para a equipa financeira conseguir validar a referência
+  // mais tarde em POST /api/finance/subscriptions (ver migration 034). Sem
+  // gateway real, isto não activa nada sozinho — é só o log do lado que faltava.
+  if (isDatabaseConfigured(c.env)) {
+    const supabase = getSupabase(c.env)
+    if (supabase) {
+      await supabase.from('payment_checkout_requests').insert({
+        user_id: user.id,
+        plan_id,
+        billing,
+        currency: cur.toUpperCase(),
+        amount: price,
+        payment_method: payment_method || null,
+        reference: refCode
+      })
+    }
+  }
+
   return c.json<ApiResponse>({
     success: true,
     message: `Subscrição ${plan.name} iniciada com sucesso!`,
