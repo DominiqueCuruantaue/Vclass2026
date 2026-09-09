@@ -196,6 +196,97 @@ finance.post('/subscriptions/:id/cancel', async (c) => {
   return c.json<ApiResponse>({ success: true, message: 'Subscrição cancelada', data: { id, status: 'cancelled' } })
 })
 
+// ── POST /api/finance/subscriptions/:id/refund ────────────────────────────────
+// Distinto de /cancel: aqui houve devolução real de dinheiro (reembolso ou
+// chargeback), não só fim de subscrição. Se esta subscrição foi a que
+// converteu a comissão de referência do estudante (Art. 21-24) — verificado
+// por `converted_subscription_id`, migration 035, não por inferência de
+// datas —, a comissão é revertida automaticamente aqui: cria-se uma linha
+// REVERSAL no ledger, nunca se apaga/edita a original (secção 23/26 do
+// prompt de implementação). Idempotente (não duplica a reversão se chamado
+// duas vezes). VCPM/BQE do período do reembolso NÃO são recalculados
+// automaticamente — ficam fora deste gap, ver blueprint.
+finance.post('/subscriptions/:id/refund', async (c) => {
+  const id = c.req.param('id')
+  if (!isDatabaseConfigured(c.env) || id.startsWith('demo-')) {
+    return c.json<ApiResponse>({ success: true, message: 'Subscrição reembolsada (modo demo)', data: { id, status: 'refunded' } })
+  }
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+
+  const { data: subscription, error: findErr } = await supabase.from('subscriptions').select('id, student_id, status').eq('id', id).maybeSingle()
+  if (findErr) return c.json<ApiResponse>({ success: false, error: findErr.message }, 500)
+  if (!subscription) return c.json<ApiResponse>({ success: false, error: 'Subscrição não encontrada' }, 404)
+  if (subscription.status === 'refunded') return c.json<ApiResponse>({ success: false, error: 'Subscrição já marcada como reembolsada' }, 409)
+
+  const { error: updateErr } = await supabase.from('subscriptions').update({ status: 'refunded' }).eq('id', id)
+  if (updateErr) return c.json<ApiResponse>({ success: false, error: updateErr.message }, 500)
+
+  const user = c.get('user') as any
+  await logEarningsAudit(supabase, {
+    actorId: user?.id, action: 'REFUND_SUBSCRIPTION', entityType: 'subscriptions', entityId: id,
+    before: { status: subscription.status }, after: { status: 'refunded' }
+  })
+
+  let reversal: { ledgerId: string; amountMzn: string } | null = null
+
+  const { data: attribution } = await supabase
+    .from('referral_attributions')
+    .select('id, teacher_id, commission_ledger_id, converted_subscription_id')
+    .eq('student_id', subscription.student_id)
+    .maybeSingle()
+
+  if (attribution?.commission_ledger_id && attribution.converted_subscription_id === id) {
+    const { data: alreadyReversed } = await supabase
+      .from('teacher_earnings_ledger')
+      .select('id')
+      .eq('reversal_of_id', attribution.commission_ledger_id)
+      .maybeSingle()
+
+    if (!alreadyReversed) {
+      const { data: originalEntry, error: origErr } = await supabase
+        .from('teacher_earnings_ledger')
+        .select('gross_amount')
+        .eq('id', attribution.commission_ledger_id)
+        .maybeSingle()
+
+      if (!origErr && originalEntry) {
+        const reversalAmount = (-Number(originalEntry.gross_amount)).toFixed(2)
+        const { data: reversalRow, error: reversalErr } = await supabase
+          .from('teacher_earnings_ledger')
+          .insert({
+            teacher_id: attribution.teacher_id,
+            earning_type: 'REVERSAL',
+            gross_amount: reversalAmount,
+            currency: 'MZN',
+            status: 'APPROVED',
+            policy_version: 'V1.0',
+            reversal_of_id: attribution.commission_ledger_id,
+            approved_at: new Date().toISOString(),
+            calculation_metadata: { reason: 'Reembolso automático da subscrição de origem', subscriptionId: id, autoReversal: true }
+          })
+          .select('id')
+          .single()
+
+        if (!reversalErr && reversalRow) {
+          reversal = { ledgerId: reversalRow.id, amountMzn: reversalAmount }
+          await logEarningsAudit(supabase, {
+            actorId: user?.id, action: 'AUTO_REVERSE_REFERRAL_COMMISSION',
+            entityType: 'teacher_earnings_ledger', entityId: reversalRow.id,
+            after: { teacherId: attribution.teacher_id, amountMzn: reversalAmount, reversalOfId: attribution.commission_ledger_id, subscriptionId: id }
+          })
+        }
+      }
+    }
+  }
+
+  return c.json<ApiResponse>({
+    success: true,
+    message: reversal ? 'Subscrição reembolsada; comissão de referência revertida automaticamente' : 'Subscrição reembolsada',
+    data: { id, status: 'refunded', reversal }
+  })
+})
+
 // ── POST /api/finance/subscriptions — registar uma subscrição manualmente ───
 // GAP CRÍTICO fechado aqui (ver blueprint, achado #13 da sessão 2): antes
 // desta rota, NADA no código alguma vez inseria uma linha em
@@ -784,7 +875,7 @@ finance.post('/referrals/:studentId/convert', async (c) => {
   const supabase = getSupabase(c.env)
   if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
 
-  const body = await c.req.json().catch(() => ({})) as { netEligibleRevenueMzn?: number }
+  const body = await c.req.json().catch(() => ({})) as { netEligibleRevenueMzn?: number; subscriptionId?: string }
   if (typeof body.netEligibleRevenueMzn !== 'number' || body.netEligibleRevenueMzn < 0) {
     return c.json<ApiResponse>({ success: false, error: 'netEligibleRevenueMzn é obrigatório e não pode ser negativo' }, 400)
   }
@@ -822,7 +913,15 @@ finance.post('/referrals/:studentId/convert', async (c) => {
 
   const { error: updateErr } = await supabase
     .from('referral_attributions')
-    .update({ converted_at: new Date().toISOString(), commission_ledger_id: ledgerRow.id })
+    .update({
+      converted_at: new Date().toISOString(),
+      commission_ledger_id: ledgerRow.id,
+      // Guarda qual subscrição converteu, para a reversão automática de
+      // reembolso (migration 035) saber exactamente qual reembolso deve
+      // disparar a reversão desta comissão, sem ambiguidade com subscrições
+      // posteriores do mesmo estudante.
+      converted_subscription_id: body.subscriptionId || null
+    })
     .eq('id', attribution.id)
   if (updateErr) return c.json<ApiResponse>({ success: false, error: updateErr.message }, 500)
 
