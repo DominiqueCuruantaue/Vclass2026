@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { calculateVcpmEarnings, VCPM_TIERS_V1 } from '../src/services/vcpmEngine'
+import { calculateVcpmEarnings, marginalVcpmRate, calculatePercentageOfVcpmEarnings, calculateFixedVcpmEarnings, VCPM_TIERS_V1 } from '../src/services/vcpmEngine'
 
 describe('vcpmEngine — cálculo progressivo por escalão (Art. 15-16)', () => {
   const cases: [number, string][] = [
@@ -62,5 +62,50 @@ describe('vcpmEngine — cálculo progressivo por escalão (Art. 15-16)', () => 
       { minVqR: 50_000, maxVqR: 100_000, rateMznPer1000: 150 },
       { minVqR: 100_000, maxVqR: null, rateMznPer1000: 175 }
     ])
+  })
+})
+
+describe('marginalVcpmRate — taxa do escalão em que uma posição cai (campanhas VQ-B)', () => {
+  it('posição 0 usa a taxa do 1º escalão', () => {
+    expect(marginalVcpmRate(0)).toBe(100)
+  })
+  it('posição exactamente na fronteira de um escalão pertence ao escalão que termina aí', () => {
+    expect(marginalVcpmRate(10_000)).toBe(100)
+    expect(marginalVcpmRate(10_001)).toBe(125)
+  })
+  it('posição acima de 100.000 usa o último escalão (175)', () => {
+    expect(marginalVcpmRate(250_000)).toBe(175)
+  })
+})
+
+describe('calculatePercentageOfVcpmEarnings — campanhas VQ-B PERCENTAGE_OF_VCPM / NORMAL_VCPM', () => {
+  it('150% da taxa marginal do 1º escalão sobre 1.000 visualizações', () => {
+    // baseline 5.000 -> tier 1 (100 MZN/1000) -> 150% = 150 MZN/1000 -> 1.000 views = 150.00
+    expect(calculatePercentageOfVcpmEarnings(1_000, 150, 5_000)).toBe('150.00')
+  })
+  it('100% (equivalente a NORMAL_VCPM) paga exactamente a taxa marginal, sem boost', () => {
+    expect(calculatePercentageOfVcpmEarnings(1_000, 100, 5_000)).toBe('100.00')
+  })
+  it('usa a taxa do escalão mais alto quando o baseline já passou de 100.000', () => {
+    expect(calculatePercentageOfVcpmEarnings(1_000, 200, 150_000)).toBe('350.00') // 175 * 2 = 350/1000
+  })
+  it('rejeita viewCount negativo ou fraccionário', () => {
+    expect(() => calculatePercentageOfVcpmEarnings(-1, 100, 0)).toThrow()
+    expect(() => calculatePercentageOfVcpmEarnings(1.5, 100, 0)).toThrow()
+  })
+  it('rejeita ratePct <= 0', () => {
+    expect(() => calculatePercentageOfVcpmEarnings(100, 0, 0)).toThrow()
+  })
+})
+
+describe('calculateFixedVcpmEarnings — campanhas VQ-B FIXED_VCPM', () => {
+  it('paga a taxa fixa por 1.000 visualizações, independente do escalão', () => {
+    expect(calculateFixedVcpmEarnings(2_000, 80)).toBe('160.00')
+  })
+  it('suporta fracções abaixo de 1.000 visualizações', () => {
+    expect(calculateFixedVcpmEarnings(500, 80)).toBe('40.00')
+  })
+  it('rejeita ratePer1000 <= 0', () => {
+    expect(() => calculateFixedVcpmEarnings(100, 0)).toThrow()
   })
 })

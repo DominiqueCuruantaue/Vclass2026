@@ -81,3 +81,48 @@ export function calculateVcpmEarnings(vqRCount: number, tiers: VcpmTier[] = VCPM
     totalAmountMzn: microsToDecimalString(total)
   }
 }
+
+/**
+ * Taxa marginal (MZN/1.000) do escalão em que a posição `count` cai — usada
+ * pelas campanhas VQ-B do tipo PERCENTAGE_OF_VCPM (migration 036) para saber
+ * "a que taxa o professor já está a ganhar", sem reabrir o cálculo
+ * progressivo. `count` é normalmente o total combinado de VQ-R + VQ-B
+ * NORMAL_VCPM do professor no período (a base sobre a qual a percentagem
+ * incide), não a contagem da própria campanha.
+ */
+export function marginalVcpmRate(count: number, tiers: VcpmTier[] = VCPM_TIERS_V1): number {
+  if (!Number.isFinite(count) || count < 0) throw new Error(`count inválido: ${count}`)
+  const position = Math.max(count, 1) // posição 0 usa a taxa do 1º escalão
+  for (const tier of tiers) {
+    const tierMax = tier.maxVqR ?? Infinity
+    if (position > tier.minVqR && position <= tierMax) return tier.rateMznPer1000
+  }
+  return tiers[tiers.length - 1].rateMznPer1000
+}
+
+/**
+ * Ganhos de uma campanha VQ-B do tipo PERCENTAGE_OF_VCPM (Art. 6, secção 11
+ * do prompt de implementação, PDR-09): `ratePct`% da taxa marginal do
+ * escalão que o professor já atingiu (Art. 15-16), sobre `viewCount`
+ * visualizações desta campanha.
+ */
+export function calculatePercentageOfVcpmEarnings(viewCount: number, ratePct: number, baselineCount: number, tiers: VcpmTier[] = VCPM_TIERS_V1): string {
+  if (!Number.isFinite(viewCount) || viewCount < 0 || !Number.isInteger(viewCount)) throw new Error(`viewCount inválido: ${viewCount}`)
+  if (!Number.isFinite(ratePct) || ratePct <= 0) throw new Error(`ratePct inválido: ${ratePct}`)
+  const baseRate = marginalVcpmRate(baselineCount, tiers)
+  const effectiveRateMicros = BigInt(Math.round(baseRate * 1_000_000 * ratePct)) / 100n
+  const amountMicros = tierAmountMicros(BigInt(viewCount), effectiveRateMicros)
+  return microsToDecimalString(amountMicros)
+}
+
+/**
+ * Ganhos de uma campanha VQ-B do tipo FIXED_VCPM: `ratePer1000` MZN por
+ * 1.000 visualizações, fixo, independente do escalão do professor.
+ */
+export function calculateFixedVcpmEarnings(viewCount: number, ratePer1000: number): string {
+  if (!Number.isFinite(viewCount) || viewCount < 0 || !Number.isInteger(viewCount)) throw new Error(`viewCount inválido: ${viewCount}`)
+  if (!Number.isFinite(ratePer1000) || ratePer1000 <= 0) throw new Error(`ratePer1000 inválido: ${ratePer1000}`)
+  const rateMicros = BigInt(Math.round(ratePer1000 * 1_000_000))
+  const amountMicros = tierAmountMicros(BigInt(viewCount), rateMicros)
+  return microsToDecimalString(amountMicros)
+}

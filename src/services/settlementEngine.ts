@@ -102,7 +102,7 @@ async function transitionLedgerStatus(
     .eq('period_start', periodStart)
     .eq('period_end', periodEnd)
     .eq('status', from)
-    .in('earning_type', ['VCPM', 'QUALITY_BONUS'])
+    .in('earning_type', ['VCPM', 'QUALITY_BONUS', 'BONIFIED_VIEW'])
     .select('id')
 
   if (error) throw new Error(`Falha ao transitar ${from} → ${to}: ${error.message}`)
@@ -148,7 +148,7 @@ export async function runApprovePhase(
     .eq('period_start', periodStart)
     .eq('period_end', periodEnd)
     .eq('status', 'VALIDATING')
-    .in('earning_type', ['VCPM', 'QUALITY_BONUS'])
+    .in('earning_type', ['VCPM', 'QUALITY_BONUS', 'BONIFIED_VIEW'])
 
   if (error) throw new Error(`Falha ao listar professores pendentes de aprovação: ${error.message}`)
 
@@ -179,7 +179,7 @@ export async function runApprovePhase(
         .eq('period_start', periodStart)
         .eq('period_end', periodEnd)
         .eq('status', 'VALIDATING')
-        .in('earning_type', ['VCPM', 'QUALITY_BONUS'])
+        .in('earning_type', ['VCPM', 'QUALITY_BONUS', 'BONIFIED_VIEW'])
         .select('id')
 
       if (updateErr) throw new Error(updateErr.message)

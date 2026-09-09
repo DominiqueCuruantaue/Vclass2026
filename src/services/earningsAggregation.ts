@@ -12,7 +12,7 @@
 // disponível). Revistas manualmente, mas por validar em staging.
 
 import type { SupaClient } from '../config/supabase'
-import { calculateVcpmEarnings, type VcpmTier, VCPM_TIERS_V1 } from './vcpmEngine'
+import { calculateVcpmEarnings, calculatePercentageOfVcpmEarnings, calculateFixedVcpmEarnings, type VcpmTier, VCPM_TIERS_V1 } from './vcpmEngine'
 import { calculateCompletionRatePct, calculateBqeBonus, type BqeTier, BQE_TIERS_V1 } from './bqeEngine'
 import { addMicros, mznToMicros, microsToDecimalString } from '../utils/money'
 import type { FraudMetricsInput } from './fraudDetection'
@@ -22,10 +22,12 @@ export interface TeacherEarningsEstimate {
   periodStart: string
   periodEnd: string
   vqRCount: number
+  vqBCount: number
   totalFinalizedViews: number
   thresholdReachedViews: number
   completionRatePct: number
   rceAmountMzn: string
+  bonifiedViewAmountMzn: string
   bqeBonusPct: number
   bqeAmountMzn: string
   totalConsumptionEarningsMzn: string
@@ -34,11 +36,17 @@ export interface TeacherEarningsEstimate {
 }
 
 /**
- * Calcula (sem gravar nada) a estimativa de RCE + BQE de um professor num
- * período, a partir das linhas já classificadas em `qualified_views`.
+ * Calcula (sem gravar nada) a estimativa de RCE + campanhas VQ-B + BQE de um
+ * professor num período, a partir das linhas já classificadas em
+ * `qualified_views` (migration 036).
  *
- * VQ-B (campanhas de bonificação) ainda não está implementado (fase
- * posterior do blueprint) — por agora só VQ-R conta para o VCPM.
+ * VQ-B nunca entra na progressão de escalões do VCPM em si (Art. 15-16) —
+ * `rceAmountMzn` continua a ser só VQ-R, nos seus próprios escalões. Cada
+ * grupo de visualizações VQ-B (por campanha) é remunerado à parte, à taxa da
+ * respectiva campanha, usando `vqRCount` como referência de "taxa marginal
+ * actual do professor" para NORMAL_VCPM (100%) e PERCENTAGE_OF_VCPM — ver
+ * vcpmEngine.ts::calculatePercentageOfVcpmEarnings. O BQE incide sobre a
+ * soma de RCE+VQ-B (Art. 18-19, "a base do bónus é o VCPM de VQ-R+VQ-B").
  */
 export async function estimateTeacherEarnings(
   supabase: SupaClient,
@@ -49,7 +57,7 @@ export async function estimateTeacherEarnings(
 ): Promise<TeacherEarningsEstimate> {
   const { data: rows, error } = await supabase
     .from('qualified_views')
-    .select('classification')
+    .select('classification, campaign_id')
     .eq('teacher_id', teacherId)
     .gte('classified_at', periodStart)
     .lt('classified_at', periodEnd)
@@ -58,25 +66,58 @@ export async function estimateTeacherEarnings(
 
   const all = rows || []
   const vqRCount = all.filter((r: any) => r.classification === 'VQ-R').length
+  const vqBRows = all.filter((r: any) => r.classification === 'VQ-B')
+  const vqBCount = vqBRows.length
   // "Atingiu o limiar" = qualquer classificação excepto VNQ (que por definição não atingiu).
   const thresholdReachedViews = all.filter((r: any) => r.classification !== 'VNQ').length
   const totalFinalizedViews = all.length
 
-  const vcpm = calculateVcpmEarnings(vqRCount, tiers.vcpm ?? VCPM_TIERS_V1)
-  const completionRatePct = calculateCompletionRatePct(thresholdReachedViews, totalFinalizedViews)
-  const bqe = calculateBqeBonus(Number(vcpm.totalAmountMzn), completionRatePct, tiers.bqe ?? BQE_TIERS_V1)
+  const vcpmTiers = tiers.vcpm ?? VCPM_TIERS_V1
+  const vcpm = calculateVcpmEarnings(vqRCount, vcpmTiers)
 
-  const total = addMicros(mznToMicros(Number(vcpm.totalAmountMzn)), mznToMicros(Number(bqe.bonusAmountMzn)))
+  let bonifiedMicros = 0n
+  if (vqBCount > 0) {
+    const campaignIds = Array.from(new Set(vqBRows.map((r: any) => r.campaign_id).filter(Boolean)))
+    const { data: campaigns, error: campErr } = campaignIds.length
+      ? await supabase.from('vq_b_campaigns').select('id, rate_type, rate_value').in('id', campaignIds)
+      : { data: [], error: null }
+    if (campErr) throw new Error(`Falha ao carregar campanhas VQ-B: ${campErr.message}`)
+    const campaignById = new Map((campaigns ?? []).map((c: any) => [c.id, c]))
+
+    const countByCampaign = new Map<string, number>()
+    for (const r of vqBRows as any[]) {
+      const key = r.campaign_id || 'unknown'
+      countByCampaign.set(key, (countByCampaign.get(key) ?? 0) + 1)
+    }
+
+    for (const [campaignId, viewCount] of countByCampaign) {
+      const campaign = campaignById.get(campaignId)
+      if (!campaign) continue // campanha entretanto apagada/desconhecida — não inventa taxa
+      const amountMzn = campaign.rate_type === 'FIXED_VCPM'
+        ? calculateFixedVcpmEarnings(viewCount, Number(campaign.rate_value))
+        : calculatePercentageOfVcpmEarnings(viewCount, campaign.rate_type === 'NORMAL_VCPM' ? 100 : Number(campaign.rate_value), vqRCount, vcpmTiers)
+      bonifiedMicros = addMicros(bonifiedMicros, mznToMicros(Number(amountMzn)))
+    }
+  }
+  const bonifiedViewAmountMzn = microsToDecimalString(bonifiedMicros)
+
+  const completionRatePct = calculateCompletionRatePct(thresholdReachedViews, totalFinalizedViews)
+  const rceBaseForBqeMzn = Number(vcpm.totalAmountMzn) + Number(bonifiedViewAmountMzn)
+  const bqe = calculateBqeBonus(rceBaseForBqeMzn, completionRatePct, tiers.bqe ?? BQE_TIERS_V1)
+
+  const total = addMicros(addMicros(mznToMicros(Number(vcpm.totalAmountMzn)), bonifiedMicros), mznToMicros(Number(bqe.bonusAmountMzn)))
 
   return {
     teacherId,
     periodStart,
     periodEnd,
     vqRCount,
+    vqBCount,
     totalFinalizedViews,
     thresholdReachedViews,
     completionRatePct,
     rceAmountMzn: vcpm.totalAmountMzn,
+    bonifiedViewAmountMzn,
     bqeBonusPct: bqe.bonusPct,
     bqeAmountMzn: bqe.bonusAmountMzn,
     totalConsumptionEarningsMzn: microsToDecimalString(total),
@@ -100,11 +141,11 @@ export async function writeEstimatedLedgerEntries(supabase: SupaClient, estimate
     .eq('period_start', estimate.periodStart)
     .eq('period_end', estimate.periodEnd)
     .eq('status', 'ESTIMATED')
-    .in('earning_type', ['VCPM', 'QUALITY_BONUS'])
+    .in('earning_type', ['VCPM', 'QUALITY_BONUS', 'BONIFIED_VIEW'])
 
   if (deleteErr) throw new Error(`Falha ao limpar estimativas anteriores: ${deleteErr.message}`)
 
-  const rows = [
+  const rows: Record<string, any>[] = [
     {
       teacher_id: estimate.teacherId,
       earning_type: 'VCPM',
@@ -133,6 +174,20 @@ export async function writeEstimatedLedgerEntries(supabase: SupaClient, estimate
       }
     }
   ]
+
+  if (estimate.vqBCount > 0 && Number(estimate.bonifiedViewAmountMzn) > 0) {
+    rows.push({
+      teacher_id: estimate.teacherId,
+      earning_type: 'BONIFIED_VIEW',
+      period_start: estimate.periodStart,
+      period_end: estimate.periodEnd,
+      gross_amount: estimate.bonifiedViewAmountMzn,
+      currency: 'MZN',
+      status: 'ESTIMATED',
+      policy_version: estimate.policyVersion,
+      calculation_metadata: { vqBCount: estimate.vqBCount }
+    })
+  }
 
   const { error: insertErr } = await supabase.from('teacher_earnings_ledger').insert(rows)
   if (insertErr) throw new Error(`Falha ao gravar estimativas no ledger: ${insertErr.message}`)

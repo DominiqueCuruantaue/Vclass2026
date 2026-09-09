@@ -1097,4 +1097,109 @@ finance.patch('/special-content/:id', async (c) => {
   return c.json<ApiResponse>({ success: true, message: 'Estado do contrato actualizado' })
 })
 
+// ── Campanhas VQ-B (bónus de visualização em lote, Art. 6, migration 036) ───
+// Uma campanha cobre um conjunto de lições concretas; enquanto activa e
+// dentro de [startsAt, endsAt), toda visualização elegível dessas lições
+// classifica VQ-B em vez de VQ-R (fn_record_watch_heartbeat decide isto no
+// próprio momento do heartbeat, não aqui — isto é só administração).
+finance.get('/vq-b-campaigns', async (c) => {
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+
+  const { data: campaigns, error } = await supabase
+    .from('vq_b_campaigns')
+    .select('*, vq_b_campaign_lessons(lesson_id)')
+    .order('created_at', { ascending: false })
+  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+
+  const data = (campaigns ?? []).map((camp: any) => ({
+    ...camp,
+    lessonIds: (camp.vq_b_campaign_lessons ?? []).map((l: any) => l.lesson_id),
+    vq_b_campaign_lessons: undefined
+  }))
+
+  return c.json<ApiResponse>({ success: true, data: { campaigns: data } })
+})
+
+finance.post('/vq-b-campaigns', async (c) => {
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+
+  const body = await c.req.json().catch(() => ({})) as {
+    name?: string; rateType?: string; rateValue?: number; startsAt?: string; endsAt?: string; lessonIds?: string[]
+  }
+  if (!body.name?.trim()) return c.json<ApiResponse>({ success: false, error: 'name é obrigatório' }, 400)
+  if (!body.rateType || !['NORMAL_VCPM', 'PERCENTAGE_OF_VCPM', 'FIXED_VCPM'].includes(body.rateType)) {
+    return c.json<ApiResponse>({ success: false, error: 'rateType inválido (NORMAL_VCPM|PERCENTAGE_OF_VCPM|FIXED_VCPM)' }, 400)
+  }
+  if (body.rateType !== 'NORMAL_VCPM' && (typeof body.rateValue !== 'number' || body.rateValue <= 0)) {
+    return c.json<ApiResponse>({ success: false, error: 'rateValue é obrigatório (e > 0) para este rateType' }, 400)
+  }
+  if (!body.startsAt || !body.endsAt || new Date(body.endsAt) <= new Date(body.startsAt)) {
+    return c.json<ApiResponse>({ success: false, error: 'startsAt/endsAt inválidos (endsAt tem de ser depois de startsAt)' }, 400)
+  }
+  if (!Array.isArray(body.lessonIds) || body.lessonIds.length === 0) {
+    return c.json<ApiResponse>({ success: false, error: 'lessonIds é obrigatório (pelo menos uma lição)' }, 400)
+  }
+
+  const user = c.get('user') as any
+  const { data: campaign, error } = await supabase
+    .from('vq_b_campaigns')
+    .insert({
+      name: body.name.trim(),
+      rate_type: body.rateType,
+      rate_value: body.rateType === 'NORMAL_VCPM' ? null : body.rateValue,
+      starts_at: body.startsAt,
+      ends_at: body.endsAt,
+      created_by: user?.id
+    })
+    .select('id')
+    .single()
+  if (error || !campaign) return c.json<ApiResponse>({ success: false, error: error?.message || 'Falha ao criar campanha' }, 500)
+
+  const { error: lessonsErr } = await supabase
+    .from('vq_b_campaign_lessons')
+    .insert(body.lessonIds.map(lessonId => ({ campaign_id: campaign.id, lesson_id: lessonId })))
+  if (lessonsErr) return c.json<ApiResponse>({ success: false, error: lessonsErr.message }, 500)
+
+  await logEarningsAudit(supabase, {
+    actorId: user?.id, action: 'CREATE_VQ_B_CAMPAIGN', entityType: 'vq_b_campaigns', entityId: campaign.id,
+    after: { name: body.name, rateType: body.rateType, rateValue: body.rateValue ?? null, startsAt: body.startsAt, endsAt: body.endsAt, lessonCount: body.lessonIds.length }
+  })
+
+  return c.json<ApiResponse>({ success: true, message: 'Campanha VQ-B criada', data: { id: campaign.id } })
+})
+
+// ── PATCH /api/finance/vq-b-campaigns/:id — desactivar/reactivar ou reagendar
+finance.patch('/vq-b-campaigns/:id', async (c) => {
+  const id = c.req.param('id')
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+
+  const body = await c.req.json().catch(() => ({})) as { active?: boolean; startsAt?: string; endsAt?: string }
+  const updates: Record<string, any> = {}
+  if (typeof body.active === 'boolean') updates.active = body.active
+  if (body.startsAt) updates.starts_at = body.startsAt
+  if (body.endsAt) updates.ends_at = body.endsAt
+  if (Object.keys(updates).length === 0) return c.json<ApiResponse>({ success: false, error: 'Nada para actualizar' }, 400)
+
+  const { data: campaign, error: findErr } = await supabase.from('vq_b_campaigns').select('*').eq('id', id).maybeSingle()
+  if (findErr) return c.json<ApiResponse>({ success: false, error: findErr.message }, 500)
+  if (!campaign) return c.json<ApiResponse>({ success: false, error: 'Campanha não encontrada' }, 404)
+
+  const { error } = await supabase.from('vq_b_campaigns').update(updates).eq('id', id)
+  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+
+  const user = c.get('user') as any
+  await logEarningsAudit(supabase, {
+    actorId: user?.id, action: 'UPDATE_VQ_B_CAMPAIGN', entityType: 'vq_b_campaigns', entityId: id,
+    before: { active: campaign.active, starts_at: campaign.starts_at, ends_at: campaign.ends_at }, after: updates
+  })
+
+  return c.json<ApiResponse>({ success: true, message: 'Campanha actualizada' })
+})
+
 export default finance
