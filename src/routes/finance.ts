@@ -568,6 +568,38 @@ finance.post('/earnings/:id/approve', async (c) => {
   return c.json<ApiResponse>({ success: true, message: 'Lançamento aprovado', data: { id, status: 'APPROVED' } })
 })
 
+// ── GET /api/finance/fraud-flags — professores sinalizados pelo gate anti-fraude
+// (fraudDetection.ts) na fase "approve" do settlement. Não é uma acusação —
+// é uma pausa para revisão humana: as linhas ficam em VALIDATING até a
+// equipa financeira decidir, caso a caso, chamar
+// POST /api/finance/earnings/:id/approve (aprovar manualmente, aceitando o
+// sinal como falso positivo) ou investigar mais a fundo.
+finance.get('/fraud-flags', async (c) => {
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+
+  const { data: flags, error } = await supabase
+    .from('earnings_audit_log')
+    .select('id, entity_id, after_state, reason, created_at')
+    .eq('action', 'FRAUD_FLAG')
+    .order('created_at', { ascending: false })
+    .limit(200)
+  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+
+  // entity_id em earnings_audit_log é genérico (não tem FK declarada para
+  // users, serve vários tipos de entidade), por isso o nome do professor tem
+  // de ser resolvido à parte em vez de um embed automático do PostgREST.
+  const teacherIds = Array.from(new Set((flags ?? []).map((f: any) => f.entity_id).filter(Boolean)))
+  const { data: teachers } = teacherIds.length
+    ? await supabase.from('users').select('id, full_name, email').in('id', teacherIds)
+    : { data: [] }
+  const teacherById = new Map((teachers ?? []).map((t: any) => [t.id, t]))
+
+  const data = (flags ?? []).map((f: any) => ({ ...f, teacher: teacherById.get(f.entity_id) ?? null }))
+  return c.json<ApiResponse>({ success: true, data: { flags: data, total: data.length } })
+})
+
 // ── GET /api/finance/earnings/payable?teacherId= — mínimo de 500 MZN (Art. 31)
 // Soma todos os lançamentos APPROVED ainda não PAID de um professor e aplica
 // a regra de payout mínimo. Não marca nada como PAID — só informa se, ao

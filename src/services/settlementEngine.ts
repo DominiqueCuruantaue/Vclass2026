@@ -12,7 +12,8 @@
 // marca nada como PAID — isso continua a ser execução de payout, Fase 8,
 // não implementada.
 import type { SupaClient } from '../config/supabase'
-import { estimateTeacherEarnings, writeEstimatedLedgerEntries } from './earningsAggregation'
+import { estimateTeacherEarnings, writeEstimatedLedgerEntries, gatherFraudMetrics } from './earningsAggregation'
+import { evaluateFraudSignals, type FraudSignal } from './fraudDetection'
 import { logEarningsAudit } from './earningsAudit'
 
 export interface SettlementPhaseResult {
@@ -21,6 +22,8 @@ export interface SettlementPhaseResult {
   periodEnd: string
   teachersProcessed?: number
   rowsTransitioned?: number
+  /** Só na fase "approve" — professores cujas linhas NÃO transitaram por terem sido sinalizadas pelo gate anti-fraude (ficam em VALIDATING até revisão manual). */
+  flaggedTeachers?: { teacherId: string; signals: FraudSignal[] }[]
   errors: { teacherId?: string; message: string }[]
 }
 
@@ -123,11 +126,73 @@ export function runValidatePhase(supabase: SupaClient, periodStart: string, peri
 }
 
 /**
- * Fase 3 (ex.: dia 15) — VALIDATING → APPROVED. Ainda não verifica fraude
- * nem qualquer outro gate além do estado — ver blueprint gap #7 (fraude
- * mínima) para o que falta antes disto poder ser totalmente automático sem
- * revisão humana.
+ * Fase 3 (ex.: dia 15) — VALIDATING → APPROVED, por professor, com gate
+ * anti-fraude (fraudDetection.ts, blueprint gap #7). Ao contrário das fases
+ * 1/2 (lote único), esta processa cada professor individualmente: se as
+ * suas visualizações remuneráveis do período disparam algum sinal de
+ * concentração (IP ou alunos), as linhas desse professor NÃO transitam —
+ * ficam em VALIDATING e fica um registo em earnings_audit_log
+ * (action='FRAUD_FLAG') para revisão manual via
+ * POST /api/finance/earnings/:id/approve. Os restantes professores do
+ * período aprovam normalmente.
  */
-export function runApprovePhase(supabase: SupaClient, periodStart: string, periodEnd: string, actorId?: string) {
-  return transitionLedgerStatus(supabase, periodStart, periodEnd, 'VALIDATING', 'APPROVED', 'approved_at', 'SETTLEMENT_APPROVE', actorId)
+export async function runApprovePhase(
+  supabase: SupaClient,
+  periodStart: string,
+  periodEnd: string,
+  actorId?: string
+): Promise<SettlementPhaseResult> {
+  const { data: pending, error } = await supabase
+    .from('teacher_earnings_ledger')
+    .select('teacher_id')
+    .eq('period_start', periodStart)
+    .eq('period_end', periodEnd)
+    .eq('status', 'VALIDATING')
+    .in('earning_type', ['VCPM', 'QUALITY_BONUS'])
+
+  if (error) throw new Error(`Falha ao listar professores pendentes de aprovação: ${error.message}`)
+
+  const teacherIds = Array.from(new Set((pending || []).map((r: any) => r.teacher_id).filter(Boolean)))
+  const errors: SettlementPhaseResult['errors'] = []
+  const flaggedTeachers: { teacherId: string; signals: FraudSignal[] }[] = []
+  let rowsTransitioned = 0
+
+  for (const teacherId of teacherIds) {
+    try {
+      const metrics = await gatherFraudMetrics(supabase, teacherId, periodStart, periodEnd)
+      const signals = evaluateFraudSignals(metrics)
+
+      if (signals.length > 0) {
+        flaggedTeachers.push({ teacherId, signals })
+        await logEarningsAudit(supabase, {
+          actorId, action: 'FRAUD_FLAG', entityType: 'teacher_earnings_ledger', entityId: teacherId,
+          after: { periodStart, periodEnd, metrics, signals },
+          reason: signals.map(s => s.code).join(', ')
+        })
+        continue
+      }
+
+      const { data: updated, error: updateErr } = await supabase
+        .from('teacher_earnings_ledger')
+        .update({ status: 'APPROVED', approved_at: new Date().toISOString() })
+        .eq('teacher_id', teacherId)
+        .eq('period_start', periodStart)
+        .eq('period_end', periodEnd)
+        .eq('status', 'VALIDATING')
+        .in('earning_type', ['VCPM', 'QUALITY_BONUS'])
+        .select('id')
+
+      if (updateErr) throw new Error(updateErr.message)
+      rowsTransitioned += (updated || []).length
+    } catch (e: any) {
+      errors.push({ teacherId, message: e.message })
+    }
+  }
+
+  await logEarningsAudit(supabase, {
+    actorId, action: 'SETTLEMENT_APPROVE', entityType: 'settlement_period', entityId: `${periodStart}_${periodEnd}`,
+    after: { teachersProcessed: teacherIds.length, rowsTransitioned, flaggedCount: flaggedTeachers.length, errors: errors.length }
+  })
+
+  return { phase: 'approve', periodStart, periodEnd, teachersProcessed: teacherIds.length, rowsTransitioned, flaggedTeachers, errors }
 }
