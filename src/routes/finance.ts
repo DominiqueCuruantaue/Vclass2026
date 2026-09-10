@@ -825,6 +825,35 @@ finance.get('/payouts', async (c) => {
   }
 })
 
+// ── GET /api/finance/payout-requests — fila de pedidos de levantamento ──────
+// Pedidos feitos pelos professores via POST /api/earnings/payout-request
+// (earnings_audit_log, action='PAYOUT_REQUESTED'). Puramente informativo —
+// não move dinheiro nem marca nada. A equipa financeira processa o pedido
+// por fora (M-Pesa/transferência) e só depois regista o pagamento real via
+// POST /api/finance/payouts, que é o único ponto que marca linhas como PAID.
+finance.get('/payout-requests', async (c) => {
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+
+  const { data: requests, error } = await supabase
+    .from('earnings_audit_log')
+    .select('id, actor_id, after_state, created_at')
+    .eq('action', 'PAYOUT_REQUESTED')
+    .order('created_at', { ascending: false })
+    .limit(200)
+  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+
+  const teacherIds = Array.from(new Set((requests ?? []).map((r: any) => r.actor_id).filter(Boolean)))
+  const { data: teachers } = teacherIds.length
+    ? await supabase.from('users').select('id, full_name, email').in('id', teacherIds)
+    : { data: [] }
+  const teacherById = new Map((teachers ?? []).map((t: any) => [t.id, t]))
+
+  const data = (requests ?? []).map((r: any) => ({ ...r, teacher: teacherById.get(r.actor_id) ?? null }))
+  return c.json<ApiResponse>({ success: true, data: { requests: data, total: data.length } })
+})
+
 // ── POST /api/finance/earnings/adjustment — lançamento manual auditável ─────
 // Nunca apaga/edita um lançamento existente (secção 23/26 do prompt de
 // implementação) — cria sempre uma linha nova ADJUSTMENT ou REVERSAL.

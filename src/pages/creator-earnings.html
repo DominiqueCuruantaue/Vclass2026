@@ -133,16 +133,12 @@
     </div>
   </div>
 
-  <!-- Period selector -->
-  <div class="flex items-center gap-2 mb-6 overflow-x-auto pb-1 fade-in">
-    <span class="text-xs font-medium text-gray-500 flex-shrink-0">Período:</span>
-    <div class="flex gap-1.5 flex-shrink-0">
-      <button onclick="setPeriod('7d')"  class="period-btn px-4 py-1.5 rounded-full text-xs font-semibold border border-gray-200 text-gray-600" id="p-7d">7 dias</button>
-      <button onclick="setPeriod('30d')" class="period-btn active px-4 py-1.5 rounded-full text-xs font-semibold border border-purple-500" id="p-30d">30 dias</button>
-      <button onclick="setPeriod('90d')" class="period-btn px-4 py-1.5 rounded-full text-xs font-semibold border border-gray-200 text-gray-600" id="p-90d">90 dias</button>
-      <button onclick="setPeriod('12m')" class="period-btn px-4 py-1.5 rounded-full text-xs font-semibold border border-gray-200 text-gray-600" id="p-12m">12 meses</button>
-      <button onclick="setPeriod('all')" class="period-btn px-4 py-1.5 rounded-full text-xs font-semibold border border-gray-200 text-gray-600" id="p-all">Tudo</button>
-    </div>
+  <!-- Período corrente (os ganhos seguem o ciclo mensal de settlement — Art. 30-31, dias 1/7/15) -->
+  <div class="flex items-center gap-2 mb-6 fade-in">
+    <span class="inline-flex items-center gap-1.5 bg-purple-50 text-purple-700 text-xs font-semibold px-3 py-1.5 rounded-full">
+      <i class="fas fa-calendar-alt text-xs"></i> <span id="period-label">Mês corrente</span>
+    </span>
+    <span class="text-xs text-gray-400">Estimativa em tempo real — torna-se definitiva no fecho mensal</span>
   </div>
 
   <!-- ── KPI Cards ──────────────────────────────────────────────────────────── -->
@@ -151,57 +147,61 @@
     <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
       <div class="flex items-start justify-between mb-3">
         <div class="w-11 h-11 bg-green-100 rounded-xl flex items-center justify-center">
-          <i class="fas fa-money-bill-wave text-green-600 text-lg"></i>
+          <i class="fas fa-play-circle text-green-600 text-lg"></i>
         </div>
         <div class="info-tooltip">
           <i class="fas fa-info-circle text-gray-300 text-xs cursor-pointer"></i>
-          <span class="tooltip-text">40 % da receita gerada pelas suas aulas</span>
+          <span class="tooltip-text">Remuneração por Consumo Educacional — VCPM progressivo sobre visualizações qualificadas (Art. 15-16)</span>
         </div>
       </div>
-      <p class="text-xs text-gray-500 font-medium mb-1">Comissão (40 %)</p>
-      <p class="text-2xl font-extrabold text-gray-900" id="kpi-commission">MT —</p>
-      <p class="text-xs text-green-600 font-medium mt-1" id="kpi-commission-sub">no período</p>
+      <p class="text-xs text-gray-500 font-medium mb-1">RCE (Consumo)</p>
+      <p class="text-2xl font-extrabold text-gray-900" id="kpi-rce">MT —</p>
+      <p class="text-xs text-green-600 font-medium mt-1" id="kpi-vqr-count">— visualizações</p>
     </div>
 
     <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
       <div class="flex items-start justify-between mb-3">
         <div class="w-11 h-11 bg-purple-100 rounded-xl flex items-center justify-center">
-          <i class="fas fa-users text-purple-600 text-lg"></i>
+          <i class="fas fa-bullhorn text-purple-600 text-lg"></i>
         </div>
         <div class="info-tooltip">
           <i class="fas fa-info-circle text-gray-300 text-xs cursor-pointer"></i>
-          <span class="tooltip-text">Alunos com subscrição paga que assistiram às suas aulas</span>
+          <span class="tooltip-text">Visualizações bonificadas por campanhas activas nas suas lições</span>
         </div>
       </div>
-      <p class="text-xs text-gray-500 font-medium mb-1">Alunos Pagos</p>
-      <p class="text-2xl font-extrabold text-gray-900" id="kpi-students">—</p>
-      <p class="text-xs text-purple-600 font-medium mt-1">activos no período</p>
+      <p class="text-xs text-gray-500 font-medium mb-1">Bonificado (VQ-B)</p>
+      <p class="text-2xl font-extrabold text-gray-900" id="kpi-bonified">MT —</p>
+      <p class="text-xs text-purple-600 font-medium mt-1" id="kpi-vqb-count">— visualizações</p>
     </div>
 
     <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
       <div class="flex items-start justify-between mb-3">
         <div class="w-11 h-11 bg-blue-100 rounded-xl flex items-center justify-center">
-          <i class="fas fa-check-circle text-blue-600 text-lg"></i>
+          <i class="fas fa-medal text-blue-600 text-lg"></i>
+        </div>
+        <div class="info-tooltip">
+          <i class="fas fa-info-circle text-gray-300 text-xs cursor-pointer"></i>
+          <span class="tooltip-text">Bónus sobre a taxa de conclusão das suas visualizações (Art. 18-19)</span>
         </div>
       </div>
-      <p class="text-xs text-gray-500 font-medium mb-1">Conclusões de Aulas</p>
-      <p class="text-2xl font-extrabold text-gray-900" id="kpi-completions">—</p>
-      <p class="text-xs text-blue-600 font-medium mt-1" id="kpi-watch-avg">— min média</p>
+      <p class="text-xs text-gray-500 font-medium mb-1">Bónus Qualidade</p>
+      <p class="text-2xl font-extrabold text-gray-900" id="kpi-bqe">MT —</p>
+      <p class="text-xs text-blue-600 font-medium mt-1" id="kpi-completion-rate">— taxa de conclusão</p>
     </div>
 
     <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
       <div class="flex items-start justify-between mb-3">
         <div class="w-11 h-11 bg-amber-100 rounded-xl flex items-center justify-center">
-          <i class="fas fa-clock text-amber-600 text-lg"></i>
+          <i class="fas fa-wallet text-amber-600 text-lg"></i>
         </div>
         <div class="info-tooltip">
           <i class="fas fa-info-circle text-gray-300 text-xs cursor-pointer"></i>
-          <span class="tooltip-text">Em processamento — será adicionado ao saldo disponível em até 3 dias úteis</span>
+          <span class="tooltip-text">Saldo já aprovado, ainda não pago — abaixo de MT 500 transita para o próximo ciclo (Art. 31)</span>
         </div>
       </div>
-      <p class="text-xs text-gray-500 font-medium mb-1">Em Processamento</p>
-      <p class="text-2xl font-extrabold text-gray-900" id="kpi-pending">MT —</p>
-      <p class="text-xs text-amber-600 font-medium mt-1">↑ até 3 dias úteis</p>
+      <p class="text-xs text-gray-500 font-medium mb-1">Saldo Aprovado</p>
+      <p class="text-2xl font-extrabold text-gray-900" id="kpi-approved">MT —</p>
+      <p class="text-xs text-amber-600 font-medium mt-1" id="kpi-approved-sub">por pagar</p>
     </div>
   </div>
 
@@ -223,35 +223,30 @@
       <div class="relative" style="height:220px">
         <canvas id="earningsChart"></canvas>
       </div>
-      <!-- Gross vs commission legend -->
       <div class="flex items-center gap-6 mt-4 pt-4 border-t border-gray-100">
         <div class="flex items-center gap-2 text-xs text-gray-600">
-          <span class="w-3 h-3 rounded-sm bg-purple-200 inline-block"></span>Receita bruta gerada
-        </div>
-        <div class="flex items-center gap-2 text-xs text-gray-600">
-          <span class="w-3 h-3 rounded-sm bg-green-500 inline-block"></span>A sua comissão (40 %)
+          <span class="w-3 h-3 rounded-sm bg-green-500 inline-block"></span>RCE + Bónus + Bonificado, por período aprovado
         </div>
       </div>
     </div>
 
-    <!-- Donut: breakdown por plano -->
+    <!-- Donut: distribuição das visualizações qualificadas -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 fade-in">
-      <h2 class="text-base font-bold text-gray-900 mb-1">Alunos por Plano</h2>
-      <p class="text-xs text-gray-400 mb-5">Distribuição dos alunos pagos</p>
+      <h2 class="text-base font-bold text-gray-900 mb-1">Visualizações Qualificadas</h2>
+      <p class="text-xs text-gray-400 mb-5">Classificação deste mês (Art. 6)</p>
       <div class="relative" style="height:170px">
         <canvas id="planDonut"></canvas>
         <div class="donut-center pointer-events-none">
           <p class="text-xl font-extrabold text-gray-900" id="donut-total">—</p>
-          <p class="text-xs text-gray-400">alunos</p>
+          <p class="text-xs text-gray-400">visualizações</p>
         </div>
       </div>
       <div id="plan-breakdown-legend" class="space-y-2 mt-5">
         <!-- filled by JS -->
       </div>
-      <!-- Nota sobre alunos gratuitos -->
       <div class="mt-4 p-3 bg-gray-50 rounded-xl text-xs text-gray-500">
         <i class="fas fa-info-circle text-blue-400 mr-1"></i>
-        Alunos do plano Gratuito <strong>não geram</strong> comissão directa. Cada conversão para plano pago aumenta os seus ganhos.
+        Só VQ-R e VQ-B geram remuneração. VQ-P (lições gratuitas), VQ-NR e VNQ não contam para o RCE.
       </div>
     </div>
   </div>
@@ -264,28 +259,28 @@
       </div>
       <div class="flex-1">
         <h3 class="font-bold text-gray-900 mb-1">Como são calculados os seus ganhos?</h3>
-        <p class="text-sm text-gray-600 mb-4">A VClass usa um modelo de partilha de receita transparente e justo.</p>
+        <p class="text-sm text-gray-600 mb-4">Política de Remuneração e Comissões dos Professores VClass V1.0.</p>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div class="bg-white rounded-xl p-4 text-center shadow-sm">
-            <div class="text-3xl font-extrabold text-purple-600 mb-1">40 %</div>
-            <p class="text-xs font-semibold text-gray-700">Para o Professor</p>
-            <p class="text-xs text-gray-400 mt-1">Sobre receita líquida das suas aulas</p>
+            <div class="text-2xl font-extrabold text-purple-600 mb-1">RCE</div>
+            <p class="text-xs font-semibold text-gray-700">Escalões progressivos (VCPM)</p>
+            <p class="text-xs text-gray-400 mt-1">Por cada 1.000 visualizações qualificadas (VQ-R/VQ-B), a taxa sobe por escalão — nunca desce</p>
           </div>
-          <div class="bg-white rounded-xl p-4 text-center shadow-sm stripe-rule">
-            <div class="text-3xl font-extrabold text-gray-400 mb-1">60 %</div>
-            <p class="text-xs font-semibold text-gray-500">Plataforma VClass</p>
-            <p class="text-xs text-gray-400 mt-1">Infra, suporte, marketing, pagamentos</p>
+          <div class="bg-white rounded-xl p-4 text-center shadow-sm">
+            <div class="text-2xl font-extrabold text-blue-600 mb-1">+ BQE</div>
+            <p class="text-xs font-semibold text-gray-700">Bónus de qualidade</p>
+            <p class="text-xs text-gray-400 mt-1">Percentagem extra sobre a RCE, consoante a sua taxa de conclusão</p>
           </div>
           <div class="bg-white rounded-xl p-4 shadow-sm border-l-4 border-green-400">
-            <p class="text-xs font-semibold text-gray-700 mb-2">Ciclo de pagamento</p>
-            <p class="text-xs text-gray-600"><i class="fas fa-calendar-check text-green-500 mr-1"></i>Dia 1 de cada mês</p>
+            <p class="text-xs font-semibold text-gray-700 mb-2">Ciclo de fecho</p>
+            <p class="text-xs text-gray-600"><i class="fas fa-calendar-check text-green-500 mr-1"></i>Dias 1 / 7 / 15 de cada mês</p>
             <p class="text-xs text-gray-600 mt-1"><i class="fas fa-mobile-alt text-green-500 mr-1"></i>M-Pesa · e-Mola · TRF Bancária</p>
-            <p class="text-xs text-gray-600 mt-1"><i class="fas fa-exclamation-circle text-amber-500 mr-1"></i>Mínimo MT 500</p>
+            <p class="text-xs text-gray-600 mt-1"><i class="fas fa-exclamation-circle text-amber-500 mr-1"></i>Mínimo MT 500 para levantar</p>
           </div>
         </div>
         <p class="text-xs text-gray-400 mt-3 flex items-start gap-1">
           <i class="fas fa-shield-alt text-gray-400 mt-0.5"></i>
-          Os valores apresentados são brutos. Podem aplicar-se retenções fiscais conforme a legislação moçambicana ou do país de residência.
+          Cada visualização só conta 2 vezes por aluno/aula em 30 dias (Art. 13). Valores estimados até ao fecho do período; depois de aprovados, ficam definitivos.
         </p>
       </div>
     </div>
@@ -298,7 +293,7 @@
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden fade-in">
       <div class="p-5 border-b border-gray-100 flex items-center justify-between">
         <h2 class="font-bold text-gray-900 text-base flex items-center gap-2">
-          <i class="fas fa-trophy text-amber-500"></i> Top Lições por Ganho
+          <i class="fas fa-trophy text-amber-500"></i> Top Lições (visualizações qualificadas)
         </h2>
         <a href="/creator-analytics.html" class="text-xs text-purple-600 hover:underline font-medium">Ver analytics →</a>
       </div>
@@ -313,7 +308,7 @@
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden fade-in">
       <div class="p-5 border-b border-gray-100 flex items-center justify-between">
         <h2 class="font-bold text-gray-900 text-base flex items-center gap-2">
-          <i class="fas fa-receipt text-blue-500"></i> Histórico de Levantamentos
+          <i class="fas fa-receipt text-blue-500"></i> Histórico de Pagamentos
         </h2>
         <button onclick="openWithdrawModal()" class="text-xs bg-green-500 text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-green-600 transition flex items-center gap-1">
           <i class="fas fa-plus text-xs"></i> Novo
@@ -341,7 +336,7 @@
       <div class="p-4 bg-blue-50 rounded-xl border border-blue-100">
         <i class="fas fa-pencil-alt text-blue-600 text-xl mb-3"></i>
         <p class="font-semibold text-gray-800 text-sm mb-1">Exercícios aumentam conclusões</p>
-        <p class="text-xs text-gray-500">Aulas com exercícios têm <strong>3.2× mais conclusões</strong>, o que aumenta a comissão directa.</p>
+        <p class="text-xs text-gray-500">Aulas com exercícios têm <strong>3.2× mais conclusões</strong>, o que aumenta o seu Bónus de Qualidade (BQE).</p>
       </div>
       <div class="p-4 bg-green-50 rounded-xl border border-green-100">
         <i class="fas fa-star text-green-600 text-xl mb-3"></i>
@@ -420,7 +415,7 @@
               <span class="ml-auto text-xs text-gray-400">🇲🇿 Instantâneo</span>
             </label>
             <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:border-green-400 transition has-[:checked]:border-green-500 has-[:checked]:bg-green-50">
-              <input type="radio" name="withdraw_method" value="transferencia" class="accent-green-600">
+              <input type="radio" name="withdraw_method" value="bank_transfer" class="accent-green-600">
               <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-blue-600">
                 <i class="fas fa-university text-white text-xs"></i>
               </div>
@@ -435,7 +430,7 @@
           <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
             Nº Telemóvel / Conta
           </label>
-          <input type="text" id="withdraw-phone" placeholder="+258 84 000 0000"
+          <input type="text" id="withdraw-account" placeholder="+258 84 000 0000"
             class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-green-400 focus:border-transparent transition">
         </div>
 
@@ -457,7 +452,7 @@
           <i class="fas fa-paper-plane"></i> Confirmar Pedido
         </button>
         <p class="text-xs text-gray-400 text-center">
-          <i class="fas fa-lock mr-1"></i>Processamento seguro. Receberá confirmação por SMS/email.
+          <i class="fas fa-lock mr-1"></i>O seu pedido fica registado para a equipa financeira processar.
         </p>
       </div>
 
@@ -466,11 +461,11 @@
         <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <i class="fas fa-check-circle text-green-500 text-4xl"></i>
         </div>
-        <h4 class="text-xl font-bold text-gray-900 mb-2">Pedido enviado!</h4>
-        <p class="text-gray-500 text-sm mb-2">O seu pedido de levantamento foi registado com sucesso.</p>
+        <h4 class="text-xl font-bold text-gray-900 mb-2">Pedido registado!</h4>
+        <p class="text-gray-500 text-sm mb-2">A equipa financeira vai processar o seu pedido de levantamento.</p>
         <p class="font-mono text-purple-700 bg-purple-50 rounded-lg px-4 py-2 text-sm font-bold mb-6" id="withdraw-ref">—</p>
         <div class="bg-blue-50 rounded-xl p-3 text-xs text-blue-700 mb-6">
-          <i class="fas fa-clock mr-1"></i>Processado até <strong>3 dias úteis</strong>. Receberá uma notificação quando o dinheiro for transferido.
+          <i class="fas fa-clock mr-1"></i>Vai aparecer no histórico de pagamentos abaixo assim que o pagamento for efectuado e registado.
         </div>
         <button onclick="closeWithdrawModal()" class="w-full border border-gray-300 text-gray-700 py-3 rounded-xl font-semibold text-sm hover:bg-gray-50 transition">
           Fechar
@@ -493,21 +488,18 @@
 <script src="/static/app.js"></script>
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
-let currentPeriod     = '30d'
-let earningsData      = null
-let earningsChart     = null
-let planDonutChart    = null
-let availableMzn      = 0
-let chartType         = 'bar'
-
-const COLORS = { free:'#9ca3af', basic:'#2563eb', premium:'#7c3aed' }
+let summaryData     = null
+let payableData     = null
+let earningsChart    = null
+let vqDonutChart      = null
+let approvedMzn        = 0
+let chartType           = 'bar'
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   const token = localStorage.getItem('accessToken')
   if (!token) { window.location.href = '/login.html'; return }
 
-  // Setup nav user info
   try {
     const me = await axios.get('/api/auth/me', { headers:{ Authorization:`Bearer ${token}` } })
     if (me.data?.data) {
@@ -519,22 +511,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   } catch(e) {}
 
+  document.getElementById('period-label').textContent = new Date().toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })
+
   await loadEarnings()
 })
 
+function authHeaders() {
+  return { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+}
+
 // ── Load Earnings ─────────────────────────────────────────────────────────────
 async function loadEarnings() {
-  const token = localStorage.getItem('accessToken')
   try {
-    const res = await axios.get(`/api/creator/earnings?period=${currentPeriod}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    earningsData = res.data.data
+    const [summaryRes, payableRes, periodsRes, topRes, payoutsRes] = await Promise.all([
+      axios.get('/api/earnings/summary', { headers: authHeaders() }),
+      axios.get('/api/earnings/payable', { headers: authHeaders() }),
+      axios.get('/api/earnings/periods?months=6', { headers: authHeaders() }),
+      axios.get('/api/earnings/top-lessons', { headers: authHeaders() }),
+      axios.get('/api/earnings/payouts', { headers: authHeaders() })
+    ])
+    summaryData = summaryRes.data.data
+    payableData = payableRes.data.data
+
     renderKPIs()
-    renderChart()
-    renderPlanDonut()
-    renderTopLessons()
-    renderWithdrawals()
+    renderChart(periodsRes.data.data.periods)
+    renderVqDonut()
+    renderTopLessons(topRes.data.data.topLessons)
+    renderPayouts(payoutsRes.data.data.payouts)
   } catch(e) {
     showToast('Erro ao carregar dados de ganhos.', 'error')
     console.error(e)
@@ -543,71 +546,60 @@ async function loadEarnings() {
 
 // ── KPIs ──────────────────────────────────────────────────────────────────────
 function renderKPIs() {
-  const k = earningsData.kpi
-  availableMzn = k.available_mzn
+  const s = summaryData
+  approvedMzn = Number(payableData.totalApprovedMzn)
 
-  animateCount('kpi-commission',  k.commission_mzn, 'MT ', '')
-  animateCount('kpi-students',    k.paid_students,  '', '')
-  animateCount('kpi-completions', k.completions,    '', '')
-  animateCount('available-balance', k.available_mzn, 'MT ', '')
-  animateCount('kpi-pending',     k.pending_mzn,    'MT ', '')
+  animateCount('kpi-rce',      Number(s.rceAmountMzn),      'MT ', '')
+  animateCount('kpi-bonified', Number(s.bonifiedViewAmountMzn), 'MT ', '')
+  animateCount('kpi-bqe',      Number(s.bqeAmountMzn),       'MT ', '')
+  animateCount('kpi-approved', approvedMzn,                  'MT ', '')
+  animateCount('available-balance', approvedMzn, 'MT ', '')
 
-  document.getElementById('kpi-watch-avg').textContent  = `${k.avg_watch_min} min média`
-  document.getElementById('kpi-commission-sub').textContent = `${k.commission_rate_pct}% da receita gerada`
-  document.getElementById('modal-available').textContent = `MT ${k.available_mzn.toLocaleString()}`
+  document.getElementById('kpi-vqr-count').textContent = `${s.vqRCount.toLocaleString()} visualizações`
+  document.getElementById('kpi-vqb-count').textContent = `${s.vqBCount.toLocaleString()} visualizações`
+  document.getElementById('kpi-completion-rate').textContent = `${s.completionRatePct}% taxa de conclusão`
+  document.getElementById('kpi-approved-sub').textContent = payableData.willPay
+    ? 'pronto para levantar'
+    : `abaixo do mínimo (MT ${(500 - approvedMzn).toFixed(2)} em falta)`
+  document.getElementById('modal-available').textContent = `MT ${approvedMzn.toLocaleString()}`
 }
 
 function animateCount(id, target, prefix, suffix) {
   const el = document.getElementById(id)
   if (!el) return
   let start = 0
-  const step = target / 40
+  const step = target / 40 || 0
   const interval = setInterval(() => {
     start = Math.min(start + step, target)
-    el.textContent = prefix + Math.round(start).toLocaleString() + suffix
+    el.textContent = prefix + start.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + suffix
     if (start >= target) clearInterval(interval)
   }, 20)
 }
 
-// ── Earnings Chart ────────────────────────────────────────────────────────────
-function renderChart() {
+// ── Earnings Chart (últimos períodos aprovados: RCE + Bónus + Bonificado) ────
+function renderChart(periods) {
   const ctx = document.getElementById('earningsChart').getContext('2d')
-  const rows = earningsData.chart
-  const labels  = rows.map(r => r.label)
-  const gross   = rows.map(r => r.gross)
-  const commiss = rows.map(r => r.commission)
+  const labels = periods.map(p => new Date(p.periodStart + 'T00:00:00Z').toLocaleDateString('pt-PT', { month: 'short', year: '2-digit' }))
+  const totals = periods.map(p => p.totalMzn)
 
   if (earningsChart) earningsChart.destroy()
+  if (periods.length === 0) return
 
   const isLine = chartType === 'line'
   earningsChart = new Chart(ctx, {
     type: isLine ? 'line' : 'bar',
     data: {
       labels,
-      datasets: [
-        {
-          label: 'Receita bruta (MT)',
-          data: gross,
-          backgroundColor: isLine ? 'rgba(167,139,250,.15)' : 'rgba(167,139,250,.35)',
-          borderColor: '#a78bfa',
-          borderWidth: isLine ? 2 : 0,
-          borderRadius: isLine ? 0 : 6,
-          fill: isLine,
-          tension: .4,
-          order: 2
-        },
-        {
-          label: 'Comissão professor (MT)',
-          data: commiss,
-          backgroundColor: isLine ? 'rgba(34,197,94,.15)' : 'rgba(34,197,94,.85)',
-          borderColor: '#22c55e',
-          borderWidth: isLine ? 2.5 : 0,
-          borderRadius: isLine ? 0 : 6,
-          fill: isLine,
-          tension: .4,
-          order: 1
-        }
-      ]
+      datasets: [{
+        label: 'Ganhos do período (MT)',
+        data: totals,
+        backgroundColor: isLine ? 'rgba(34,197,94,.15)' : 'rgba(34,197,94,.85)',
+        borderColor: '#22c55e',
+        borderWidth: isLine ? 2.5 : 0,
+        borderRadius: isLine ? 0 : 6,
+        fill: isLine,
+        tension: .4
+      }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
@@ -617,9 +609,7 @@ function renderChart() {
         tooltip: {
           backgroundColor: '#1f2937',
           padding: 12,
-          callbacks: {
-            label: ctx => ` ${ctx.dataset.label}: MT ${ctx.parsed.y.toLocaleString()}`
-          }
+          callbacks: { label: ctx => ` MT ${ctx.parsed.y.toLocaleString(undefined,{minimumFractionDigits:2})}` }
         }
       },
       scales: {
@@ -638,25 +628,26 @@ function setChartType(type) {
   document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('active'); b.classList.add('text-gray-600') })
   const btn = document.getElementById(`ct-${type}`)
   btn.classList.add('active'); btn.classList.remove('text-gray-600')
-  renderChart()
+  loadEarnings()
 }
 
-// ── Plan Donut ────────────────────────────────────────────────────────────────
-function renderPlanDonut() {
-  const pb = earningsData.plan_breakdown
+// ── Donut: VQ-R / VQ-B / Outras ──────────────────────────────────────────────
+function renderVqDonut() {
+  const s = summaryData
+  const outras = Math.max(0, s.totalFinalizedViews - s.vqRCount - s.vqBCount)
   const ctx = document.getElementById('planDonut').getContext('2d')
-  const total = (pb.free?.students||0) + (pb.basic?.students||0) + (pb.premium?.students||0)
+  const total = s.vqRCount + s.vqBCount + outras
   document.getElementById('donut-total').textContent = total.toLocaleString()
 
-  if (planDonutChart) planDonutChart.destroy()
-  planDonutChart = new Chart(ctx, {
+  if (vqDonutChart) vqDonutChart.destroy()
+  vqDonutChart = new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: ['Gratuito', 'Básico', 'Premium'],
+      labels: ['VQ-R (remunerável)', 'VQ-B (bonificada)', 'Outras (VQ-P/VQ-NR/VNQ)'],
       datasets: [{
-        data: [pb.free?.students||0, pb.basic?.students||0, pb.premium?.students||0],
-        backgroundColor: ['#e5e7eb', '#93c5fd', '#a78bfa'],
-        borderColor: ['#d1d5db', '#60a5fa', '#8b5cf6'],
+        data: [s.vqRCount, s.vqBCount, outras],
+        backgroundColor: ['#22c55e', '#a78bfa', '#e5e7eb'],
+        borderColor: ['#16a34a', '#8b5cf6', '#d1d5db'],
         borderWidth: 2,
         hoverOffset: 6
       }]
@@ -667,35 +658,35 @@ function renderPlanDonut() {
         legend: { display:false },
         tooltip: {
           backgroundColor:'#1f2937', padding:10,
-          callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} alunos (${Math.round(ctx.parsed/total*100)}%)` }
+          callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} (${total > 0 ? Math.round(ctx.parsed/total*100) : 0}%)` }
         }
       }
     }
   })
 
-  // Legend
-  const PLAN_COLORS = { free:'#9ca3af', basic:'#3b82f6', premium:'#8b5cf6' }
-  const PLAN_LABELS = { free:'Gratuito', basic:'Básico', premium:'Premium' }
-  const PLAN_SHARE  = { free:'Sem comissão', basic:`${pb.basic?.commission_share||0}% da comissão`, premium:`${pb.premium?.commission_share||0}% da comissão` }
-  document.getElementById('plan-breakdown-legend').innerHTML = ['free','basic','premium'].map(id => `
+  const rows = [
+    { label: 'VQ-R (remunerável)', color: '#22c55e', value: s.vqRCount },
+    { label: 'VQ-B (bonificada)', color: '#a78bfa', value: s.vqBCount },
+    { label: 'Outras', color: '#9ca3af', value: outras }
+  ]
+  document.getElementById('plan-breakdown-legend').innerHTML = rows.map(r => `
     <div class="flex items-center justify-between text-xs">
       <div class="flex items-center gap-2">
-        <span class="w-3 h-3 rounded-sm inline-block" style="background:${PLAN_COLORS[id]}"></span>
-        <span class="text-gray-700 font-medium">${PLAN_LABELS[id]}</span>
+        <span class="w-3 h-3 rounded-sm inline-block" style="background:${r.color}"></span>
+        <span class="text-gray-700 font-medium">${r.label}</span>
       </div>
-      <div class="text-right">
-        <span class="font-bold text-gray-900">${(pb[id]?.students||0).toLocaleString()}</span>
-        <span class="text-gray-400 ml-1">(${pb[id]?.pct||0}%)</span>
-        <p class="text-gray-400 mt-0.5">${PLAN_SHARE[id]}</p>
-      </div>
+      <span class="font-bold text-gray-900">${r.value.toLocaleString()}</span>
     </div>
   `).join('')
 }
 
 // ── Top Lessons ───────────────────────────────────────────────────────────────
-function renderTopLessons() {
-  const lessons = earningsData.top_lessons
-  const maxComm = Math.max(...lessons.map(l => l.commission_mzn))
+function renderTopLessons(lessons) {
+  if (!lessons || lessons.length === 0) {
+    document.getElementById('top-lessons-list').innerHTML = `<div class="p-8 text-center text-gray-400 text-sm"><i class="fas fa-video-slash text-4xl mb-3 block opacity-40"></i>Sem visualizações qualificadas este mês.</div>`
+    return
+  }
+  const maxViews = Math.max(...lessons.map(l => l.qualifiedViews))
   document.getElementById('top-lessons-list').innerHTML = lessons.map((l, i) => `
     <div class="lesson-row p-4 cursor-default transition">
       <div class="flex items-start gap-3">
@@ -704,76 +695,51 @@ function renderTopLessons() {
           ${i+1}
         </div>
         <div class="flex-1 min-w-0">
-          <p class="font-semibold text-gray-900 text-sm truncate">${l.title}</p>
-          <div class="flex items-center gap-3 mt-1 text-xs text-gray-500">
-            <span><i class="fas fa-eye mr-1 text-gray-300"></i>${l.views.toLocaleString()} views</span>
-            <span><i class="fas fa-check-circle mr-1 text-green-400"></i>${l.completions.toLocaleString()} conclusões</span>
-            <span class="text-green-600 font-semibold">${l.trend}</span>
-          </div>
-          <!-- Mini progress bar -->
+          <p class="font-semibold text-gray-900 text-sm truncate">${escapeHtml(l.title)}</p>
           <div class="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
             <div class="h-full bg-gradient-to-r from-purple-400 to-green-500 rounded-full progress-bar"
-              style="width:${Math.round(l.commission_mzn/maxComm*100)}%"></div>
+              style="width:${Math.round(l.qualifiedViews/maxViews*100)}%"></div>
           </div>
         </div>
         <div class="text-right flex-shrink-0">
-          <p class="font-extrabold text-green-600 text-sm">MT ${l.commission_mzn.toLocaleString()}</p>
-          <p class="text-xs text-gray-400 mt-0.5">${l.subject}</p>
+          <p class="font-extrabold text-green-600 text-sm">${l.qualifiedViews.toLocaleString()}</p>
+          <p class="text-xs text-gray-400 mt-0.5">visualizações</p>
         </div>
       </div>
     </div>
   `).join('')
 }
 
-// ── Withdrawals ───────────────────────────────────────────────────────────────
-function renderWithdrawals() {
-  const wths = earningsData.withdrawals
-  if (!wths || wths.length === 0) {
-    document.getElementById('withdrawals-list').innerHTML = `<div class="p-8 text-center text-gray-400 text-sm"><i class="fas fa-receipt text-4xl mb-3 block opacity-40"></i>Sem levantamentos registados.</div>`
+function escapeHtml(s) {
+  const d = document.createElement('div')
+  d.textContent = s ?? ''
+  return d.innerHTML
+}
+
+// ── Payouts (pagamentos já efectuados) ───────────────────────────────────────
+function renderPayouts(payouts) {
+  if (!payouts || payouts.length === 0) {
+    document.getElementById('withdrawals-list').innerHTML = `<div class="p-8 text-center text-gray-400 text-sm"><i class="fas fa-receipt text-4xl mb-3 block opacity-40"></i>Sem pagamentos registados ainda.</div>`
     return
   }
-  const STATUS_STYLE = {
-    pago: 'bg-green-100 text-green-700',
-    em_processamento: 'bg-amber-100 text-amber-700',
-    cancelado: 'bg-red-100 text-red-700'
-  }
-  const STATUS_LABEL = { pago:'Pago', em_processamento:'Em processamento', cancelado:'Cancelado' }
-  document.getElementById('withdrawals-list').innerHTML = wths.map(w => `
+  const METHOD_LABEL = { mpesa: 'M-Pesa', emola: 'e-Mola', bank_transfer: 'Transferência', other: 'Outro' }
+  document.getElementById('withdrawals-list').innerHTML = payouts.map(w => `
     <div class="withdrawal-row flex items-center justify-between p-4 transition cursor-default">
       <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0
-          ${w.method==='M-Pesa'?'bg-red-50':'w.method==="e-Mola"?bg-orange-50:bg-blue-50'}">
-          <i class="fas ${w.method.includes('Pesa')||w.method.includes('Mola')?'fa-mobile-alt':'fa-university'} text-sm
-            ${w.method.includes('Pesa')?'text-red-500':w.method.includes('Mola')?'text-orange-500':'text-blue-500'}"></i>
+        <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-green-50">
+          <i class="fas ${w.method==='bank_transfer'?'fa-university':'fa-mobile-alt'} text-sm text-green-600"></i>
         </div>
         <div>
-          <p class="text-sm font-semibold text-gray-900">${w.method}</p>
-          <p class="text-xs text-gray-400">${w.date} · <span class="font-mono">${w.ref}</span></p>
+          <p class="text-sm font-semibold text-gray-900">${METHOD_LABEL[w.method] || w.method}</p>
+          <p class="text-xs text-gray-400">${new Date(w.created_at).toLocaleDateString('pt-PT')}${w.reference ? ' · <span class="font-mono">' + escapeHtml(w.reference) + '</span>' : ''}</p>
         </div>
       </div>
       <div class="text-right">
-        <p class="font-extrabold text-gray-900 text-sm">MT ${w.amount_mzn.toLocaleString()}</p>
-        <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLE[w.status]||'bg-gray-100 text-gray-600'}">
-          ${STATUS_LABEL[w.status]||w.status}
-        </span>
+        <p class="font-extrabold text-gray-900 text-sm">MT ${Number(w.amount_mzn).toLocaleString(undefined,{minimumFractionDigits:2})}</p>
+        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">Pago</span>
       </div>
     </div>
   `).join('')
-}
-
-// ── Period ────────────────────────────────────────────────────────────────────
-function setPeriod(p) {
-  currentPeriod = p
-  document.querySelectorAll('.period-btn').forEach(b => {
-    b.classList.remove('active')
-    b.style.borderColor = ''
-    b.classList.add('text-gray-600')
-    b.classList.remove('text-white')
-  })
-  const btn = document.getElementById(`p-${p}`)
-  btn.classList.add('active')
-  btn.classList.remove('text-gray-600')
-  loadEarnings()
 }
 
 // ── Withdraw Modal ────────────────────────────────────────────────────────────
@@ -793,7 +759,7 @@ function setAmount(v) {
   updateSummary()
 }
 function setWithdrawMax() {
-  document.getElementById('withdraw-amount').value = availableMzn
+  document.getElementById('withdraw-amount').value = approvedMzn
   updateSummary()
 }
 document.addEventListener('input', e => { if (e.target.id === 'withdraw-amount') updateSummary() })
@@ -805,21 +771,20 @@ function updateSummary() {
 async function submitWithdraw() {
   const amount = parseInt(document.getElementById('withdraw-amount').value)
   const method = document.querySelector('input[name="withdraw_method"]:checked')?.value
-  const phone  = document.getElementById('withdraw-phone').value.trim()
+  const account = document.getElementById('withdraw-account').value.trim()
   if (!amount || amount < 500) { showToast('Valor mínimo de MT 500.', 'error'); return }
-  if (amount > availableMzn)   { showToast('Valor superior ao saldo disponível.', 'error'); return }
-  const token = localStorage.getItem('accessToken')
+  if (amount > approvedMzn)    { showToast('Valor superior ao saldo aprovado disponível.', 'error'); return }
+  if (!account) { showToast('Indique o número de telemóvel ou conta.', 'error'); return }
   try {
-    const res = await axios.post('/api/creator/earnings/withdraw', { amount_mzn: amount, method, phone }, {
-      headers: { Authorization: `Bearer ${token}` }
+    const res = await axios.post('/api/earnings/payout-request', { amountMzn: amount, method, account }, {
+      headers: authHeaders()
     })
     document.getElementById('withdraw-ref').textContent = res.data.data.reference
     document.getElementById('withdraw-step-form').classList.add('hidden')
     document.getElementById('withdraw-step-success').classList.remove('hidden')
     showToast(res.data.message, 'success')
-    loadEarnings()
   } catch(e) {
-    showToast(e.response?.data?.message || 'Erro ao processar pedido.', 'error')
+    showToast(e.response?.data?.error || 'Erro ao processar pedido.', 'error')
   }
 }
 
