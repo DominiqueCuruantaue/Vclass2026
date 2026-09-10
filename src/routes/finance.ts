@@ -3,7 +3,7 @@
 import { Hono } from 'hono'
 import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware, requireFinanceOrAdmin } from '../middleware/auth'
-import { getSupabase } from '../config/supabase'
+import { getSupabase, type SupaClient } from '../config/supabase'
 import { loadPlans, isDatabaseConfigured, FALLBACK_PLANS_DATA } from '../utils/plans'
 import { COUNTRIES } from '../data/curriculum'
 import { estimateTeacherEarnings, writeEstimatedLedgerEntries } from '../services/earningsAggregation'
@@ -347,7 +347,27 @@ finance.post('/subscriptions', async (c) => {
     after: { studentId, planType, amount, fundingSource: fundingSource || 'PAID_SUBSCRIPTION' }
   })
 
-  return c.json<ApiResponse>({ success: true, message: 'Subscrição registada', data: inserted })
+  // Gatilho automático da comissão de referência (Art. 21-24, PDR-002): sem
+  // gateway de pagamento, "automático" quer dizer "não precisa de uma
+  // segunda chamada manual separada a /referrals/:id/convert" — a equipa
+  // financeira já regista o pagamento aqui de qualquer forma, isto só evita
+  // o passo extra. Restrito a PAID_SUBSCRIPTION com amount numérico: para
+  // funding_source institucional/patrocinado "receita líquida elegível" não
+  // é simplesmente `amount` e continua a exigir a conversão manual acima.
+  // Nunca falha a criação da subscrição por causa disto — best-effort.
+  let referralConversion: { converted: boolean; reason?: string; commissionMzn?: string } | null = null
+  const effectiveFundingSource = fundingSource || 'PAID_SUBSCRIPTION'
+  if (effectiveFundingSource === 'PAID_SUBSCRIPTION' && typeof amount === 'number' && amount > 0) {
+    try {
+      referralConversion = await attemptReferralConversion(supabase, {
+        studentId, subscriptionId: inserted.id, netEligibleRevenueMzn: amount, actorId: user?.id
+      })
+    } catch (e: any) {
+      console.error('auto-conversão de comissão de referência falhou:', e)
+    }
+  }
+
+  return c.json<ApiResponse>({ success: true, message: 'Subscrição registada', data: { ...inserted, referralConversion } })
 })
 
 // ── PATCH /api/finance/subscriptions/:id — renovar/actualizar uma subscrição
@@ -844,6 +864,64 @@ finance.post('/earnings/adjustment', async (c) => {
   return c.json<ApiResponse>({ success: true, message: 'Lançamento de ajuste criado' })
 })
 
+// ── Conversão de comissão de referência (Art. 21-24) ────────────────────────
+// Núcleo partilhado entre a conversão manual (POST /referrals/:id/convert,
+// mantida para os casos que o gatilho automático abaixo não cobre — ex.
+// funding_source institucional/patrocinado, onde "receita líquida elegível"
+// exige julgamento humano) e o gatilho automático em POST /subscriptions:
+// sem gateway de pagamento, "automático" aqui significa "não precisa de uma
+// SEGUNDA acção manual separada depois de já se ter registado o pagamento" —
+// mesma filosofia da reversão automática de reembolso (migration 035).
+// Nunca lança excepção por "nada a converter" — devolve { converted: false,
+// reason } para o chamador decidir se isso é um erro (endpoint manual) ou
+// um não-evento normal (gatilho automático).
+async function attemptReferralConversion(
+  supabase: SupaClient,
+  opts: { studentId: string; subscriptionId?: string | null; netEligibleRevenueMzn: number; actorId?: string }
+): Promise<{ converted: boolean; reason?: string; commissionMzn?: string; ledgerId?: string }> {
+  const { data: attribution, error: findErr } = await supabase
+    .from('referral_attributions')
+    .select('id, teacher_id, attributed_at, converted_at')
+    .eq('student_id', opts.studentId)
+    .maybeSingle()
+  if (findErr) throw new Error(findErr.message)
+  if (!attribution) return { converted: false, reason: 'NO_ATTRIBUTION' }
+  if (attribution.converted_at) return { converted: false, reason: 'ALREADY_CONVERTED' }
+
+  const windowCheck = checkAttributionWindow(new Date(attribution.attributed_at), new Date())
+  if (!windowCheck.eligible) return { converted: false, reason: windowCheck.reason === 'EXPIRED' ? 'WINDOW_EXPIRED' : 'SELF_REFERRAL' }
+
+  const commissionMzn = calculateReferralCommission(opts.netEligibleRevenueMzn)
+
+  const { data: ledgerRow, error: ledgerErr } = await supabase
+    .from('teacher_earnings_ledger')
+    .insert({
+      teacher_id: attribution.teacher_id,
+      earning_type: 'REFERRAL_COMMISSION',
+      gross_amount: commissionMzn,
+      currency: 'MZN',
+      status: 'ESTIMATED',
+      policy_version: 'V1.0',
+      calculation_metadata: { studentId: opts.studentId, netEligibleRevenueMzn: opts.netEligibleRevenueMzn, ratePct: 15 }
+    })
+    .select('id')
+    .single()
+  if (ledgerErr || !ledgerRow) throw new Error(ledgerErr?.message || 'Falha ao gravar comissão')
+
+  const { error: updateErr } = await supabase
+    .from('referral_attributions')
+    .update({ converted_at: new Date().toISOString(), commission_ledger_id: ledgerRow.id, converted_subscription_id: opts.subscriptionId || null })
+    .eq('id', attribution.id)
+  if (updateErr) throw new Error(updateErr.message)
+
+  await logEarningsAudit(supabase, {
+    actorId: opts.actorId, action: 'CONVERT_REFERRAL_COMMISSION', entityType: 'referral_attributions', entityId: attribution.id,
+    after: { teacherId: attribution.teacher_id, commissionMzn, subscriptionId: opts.subscriptionId || null }
+  })
+
+  return { converted: true, commissionMzn, ledgerId: ledgerRow.id }
+}
+
 // ── GET /api/finance/referrals — listar atribuições de referência ───────────
 finance.get('/referrals', async (c) => {
   if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
@@ -864,11 +942,12 @@ finance.get('/referrals', async (c) => {
 })
 
 // ── POST /api/finance/referrals/:studentId/convert ───────────────────────────
-// Regista a comissão da PRIMEIRA compra elegível do estudante referenciado
-// (Art. 21-24). Chamada manualmente pela equipa financeira quando processa a
-// subscrição — não existe ainda gateway de pagamento a disparar isto
-// automaticamente (ver PDR-002 no blueprint). Idempotente: uma atribuição só
-// converte uma vez (commission_ledger_id preenchido bloqueia repetições).
+// Conversão MANUAL — continua a existir para os casos que o gatilho
+// automático de POST /subscriptions (abaixo) deliberadamente não cobre:
+// funding_source que não seja PAID_SUBSCRIPTION (institucional, patrocínio,
+// etc.), onde "receita líquida elegível" não é simplesmente o `amount` da
+// subscrição e exige julgamento humano, ou para corrigir/registar um caso
+// que o gatilho automático não apanhou por algum motivo.
 finance.post('/referrals/:studentId/convert', async (c) => {
   const studentId = c.req.param('studentId')
   if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
@@ -880,52 +959,28 @@ finance.post('/referrals/:studentId/convert', async (c) => {
     return c.json<ApiResponse>({ success: false, error: 'netEligibleRevenueMzn é obrigatório e não pode ser negativo' }, 400)
   }
 
-  const { data: attribution, error: findErr } = await supabase
-    .from('referral_attributions')
-    .select('id, teacher_id, attributed_at, converted_at')
-    .eq('student_id', studentId)
-    .maybeSingle()
-  if (findErr) return c.json<ApiResponse>({ success: false, error: findErr.message }, 500)
-  if (!attribution) return c.json<ApiResponse>({ success: false, error: 'Este estudante não tem professor referenciador atribuído' }, 404)
-  if (attribution.converted_at) return c.json<ApiResponse>({ success: false, error: 'Comissão já registada para esta atribuição — só a primeira compra conta (Art. 21-24)' }, 409)
-
-  const windowCheck = checkAttributionWindow(new Date(attribution.attributed_at), new Date())
-  if (!windowCheck.eligible) {
-    return c.json<ApiResponse>({ success: false, error: `Fora da janela de atribuição de 30 dias (${windowCheck.reason})` }, 409)
+  const user = c.get('user') as any
+  let result
+  try {
+    result = await attemptReferralConversion(supabase, {
+      studentId, subscriptionId: body.subscriptionId, netEligibleRevenueMzn: body.netEligibleRevenueMzn, actorId: user?.id
+    })
+  } catch (e: any) {
+    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
   }
 
-  const commissionMzn = calculateReferralCommission(body.netEligibleRevenueMzn)
+  if (!result.converted) {
+    const messages: Record<string, [string, number]> = {
+      NO_ATTRIBUTION: ['Este estudante não tem professor referenciador atribuído', 404],
+      ALREADY_CONVERTED: ['Comissão já registada para esta atribuição — só a primeira compra conta (Art. 21-24)', 409],
+      WINDOW_EXPIRED: ['Fora da janela de atribuição de 30 dias', 409],
+      SELF_REFERRAL: ['Auto-referência não é permitida', 409]
+    }
+    const [error, status] = messages[result.reason || ''] || ['Não foi possível converter', 409]
+    return c.json<ApiResponse>({ success: false, error }, status as any)
+  }
 
-  const { data: ledgerRow, error: ledgerErr } = await supabase
-    .from('teacher_earnings_ledger')
-    .insert({
-      teacher_id: attribution.teacher_id,
-      earning_type: 'REFERRAL_COMMISSION',
-      gross_amount: commissionMzn,
-      currency: 'MZN',
-      status: 'ESTIMATED',
-      policy_version: 'V1.0',
-      calculation_metadata: { studentId, netEligibleRevenueMzn: body.netEligibleRevenueMzn, ratePct: 15 }
-    })
-    .select('id')
-    .single()
-  if (ledgerErr || !ledgerRow) return c.json<ApiResponse>({ success: false, error: ledgerErr?.message || 'Falha ao gravar comissão' }, 500)
-
-  const { error: updateErr } = await supabase
-    .from('referral_attributions')
-    .update({
-      converted_at: new Date().toISOString(),
-      commission_ledger_id: ledgerRow.id,
-      // Guarda qual subscrição converteu, para a reversão automática de
-      // reembolso (migration 035) saber exactamente qual reembolso deve
-      // disparar a reversão desta comissão, sem ambiguidade com subscrições
-      // posteriores do mesmo estudante.
-      converted_subscription_id: body.subscriptionId || null
-    })
-    .eq('id', attribution.id)
-  if (updateErr) return c.json<ApiResponse>({ success: false, error: updateErr.message }, 500)
-
-  return c.json<ApiResponse>({ success: true, message: 'Comissão de referência registada', data: { commissionMzn, ledgerId: ledgerRow.id } })
+  return c.json<ApiResponse>({ success: true, message: 'Comissão de referência registada', data: { commissionMzn: result.commissionMzn, ledgerId: result.ledgerId } })
 })
 
 // ── Fee de Embaixador (FEA, Art. 25) ─────────────────────────────────────────
