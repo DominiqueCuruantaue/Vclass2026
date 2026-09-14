@@ -25,10 +25,29 @@ Implicação: a app precisa de internet para funcionar (não há modo offline).
 ```
 mobile/
 ├── android/              # Projeto nativo Android (gerado pelo Capacitor)
+├── assets/                # Fontes do ícone/splash (usadas pelo @capacitor/assets)
 ├── www/                  # Fallback local mínimo (offline)
 ├── capacitor.config.ts   # Configuração do Capacitor (URL do servidor, appId, etc.)
 └── package.json
 ```
+
+## Ícone e nome da app
+
+- Nome exibido no telemóvel: `appName` em `capacitor.config.ts` (atualmente
+  "VClass"). Depois de mudar, corre `npx cap sync android`.
+- Ícone e splash screen: ficheiros-fonte em `mobile/assets/`
+  (`icon-background.png`, `icon-foreground.png`, `icon-only.png`,
+  `splash.png`, `splash-dark.png`, todos 1024×1024 ou 2732×2732). Para
+  regenerar todos os tamanhos depois de trocar esses ficheiros:
+
+  ```bash
+  npx capacitor-assets generate --android
+  npx cap sync android
+  ```
+- Nome do ficheiro `.apk` gerado: `archivesBaseName` em
+  `android/app/build.gradle` (atualmente produz `VClass-debug.apk`). Se
+  mudares, atualiza também o `path` do passo "Upload APK artifact" em
+  `.github/workflows/android-apk.yml`.
 
 ## Desenvolvimento local
 
@@ -65,7 +84,7 @@ cd android
 gradlew.bat assembleDebug # Windows
 ```
 
-O APK fica em `android/app/build/outputs/apk/debug/app-debug.apk`.
+O APK fica em `android/app/build/outputs/apk/debug/VClass-debug.apk`.
 
 ## Publicar (build de release)
 

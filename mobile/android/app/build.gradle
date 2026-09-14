@@ -3,6 +3,7 @@ apply plugin: 'com.android.application'
 android {
     namespace = "mz.co.vclass.app"
     compileSdk = rootProject.ext.compileSdkVersion
+    setProperty("archivesBaseName", "VClass")
     defaultConfig {
         applicationId "mz.co.vclass.app"
         minSdkVersion rootProject.ext.minSdkVersion
