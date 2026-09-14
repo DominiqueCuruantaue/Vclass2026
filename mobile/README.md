@@ -1,86 +1,80 @@
-# VClass Mobile
+# VClass Mobile (Android)
 
-App móvel (Expo + React Native) para os perfis **Estudante** e **Professor**
-da VClass. Consome directamente a API existente (`src/routes/*` na raiz do
-repositório) — não altera nem duplica o backend/web actuais.
+Wrapper nativo Android feito com [Capacitor](https://capacitorjs.com/), que abre
+`https://vclass.co.mz` dentro de uma WebView. Não é uma reimplementação dos
+ecrãs — é a própria aplicação web, por isso o layout mobile é sempre
+idêntico ao da web (mesmo HTML/CSS/JS, mesmas atualizações, sem duplicar
+lógica nem correr o risco dos dois ficarem dessincronizados).
 
-Os restantes seis papéis (Admin, Editor, Gestor de País, Financeiro,
-Moderador, Suporte) são painéis de staff densos, pensados para ecrã largo, e
-continuam apenas na versão web (ver `fluxo-funcionamento.txt` na raiz).
+Substitui a antiga app Expo/React Native (ecrãs próprios, build via EAS),
+removida por já não ser necessária.
 
-## Stack
+## Como funciona
 
-- Expo SDK 57 + `expo-router` (navegação por ficheiros, com grupos
-  `(auth)` / `(student)` / `(teacher)`)
-- TypeScript, tema navy/verde alinhado com o redesign web recente
-- `expo-video` (leitor HLS), `expo-secure-store` (token), `expo-document-picker`
-  (upload de documentos/vídeo), `tus-js-client` (upload resumível para o
-  Bunny.net Stream)
-- `shared/types/` — tipos TS partilhados com o backend (mantidos manualmente
-  em sincronia com `src/types/index.ts`)
+- `capacitor.config.ts` define `server.url = "https://vclass.co.mz"` — a
+  WebView carrega sempre a versão de produção da web.
+- `www/index.html` é apenas um ecrã de fallback (sem internet); não é
+  empacotado como conteúdo real da app.
+- Não há build do frontend a correr aqui — o `npm run build` da app web
+  (raiz do repositório) não é necessário para gerar o APK.
 
-## Correr localmente
-
-```bash
-cd mobile
-npm install   # já feito nesta sessão, mas fica documentado
-npx expo start
-```
-
-Abre no telemóvel com a app **Expo Go** (lê o QR code) ou num emulador
-Android/iOS (`npx expo start --android` / `--ios`).
-
-### Apontar para a API
-
-Por omissão, o app aponta para `http://localhost:3000` (ver
-`mobile/app.json` → `extra.apiBaseUrl`). Num dispositivo físico ou emulador,
-`localhost` **não** aponta para a tua máquina de desenvolvimento — cria um
-`.env` em `mobile/` com o IP da tua máquina na rede local:
-
-```
-EXPO_PUBLIC_API_URL=http://192.168.1.10:3000
-```
-
-e corre o backend normalmente a partir da raiz do repositório (`npm run dev`).
-
-## Autenticação
-
-O access token (JWT, 8h) é guardado com `expo-secure-store`. O refresh token
-continua a viver num cookie `HttpOnly` definido pelo backend — o stack de
-rede nativo do iOS/Android mantém esse cookie automaticamente entre pedidos
-ao mesmo host, tal como um browser, por isso o fluxo de refresh
-(`mobile/src/api/client.ts`) funciona sem bibliotecas extra de cookies.
+Implicação: a app precisa de internet para funcionar (não há modo offline).
 
 ## Estrutura
 
 ```
 mobile/
-  app/                    ← rotas (expo-router)
-    (auth)/                 login, registo de estudante, candidatura de
-                             professor, ecrã para papéis de staff
-    (student)/(tabs)/       início, explorar, progresso, biblioteca, perfil
-    (student)/               lição (vídeo+exercícios), biblioteca (detalhe),
-                             perfil (editar/planos), notificações, ajuda,
-                             conquistas
-    (teacher)/(tabs)/       visão geral, conteúdos, alunos, ganhos
-    (teacher)/               editor de lição (5 abas), analytics
-  src/
-    api/                   um módulo por área da API (auth, curriculum,
-                             progress, exercises, video, creator, ...)
-    components/ui.tsx       biblioteca de componentes reutilizáveis
-    context/AuthContext.tsx estado de autenticação global
-    theme/colors.ts         paleta partilhada com o tema web
-
-shared/types/               tipos TS partilhados entre web e mobile
+├── android/              # Projeto nativo Android (gerado pelo Capacitor)
+├── www/                  # Fallback local mínimo (offline)
+├── capacitor.config.ts   # Configuração do Capacitor (URL do servidor, appId, etc.)
+└── package.json
 ```
 
-## Limitações conhecidas (MVP)
+## Desenvolvimento local
 
-- **Recursos da lição** (anexos/PDFs no editor do professor): ainda só na
-  versão web — a aba "Recursos" no editor mobile mostra um aviso.
-- **Criar capítulo** no mobile não associa `grade_subject_id`/currículo (essa
-  lógica de resolução de slugs vive só no backend/web); o capítulo fica
-  criado mas só aparece no Explorar dos alunos depois de associado à
-  disciplina/classe pela versão web (Conteúdos), tal como já documentado em
-  `src/routes/creator.ts`.
-- Sem suporte offline — todas as chamadas exigem ligação à API.
+Pré-requisitos: Node 20+, JDK 17+ e Android SDK (ou Android Studio) instalados.
+
+```bash
+npm install
+npx cap sync android      # copia config/plugins para o projeto nativo
+npx cap open android      # abre no Android Studio
+```
+
+Depois de qualquer alteração a `capacitor.config.ts` ou aos plugins
+instalados, corra `npx cap sync android` novamente.
+
+## Gerar o APK
+
+### Via GitHub Actions (recomendado, sem instalar Android SDK localmente)
+
+O workflow [`.github/workflows/android-apk.yml`](../.github/workflows/android-apk.yml)
+instala o JDK e as ferramentas de linha de comando do Android SDK, corre
+`npx cap sync android` e depois `./gradlew assembleDebug` dentro de
+`android/`. O APK fica disponível como artifact do workflow.
+
+Para gerar: aba **Actions** do repositório → workflow **Build Android APK
+(Capacitor)** → **Run workflow**. Ou faz push de alterações dentro de
+`mobile/**` na branch `main`.
+
+### Localmente
+
+```bash
+npx cap sync android
+cd android
+./gradlew assembleDebug   # Linux/Mac
+gradlew.bat assembleDebug # Windows
+```
+
+O APK fica em `android/app/build/outputs/apk/debug/app-debug.apk`.
+
+## Publicar (build de release)
+
+O workflow atual gera apenas builds `debug` (não assinados, só para testes).
+Para publicar na Play Store é preciso:
+
+1. Gerar uma keystore de assinatura e guardá-la como secret no GitHub
+   (nunca commitar a keystore nem a password no repositório).
+2. Configurar a assinatura em `android/app/build.gradle`
+   (`signingConfigs` + `buildTypes.release`).
+3. Alterar o passo final do workflow para `./gradlew assembleRelease` (ou
+   `bundleRelease` para gerar `.aab`).

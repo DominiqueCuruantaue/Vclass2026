@@ -444,7 +444,7 @@ npm run test               # Health check via curl
 - [ ] Fórum de discussão por disciplina
 - [ ] Sistema de pagamentos (cursos premium)
 - [ ] PWA com suporte offline
-- [ ] App mobile (Flutter)
+- [x] App mobile Android (Capacitor, wrapper da web — ver [mobile/](mobile/))
 - [ ] Integração M-Pesa para pagamentos locais
 
 ---
