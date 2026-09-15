@@ -39,6 +39,11 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # A Google deixou de servir o pacote legado "tools" (quebrou o
+          # install por omissão desta action em 2026-09-15). O próximo passo
+          # já instala explicitamente os pacotes necessários.
+          packages: ''
 
       - name: Install Android SDK packages
         run: sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;36.0.0"
