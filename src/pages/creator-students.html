@@ -138,11 +138,11 @@
                 </div>
 
                 <!-- Table Header -->
-                <div class="grid grid-cols-12 gap-2 px-4 py-2.5 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <div class="hidden sm:grid grid-cols-12 gap-2 px-4 py-2.5 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                     <div class="col-span-4">Aluno</div>
                     <div class="col-span-2 text-center">Progresso</div>
                     <div class="col-span-2 text-center">Nota</div>
-                    <div class="col-span-2 text-center hidden sm:block">Última atividade</div>
+                    <div class="col-span-2 text-center">Última atividade</div>
                     <div class="col-span-2 text-center">Ações</div>
                 </div>
 
@@ -429,15 +429,21 @@
                 const isActive   = s.daysAgo <= 7;
                 const sid        = JSON.stringify(String(s.id));
                 return `
-                <div class="student-row grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-50 items-center" onclick="openStudentModal(${sid})">
-                    <div class="col-span-4 flex items-center gap-2 min-w-0">
-                        <div class="avatar-circle text-xs" style="background:${randomColor(s.name)}">${initials}</div>
+                <div class="student-row flex items-center gap-3 px-4 py-3 border-b border-gray-50 cursor-pointer sm:grid sm:grid-cols-12 sm:gap-2" onclick="openStudentModal(${sid})">
+                    <div class="flex items-center gap-2 min-w-0 flex-1 sm:col-span-4 sm:flex-none">
+                        <div class="avatar-circle text-xs shrink-0" style="background:${randomColor(s.name)}">${initials}</div>
                         <div class="min-w-0">
                             <p class="text-sm font-semibold text-gray-900 truncate">${s.name}</p>
-                            <p class="text-xs text-gray-400 truncate">${s.email || '—'}</p>
+                            <p class="text-xs text-gray-400 truncate hidden sm:block">${s.email || '—'}</p>
+                            <div class="flex items-center gap-1.5 mt-1 sm:hidden">
+                                <div class="w-12 h-1.5 bg-gray-100 rounded-full overflow-hidden shrink-0">
+                                    <div class="progress-bar h-full rounded-full ${s.progress>=70?'bg-green-500':s.progress>=30?'bg-amber-500':'bg-red-400'}" style="width:${s.progress}%"></div>
+                                </div>
+                                <span class="text-[11px] font-medium text-gray-500">${s.progress}%</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-span-2">
+                    <div class="hidden sm:block sm:col-span-2">
                         <div class="flex items-center gap-1.5">
                             <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                                 <div class="progress-bar h-full rounded-full ${s.progress>=70?'bg-green-500':s.progress>=30?'bg-amber-500':'bg-red-400'}" style="width:${s.progress}%"></div>
@@ -445,13 +451,13 @@
                             <span class="text-xs font-medium text-gray-600 w-8 text-right">${s.progress}%</span>
                         </div>
                     </div>
-                    <div class="col-span-2 text-center">
+                    <div class="shrink-0 sm:col-span-2 sm:text-center">
                         <span class="score-badge ${scoreClass}">${s.score}%</span>
                     </div>
-                    <div class="col-span-2 text-center hidden sm:block">
+                    <div class="hidden sm:block sm:col-span-2 sm:text-center">
                         <span class="text-xs ${isActive?'text-green-600 font-medium':'text-gray-400'}">${lastAct}</span>
                     </div>
-                    <div class="col-span-2 flex items-center justify-center gap-1">
+                    <div class="hidden sm:flex sm:col-span-2 sm:items-center sm:justify-center sm:gap-1">
                         <button class="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition text-xs"
                             title="Ver detalhe" onclick="event.stopPropagation();openStudentModal(${sid})">
                             <i class="fas fa-eye"></i>
@@ -461,6 +467,7 @@
                             <i class="fas fa-envelope"></i>
                         </button>
                     </div>
+                    <i class="fas fa-chevron-right text-gray-300 text-xs shrink-0 sm:hidden"></i>
                 </div>`;
             }).join('');
         }

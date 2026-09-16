@@ -7,20 +7,25 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
   <style>
-    .sidebar { width:240px; min-height:100vh; }
+    .sidebar { width:240px; min-height:100vh; transition:transform .3s; }
     .stat-card { transition:transform .15s; }
     .stat-card:hover { transform:translateY(-2px); }
     .tab-btn { border-bottom:3px solid transparent; transition: all .15s; }
     .tab-btn.active { border-bottom-color:#b45309; color:#b45309; }
     #overlay { background:rgba(0,0,0,.5); }
     .bar { transition: width .6s ease; }
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      main { margin-left: 0 !important; }
+    }
   </style>
   <script src="/static/safe-dom.js"></script>
 </head>
 <body class="bg-gray-50 flex">
 
 <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
-<aside class="sidebar bg-white border-r border-gray-200 flex flex-col fixed top-0 left-0 h-full z-20">
+<aside id="sidebar" class="sidebar bg-white border-r border-gray-200 flex flex-col fixed top-0 left-0 h-full z-20">
   <div class="p-5 border-b border-gray-100">
     <div class="flex items-center gap-2">
       <div class="w-9 h-9 bg-amber-600 rounded-xl flex items-center justify-center text-white font-bold text-lg">V</div>
@@ -72,9 +77,14 @@
 <!-- ── Main ────────────────────────────────────────────────────────────── -->
 <main class="ml-60 flex-1 min-h-screen">
   <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
-    <div>
-      <h1 class="text-xl font-bold text-gray-900" id="page-title">Visão Geral</h1>
-      <p class="text-sm text-gray-500" id="page-sub">Gestão do país e métricas locais</p>
+    <div class="flex items-center gap-3">
+      <button class="md:hidden p-2 -ml-2 rounded-lg hover:bg-gray-100 text-gray-600" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div>
+        <h1 class="text-xl font-bold text-gray-900" id="page-title">Visão Geral</h1>
+        <p class="text-sm text-gray-500" id="page-sub">Gestão do país e métricas locais</p>
+      </div>
     </div>
     <div class="flex items-center gap-3">
       <div class="flex items-center gap-2 bg-amber-50 border border-amber-200 px-3 py-2 rounded-xl">
@@ -85,7 +95,7 @@
   </header>
 
   <!-- KPI Cards -->
-  <div class="p-6 pb-0 grid grid-cols-4 gap-4">
+  <div class="p-6 pb-0 grid grid-cols-2 lg:grid-cols-4 gap-4">
     <div class="stat-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
       <div class="flex items-center justify-between mb-3">
         <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center"><i class="fas fa-user-graduate text-blue-500"></i></div>
@@ -121,7 +131,7 @@
   </div>
 
   <!-- Tabs -->
-  <div class="px-6 pt-6 border-b border-gray-200 bg-white mx-6 mt-6 rounded-t-2xl flex gap-6">
+  <div class="px-6 pt-6 border-b border-gray-200 bg-white mx-6 mt-6 rounded-t-2xl flex gap-6 overflow-x-auto whitespace-nowrap">
     <button onclick="showTab('overview')"    class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-amber-600 transition" id="tab-overview">Visão Geral</button>
     <button onclick="showTab('users')"       class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-amber-600 transition" id="tab-users">Utilizadores</button>
     <button onclick="showTab('applications')" class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-amber-600 transition" id="tab-applications">Candidaturas</button>
@@ -133,7 +143,7 @@
 
   <!-- ── Overview ──────────────────────────────────────────────────────── -->
   <section id="tab-content-overview" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
-    <div class="grid grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="bg-gray-50 rounded-2xl p-5">
         <h3 class="font-semibold text-gray-800 mb-4"><i class="fas fa-fire mr-2 text-orange-500"></i>Top 3 Lições</h3>
         <div id="top-lessons" class="space-y-3"></div>
@@ -180,7 +190,7 @@
 
   <!-- ── Applications (candidaturas de professor) ─────────────────────────── -->
   <section id="tab-content-applications" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
-    <div class="grid grid-cols-4 gap-3 mb-6">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
       <div class="bg-amber-50 border border-amber-100 rounded-xl p-3 text-center">
         <div class="text-xl font-bold text-amber-700" id="app-stat-pending">0</div>
         <div class="text-xs text-gray-500">Pendentes</div>
@@ -554,7 +564,7 @@ async function openAppModal(id) {
 
   document.getElementById('app-modal-content').innerHTML = `
     <div class="space-y-5">
-      <div class="grid grid-cols-2 gap-4 text-sm">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
         <div><span class="text-gray-500">Nome:</span> <span class="font-medium">${escapeHtml(a.full_name)}</span></div>
         <div><span class="text-gray-500">Email:</span> <span class="font-medium">${escapeHtml(a.email)}</span></div>
         <div><span class="text-gray-500">Telefone:</span> <span class="font-medium">${escapeHtml(a.phone)}</span></div>
@@ -565,8 +575,8 @@ async function openAppModal(id) {
         <div><span class="text-gray-500">Instituição:</span> <span class="font-medium">${escapeHtml(a.institution)} (${a.graduation_year})</span></div>
         <div><span class="text-gray-500">Experiência:</span> <span class="font-medium">${a.years_experience} anos</span></div>
         <div><span class="text-gray-500">Cert. Docência:</span> <span class="font-medium">${certText}</span></div>
-        <div class="col-span-2"><span class="text-gray-500">Disciplinas:</span> <span class="font-medium">${(a.subjects||[]).map(escapeHtml).join(', ')}</span></div>
-        <div class="col-span-2"><span class="text-gray-500">Referência:</span> <span class="font-medium">${escapeHtml(a.reference_1_name)} — ${escapeHtml(a.reference_1_phone)} (${escapeHtml(a.reference_1_role)})</span></div>
+        <div class="sm:col-span-2"><span class="text-gray-500">Disciplinas:</span> <span class="font-medium">${(a.subjects||[]).map(escapeHtml).join(', ')}</span></div>
+        <div class="sm:col-span-2"><span class="text-gray-500">Referência:</span> <span class="font-medium">${escapeHtml(a.reference_1_name)} — ${escapeHtml(a.reference_1_phone)} (${escapeHtml(a.reference_1_role)})</span></div>
       </div>
 
       <div>

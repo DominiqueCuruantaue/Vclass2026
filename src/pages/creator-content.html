@@ -711,16 +711,18 @@
                 const rows = g.lessons.map(l => {
                     const checked = selectedIds.has(l.id);
                     return `
-                    <div class="lesson-row flex items-center gap-4 px-6 py-3.5 border-b border-gray-50 last:border-b-0">
-                        <input type="checkbox" class="lesson-check w-4 h-4 rounded accent-purple-600" data-id="${l.id}"
-                            ${checked ? 'checked' : ''} onchange="toggleSelect('${l.id}', this.checked)">
-                        <i class="drag-handle fas fa-grip-vertical text-sm"></i>
-                        <div class="w-8 h-8 bg-${meta.color}-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <i class="fas fa-play-circle text-${meta.color}-600 text-sm"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-semibold text-gray-900 truncate">${escapeHtml(l.title)}</p>
-                            <p class="text-xs text-gray-400 mt-0.5">${escapeHtml(String(l.duration))} min · ${l.access === 'premium' ? '🔒 Premium' : '🆓 Gratuito'} · ${escapeHtml(l.updated)}</p>
+                    <div class="lesson-row flex flex-wrap items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3.5 border-b border-gray-50 last:border-b-0">
+                        <div class="flex items-center gap-3 sm:gap-4 min-w-[190px] flex-1">
+                            <input type="checkbox" class="lesson-check w-4 h-4 rounded accent-purple-600 shrink-0" data-id="${l.id}"
+                                ${checked ? 'checked' : ''} onchange="toggleSelect('${l.id}', this.checked)">
+                            <i class="drag-handle fas fa-grip-vertical text-sm hidden sm:inline-block"></i>
+                            <div class="w-8 h-8 bg-${meta.color}-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-play-circle text-${meta.color}-600 text-sm"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-gray-900 truncate">${escapeHtml(l.title)}</p>
+                                <p class="text-xs text-gray-400 mt-0.5 truncate">${escapeHtml(String(l.duration))} min · ${l.access === 'premium' ? '🔒 Premium' : '🆓 Gratuito'} · ${escapeHtml(l.updated)}</p>
+                            </div>
                         </div>
                         <div class="hidden md:flex items-center gap-5 text-xs text-gray-500">
                             <span title="Visualizações" class="flex items-center gap-1"><i class="fas fa-eye text-gray-300"></i> ${escapeHtml(String(l.views))}</span>
@@ -729,20 +731,22 @@
                                 ${l.exercises > 0 ? escapeHtml(String(l.exercises)) : '<span class="text-red-400">0</span>'}
                             </span>
                         </div>
-                        ${statusBadge(l.status)}
-                        <div class="flex items-center gap-1">
-                            <a href="/lesson.html?id=${l.id}" target="_blank" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition" title="Visualizar">
-                                <i class="fas fa-eye text-xs"></i>
-                            </a>
-                            <a href="/creator-lesson-editor.html?id=${l.id}" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition" title="Editar">
-                                <i class="fas fa-pen text-xs"></i>
-                            </a>
-                            <button onclick="toggleLessonStatus('${l.id}')" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition" title="${l.status === 'published' ? 'Mover p/ rascunho' : 'Publicar'}">
-                                <i class="fas ${l.status === 'published' ? 'fa-eye-slash' : 'fa-check-circle'} text-xs"></i>
-                            </button>
-                            <button onclick="openDeleteModal('${l.id}')" class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition" title="Excluir">
-                                <i class="fas fa-trash text-xs"></i>
-                            </button>
+                        <div class="flex items-center gap-2 flex-shrink-0 ml-auto sm:ml-0">
+                            ${statusBadge(l.status)}
+                            <div class="flex items-center gap-1">
+                                <a href="/lesson.html?id=${l.id}" target="_blank" class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition" title="Visualizar">
+                                    <i class="fas fa-eye text-xs"></i>
+                                </a>
+                                <a href="/creator-lesson-editor.html?id=${l.id}" class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition" title="Editar">
+                                    <i class="fas fa-pen text-xs"></i>
+                                </a>
+                                <button onclick="toggleLessonStatus('${l.id}')" class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition" title="${l.status === 'published' ? 'Mover p/ rascunho' : 'Publicar'}">
+                                    <i class="fas ${l.status === 'published' ? 'fa-eye-slash' : 'fa-check-circle'} text-xs"></i>
+                                </button>
+                                <button onclick="openDeleteModal('${l.id}')" class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition" title="Excluir">
+                                    <i class="fas fa-trash text-xs"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>`;
                 }).join('');
