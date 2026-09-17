@@ -9,7 +9,10 @@ const config: CapacitorConfig = {
   appName: 'VClass',
   webDir: 'www',
   server: {
-    url: 'https://vclass.co.mz',
+    // Entra directo no login (sem landing page) — quem já tem sessão
+    // válida é logo redireccionado para o dashboard certo pelo próprio
+    // login.html (VClass.isAuthenticated()).
+    url: 'https://vclass.co.mz/login.html',
     androidScheme: 'https',
     cleartext: false
   },
