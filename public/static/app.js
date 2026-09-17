@@ -704,6 +704,130 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// ─── Mobile App Shell (só dentro do APK Capacitor) ─────────────────────────────
+// A web continua sempre igual. Dentro da app nativa, substitui a navbar de site
+// (menus, CTA de marketing) por um cabeçalho fino + barra de navegação inferior,
+// ao estilo das apps móveis modernas (Instagram/WhatsApp). Não requer nenhuma
+// alteração por página: corre para qualquer página autenticada (não-staff) que
+// já carregue este script, porque esconde a navbar via CSS (`body > nav`) em vez
+// de mexer no HTML de cada página.
+const _STAFF_ROLES = ['admin', 'support', 'editor', 'country_manager', 'finance', 'moderator'];
+
+const _STUDENT_TABS = [
+  { href: '/dashboard.html',     label: 'Início',   icon: 'fa-house' },
+  { href: '/browse.html',        label: 'Explorar', icon: 'fa-compass' },
+  { href: '/chat.html',          label: 'Chat',      icon: 'fa-comment-dots' },
+  { href: '/notifications.html', label: 'Avisos',    icon: 'fa-bell' },
+  { href: '/profile.html',       label: 'Perfil',    icon: 'fa-user' }
+];
+const _TEACHER_TABS = [
+  { href: '/creator-dashboard.html', label: 'Visão Geral', icon: 'fa-chart-pie' },
+  { href: '/creator-content.html',   label: 'Conteúdos',   icon: 'fa-layer-group' },
+  { href: '/creator-students.html',  label: 'Alunos',      icon: 'fa-users' },
+  { href: '/creator-analytics.html', label: 'Analytics',   icon: 'fa-chart-bar' },
+  { href: '/creator-earnings.html',  label: 'Ganhos',      icon: 'fa-coins' }
+];
+// Páginas secundárias sem separador próprio — ficam com o separador mais próximo activo.
+const _TAB_FALLBACK = {
+  '/search.html': '/browse.html', '/library.html': '/browse.html',
+  '/chapters.html': '/browse.html', '/bookmarks.html': '/browse.html',
+  '/achievements.html': '/profile.html', '/help.html': '/profile.html'
+};
+
+function _isNativeApp() {
+  return !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
+}
+
+function openMobileSheet() { document.getElementById('vc-mobile-sheet')?.classList.add('open'); }
+function closeMobileSheet() { document.getElementById('vc-mobile-sheet')?.classList.remove('open'); }
+
+function initMobileAppShell() {
+  if (!_isNativeApp() || document.getElementById('vc-app-shell-style')) return;
+  const user = getCurrentUser();
+  if (!isAuthenticated() || !user || _STAFF_ROLES.includes(user.role)) return;
+
+  const tabs = user.role === 'teacher' ? _TEACHER_TABS : _STUDENT_TABS;
+  const path = window.location.pathname;
+  const activeHref = tabs.some(t => t.href === path) ? path : _TAB_FALLBACK[path];
+  // Páginas como o editor de lições já têm o seu próprio cabeçalho fino
+  // (botão voltar + título) — não duplicar com o app-bar genérico, só
+  // acrescentar a barra inferior e o espaço para a área segura de baixo.
+  const hasOwnHeader = !!document.querySelector('body > header');
+
+  const style = document.createElement('style');
+  style.id = 'vc-app-shell-style';
+  style.textContent = `
+    html.vc-native body > nav:not(.vc-tab-bar) { display: none !important; }
+    html.vc-native body { padding-bottom: calc(64px + env(safe-area-inset-bottom)) !important; }
+    html.vc-native.vc-has-appbar body { padding-top: calc(52px + env(safe-area-inset-top)) !important; }
+    html.vc-native.vc-native-no-appbar body > header { padding-top: env(safe-area-inset-top) !important; }
+    .vc-app-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 60; height: calc(52px + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); background: #fff; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 12px; padding-left: 16px; padding-right: 16px; box-sizing: border-box; }
+    .vc-app-bar-avatar { width: 32px; height: 32px; border-radius: 50%; background: #7c3aed; color: #fff; display: flex; align-items: center; justify-content: center; font-size: .72rem; font-weight: 700; flex-shrink: 0; border: none; cursor: pointer; }
+    .vc-app-bar-title { flex: 1; min-width: 0; font-weight: 700; font-size: .95rem; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .vc-app-bar-bell { color: #64748b; font-size: 1.05rem; flex-shrink: 0; }
+    .vc-tab-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 60; display: flex; background: #fff; border-top: 1px solid #f1f5f9; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 12px rgba(0,0,0,.06); }
+    .vc-tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 8px 0 6px; color: #94a3b8; text-decoration: none; font-size: .65rem; font-weight: 600; }
+    .vc-tab i { font-size: 1.15rem; }
+    .vc-tab.active { color: #7c3aed; }
+    .vc-sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 70; display: none; }
+    .vc-sheet-overlay.open { display: block; }
+    .vc-sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 71; background: #fff; border-radius: 18px 18px 0 0; padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); transform: translateY(100%); transition: transform .25s ease; }
+    .vc-sheet-overlay.open .vc-sheet { transform: translateY(0); }
+    .vc-sheet-item { display: flex; align-items: center; gap: 12px; padding: 14px 20px; font-size: .9rem; font-weight: 600; color: #1e293b; text-decoration: none; cursor: pointer; }
+    .vc-sheet-item i { width: 20px; text-align: center; color: #7c3aed; }
+    .vc-sheet-item.danger, .vc-sheet-item.danger i { color: #dc2626; }
+  `;
+  document.head.appendChild(style);
+  document.documentElement.classList.add('vc-native', hasOwnHeader ? 'vc-native-no-appbar' : 'vc-has-appbar');
+
+  if (!hasOwnHeader) {
+    const initials = (user.full_name || 'U').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    const title = (document.title || 'VClass').split(/\s[-—]\s/)[0];
+
+    const appBar = document.createElement('header');
+    appBar.className = 'vc-app-bar';
+    appBar.innerHTML = `
+      <button class="vc-app-bar-avatar" onclick="VClass.openMobileSheet()"></button>
+      <span class="vc-app-bar-title"></span>
+      <a href="/notifications.html" class="vc-app-bar-bell"><i class="fas fa-bell"></i></a>
+    `;
+    appBar.querySelector('.vc-app-bar-avatar').textContent = initials;
+    appBar.querySelector('.vc-app-bar-title').textContent = title;
+    document.body.insertBefore(appBar, document.body.firstChild);
+  }
+
+  const tabBar = document.createElement('nav');
+  tabBar.className = 'vc-tab-bar';
+  tabBar.innerHTML = tabs.map(t => `
+    <a href="${t.href}" class="vc-tab ${t.href === activeHref ? 'active' : ''}">
+      <i class="fas ${t.icon}"></i><span>${t.label}</span>
+    </a>`).join('');
+  document.body.appendChild(tabBar);
+
+  const sheetOverlay = document.createElement('div');
+  sheetOverlay.className = 'vc-sheet-overlay';
+  sheetOverlay.id = 'vc-mobile-sheet';
+  sheetOverlay.addEventListener('click', (e) => { if (e.target === sheetOverlay) closeMobileSheet(); });
+  sheetOverlay.innerHTML = `
+    <div class="vc-sheet">
+      <a href="/profile.html" class="vc-sheet-item"><i class="fas fa-user"></i> Perfil</a>
+      <a href="/help.html" class="vc-sheet-item"><i class="fas fa-question-circle"></i> Ajuda & Suporte</a>
+      <div class="vc-sheet-item danger" onclick="VClass.logout()"><i class="fas fa-sign-out-alt"></i> Sair</div>
+    </div>`;
+  document.body.appendChild(sheetOverlay);
+
+  // Barra de estado nativa — melhor esforço, nunca deve quebrar a app.
+  try {
+    const SB = window.Capacitor?.Plugins?.StatusBar;
+    if (SB) {
+      SB.setOverlaysWebView({ overlay: false }).catch(() => {});
+      SB.setStyle({ style: 'LIGHT' }).catch(() => {});
+    }
+  } catch (e) {}
+}
+
+document.addEventListener('DOMContentLoaded', initMobileAppShell);
+
 // ─── Export ───────────────────────────────────────────────────────────────────
 window.VClass = {
   api, saveAuth, logout, isAuthenticated, getCurrentUser,
@@ -711,7 +835,8 @@ window.VClass = {
   showNotification, showLoading, hideLoading, updateProgressBar,
   debounce, storage, analytics,
   initNavbar, toggleNavDropdown, toggleMobileMenu,
-  openClassSwitcher, closeClassSwitcher, confirmClassSwitch, _switchLoadGrades
+  openClassSwitcher, closeClassSwitcher, confirmClassSwitch, _switchLoadGrades,
+  openMobileSheet, closeMobileSheet
 };
 
 console.log('VClass API client v2.0 loaded');
