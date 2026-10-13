@@ -20,7 +20,8 @@ const api = {
     getChapters: async (gradeSubjectId) => apiRequest(`/content/chapters/${gradeSubjectId}`, 'GET'),
     getLessons: async (chapterId) => apiRequest(`/content/lessons/${chapterId}`, 'GET'),
     getLesson: async (lessonId) => apiRequest(`/content/lesson/${lessonId}`, 'GET'),
-    getRecentLessons: async (limit = 6) => apiRequest(`/content/recent-lessons?limit=${limit}`, 'GET')
+    getRecentLessons: async (limit = 6) => apiRequest(`/content/recent-lessons?limit=${limit}`, 'GET'),
+    getTrendingLessons: async (limit = 6) => apiRequest(`/content/trending-lessons?limit=${limit}`, 'GET')
   },
   video: {
     getToken: async (lessonId) => apiRequest(`/video/${lessonId}/token`, 'GET'),
@@ -36,13 +37,15 @@ const api = {
     getLessonProgress: async (lessonId) => apiRequest(`/progress/lesson/${lessonId}`, 'GET'),
     updateLessonProgress: async (lessonId, data) => apiRequest(`/progress/lesson/${lessonId}`, 'POST', data),
     getRecommendations: async () => apiRequest('/progress/recommendations', 'GET'),
-    getActivity: async () => apiRequest('/progress/activity', 'GET')
+    getActivity: async () => apiRequest('/progress/activity', 'GET'),
+    getWeekly: async () => apiRequest(`/progress/weekly?tz=${new Date().getTimezoneOffset()}`, 'GET')
   },
   favorites: {
     list:   async () => apiRequest('/favorites', 'GET'),
     get:    async (lessonId) => apiRequest(`/favorites/${lessonId}`, 'GET'),
     toggle: async (lessonId) => apiRequest(`/favorites/${lessonId}`, 'POST'),
-    remove: async (lessonId) => apiRequest(`/favorites/${lessonId}`, 'DELETE')
+    remove: async (lessonId) => apiRequest(`/favorites/${lessonId}`, 'DELETE'),
+    count:  async (lessonId) => apiRequest(`/favorites/${lessonId}/count`, 'GET')
   },
   bookmarks: {
     listForLesson: async (lessonId) => apiRequest(`/bookmarks?lesson_id=${lessonId}`, 'GET'),
@@ -758,6 +761,7 @@ function initMobileAppShell() {
   style.id = 'vc-app-shell-style';
   style.textContent = `
     html.vc-native body > nav:not(.vc-tab-bar) { display: none !important; }
+    html.vc-native body { overflow-x: clip; max-width: 100vw; }
     html.vc-native body { padding-bottom: calc(64px + env(safe-area-inset-bottom)) !important; }
     html.vc-native.vc-has-appbar body { padding-top: calc(52px + env(safe-area-inset-top)) !important; }
     html.vc-native.vc-native-no-appbar body > header { padding-top: env(safe-area-inset-top) !important; }

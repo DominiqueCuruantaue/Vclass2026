@@ -269,6 +269,8 @@
         }
         
         /* 3-Column Layout */
+        .lesson-container > * { min-width: 0; }
+        #lesson-title, #lesson-description { overflow-wrap: anywhere; }
         .lesson-container {
             display: grid;
             grid-template-columns: 300px 1fr 320px;
@@ -286,7 +288,10 @@
         
         @media (max-width: 1024px) {
             .lesson-container {
-                grid-template-columns: 1fr;
+                /* minmax(0,1fr): sem isto a coluna estica até caber o texto
+                   mais largo (ex.: URL do YouTube na descrição) e a página
+                   fica mais larga que o ecrã do telemóvel. */
+                grid-template-columns: minmax(0, 1fr);
             }
             .left-sidebar {
                 order: 2;
@@ -740,13 +745,16 @@
                 <!-- ── Video Toolbar (below player) ── -->
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
                     <div class="flex flex-wrap items-center gap-3">
+                        <span class="flex items-center gap-1.5 px-2 text-gray-500 text-sm font-semibold" title="Visualizações">
+                            <i class="fas fa-eye text-gray-400"></i> <span id="toolbar-views-count">--</span>
+                        </span>
                         <button onclick="markComplete()" id="btn-complete"
                             class="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-xl transition">
                             <i class="fas fa-check-circle"></i> Marcar como Concluída
                         </button>
                         <button onclick="toggleFavorite()" id="btn-favorite"
                             class="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-500 text-sm font-semibold rounded-xl transition">
-                            <i class="far fa-heart" id="heart-icon"></i> Favoritar
+                            <i class="far fa-heart" id="heart-icon"></i> Gostei <span id="like-count" class="text-xs font-normal opacity-75"></span>
                         </button>
                         <button onclick="addBookmark()"
                             class="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-blue-50 text-gray-600 hover:text-blue-600 text-sm font-semibold rounded-xl transition">
@@ -1288,6 +1296,8 @@
             document.getElementById('lesson-description').textContent = lessonData.description || 'Sem descrição disponível';
             document.getElementById('lesson-duration').textContent = VClass.formatDuration(lessonData.duration);
             document.getElementById('lesson-views').textContent = lessonData.views || '0';
+            const toolbarViews = document.getElementById('toolbar-views-count');
+            if (toolbarViews) toolbarViews.textContent = lessonData.views || '0';
             document.getElementById('lesson-date').textContent = VClass.formatDate(lessonData.created_at);
 
             // Acesso controlado por autenticação — sem distinção pública de plano
@@ -1409,6 +1419,7 @@
         function vcOnPause() {
             vcStopHeartbeatLoop();
             vcSendHeartbeat('pause');
+            vcSaveProgressNow(false);
         }
 
         function vcOnSeeked() {
@@ -1671,28 +1682,40 @@
             if (timeEl) timeEl.textContent = Math.floor(cur / 60);
         }
 
-        // Guardar progresso no backend a cada 30 s
+        // Guarda o progresso actual no backend de imediato — usada tanto pelo
+        // intervalo de 30s (sessões longas) como por pause/troca de separador/
+        // saída da página, para que mesmo alguns segundos de visualização
+        // fiquem registados e apareçam em "Continuar a estudar".
+        let vcLastSavedPosition = -1;
+        async function vcSaveProgressNow(onUnload) {
+            const v = document.getElementById('vclass-video');
+            if (!v) return;
+            const curPos = Math.round(v.currentTime || 0);
+            if (curPos <= 0 || curPos === vcLastSavedPosition) return;
+            vcLastSavedPosition = curPos;
+            const dur = vcDuration || v.duration || 0;
+            const pct = dur > 0 ? Math.round((curPos / dur) * 100) : 0;
+            try {
+                // keepalive garante que o pedido chega a terminar mesmo que a
+                // página esteja a fechar/trocar de separador (beforeunload/
+                // visibilitychange) — ao contrário de sendBeacon, mantém o
+                // cabeçalho Authorization.
+                await fetch(`/api/video/${lessonId}/progress`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${VClass.getToken()}` },
+                    body: JSON.stringify({ position: curPos, duration: Math.round(dur), percent: pct, tz: new Date().getTimezoneOffset() }),
+                    keepalive: !!onUnload
+                });
+            } catch (e) { /* silent fail */ }
+        }
+
+        // Guardar progresso no backend a cada 30 s enquanto reproduz
         function vcScheduleSave() {
             clearInterval(vcProgressSaveTimer);
-            vcProgressSaveTimer = setInterval(async () => {
+            vcProgressSaveTimer = setInterval(() => {
                 const v = document.getElementById('vclass-video');
                 if (!v || v.paused) return;
-                const dur = vcDuration || v.duration || 0;
-                const pct = dur > 0 ? Math.round((v.currentTime / dur) * 100) : 0;
-                try {
-                    await fetch(`/api/video/${lessonId}/progress`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${VClass.getToken()}`
-                        },
-                        body: JSON.stringify({
-                            position: Math.round(v.currentTime),
-                            duration: Math.round(dur),
-                            percent:  pct
-                        })
-                    });
-                } catch(e) { /* silent fail */ }
+                vcSaveProgressNow(false);
             }, 30000);
         }
 
@@ -1963,7 +1986,7 @@
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${VClass.getToken()}`
                     },
-                    body: JSON.stringify({ position: Math.round(vcDuration), duration: Math.round(vcDuration), percent: 100 })
+                    body: JSON.stringify({ position: Math.round(vcDuration), duration: Math.round(vcDuration), percent: 100, tz: new Date().getTimezoneOffset() })
                 });
             } catch(e) {}
         }
@@ -2512,7 +2535,8 @@
             }
             isFavorite = !isFavorite;
             applyFavoriteState();
-            VClass.showNotification(isFavorite ? 'Adicionado aos favoritos! ❤️' : 'Removido dos favoritos', isFavorite ? 'success' : 'info');
+            loadLikeCount();
+            VClass.showNotification(isFavorite ? 'Gostei desta lição! ❤️' : 'Deixou de gostar', isFavorite ? 'success' : 'info');
         }
         async function loadFavoriteState() {
             const res = await VClass.api.favorites.get(lessonId);
@@ -2520,6 +2544,15 @@
                 isFavorite = !!res.data?.favorited;
                 applyFavoriteState();
             }
+            loadLikeCount();
+        }
+        async function loadLikeCount() {
+            const el = document.getElementById('like-count');
+            if (!el) return;
+            try {
+                const res = await VClass.api.favorites.count(lessonId);
+                if (res.success) el.textContent = `(${res.data?.count || 0})`;
+            } catch { /* silent */ }
         }
 
         // ─────────────────────────────────────────
@@ -2975,6 +3008,10 @@
                     v.play().catch(() => {});
                 }
             });
+
+            // Fechar o separador/navegar para fora também conta como visto —
+            // mesmo que tenham sido só alguns segundos.
+            window.addEventListener('pagehide', () => { vcSaveProgressNow(true); });
 
         })();
 

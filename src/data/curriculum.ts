@@ -873,10 +873,7 @@ export const CHAPTERS: Chapter[] = [
   // ══════════════════════════════════════════════════════════
 
   // ─── Matemática 10ª Classe ────────────────────────────────
-  { id:'mz10mat-1-1', subjectId:'mz10-mat', title:'Funções Reais de Variável Real',         description:'Domínio, contradomínio, crescimento e monotonicidade',         term:1, displayOrder:1 },
-  { id:'mz10mat-1-2', subjectId:'mz10-mat', title:'Equações e Inequações do 2º Grau',        description:'Fórmula resolvente, discriminante e intervalos',                term:1, displayOrder:2 },
   { id:'mz10mat-1-3', subjectId:'mz10-mat', title:'Sistemas de Equações',                   description:'Métodos de substituição, eliminação e Cramer',                  term:1, displayOrder:3 },
-  { id:'mz10mat-2-1', subjectId:'mz10-mat', title:'Trigonometria',                          description:'Seno, cosseno, tangente e fórmulas trigonométricas',             term:2, displayOrder:4 },
   { id:'mz10mat-2-2', subjectId:'mz10-mat', title:'Progressões Aritméticas e Geométricas',  description:'Termos, somas e aplicações financeiras',                         term:2, displayOrder:5 },
   { id:'mz10mat-2-3', subjectId:'mz10-mat', title:'Logaritmos e Exponenciais',              description:'Propriedades dos logaritmos e equações exponenciais',            term:2, displayOrder:6 },
   { id:'mz10mat-3-1', subjectId:'mz10-mat', title:'Matrizes e Determinantes',               description:'Operações matriciais e regra de Sarrus',                         term:3, displayOrder:7 },
@@ -885,7 +882,6 @@ export const CHAPTERS: Chapter[] = [
 
   // ─── Português 10ª Classe ─────────────────────────────────
   { id:'mz10por-1-1', subjectId:'mz10-port', title:'Classes de Palavras',                  description:'Substantivos, adjectivos, verbos e classes invariáveis',         term:1, displayOrder:1 },
-  { id:'mz10por-1-2', subjectId:'mz10-port', title:'Análise Sintáctica',                  description:'Sujeito, predicado, complementos e aposto',                       term:1, displayOrder:2 },
   { id:'mz10por-1-3', subjectId:'mz10-port', title:'Literatura Portuguesa — Clássicos',   description:'Camões, Fernão Lopes e o Renascimento',                           term:1, displayOrder:3 },
   { id:'mz10por-2-1', subjectId:'mz10-port', title:'Orações Coordenadas e Subordinadas',  description:'Tipos de orações e funções sintácticas',                          term:2, displayOrder:4 },
   { id:'mz10por-2-2', subjectId:'mz10-port', title:'Literatura Moçambicana',              description:'José Craveirinha, Noémia de Sousa e autores contemporâneos',      term:2, displayOrder:5 },
@@ -895,37 +891,20 @@ export const CHAPTERS: Chapter[] = [
   { id:'mz10por-3-3', subjectId:'mz10-port', title:'Figuras de Estilo e Versificação',    description:'Metáfora, metonímia, aliteração e análise poética',               term:3, displayOrder:9 },
 
   // ─── Física 10ª Classe ────────────────────────────────────
-  { id:'mz10fis-1-1', subjectId:'mz10-fis', title:'Cinemática',                           description:'MU, MUV, gráficos e queda livre',                                term:1, displayOrder:1 },
-  { id:'mz10fis-1-2', subjectId:'mz10-fis', title:'Dinâmica — Leis de Newton',            description:'Inércia, F=ma e acção-reacção',                                   term:1, displayOrder:2 },
-  { id:'mz10fis-1-3', subjectId:'mz10-fis', title:'Trabalho e Energia',                   description:'Energia cinética, potencial e conservação',                       term:1, displayOrder:3 },
-  { id:'mz10fis-2-1', subjectId:'mz10-fis', title:'Termodinâmica',                        description:'Temperatura, calor, dilatação e calorimetria',                    term:2, displayOrder:4 },
-  { id:'mz10fis-2-2', subjectId:'mz10-fis', title:'Óptica Geométrica',                    description:'Reflexão, refracção, espelhos e lentes',                          term:2, displayOrder:5 },
-  { id:'mz10fis-2-3', subjectId:'mz10-fis', title:'Ondulatória',                          description:'Ondas mecânicas, som e EM',                                       term:2, displayOrder:6 },
-  { id:'mz10fis-3-1', subjectId:'mz10-fis', title:'Electrostática',                       description:'Carga, lei de Coulomb e campo eléctrico',                         term:3, displayOrder:7 },
-  { id:'mz10fis-3-2', subjectId:'mz10-fis', title:'Electrodynamica e Circuitos',          description:'Corrente, tensão, resistência e lei de Ohm',                      term:3, displayOrder:8 },
-  { id:'mz10fis-3-3', subjectId:'mz10-fis', title:'Magnetismo',                           description:'Campo magnético, electroíman e indução',                          term:3, displayOrder:9 },
+  // Os 8 capítulos oficiais (Cinemática, Trabalho e Energia, Termodinâmica,
+  // Óptica Geométrica, Ondulatória, Electrostática, Electrodinâmica e
+  // Circuitos, Magnetismo) existem agora como capítulos reais na BD, cada um
+  // com vídeo publicado — ver [[project_curriculum_static_vs_db]]. Mantê-los
+  // aqui também duplicava a lista para o aluno (um capítulo vazio ao lado do
+  // capítulo real com lições).
 
   // ─── Química 10ª Classe ───────────────────────────────────
-  { id:'mz10qui-1-1', subjectId:'mz10-qui', title:'Estrutura Atómica',                    description:'Protões, neutrões, electrões e modelos atómicos',                 term:1, displayOrder:1 },
-  { id:'mz10qui-1-2', subjectId:'mz10-qui', title:'Tabela Periódica',                     description:'Períodos, grupos e propriedades periódicas',                      term:1, displayOrder:2 },
-  { id:'mz10qui-1-3', subjectId:'mz10-qui', title:'Ligações Químicas',                    description:'Iónica, covalente, metálica e intermolecular',                    term:1, displayOrder:3 },
-  { id:'mz10qui-2-1', subjectId:'mz10-qui', title:'Funções Inorgânicas',                  description:'Ácidos, bases, sais e óxidos',                                    term:2, displayOrder:4 },
-  { id:'mz10qui-2-2', subjectId:'mz10-qui', title:'Reacções Químicas',                    description:'Balanceamento e tipos de reacções',                               term:2, displayOrder:5 },
-  { id:'mz10qui-2-3', subjectId:'mz10-qui', title:'Estequiometria',                       description:'Mole, cálculos estequiométricos e rendimento',                    term:2, displayOrder:6 },
-  { id:'mz10qui-3-1', subjectId:'mz10-qui', title:'Soluções e Concentrações',             description:'Solvente, soluto, molaridade e diluição',                         term:3, displayOrder:7 },
-  { id:'mz10qui-3-2', subjectId:'mz10-qui', title:'Química Orgânica — Introdução',        description:'Hidrocarbonetos, nomenclatura e isomeria',                        term:3, displayOrder:8 },
-  { id:'mz10qui-3-3', subjectId:'mz10-qui', title:'Funções Orgânicas',                    description:'Álcoois, aldeídos, cetonas e ácidos carboxílicos',                term:3, displayOrder:9 },
+  // Os 9 capítulos oficiais existem agora como capítulos reais na BD, cada
+  // um com vídeo publicado — mesma razão da remoção acima.
 
   // ─── Biologia 10ª Classe ──────────────────────────────────
-  { id:'mz10bio-1-1', subjectId:'mz10-bio', title:'A Célula',                             description:'Estrutura, organelos e diferença procariota/eucariota',            term:1, displayOrder:1 },
-  { id:'mz10bio-1-2', subjectId:'mz10-bio', title:'Metabolismo Celular',                  description:'Respiração celular e fotossíntese',                               term:1, displayOrder:2 },
-  { id:'mz10bio-1-3', subjectId:'mz10-bio', title:'Divisão Celular',                      description:'Mitose, meiose e ciclo celular',                                  term:1, displayOrder:3 },
-  { id:'mz10bio-2-1', subjectId:'mz10-bio', title:'Genética Mendeliana',                  description:'1ª e 2ª Lei de Mendel e cruzamentos',                             term:2, displayOrder:4 },
-  { id:'mz10bio-2-2', subjectId:'mz10-bio', title:'DNA, RNA e Síntese Proteica',          description:'Estrutura do DNA, transcrição e tradução',                        term:2, displayOrder:5 },
-  { id:'mz10bio-2-3', subjectId:'mz10-bio', title:'Evolução',                             description:'Darwin, Lamarck e selecção natural',                              term:2, displayOrder:6 },
-  { id:'mz10bio-3-1', subjectId:'mz10-bio', title:'Ecologia',                             description:'Cadeias alimentares, fluxo de energia e ciclos biogeoquímicos',   term:3, displayOrder:7 },
-  { id:'mz10bio-3-2', subjectId:'mz10-bio', title:'Taxonomia e Classificação',            description:'Reinos, filo, classe, ordem e espécie',                           term:3, displayOrder:8 },
-  { id:'mz10bio-3-3', subjectId:'mz10-bio', title:'Fisiologia Humana',                    description:'Sistemas circulatório, digestivo, nervoso e reprodutor',          term:3, displayOrder:9 },
+  // Os 9 capítulos oficiais existem agora como capítulos reais na BD, cada
+  // um com vídeo publicado — mesma razão da remoção acima.
 
   // ─── Geografia 10ª Classe ─────────────────────────────────
   { id:'mz10geo-1-1', subjectId:'mz10-geo', title:'Cartografia e Orientação',             description:'Mapas, escalas, coordenadas geográficas e bússola',              term:1, displayOrder:1 },
@@ -1003,8 +982,6 @@ export const CHAPTERS: Chapter[] = [
   // ══════════════════════════════════════════════════════════
   //  MOÇAMBIQUE 11ª Classe
   // ══════════════════════════════════════════════════════════
-  { id:'mz11mat-1-1', subjectId:'mz11-mat', title:'Limites e Continuidade',               description:'Noção de limite, limites laterais e continuidade de funções',     term:1, displayOrder:1 },
-  { id:'mz11mat-1-2', subjectId:'mz11-mat', title:'Derivadas',                            description:'Definição, regras de derivação e aplicações',                     term:1, displayOrder:2 },
   { id:'mz11mat-2-1', subjectId:'mz11-mat', title:'Integrais',                            description:'Primitivas, integral definido e aplicações',                      term:2, displayOrder:3 },
   { id:'mz11mat-2-2', subjectId:'mz11-mat', title:'Álgebra Linear — Vectores',            description:'Vectores no plano e no espaço, produto escalar e vectorial',      term:2, displayOrder:4 },
   { id:'mz11mat-3-1', subjectId:'mz11-mat', title:'Geometria no Espaço',                  description:'Poliedros, esferas e cálculo de volume',                          term:3, displayOrder:5 },
@@ -1149,23 +1126,11 @@ export const CHAPTERS: Chapter[] = [
   // ══════════════════════════════════════════════════════════
   //  MOÇAMBIQUE 12ª Classe
   // ══════════════════════════════════════════════════════════
-  { id:'mz12mat-1-1', subjectId:'mz12-mat', title:'Cálculo Integral Avançado',            description:'Integrais duplos, por partes e por fracções parciais',            term:1, displayOrder:1 },
-  { id:'mz12mat-2-1', subjectId:'mz12-mat', title:'Números Complexos',                    description:'Forma algébrica, trigonométrica e exponencial',                   term:2, displayOrder:2 },
-  { id:'mz12mat-3-1', subjectId:'mz12-mat', title:'Revisão para Exame Nacional',          description:'Todos os temas do ESG2 com exercícios de exames anteriores',      term:3, displayOrder:3 },
-
-  { id:'mz12fis-1-1', subjectId:'mz12-fis', title:'Física Atómica e Espectros',           description:'Espectros de emissão e absorção, lasers',                         term:1, displayOrder:1 },
-  { id:'mz12fis-2-1', subjectId:'mz12-fis', title:'Energia Nuclear e Reactores',          description:'Aplicações da energia nuclear e segurança',                       term:2, displayOrder:2 },
-  { id:'mz12fis-3-1', subjectId:'mz12-fis', title:'Revisão para Exame Nacional',          description:'Exercícios de exames anteriores e simulações',                    term:3, displayOrder:3 },
-
-  // ─── Língua Portuguesa 12ª Classe ────────────────────────────
-  // "Português, Programa da 12ª Classe" — INDE/MINED - Moçambique (2010),
-  // secção 7 "Visão Geral dos Conteúdos da 12ª Classe" (índice oficial por trimestre)
-  { id:'mz12port-1', subjectId:'mz12-port', title:'Textos Normativos e Jornalísticos (1º Trimestre)', description:'Lei nº 18/2002 de 10 de Outubro — Recenseamento Eleitoral (Artigos 1 a 18); formação de palavras — derivações irregulares; Artigo de fundo/editorial — justificativa do tema, apresentação da tese, desenvolvimento e síntese, tipo de linguagem opinativo; variação da língua portuguesa no espaço — Brasil e Moçambique; temas transversais — Declaração dos Direitos Humanos e Democracia, Saúde e Nutrição', term:1, displayOrder:1 },
-  { id:'mz12port-2', subjectId:'mz12-port', title:'Textos Multiusos, Literários e de Pesquisa de Dados (1º Trimestre)', description:'Texto Expositivo-Argumentativo — apresentação, organização e tipo de linguagem; conjunções/locuções subordinativas e orações subordinadas comparativas; Texto Narrativo — estrutura, categorias da narrativa e tipo de linguagem; concordância do nome predicativo do sujeito; Ficha de leitura — síntese e sumário; orações relativas com os pronomes cujo e onde; temas transversais — desastres naturais (maremotos), combate à estigmatização de pessoas vivendo com HIV/SIDA, biblioteca', term:1, displayOrder:2 },
-  { id:'mz12port-3', subjectId:'mz12-port', title:'Textos Normativos e Jornalísticos (2º Trimestre)', description:'Lei nº 19/2002 de 10 de Outubro — Lei Eleitoral, eleições dos órgãos das autarquias locais; formação de palavras — derivações irregulares; divisão ou separação de poderes num Estado de Direito; Artigo de opinião — mancha gráfica, estrutura do texto e tipo de linguagem; regência verbal — complementos de verbos de separação; tema transversal — saneamento do meio', term:2, displayOrder:3 },
-  { id:'mz12port-4', subjectId:'mz12-port', title:'Textos Multiusos, Literários e de Pesquisa de Dados (2º Trimestre)', description:'Texto expositivo-explicativo (textos didácticos e/ou científicos) — apresentação, organização e tipo de linguagem; conjunções/locuções subordinativas e orações subordinadas consecutivas; Texto Lírico — caracterização estrutural e temática, tipo de linguagem; figuras de pensamento; Inquérito — organização do texto e tipo de linguagem; orações relativas com os pronomes cujo e onde; temas transversais — desastres naturais (maremotos), combate à estigmatização de pessoas vivendo com HIV/SIDA, biblioteca', term:2, displayOrder:4 },
-  { id:'mz12port-5', subjectId:'mz12-port', title:'Textos Normativos e Jornalísticos (3º Trimestre)', description:'Lei nº 19/2002 de 10 de Outubro — Capítulo V (Votação), Artigos 57 a 79; formação de palavras — derivações irregulares; função da polícia num Estado de Direito e Democrático; Artigo de opinião e Artigo de fundo/editorial; regência de orações integrantes; temas transversais — saúde e nutrição, plantio de árvores e saúde pública', term:3, displayOrder:5 },
-  { id:'mz12port-6', subjectId:'mz12-port', title:'Textos Multiusos, Literários e de Pesquisa de Dados (3º Trimestre)', description:'Texto expositivo-explicativo e Texto Expositivo-Argumentativo; conjunções/locuções subordinativas e orações subordinadas comparativas e consecutivas; Texto Dramático e o Teatro Contemporâneo em Moçambique — o ritual na génese do modo dramático (Nyao, Mapico), caracterização do modo dramático; figuras de sintaxe; Ficha de leitura; orações relativas e orações integrantes; temas transversais — desastres naturais (maremotos), combate à estigmatização de pessoas vivendo com HIV/SIDA, biblioteca', term:3, displayOrder:6 },
+  // Matemática 12ª (Cálculo Integral Avançado, Números Complexos, Revisão
+  // para o Exame Nacional), Física 12ª (Física Atómica e Espectros, Energia
+  // Nuclear e Reactores, Revisão para o Exame Nacional) e os 6 capítulos de
+  // Língua Portuguesa 12ª (INDE/MINED, 2010) existem agora como capítulos
+  // reais na BD, cada um com vídeo publicado — ver [[project_curriculum_static_vs_db]].
 
   // ─── Química 12ª Classe ───────────────────────────────────────
   // "Química, Programa da 12ª Classe" — INDE/MINED - Moçambique (2010),

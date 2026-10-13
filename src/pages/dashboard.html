@@ -230,6 +230,26 @@
                 </div>
             </section>
 
+            <!-- Lições em Alta (mais vistas na classe do aluno) -->
+            <section class="dash-card p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                            <i class="fas fa-fire text-orange-500 text-sm"></i>
+                        </span>
+                        Lições em Alta
+                    </h2>
+                    <a href="/browse.html" class="text-xs font-semibold text-purple-600 hover:text-purple-700 flex items-center gap-1">
+                        Ver tudo <i class="fas fa-arrow-right text-[10px]"></i>
+                    </a>
+                </div>
+                <div id="trending-lessons" class="space-y-2">
+                    <div class="skeleton h-16 w-full"></div>
+                    <div class="skeleton h-16 w-full"></div>
+                    <div class="skeleton h-16 w-full"></div>
+                </div>
+            </section>
+
             <!-- Biblioteca (materiais recentes) -->
             <section class="dash-card p-6">
                 <div class="flex items-center justify-between mb-4">
@@ -482,13 +502,28 @@ function animateCounter(el, target, suffix = '') {
 
 // ── Chart ───────────────────────────────────────────────────────────────────
 let _chart = null;
+// Começa a zero e é preenchido com dados reais de /api/progress/weekly
+// (semana actual Seg→Dom) — uma conta nova vê tudo a zero até começar a estudar.
+let _chartType = 'lessons';
 const _chartData = {
-    lessons:   { data: [2, 3, 1, 4, 3, 5, 2],     label: 'Aulas Assistidas',  color: '#7c3aed', bg: 'rgba(124,58,237,0.12)' },
-    time:      { data: [30, 45, 20, 60, 40, 75, 35],label: 'Minutos Estudados', color: '#2563eb', bg: 'rgba(37,99,235,0.12)' },
-    exercises: { data: [5, 8, 3, 12, 7, 15, 4],    label: 'Exercícios',        color: '#16a34a', bg: 'rgba(22,163,74,0.12)' }
+    lessons:   { data: [0, 0, 0, 0, 0, 0, 0], label: 'Aulas Concluídas',  color: '#7c3aed', bg: 'rgba(124,58,237,0.12)' },
+    time:      { data: [0, 0, 0, 0, 0, 0, 0], label: 'Minutos Estudados', color: '#2563eb', bg: 'rgba(37,99,235,0.12)' },
+    exercises: { data: [0, 0, 0, 0, 0, 0, 0], label: 'Exercícios',        color: '#16a34a', bg: 'rgba(22,163,74,0.12)' }
 };
 
+async function loadWeeklyChart() {
+    try {
+        const result = await VClass.api.progress.getWeekly();
+        if (!result.success || !result.data) return;
+        _chartData.lessons.data   = result.data.lessons   || _chartData.lessons.data;
+        _chartData.time.data      = result.data.minutes   || _chartData.time.data;
+        _chartData.exercises.data = result.data.exercises || _chartData.exercises.data;
+        if (_chart) switchChart(_chartType);
+    } catch { /* mantém zeros */ }
+}
+
 function switchChart(type) {
+    _chartType = type;
     document.querySelectorAll('.chart-tab').forEach(b => {
         b.classList.remove('bg-white', 'text-gray-900', 'shadow-sm', 'font-semibold');
         b.classList.add('text-gray-500', 'font-medium');
@@ -677,6 +712,53 @@ async function loadSuggestedLessons() {
                     </div>
                 </div>
                 <i class="fas fa-play-circle text-purple-300 group-hover:text-purple-500 transition text-lg flex-shrink-0"></i>
+            </a>`;
+        }).join('');
+    } catch {
+        cont.innerHTML = `<p class="text-center text-gray-400 text-sm py-6"><i class="fas fa-wifi-slash text-2xl mb-2 block"></i>Não foi possível carregar as lições.</p>`;
+    }
+}
+
+// ── Lições em Alta (mais vistas na classe do aluno) ─────────────────────────
+async function loadTrendingLessons() {
+    const cont = document.getElementById('trending-lessons');
+    try {
+        const d = await VClass.api.content.getTrendingLessons(4);
+        if (!d.success) throw new Error('no data');
+
+        const lessons = d.data || [];
+        if (lessons.length === 0) {
+            cont.innerHTML = `<p class="text-center text-gray-400 text-sm py-6"><i class="fas fa-fire text-3xl mb-2 block"></i>Ainda não há lições em alta.<br>Consulte a <a href="/browse.html" class="text-purple-600 hover:underline font-medium">biblioteca de conteúdos</a>.</p>`;
+            return;
+        }
+
+        cont.innerHTML = lessons.map(lesson => {
+            const ch      = lesson.chapters || {};
+            const gs      = ch.grade_subjects || {};
+            const subj    = gs.subjects || {};
+            const grade   = gs.grades || {};
+            const color   = subj.color || '#f97316';
+            const bg      = color + '22';
+            const icon    = subj.icon_name ? `fa-${subj.icon_name}` : 'fa-book';
+            const subjName = subj.name || 'Disciplina';
+            const gradeName = grade.name || '';
+            const views   = lesson.views_count || 0;
+            const viewsLabel = views >= 1000 ? (views / 1000).toFixed(1).replace('.0', '') + 'k' : views;
+            return `
+            <a href="/lesson.html?id=${lesson.id}" class="lesson-row flex items-center gap-4 px-3 py-3 rounded-xl transition group cursor-pointer">
+                <div class="lesson-thumb" style="background:${bg}">
+                    <i class="fas ${icon} text-sm" style="color:${color}"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-bold text-gray-900 truncate group-hover:text-purple-700 transition">${lesson.title}</p>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <span class="subj-pill" style="background:${bg};color:${color}">${subjName}</span>
+                        ${gradeName ? `<span class="text-[11px] text-gray-400">${gradeName}</span>` : ''}
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5 text-gray-400 text-xs font-semibold flex-shrink-0">
+                    <i class="fas fa-eye"></i> ${viewsLabel}
+                </div>
             </a>`;
         }).join('');
     } catch {
@@ -1030,8 +1112,8 @@ async function libDownload(id) {
 setupUserInfo();
 setGreeting();
 if (!IS_KIDS_DASHBOARD) createChart();
-const _initTasks = [loadDashboard(), loadSuggestedLessons(), loadPlanBanner(), loadLibraryWidget()];
-if (!IS_KIDS_DASHBOARD) _initTasks.push(loadSessions());
+const _initTasks = [loadDashboard(), loadSuggestedLessons(), loadTrendingLessons(), loadPlanBanner(), loadLibraryWidget()];
+if (!IS_KIDS_DASHBOARD) _initTasks.push(loadSessions(), loadWeeklyChart());
 Promise.all(_initTasks);
 updateNotifBadge();
 </script>

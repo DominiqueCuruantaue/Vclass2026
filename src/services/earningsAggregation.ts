@@ -127,44 +127,24 @@ export async function estimateTeacherEarnings(
 }
 
 /**
- * Grava a estimativa como dois lançamentos ESTIMATED no ledger (VCPM +
- * QUALITY_BONUS). Idempotente por (teacher_id, earning_type, period_start,
- * period_end): apaga estimativas anteriores do mesmo período antes de
- * inserir — só linhas ESTIMATED podem ser substituídas desta forma (nunca
- * APPROVED/PAID, que são imutáveis por definição do ledger).
+ * Grava a estimativa como lançamentos ESTIMATED no ledger (VCPM + QUALITY_BONUS
+ * + BONIFIED_VIEW quando aplicável). Idempotente por (teacher_id, período):
+ * delega o DELETE+INSERT a fn_write_estimated_earnings (migration 037), que
+ * corre dentro de uma única transacção protegida por advisory lock — impede
+ * que duas invocações concorrentes (retry do cron vs. accionamento manual)
+ * intercalem DELETE/INSERT e dupliquem lançamentos ESTIMATED.
  */
 export async function writeEstimatedLedgerEntries(supabase: SupaClient, estimate: TeacherEarningsEstimate): Promise<void> {
-  const { error: deleteErr } = await supabase
-    .from('teacher_earnings_ledger')
-    .delete()
-    .eq('teacher_id', estimate.teacherId)
-    .eq('period_start', estimate.periodStart)
-    .eq('period_end', estimate.periodEnd)
-    .eq('status', 'ESTIMATED')
-    .in('earning_type', ['VCPM', 'QUALITY_BONUS', 'BONIFIED_VIEW'])
-
-  if (deleteErr) throw new Error(`Falha ao limpar estimativas anteriores: ${deleteErr.message}`)
-
   const rows: Record<string, any>[] = [
     {
-      teacher_id: estimate.teacherId,
       earning_type: 'VCPM',
-      period_start: estimate.periodStart,
-      period_end: estimate.periodEnd,
       gross_amount: estimate.rceAmountMzn,
-      currency: 'MZN',
-      status: 'ESTIMATED',
       policy_version: estimate.policyVersion,
       calculation_metadata: { vqRCount: estimate.vqRCount, breakdown: estimate.vcpmBreakdown }
     },
     {
-      teacher_id: estimate.teacherId,
       earning_type: 'QUALITY_BONUS',
-      period_start: estimate.periodStart,
-      period_end: estimate.periodEnd,
       gross_amount: estimate.bqeAmountMzn,
-      currency: 'MZN',
-      status: 'ESTIMATED',
       policy_version: estimate.policyVersion,
       calculation_metadata: {
         completionRatePct: estimate.completionRatePct,
@@ -177,20 +157,20 @@ export async function writeEstimatedLedgerEntries(supabase: SupaClient, estimate
 
   if (estimate.vqBCount > 0 && Number(estimate.bonifiedViewAmountMzn) > 0) {
     rows.push({
-      teacher_id: estimate.teacherId,
       earning_type: 'BONIFIED_VIEW',
-      period_start: estimate.periodStart,
-      period_end: estimate.periodEnd,
       gross_amount: estimate.bonifiedViewAmountMzn,
-      currency: 'MZN',
-      status: 'ESTIMATED',
       policy_version: estimate.policyVersion,
       calculation_metadata: { vqBCount: estimate.vqBCount }
     })
   }
 
-  const { error: insertErr } = await supabase.from('teacher_earnings_ledger').insert(rows)
-  if (insertErr) throw new Error(`Falha ao gravar estimativas no ledger: ${insertErr.message}`)
+  const { error } = await supabase.rpc('fn_write_estimated_earnings', {
+    p_teacher_id: estimate.teacherId,
+    p_period_start: estimate.periodStart,
+    p_period_end: estimate.periodEnd,
+    p_rows: rows
+  })
+  if (error) throw new Error(`Falha ao gravar estimativas no ledger: ${error.message}`)
 }
 
 /**

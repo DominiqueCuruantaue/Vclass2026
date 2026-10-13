@@ -15,6 +15,7 @@ import { Hono } from 'hono'
 import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware } from '../middleware/auth'
 import { getSupabase } from '../config/supabase'
+import { logger } from '../utils/logger'
 import type { ApiResponse } from '../types'
 
 const comments = new Hono<{ Bindings: CloudflareBindings }>()
@@ -39,7 +40,10 @@ comments.get('/lesson/:lessonId', async (c) => {
     .eq('is_approved', true)
     .order('created_at', { ascending: true })
 
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('comments GET: listar comentários', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar comentários' }, 500)
+  }
 
   const rows = data || []
   const byId = new Map(rows.map((r: any) => [r.id, { ...r, replies: [] as any[] }]))
@@ -84,7 +88,10 @@ comments.post('/lesson/:lessonId', async (c) => {
     .select(USER_JOIN)
     .single()
 
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('comments POST: criar comentário', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao publicar comentário' }, 500)
+  }
 
   return c.json<ApiResponse>({ success: true, data })
 })
@@ -96,7 +103,10 @@ comments.post('/:id/like', async (c) => {
   const id = c.req.param('id')
 
   const { error } = await supabase.rpc('increment_comment_likes', { comment_id: id })
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('comments/like POST: registar like', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao registar like' }, 500)
+  }
 
   return c.json<ApiResponse>({ success: true, data: null })
 })
@@ -116,7 +126,10 @@ comments.delete('/:id', async (c) => {
     .eq('user_id', user.id)
     .select('id')
 
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('comments DELETE: remover comentário', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao remover comentário' }, 500)
+  }
   if (!data || data.length === 0) {
     return c.json<ApiResponse>({ success: false, error: 'Mensagem não encontrada ou não pertence a este utilizador' }, 404)
   }

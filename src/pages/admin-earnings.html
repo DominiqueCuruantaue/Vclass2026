@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ganhos de Professores — VClass</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    .sidebar { width:240px; min-height:100vh; transition:transform .3s; }
+    .tab-btn { border-bottom:3px solid transparent; transition: all .15s; }
+    .tab-btn.active { border-bottom-color:#166534; color:#166534; }
+    #overlay { background:rgba(0,0,0,.5); }
+    .badge-estimated { background:#f3f4f6; color:#4b5563; }
+    .badge-validating { background:#fef3c7; color:#92400e; }
+    .badge-approved { background:#dbeafe; color:#1e40af; }
+    .badge-paid { background:#d1fae5; color:#065f46; }
+    .badge-adjusted { background:#e0e7ff; color:#3730a3; }
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      main { margin-left: 0 !important; }
+    }
+  </style>
+  <script src="/static/safe-dom.js"></script>
+</head>
+<body class="bg-gray-50 flex">
+
+<aside id="sidebar" class="sidebar bg-white border-r border-gray-200 flex flex-col fixed top-0 left-0 h-full z-20">
+  <div class="p-5 border-b border-gray-100">
+    <div class="flex items-center gap-2">
+      <div class="w-9 h-9 bg-green-700 rounded-xl flex items-center justify-center text-white font-bold text-lg">V</div>
+      <div>
+        <div class="font-bold text-gray-900 text-sm">VClass</div>
+        <div class="text-xs text-green-700 font-semibold">Ganhos de Professores</div>
+      </div>
+    </div>
+  </div>
+  <nav class="flex-1 p-4 space-y-1">
+    <a href="/finance-dashboard.html" class="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-green-50 hover:text-green-700 transition text-sm font-medium">
+      <i class="fas fa-arrow-left w-5 text-center"></i> Painel Financeiro
+    </a>
+    <div class="pt-2 text-xs uppercase text-gray-400 font-semibold px-3">Ganhos</div>
+    <button onclick="showTab('requests')"   class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-green-50 hover:text-green-700 transition text-sm font-medium">
+      <i class="fas fa-hand-holding-usd w-5 text-center text-blue-500"></i> Levantamentos
+    </button>
+    <button onclick="showTab('fraud')"      class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-green-50 hover:text-green-700 transition text-sm font-medium">
+      <i class="fas fa-shield-alt w-5 text-center text-red-500"></i> Sinalizações
+    </button>
+    <button onclick="showTab('campaigns')"  class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-green-50 hover:text-green-700 transition text-sm font-medium">
+      <i class="fas fa-bullhorn w-5 text-center text-amber-500"></i> Campanhas VQ-B
+    </button>
+    <button onclick="showTab('contracts')"  class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-green-50 hover:text-green-700 transition text-sm font-medium">
+      <i class="fas fa-file-signature w-5 text-center text-teal-600"></i> Contratos
+    </button>
+    <button onclick="showTab('ledger')"     class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-green-50 hover:text-green-700 transition text-sm font-medium">
+      <i class="fas fa-book w-5 text-center text-purple-500"></i> Extracto do Ledger
+    </button>
+    <button onclick="showTab('adjustment')" class="nav-item w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-green-50 hover:text-green-700 transition text-sm font-medium">
+      <i class="fas fa-edit w-5 text-center text-gray-500"></i> Ajuste Manual
+    </button>
+  </nav>
+  <div class="p-4 border-t border-gray-100">
+    <div class="flex items-center gap-3">
+      <div id="avatar-circle" class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold" style="background:#166534">FI</div>
+      <div>
+        <div class="text-sm font-semibold text-gray-900" id="user-name-sidebar">Financeiro</div>
+        <div class="text-xs text-gray-500">Ganhos de Professores</div>
+      </div>
+    </div>
+    <button onclick="logout()" class="mt-3 w-full text-xs text-gray-500 hover:text-red-500 flex items-center gap-2 transition">
+      <i class="fas fa-sign-out-alt"></i> Sair
+    </button>
+  </div>
+</aside>
+
+<main class="ml-60 flex-1 min-h-screen">
+  <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+    <div class="flex items-center gap-3">
+      <button class="md:hidden p-2 -ml-2 rounded-lg hover:bg-gray-100 text-gray-600" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div>
+        <h1 class="text-xl font-bold text-gray-900" id="page-title">Pedidos de Levantamento</h1>
+        <p class="text-sm text-gray-500">Política de Remuneração e Comissões dos Professores V1.0</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="px-6 pt-6 border-b border-gray-200 bg-white mx-6 mt-6 rounded-t-2xl flex gap-6 overflow-x-auto whitespace-nowrap">
+    <button onclick="showTab('requests')"   class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-green-700 transition" id="tab-requests">Levantamentos</button>
+    <button onclick="showTab('fraud')"      class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-green-700 transition" id="tab-fraud">Sinalizações</button>
+    <button onclick="showTab('campaigns')"  class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-green-700 transition" id="tab-campaigns">Campanhas VQ-B</button>
+    <button onclick="showTab('contracts')"  class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-green-700 transition" id="tab-contracts">Contratos</button>
+    <button onclick="showTab('ledger')"     class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-green-700 transition" id="tab-ledger">Extracto do Ledger</button>
+    <button onclick="showTab('adjustment')" class="tab-btn pb-3 text-sm font-medium text-gray-600 hover:text-green-700 transition" id="tab-adjustment">Ajuste Manual</button>
+  </div>
+
+  <!-- ── Pedidos de levantamento ───────────────────────────────────────── -->
+  <section id="tab-content-requests" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
+    <p class="text-sm text-gray-500 mb-4">Pedidos feitos pelos professores. Não movem dinheiro — a equipa financeira processa por fora (M-Pesa/transferência) e depois regista o pagamento em "Registar Pagamento".</p>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="bg-gray-50 text-gray-600">
+          <th class="px-4 py-3 text-left rounded-l-xl">Professor</th>
+          <th class="px-4 py-3 text-left">Valor pedido</th>
+          <th class="px-4 py-3 text-left">Método</th>
+          <th class="px-4 py-3 text-left">Conta</th>
+          <th class="px-4 py-3 text-left">Referência</th>
+          <th class="px-4 py-3 text-left">Data</th>
+          <th class="px-4 py-3 text-left rounded-r-xl">Acções</th>
+        </tr></thead>
+        <tbody id="requests-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── Sinalizações de fraude ────────────────────────────────────────── -->
+  <section id="tab-content-fraud" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
+    <p class="text-sm text-gray-500 mb-4">Professores cujas visualizações remuneráveis do período dispararam um sinal de concentração de IP ou de alunos. As linhas ficam em VALIDATING até revisão manual.</p>
+    <div id="fraud-list" class="space-y-3"></div>
+  </section>
+
+  <!-- ── Campanhas VQ-B ────────────────────────────────────────────────── -->
+  <section id="tab-content-campaigns" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
+    <div class="flex justify-between items-center mb-4">
+      <p class="text-sm text-gray-500">Cada campanha cobre um conjunto de lições — visualizações elegíveis dessas lições classificam VQ-B em vez de VQ-R enquanto a campanha estiver activa.</p>
+      <button onclick="openCampaignForm()" class="px-4 py-2 bg-green-700 text-white rounded-xl text-sm hover:bg-green-800 transition whitespace-nowrap ml-4">
+        <i class="fas fa-plus mr-1"></i> Nova campanha
+      </button>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="bg-gray-50 text-gray-600">
+          <th class="px-4 py-3 text-left rounded-l-xl">Nome</th>
+          <th class="px-4 py-3 text-left">Taxa</th>
+          <th class="px-4 py-3 text-left">Lições</th>
+          <th class="px-4 py-3 text-left">Início</th>
+          <th class="px-4 py-3 text-left">Fim</th>
+          <th class="px-4 py-3 text-left">Estado</th>
+          <th class="px-4 py-3 text-left rounded-r-xl">Acções</th>
+        </tr></thead>
+        <tbody id="campaigns-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── Contratos (FEA / RCEsp, Art. 25) ──────────────────────────────── -->
+  <section id="tab-content-contracts" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
+    <div class="flex justify-between items-center mb-3">
+      <h3 class="font-semibold text-gray-900">Fee de Embaixador</h3>
+      <button onclick="openAmbassadorForm()" class="px-4 py-2 bg-green-700 text-white rounded-xl text-sm hover:bg-green-800 transition whitespace-nowrap ml-4">
+        <i class="fas fa-plus mr-1"></i> Novo contrato
+      </button>
+    </div>
+    <p class="text-sm text-gray-500 mb-4">Marcar como "Concluído" cria automaticamente o lançamento AMBASSADOR_FEE no ledger (ESTIMATED), que segue o ciclo normal do settlement.</p>
+    <div class="overflow-x-auto mb-10">
+      <table class="w-full text-sm">
+        <thead><tr class="bg-gray-50 text-gray-600">
+          <th class="px-4 py-3 text-left rounded-l-xl">Professor</th>
+          <th class="px-4 py-3 text-left">Valor</th>
+          <th class="px-4 py-3 text-left">Vigência</th>
+          <th class="px-4 py-3 text-left">Referência</th>
+          <th class="px-4 py-3 text-left">Estado</th>
+          <th class="px-4 py-3 text-left rounded-r-xl">Acções</th>
+        </tr></thead>
+        <tbody id="ambassador-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="flex justify-between items-center mb-3">
+      <h3 class="font-semibold text-gray-900">Conteúdo Especial</h3>
+      <button onclick="openSpecialForm()" class="px-4 py-2 bg-green-700 text-white rounded-xl text-sm hover:bg-green-800 transition whitespace-nowrap ml-4">
+        <i class="fas fa-plus mr-1"></i> Novo contrato
+      </button>
+    </div>
+    <p class="text-sm text-gray-500 mb-4">Marcar como "Entregue" cria automaticamente o lançamento SPECIAL_CONTENT no ledger (ESTIMATED).</p>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="bg-gray-50 text-gray-600">
+          <th class="px-4 py-3 text-left rounded-l-xl">Professor</th>
+          <th class="px-4 py-3 text-left">Conteúdo</th>
+          <th class="px-4 py-3 text-left">Valor</th>
+          <th class="px-4 py-3 text-left">Período</th>
+          <th class="px-4 py-3 text-left">Estado</th>
+          <th class="px-4 py-3 text-left rounded-r-xl">Acções</th>
+        </tr></thead>
+        <tbody id="special-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── Extracto do ledger ────────────────────────────────────────────── -->
+  <section id="tab-content-ledger" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
+    <div class="flex flex-wrap gap-3 mb-4">
+      <input id="ledger-teacher-filter" placeholder="ID do professor…" class="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-300 w-64">
+      <select id="ledger-status-filter" class="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-300">
+        <option value="">Todos os estados</option>
+        <option value="ESTIMATED">ESTIMATED</option>
+        <option value="VALIDATING">VALIDATING</option>
+        <option value="APPROVED">APPROVED</option>
+        <option value="PAID">PAID</option>
+        <option value="ADJUSTED">ADJUSTED</option>
+      </select>
+      <select id="ledger-type-filter" class="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-300">
+        <option value="">Todos os tipos</option>
+        <option value="VCPM">VCPM</option>
+        <option value="QUALITY_BONUS">QUALITY_BONUS</option>
+        <option value="BONIFIED_VIEW">BONIFIED_VIEW</option>
+        <option value="REFERRAL_COMMISSION">REFERRAL_COMMISSION</option>
+        <option value="AMBASSADOR_FEE">AMBASSADOR_FEE</option>
+        <option value="SPECIAL_CONTENT">SPECIAL_CONTENT</option>
+        <option value="ADJUSTMENT">ADJUSTMENT</option>
+        <option value="REVERSAL">REVERSAL</option>
+      </select>
+      <button onclick="renderLedger()" class="px-4 py-2 bg-gray-800 text-white rounded-xl text-sm hover:bg-gray-900 transition">Filtrar</button>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="bg-gray-50 text-gray-600">
+          <th class="px-4 py-3 text-left rounded-l-xl">Professor</th>
+          <th class="px-4 py-3 text-left">Tipo</th>
+          <th class="px-4 py-3 text-left">Período</th>
+          <th class="px-4 py-3 text-left">Valor</th>
+          <th class="px-4 py-3 text-left">Estado</th>
+          <th class="px-4 py-3 text-left rounded-r-xl">Criado</th>
+        </tr></thead>
+        <tbody id="ledger-tbody"></tbody>
+      </table>
+    </div>
+    <div class="text-xs text-gray-400 mt-3" id="ledger-total"></div>
+  </section>
+
+  <!-- ── Ajuste manual ─────────────────────────────────────────────────── -->
+  <section id="tab-content-adjustment" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
+    <p class="text-sm text-gray-500 mb-4 max-w-xl">Cria sempre um lançamento novo (ADJUSTMENT ou REVERSAL) — nunca apaga/edita um lançamento existente. Usar com cautela: fica registado no audit log com o teu utilizador.</p>
+    <form id="adjustment-form" class="max-w-md space-y-4" onsubmit="submitAdjustment(event)">
+      <div>
+        <label class="text-xs text-gray-600 font-semibold">ID do professor</label>
+        <input required id="adj-teacher-id" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1">
+      </div>
+      <div>
+        <label class="text-xs text-gray-600 font-semibold">Valor (MZN — negativo para reverter)</label>
+        <input required type="number" step="0.01" id="adj-amount" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1">
+      </div>
+      <div>
+        <label class="text-xs text-gray-600 font-semibold">ID do lançamento a reverter (opcional)</label>
+        <input id="adj-reversal-of" placeholder="Deixar vazio para um ADJUSTMENT simples" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1">
+      </div>
+      <div>
+        <label class="text-xs text-gray-600 font-semibold">Motivo (obrigatório, fica no audit log)</label>
+        <textarea required id="adj-reason" rows="3" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1"></textarea>
+      </div>
+      <button type="submit" class="px-5 py-2.5 bg-green-700 text-white rounded-xl text-sm font-medium hover:bg-green-800 transition">Criar lançamento</button>
+    </form>
+  </section>
+</main>
+
+<div id="overlay" class="fixed inset-0 z-40 hidden items-center justify-center">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+    <div class="border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+      <h2 class="font-bold text-gray-900" id="modal-title">Acção</h2>
+      <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="p-6" id="modal-body"></div>
+    <div class="border-t border-gray-100 px-6 py-4 flex gap-3 justify-end" id="modal-actions"></div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!VClass.isAuthenticated()) { window.location.href = '/login.html'; return }
+  const user = VClass.getCurrentUser()
+  if (!user || !['finance','admin'].includes(user.role)) { window.location.href = '/dashboard.html'; return }
+  document.getElementById('user-name-sidebar').textContent = user.full_name || user.name || 'Financeiro'
+  if (user.avatar_color) document.getElementById('avatar-circle').style.background = user.avatar_color
+  const initials = (user.full_name || user.name || 'FI').split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()
+  document.getElementById('avatar-circle').textContent = initials
+  showTab('requests')
+})
+
+async function financeApi(path, opts = {}) {
+  const token = localStorage.getItem('accessToken')
+  const res = await fetch(path, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...(opts.headers || {}) }
+  })
+  return res.json()
+}
+
+function fmtAmount(n) { return Number(n || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+function fmtDate(d) { return d ? new Date(d).toLocaleString('pt-PT') : '—' }
+function teacherLabel(t) { return t ? `${escapeHtml(t.full_name || '—')}<div class="text-xs text-gray-400">${escapeHtml(t.email || '')}</div>` : '<span class="text-gray-400">Desconhecido</span>' }
+function statusBadge(s) {
+  const label = { ESTIMATED:'Estimado', VALIDATING:'Em validação', APPROVED:'Aprovado', PAID:'Pago', ADJUSTED:'Ajustado' }
+  return `<span class="text-xs px-2 py-0.5 rounded-full font-medium badge-${String(s||'').toLowerCase()}">${label[s] || s}</span>`
+}
+
+const TABS = ['requests', 'fraud', 'campaigns', 'contracts', 'ledger', 'adjustment']
+const TITLES = { requests:'Pedidos de Levantamento', fraud:'Sinalizações de Fraude', campaigns:'Campanhas VQ-B', contracts:'Contratos (Embaixador / Conteúdo Especial)', ledger:'Extracto do Ledger', adjustment:'Ajuste Manual' }
+
+function showTab(name) {
+  TABS.forEach(t => {
+    document.getElementById(`tab-content-${t}`).style.display = 'none'
+    document.getElementById(`tab-${t}`).classList.remove('active')
+  })
+  document.getElementById(`tab-content-${name}`).style.display = 'block'
+  document.getElementById(`tab-${name}`).classList.add('active')
+  document.getElementById('page-title').textContent = TITLES[name] || name
+
+  if (name === 'requests')  renderRequests()
+  if (name === 'fraud')     renderFraud()
+  if (name === 'campaigns') renderCampaigns()
+  if (name === 'contracts') renderContracts()
+  if (name === 'ledger')    renderLedger()
+}
+
+// ── Pedidos de levantamento ──────────────────────────────────────────────
+async function renderRequests() {
+  document.getElementById('requests-tbody').innerHTML = '<tr><td colspan="7" class="p-6 text-center text-gray-400 text-sm">A carregar…</td></tr>'
+  const r = await financeApi('/api/finance/payout-requests')
+  if (!r.success) { showToast(r.error || 'Erro ao carregar pedidos'); return }
+  const rows = r.data.requests
+  document.getElementById('requests-tbody').innerHTML = rows.length === 0
+    ? '<tr><td colspan="7" class="p-6 text-center text-gray-400 text-sm">Sem pedidos pendentes</td></tr>'
+    : rows.map(req => {
+      const after = req.after_state || {}
+      return `<tr class="border-b border-gray-100 hover:bg-gray-50">
+        <td class="px-4 py-3">${teacherLabel(req.teacher)}</td>
+        <td class="px-4 py-3 font-bold text-gray-900">${fmtAmount(after.amountMzn)} MZN</td>
+        <td class="px-4 py-3 text-xs text-gray-600">${escapeHtml(after.method || '—')}</td>
+        <td class="px-4 py-3 text-xs text-gray-600">${escapeHtml(after.account || '—')}</td>
+        <td class="px-4 py-3 text-xs font-mono text-gray-500">${escapeHtml(after.reference || '—')}</td>
+        <td class="px-4 py-3 text-xs text-gray-500">${fmtDate(req.created_at)}</td>
+        <td class="px-4 py-3">
+          ${req.teacher ? `<button onclick="openRecordPayout('${req.teacher.id}', '${escapeAttr(req.teacher.full_name || '')}')" class="text-xs px-3 py-1.5 bg-green-700 text-white rounded-lg hover:bg-green-800">Registar Pagamento</button>` : ''}
+        </td>
+      </tr>`
+    }).join('')
+}
+
+function openRecordPayout(teacherId, teacherName) {
+  document.getElementById('modal-title').textContent = `Registar Pagamento — ${teacherName || teacherId}`
+  document.getElementById('modal-body').innerHTML = `
+    <p class="text-xs text-gray-500 mb-4">Paga sempre o saldo APPROVED completo do professor de uma vez. Confirma que a transferência já foi feita fora do sistema antes de continuar.</p>
+    <div class="space-y-3">
+      <div>
+        <label class="text-xs text-gray-600 font-semibold">Método</label>
+        <select id="payout-method" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1">
+          <option value="mpesa">M-Pesa</option>
+          <option value="emola">e-Mola</option>
+          <option value="bank_transfer">Transferência bancária</option>
+          <option value="other">Outro</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-gray-600 font-semibold">Referência da transferência</label>
+        <input id="payout-reference" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1">
+      </div>
+      <div>
+        <label class="text-xs text-gray-600 font-semibold">Nota (opcional)</label>
+        <textarea id="payout-note" rows="2" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1"></textarea>
+      </div>
+    </div>`
+  document.getElementById('modal-actions').innerHTML = `
+    <button onclick="closeModal()" class="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm">Cancelar</button>
+    <button onclick="confirmRecordPayout('${teacherId}')" class="px-4 py-2 bg-green-700 text-white rounded-xl text-sm">Confirmar Pagamento</button>`
+  openModal()
+}
+
+async function confirmRecordPayout(teacherId) {
+  const method = document.getElementById('payout-method').value
+  const reference = document.getElementById('payout-reference').value.trim()
+  const note = document.getElementById('payout-note').value.trim()
+  const r = await financeApi('/api/finance/payouts', { method: 'POST', body: JSON.stringify({ teacherId, method, reference, note }) })
+  closeModal()
+  if (r.success) { showToast(`Pagamento registado: ${fmtAmount(r.data.amountMzn)} MZN`); renderRequests() }
+  else showToast(r.error || 'Erro ao registar pagamento')
+}
+
+// ── Sinalizações de fraude ────────────────────────────────────────────────
+async function renderFraud() {
+  document.getElementById('fraud-list').innerHTML = '<div class="text-center text-gray-400 text-sm py-8">A carregar…</div>'
+  const r = await financeApi('/api/finance/fraud-flags')
+  if (!r.success) { showToast(r.error || 'Erro ao carregar sinalizações'); return }
+  const flags = r.data.flags
+  document.getElementById('fraud-list').innerHTML = flags.length === 0
+    ? '<div class="text-center text-gray-400 text-sm py-8">Sem sinalizações activas</div>'
+    : flags.map((f, i) => {
+      const after = f.after_state || {}
+      const signals = (after.signals || []).map(s => `<span class="text-xs px-2 py-0.5 bg-red-50 text-red-700 rounded-full mr-1">${escapeHtml(s.code)}</span>`).join('')
+      return `<div class="border border-gray-100 rounded-2xl p-4">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div>${teacherLabel(f.teacher)}</div>
+          <div class="text-xs text-gray-400">${fmtDate(f.created_at)}</div>
+        </div>
+        <div class="mt-2">${signals}</div>
+        <div class="text-xs text-gray-500 mt-2">${escapeHtml(f.reason || '')}</div>
+        <div class="mt-3">
+          <button onclick="loadFlaggedEntries('${f.entity_id}', ${i})" class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50">Ver lançamentos em VALIDATING</button>
+        </div>
+        <div id="flagged-entries-${i}" class="mt-3"></div>
+      </div>`
+    }).join('')
+}
+
+async function loadFlaggedEntries(teacherId, i) {
+  const el = document.getElementById(`flagged-entries-${i}`)
+  el.innerHTML = '<div class="text-xs text-gray-400">A carregar…</div>'
+  const r = await financeApi(`/api/finance/earnings?teacherId=${encodeURIComponent(teacherId)}&status=VALIDATING`)
+  if (!r.success) { el.innerHTML = `<div class="text-xs text-red-500">${escapeHtml(r.error || 'Erro')}</div>`; return }
+  const entries = r.data.entries
+  el.innerHTML = entries.length === 0
+    ? '<div class="text-xs text-gray-400">Sem lançamentos em VALIDATING para este professor</div>'
+    : `<table class="w-full text-xs"><tbody>${entries.map(e => `
+      <tr class="border-t border-gray-100">
+        <td class="py-2 pr-2">${escapeHtml(e.earning_type)}</td>
+        <td class="py-2 pr-2">${e.period_start || ''} — ${e.period_end || ''}</td>
+        <td class="py-2 pr-2 font-semibold">${fmtAmount(e.gross_amount)} MZN</td>
+        <td class="py-2"><button onclick="approveEntry('${e.id}', ${i}, '${teacherId}')" class="px-2 py-1 bg-blue-600 text-white rounded-lg">Aprovar mesmo assim</button></td>
+      </tr>`).join('')}</tbody></table>`
+}
+
+async function approveEntry(id, i, teacherId) {
+  const r = await financeApi(`/api/finance/earnings/${id}/approve`, { method: 'POST' })
+  if (r.success) { showToast('Lançamento aprovado'); loadFlaggedEntries(teacherId, i) }
+  else showToast(r.error || 'Erro ao aprovar')
+}
+
+// ── Campanhas VQ-B ────────────────────────────────────────────────────────
+async function renderCampaigns() {
+  document.getElementById('campaigns-tbody').innerHTML = '<tr><td colspan="7" class="p-6 text-center text-gray-400 text-sm">A carregar…</td></tr>'
+  const r = await financeApi('/api/finance/vq-b-campaigns')
+  if (!r.success) { showToast(r.error || 'Erro ao carregar campanhas'); return }
+  const campaigns = r.data.campaigns
+  document.getElementById('campaigns-tbody').innerHTML = campaigns.length === 0
+    ? '<tr><td colspan="7" class="p-6 text-center text-gray-400 text-sm">Sem campanhas criadas</td></tr>'
+    : campaigns.map(c => `
+    <tr class="border-b border-gray-100 hover:bg-gray-50">
+      <td class="px-4 py-3 font-medium text-gray-800">${escapeHtml(c.name)}</td>
+      <td class="px-4 py-3 text-xs text-gray-600">${escapeHtml(c.rate_type)}${c.rate_value ? ` (${c.rate_value})` : ''}</td>
+      <td class="px-4 py-3 text-xs text-gray-500">${(c.lessonIds || []).length}</td>
+      <td class="px-4 py-3 text-xs text-gray-500">${fmtDate(c.starts_at)}</td>
+      <td class="px-4 py-3 text-xs text-gray-500">${fmtDate(c.ends_at)}</td>
+      <td class="px-4 py-3"><span class="text-xs px-2 py-0.5 rounded-full font-medium ${c.active ? 'badge-approved' : 'badge-estimated'}">${c.active ? 'Activa' : 'Inactiva'}</span></td>
+      <td class="px-4 py-3">
+        <button onclick="toggleCampaign('${c.id}', ${!c.active})" class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50">${c.active ? 'Desactivar' : 'Reactivar'}</button>
+      </td>
+    </tr>`).join('')
+}
+
+async function toggleCampaign(id, active) {
+  const r = await financeApi(`/api/finance/vq-b-campaigns/${id}`, { method: 'PATCH', body: JSON.stringify({ active }) })
+  if (r.success) { showToast(active ? 'Campanha reactivada' : 'Campanha desactivada'); renderCampaigns() }
+  else showToast(r.error || 'Erro ao actualizar campanha')
+}
+
+function openCampaignForm() {
+  document.getElementById('modal-title').textContent = 'Nova Campanha VQ-B'
+  document.getElementById('modal-body').innerHTML = `
+    <div class="space-y-3">
+      <div>
+        <label class="text-xs text-gray-600 font-semibold">Nome</label>
+        <input id="camp-name" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1">
+      </div>
+      <div>
+        <label class="text-xs text-gray-600 font-semibold">Tipo de taxa</label>
+        <select id="camp-rate-type" onchange="document.getElementById('camp-rate-value-wrap').style.display = this.value === 'NORMAL_VCPM' ? 'none' : 'block'" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1">
+          <option value="NORMAL_VCPM">NORMAL_VCPM (100% da taxa marginal actual)</option>
+          <option value="PERCENTAGE_OF_VCPM">PERCENTAGE_OF_VCPM (% da taxa marginal)</option>
+          <option value="FIXED_VCPM">FIXED_VCPM (taxa fixa por 1000 views)</option>
+        </select>
+      </div>
+      <div id="camp-rate-value-wrap" style="display:none">
+        <label class="text-xs text-gray-600 font-semibold">Valor da taxa</label>
+        <input type="number" step="0.01" id="camp-rate-value" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-gray-600 font-semibold">Início</label>
+          <input type="datetime-local" id="camp-starts-at" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1">
+        </div>
+        <div>
+          <label class="text-xs text-gray-600 font-semibold">Fim</label>
+          <input type="datetime-local" id="camp-ends-at" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-gray-600 font-semibold">IDs das lições (separados por vírgula)</label>
+        <textarea id="camp-lesson-ids" rows="2" placeholder="uuid-1, uuid-2, uuid-3" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1"></textarea>
+      </div>
+    </div>`
+  document.getElementById('modal-actions').innerHTML = `
+    <button onclick="closeModal()" class="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm">Cancelar</button>
+    <button onclick="submitCampaign()" class="px-4 py-2 bg-green-700 text-white rounded-xl text-sm">Criar Campanha</button>`
+  openModal()
+}
+
+async function submitCampaign() {
+  const lessonIds = document.getElementById('camp-lesson-ids').value.split(',').map(s => s.trim()).filter(Boolean)
+  const body = {
+    name: document.getElementById('camp-name').value.trim(),
+    rateType: document.getElementById('camp-rate-type').value,
+    rateValue: parseFloat(document.getElementById('camp-rate-value').value) || undefined,
+    startsAt: document.getElementById('camp-starts-at').value ? new Date(document.getElementById('camp-starts-at').value).toISOString() : undefined,
+    endsAt: document.getElementById('camp-ends-at').value ? new Date(document.getElementById('camp-ends-at').value).toISOString() : undefined,
+    lessonIds
+  }
+  const r = await financeApi('/api/finance/vq-b-campaigns', { method: 'POST', body: JSON.stringify(body) })
+  closeModal()
+  if (r.success) { showToast('Campanha criada'); renderCampaigns() }
+  else showToast(r.error || 'Erro ao criar campanha')
+}
+
+// ── Contratos (FEA / RCEsp) ───────────────────────────────────────────────
+// O backend aceita qualquer estado válido, mas na UI só oferecemos as
+// transições que fazem sentido — reabrir um contrato já concluído/entregue
+// por engano não desfaz o lançamento que já foi criado no ledger.
+const AMBASSADOR_NEXT = { ACTIVE: [['COMPLETED', 'Concluir'], ['CANCELLED', 'Cancelar']] }
+const SPECIAL_NEXT = { PENDING: [['DELIVERED', 'Marcar entregue'], ['CANCELLED', 'Cancelar']] }
+const CONTRACT_LABELS = { ACTIVE:'Activo', COMPLETED:'Concluído', CANCELLED:'Cancelado', PENDING:'Pendente', DELIVERED:'Entregue', PAID:'Pago' }
+const CONTRACT_BADGE = { ACTIVE:'approved', COMPLETED:'paid', CANCELLED:'estimated', PENDING:'validating', DELIVERED:'approved', PAID:'paid' }
+
+function contractBadge(s) {
+  return `<span class="text-xs px-2 py-0.5 rounded-full font-medium badge-${CONTRACT_BADGE[s] || 'estimated'}">${CONTRACT_LABELS[s] || escapeHtml(s)}</span>`
+}
+function contractActions(kind, c, nextMap) {
+  return (nextMap[c.status] || []).map(([status, label]) =>
+    `<button onclick="updateContractStatus('${kind}', '${c.id}', '${status}')" class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 mr-1">${label}</button>`
+  ).join('') || '<span class="text-xs text-gray-400">—</span>'
+}
+
+async function renderContracts() {
+  const loading = '<tr><td colspan="6" class="p-6 text-center text-gray-400 text-sm">A carregar…</td></tr>'
+  document.getElementById('ambassador-tbody').innerHTML = loading
+  document.getElementById('special-tbody').innerHTML = loading
+  const [a, s] = await Promise.all([financeApi('/api/finance/ambassador-fees'), financeApi('/api/finance/special-content')])
+
+  if (!a.success) showToast(a.error || 'Erro ao carregar contratos de embaixador')
+  else document.getElementById('ambassador-tbody').innerHTML = a.data.contracts.length === 0
+    ? '<tr><td colspan="6" class="p-6 text-center text-gray-400 text-sm">Sem contratos de embaixador</td></tr>'
+    : a.data.contracts.map(c => `
+    <tr class="border-b border-gray-100 hover:bg-gray-50">
+      <td class="px-4 py-3">${teacherLabel(c.teacher)}</td>
+      <td class="px-4 py-3 font-semibold text-gray-900">${fmtAmount(c.amount_mzn)} ${escapeHtml(c.currency || 'MZN')}</td>
+      <td class="px-4 py-3 text-xs text-gray-500">${escapeHtml(c.start_date)} — ${escapeHtml(c.end_date)}</td>
+      <td class="px-4 py-3 text-xs font-mono text-gray-500">${escapeHtml(c.contract_reference || '—')}</td>
+      <td class="px-4 py-3">${contractBadge(c.status)}</td>
+      <td class="px-4 py-3">${contractActions('ambassador-fees', c, AMBASSADOR_NEXT)}</td>
+    </tr>`).join('')
+
+  if (!s.success) showToast(s.error || 'Erro ao carregar contratos de conteúdo especial')
+  else document.getElementById('special-tbody').innerHTML = s.data.contracts.length === 0
+    ? '<tr><td colspan="6" class="p-6 text-center text-gray-400 text-sm">Sem contratos de conteúdo especial</td></tr>'
+    : s.data.contracts.map(c => `
+    <tr class="border-b border-gray-100 hover:bg-gray-50">
+      <td class="px-4 py-3">${teacherLabel(c.teacher)}</td>
+      <td class="px-4 py-3 text-xs text-gray-700">${escapeHtml(c.content_reference)}${c.contract_reference ? `<div class="text-gray-400 font-mono">${escapeHtml(c.contract_reference)}</div>` : ''}</td>
+      <td class="px-4 py-3 font-semibold text-gray-900">${fmtAmount(c.amount_mzn)} ${escapeHtml(c.currency || 'MZN')}</td>
+      <td class="px-4 py-3 text-xs text-gray-500">${c.period_start ? `${escapeHtml(c.period_start)} — ${escapeHtml(c.period_end || '')}` : '—'}</td>
+      <td class="px-4 py-3">${contractBadge(c.status)}</td>
+      <td class="px-4 py-3">${contractActions('special-content', c, SPECIAL_NEXT)}</td>
+    </tr>`).join('')
+}
+
+async function updateContractStatus(kind, id, status) {
+  const createsLedger = status === 'COMPLETED' || status === 'DELIVERED'
+  const msg = createsLedger
+    ? 'Isto cria um lançamento no ledger do professor com o valor do contrato. Continuar?'
+    : `Mudar o estado do contrato para ${CONTRACT_LABELS[status] || status}?`
+  if (!confirm(msg)) return
+  const r = await financeApi(`/api/finance/${kind}/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) })
+  if (r.success) { showToast('Contrato actualizado'); renderContracts() }
+  else showToast(r.error || 'Erro ao actualizar contrato')
+}
+
+function contractField(id, label, type = 'text', extra = '') {
+  return `<div><label class="text-xs text-gray-600 font-semibold">${label}</label>
+    <input id="${id}" type="${type}" ${extra} class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1"></div>`
+}
+function contractNotesField(id) {
+  return `<div><label class="text-xs text-gray-600 font-semibold">Notas (opcional)</label>
+    <textarea id="${id}" rows="2" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1"></textarea></div>`
+}
+function openContractModal(title, bodyHtml, submitFn) {
+  document.getElementById('modal-title').textContent = title
+  document.getElementById('modal-body').innerHTML = `<div class="space-y-3">${bodyHtml}</div>`
+  document.getElementById('modal-actions').innerHTML = `
+    <button onclick="closeModal()" class="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm">Cancelar</button>
+    <button onclick="${submitFn}()" class="px-4 py-2 bg-green-700 text-white rounded-xl text-sm">Criar Contrato</button>`
+  openModal()
+}
+const fieldVal = id => document.getElementById(id).value.trim()
+
+function openAmbassadorForm() {
+  openContractModal('Novo Contrato de Embaixador', `
+    ${contractField('amb-teacher-id', 'ID do professor')}
+    ${contractField('amb-amount', 'Valor (MZN)', 'number', 'step="0.01" min="0"')}
+    <div class="grid grid-cols-2 gap-3">
+      ${contractField('amb-start', 'Início', 'date')}
+      ${contractField('amb-end', 'Fim', 'date')}
+    </div>
+    ${contractField('amb-ref', 'Referência do contrato (opcional)')}
+    ${contractNotesField('amb-notes')}`, 'submitAmbassador')
+}
+
+async function submitAmbassador() {
+  const body = {
+    teacherId: fieldVal('amb-teacher-id'),
+    amountMzn: parseFloat(fieldVal('amb-amount')),
+    startDate: fieldVal('amb-start'),
+    endDate: fieldVal('amb-end'),
+    contractReference: fieldVal('amb-ref') || undefined,
+    notes: fieldVal('amb-notes') || undefined
+  }
+  if (!body.teacherId || !(body.amountMzn > 0) || !body.startDate || !body.endDate) { showToast('Preenche professor, valor (> 0), início e fim'); return }
+  if (body.endDate < body.startDate) { showToast('A data de fim não pode ser anterior ao início'); return }
+  const r = await financeApi('/api/finance/ambassador-fees', { method: 'POST', body: JSON.stringify(body) })
+  if (r.success) { closeModal(); showToast('Contrato criado'); renderContracts() }
+  else showToast(r.error || 'Erro ao criar contrato')
+}
+
+function openSpecialForm() {
+  openContractModal('Novo Contrato de Conteúdo Especial', `
+    ${contractField('sp-teacher-id', 'ID do professor')}
+    ${contractField('sp-content', 'Conteúdo encomendado')}
+    ${contractField('sp-amount', 'Valor (MZN)', 'number', 'step="0.01" min="0"')}
+    <div class="grid grid-cols-2 gap-3">
+      ${contractField('sp-start', 'Início (opcional)', 'date')}
+      ${contractField('sp-end', 'Fim (opcional)', 'date')}
+    </div>
+    ${contractField('sp-ref', 'Referência do contrato (opcional)')}
+    ${contractNotesField('sp-notes')}`, 'submitSpecial')
+}
+
+async function submitSpecial() {
+  const body = {
+    teacherId: fieldVal('sp-teacher-id'),
+    contentReference: fieldVal('sp-content'),
+    amountMzn: parseFloat(fieldVal('sp-amount')),
+    periodStart: fieldVal('sp-start') || undefined,
+    periodEnd: fieldVal('sp-end') || undefined,
+    contractReference: fieldVal('sp-ref') || undefined,
+    notes: fieldVal('sp-notes') || undefined
+  }
+  if (!body.teacherId || !body.contentReference || !(body.amountMzn > 0)) { showToast('Preenche professor, conteúdo e valor (> 0)'); return }
+  if (body.periodStart && body.periodEnd && body.periodEnd < body.periodStart) { showToast('A data de fim não pode ser anterior ao início'); return }
+  const r = await financeApi('/api/finance/special-content', { method: 'POST', body: JSON.stringify(body) })
+  if (r.success) { closeModal(); showToast('Contrato criado'); renderContracts() }
+  else showToast(r.error || 'Erro ao criar contrato')
+}
+
+// ── Extracto do ledger ────────────────────────────────────────────────────
+async function renderLedger() {
+  document.getElementById('ledger-tbody').innerHTML = '<tr><td colspan="6" class="p-6 text-center text-gray-400 text-sm">A carregar…</td></tr>'
+  const teacherId = document.getElementById('ledger-teacher-filter').value.trim()
+  const status = document.getElementById('ledger-status-filter').value
+  const earningType = document.getElementById('ledger-type-filter').value
+  const q = new URLSearchParams()
+  if (teacherId) q.set('teacherId', teacherId)
+  if (status) q.set('status', status)
+  if (earningType) q.set('earningType', earningType)
+
+  const r = await financeApi(`/api/finance/earnings?${q}`)
+  if (!r.success) { showToast(r.error || 'Erro ao carregar ledger'); return }
+  const entries = r.data.entries
+  document.getElementById('ledger-total').textContent = `${r.data.total} lançamento(s) no total (mostrando até 50)`
+  document.getElementById('ledger-tbody').innerHTML = entries.length === 0
+    ? '<tr><td colspan="6" class="p-6 text-center text-gray-400 text-sm">Sem lançamentos</td></tr>'
+    : entries.map(e => `
+    <tr class="border-b border-gray-100 hover:bg-gray-50">
+      <td class="px-4 py-3">${teacherLabel(e.users)}</td>
+      <td class="px-4 py-3 text-xs text-gray-600">${escapeHtml(e.earning_type)}</td>
+      <td class="px-4 py-3 text-xs text-gray-500">${e.period_start || ''} ${e.period_end ? '— ' + e.period_end : ''}</td>
+      <td class="px-4 py-3 font-semibold text-gray-900">${fmtAmount(e.gross_amount)} MZN</td>
+      <td class="px-4 py-3">${statusBadge(e.status)}</td>
+      <td class="px-4 py-3 text-xs text-gray-500">${fmtDate(e.created_at)}</td>
+    </tr>`).join('')
+}
+
+// ── Ajuste manual ─────────────────────────────────────────────────────────
+async function submitAdjustment(ev) {
+  ev.preventDefault()
+  const body = {
+    teacherId: document.getElementById('adj-teacher-id').value.trim(),
+    amountMzn: parseFloat(document.getElementById('adj-amount').value),
+    reversalOfId: document.getElementById('adj-reversal-of').value.trim() || undefined,
+    reason: document.getElementById('adj-reason').value.trim()
+  }
+  const r = await financeApi('/api/finance/earnings/adjustment', { method: 'POST', body: JSON.stringify(body) })
+  if (r.success) { showToast('Lançamento criado'); document.getElementById('adjustment-form').reset() }
+  else showToast(r.error || 'Erro ao criar lançamento')
+}
+
+function openModal() {
+  document.getElementById('overlay').classList.remove('hidden')
+  document.getElementById('overlay').classList.add('flex')
+}
+function closeModal() {
+  document.getElementById('overlay').classList.add('hidden')
+  document.getElementById('overlay').classList.remove('flex')
+}
+function showToast(msg) {
+  const t = document.createElement('div')
+  t.className = 'fixed bottom-6 right-6 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-lg z-50 text-sm'
+  t.textContent = msg
+  document.body.appendChild(t)
+  setTimeout(() => t.remove(), 3000)
+}
+function logout() {
+  if (typeof VClass !== 'undefined' && VClass.logout) { VClass.logout(); }
+  else { localStorage.clear(); window.location.replace('/login.html'); }
+}
+</script>
+</body>
+</html>

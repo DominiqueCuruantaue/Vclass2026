@@ -297,6 +297,33 @@ earnings.post('/payout-request', async (c) => {
       return c.json<ApiResponse>({ success: false, error: `Valor pedido (${body.amountMzn} MZN) excede o saldo aprovado disponível (${approvedTotal.toFixed(2)} MZN)` }, 400)
     }
 
+    // Evita pedidos duplicados na fila: se já existe um PAYOUT_REQUESTED mais
+    // recente que o último pagamento efectivo deste professor, há um pedido
+    // ainda por processar — bloquear novo pedido em vez de deixar a equipa
+    // financeira ver duas entradas para o mesmo saldo (achado de auditoria
+    // 2026-09-22; o pagamento real em si já é seguro contra duplicação via
+    // fn_record_teacher_payout, isto só evita ruído/confusão na fila).
+    const [{ data: lastRequestRows }, { data: lastPayoutRows }] = await Promise.all([
+      supabase
+        .from('earnings_audit_log')
+        .select('created_at')
+        .eq('actor_id', user.id)
+        .eq('action', 'PAYOUT_REQUESTED')
+        .order('created_at', { ascending: false })
+        .limit(1),
+      supabase
+        .from('teacher_payouts')
+        .select('created_at')
+        .eq('teacher_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+    ])
+    const lastRequestAt = lastRequestRows?.[0]?.created_at ? new Date(lastRequestRows[0].created_at).getTime() : null
+    const lastPayoutAt = lastPayoutRows?.[0]?.created_at ? new Date(lastPayoutRows[0].created_at).getTime() : null
+    if (lastRequestAt !== null && (lastPayoutAt === null || lastRequestAt > lastPayoutAt)) {
+      return c.json<ApiResponse>({ success: false, error: 'Já existe um pedido de levantamento pendente — aguarde o processamento antes de pedir novamente.' }, 409)
+    }
+
     const reference = `PR-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${Date.now().toString(36).toUpperCase().slice(-4)}`
     await logEarningsAudit(supabase, {
       actorId: user.id, action: 'PAYOUT_REQUESTED', entityType: 'users', entityId: user.id,

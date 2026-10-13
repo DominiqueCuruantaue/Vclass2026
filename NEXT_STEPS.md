@@ -1,87 +1,57 @@
 # 🚀 VClass — Próximos Passos
 
-**Versão atual:** v1.7.3
-**Última atualização:** 2026-04-23
-**Stack:** Hono + Cloudflare Pages/Workers · Supabase Postgres · Bunny CDN (HLS)
+**Última atualização:** 2026-09-22 (revisão geral de código)
+**Stack:** Hono + Cloudflare Pages/Workers · Supabase Postgres · Bunny CDN (HLS) · Capacitor (mobile)
 
 ---
 
 ## ✅ Estado atual
 
-### Backend (21 rotas)
-auth, content, video, exercises, progress, curriculum, country, creator, editor, finance, moderator, admin, support, chat, news, notifications, plans, library, search, teacher-verification, pages.
+### Backend (25 grupos de rotas)
+auth, content, video, exercises, progress, curriculum, country, creator, editor, finance, moderator, admin, support, chat, news, notifications, plans, library, search, teacher-verification, pages, earnings, settlementCron, sessions, bookmarks/favorites/comments/tickets.
 
-### Frontend (32 páginas)
-Home, login, register (+ teacher), browse, chapters, lesson, library, search, dashboard, profile, progress, achievements, chat, news, notifications, help, plans, e dashboards por papel (admin, creator, editor, finance, moderator, support, country).
+### Domínio "Teacher Earnings" (política V1.0)
+Fundação, VCPM/BQE, comissão de referência (CRA) com conversão e reversão automáticas, campanhas VQ-B, gate anti-fraude, settlement mensal (cron GitHub Actions), execução de payout — tudo implementado e testado (111 testes). UI de professor ligada ao ledger real. Migration 037 (`fn_write_estimated_earnings`, escrita atómica da fase estimate) aplicada e confirmada em produção em 2026-09-23. Detalhe completo em [VCLASS_TEACHER_EARNINGS_V1_IMPLEMENTATION_BLUEPRINT.md](VCLASS_TEACHER_EARNINGS_V1_IMPLEMENTATION_BLUEPRINT.md).
 
-### Infra
-- ✅ Supabase production integrado via `service_role` (commit `1db36f1`)
-- ✅ Seeds corrigidos`)
+### Segurança
+Auditoria de 30/08/2026 (`docs/security-audit/relatorio-auditoria-seguranca.pdf`) encontrou 7 achados (1 crítico) — **todos os 7 confirmados corrigidos** numa re-verificação de código em 2026-09-22. Rate limiting já usa Cloudflare KV, headers de segurança (CSP/HSTS/X-Frame-Options) e CORS de produção já estão em vigor.
+
+### Mobile
+App Capacitor publicada (APK) — é um wrapper WebView à volta do site, herda as mesmas páginas. Sem UI própria de admin/earnings (ver gaps abaixo).
 
 ---
 
 ## 🎯 Próximos passos
 
-### 1. Limpar documentação redundante 🟡
-Existem ~20 `.md` de relatórios antigos (FINAL_STATUS, FINAL_REPORT, FINAL_SUMMARY, PROJECT_COMPLETE, REDESIGN_REPORT, COMPLETE_REDESIGN_REPORT, etc.) que descrevem estados passados. Consolidar em `CHANGELOG.md` e arquivar o resto em `docs/archive/`.
+### 1. Gateway de pagamento 🔴
+Continua a ser o único bloqueador de negócio real. `plans.ts`/`finance.ts` só têm registo manual de subscrições ("a equipa financeira regista o que já aconteceu fora do sistema"). Falta:
+- Escolher fornecedor (M-Pesa, e-Mola ou Stripe) — decisão de negócio, não técnica.
+- Webhook para atualizar `subscriptions.status` automaticamente.
+- Sem isto, a Comissão de Referência (CRA) nunca dispara para utilizadores reais.
 
-**Tempo:** 30 min.
+### 2. UI de admin para earnings 🟢
+[src/pages/admin-earnings.html](src/pages/admin-earnings.html) cobre agora todos os endpoints de admin do domínio: Levantamentos, Sinalizações de Fraude, Campanhas VQ-B, **Contratos (Fee de Embaixador + Conteúdo Especial, adicionado em 2026-10-09)**, Extracto do Ledger e Ajuste Manual. Falta: selector de professor por nome (hoje os formulários pedem o UUID do professor) e versão mobile dedicada.
 
-### 2. Revisar segurança do `service_role` 🔴
-O backend usa `service_role` em todas as queries, o que bypassa RLS. Verificar:
-- Nenhum endpoint público retorna dados sensíveis de outros utilizadores.
-- Middleware de auth valida JWT **antes** de qualquer query que dependa de `student_id`/`user_id`.
-- `video_tokens`, `subscriptions` e `exercise_submissions` só são acessados com `user_id` vindo do JWT verificado — nunca de query string/body.
+### 3. Observabilidade 🟡
+Sem Sentry nem logger estruturado — só `console.log`/`console.error` espalhados. `src/utils/logger.ts` (criado nesta sessão) padroniza o formato; falta decidir e configurar um serviço externo (Sentry ou equivalente) para agregação e alertas — requer conta/DSN, decisão do utilizador.
 
-**Tempo:** 1 dia de auditoria.
+### 4. Cobertura de testes no domínio financeiro 🟡
+`settlementEngine.ts` (fase estimate) e `earningsAggregation.ts` não têm teste dedicado que exercite agregação real a partir de `qualified_views`/campanhas VQ-B — só os motores puros (`vcpmEngine`/`bqeEngine`) estão bem cobertos.
 
-### 3. Carregar conteúdo real 🟡
-Seeds ainda contêm dados demo. Fluxo de upload por professor (`creator-lesson-editor.html` + rotas `creator.ts`) existe mas precisa:
-- Integração real com Bunny Stream (upload + playback HLS).
-- Validação de permissões (só `creator` verificado publica).
-- Fluxo de moderação (`moderator-dashboard.html`).
-
-**Tempo:** 1–2 semanas.
-
-### 4. Sistema de pagamentos 🟡
-[plans.ts](src/routes/plans.ts) e [plans.html](src/pages/plans.html) existem. Falta:
-- Gateway de pagamento (M-Pesa, e-Mola ou Stripe).
-- Webhook para atualizar `subscriptions.status`.
-- Bloqueio de lições premium no frontend quando `plan_type = 'free'`.
-
-**Tempo:** 1 semana.
-
-### 5. Observabilidade 🟢
-- Logs estruturados nos 21 endpoints.
-- Sentry ou similar para erros no frontend.
-- Dashboard Supabase para queries lentas.
-
-**Tempo:** 4–6 semanas se Flutter, ~1 semana se PWA.
-
----
-
-## 🗂️ Migrations pendentes no Supabase
-
-Aplicar pela ordem:
-
-```
-database/migrations/002_fix_security_definer_views.sql
-database/migrations/003_fix_function_search_path.sql
-database/migrations/004_explicit_rls_deny_policies.sql
-```
+### 5. Limpeza de `as any` 🟢
+111 ocorrências, concentradas em `creator.ts` (41) e `finance.ts` (15) — perda de type safety, não bloqueador funcional.
 
 ---
 
 ## 📊 Prioridades
 
-| # | Tarefa | Prioridade | Tempo |
-|---|--------|-----------|-------|
-| 2 | Auditoria `service_role` | 🔴 Alta | 1 dia |
-| 1 | Limpar docs redundantes | 🟡 Média | 30 min |
-| 3 | Upload de conteúdo real (Bunny) | 🟡 Média | 1–2 sem |
-| 4 | Pagamentos (M-Pesa/Stripe) | 🟡 Média | 1 sem |
-| 5 | Observabilidade | 🟢 Baixa | 2 dias |
-| 6 | Mobile (PWA) | 🟢 Baixa | 1–6 sem |
+| # | Tarefa | Prioridade |
+|---|--------|-----------|
+| 1 | Gateway de pagamento (decisão + integração) | 🔴 Alta |
+| 2 | UI de admin para earnings (expandir a página base) | 🟡 Média |
+| 3 | Observabilidade externa (Sentry ou equivalente) | 🟡 Média |
+| 4 | Testes de agregação/settlement | 🟡 Média |
+| 5 | Limpeza de `as any` | 🟢 Baixa |
 
 ---
 
@@ -90,13 +60,13 @@ database/migrations/004_explicit_rls_deny_policies.sql
 ### "Database configuration missing"
 Verificar `.dev.vars` local ou secrets do Cloudflare (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`).
 
-### Linter do Supabase volta a acusar
-Confirmar que migrations 002–004 correram no ambiente em questão. Cada environment (dev/prod) precisa das três.
-
 ### Vídeo não reproduz
 - Token gerado? Ver `video_tokens`.
-- `BUNNY_CDN_URL` configurado?
+- `BUNNY_CDN_URL`/`BUNNY_API_KEY` configurados?
 - HLS suportado pelo browser? Usar `hls.js` como fallback.
+
+### Settlement/earnings
+Ver [VCLASS_TEACHER_EARNINGS_V1_IMPLEMENTATION_BLUEPRINT.md](VCLASS_TEACHER_EARNINGS_V1_IMPLEMENTATION_BLUEPRINT.md) — Definition of Done e Requirement Traceability Matrix têm o estado mais actual.
 
 ---
 
@@ -106,3 +76,5 @@ Confirmar que migrations 002–004 correram no ambiente em questão. Cada enviro
 - [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)
 - [DEPLOY_GUIDE.md](DEPLOY_GUIDE.md)
 - [TESTING_GUIDE.md](TESTING_GUIDE.md)
+- [VCLASS_TEACHER_EARNINGS_V1_IMPLEMENTATION_BLUEPRINT.md](VCLASS_TEACHER_EARNINGS_V1_IMPLEMENTATION_BLUEPRINT.md)
+- [docs/security-audit/relatorio-auditoria-seguranca.pdf](docs/security-audit/relatorio-auditoria-seguranca.pdf)

@@ -10,6 +10,7 @@ import { isLessonVideoReady } from '../utils/bunny'
 import { hashPassword, validatePassword } from '../utils/password'
 import { extractPageCount, isValidPdfSignature } from '../utils/documentMeta'
 import { GRADES } from '../data/curriculum'
+import { logger } from '../utils/logger'
 
 const admin = new Hono<{ Bindings: CloudflareBindings }>()
 
@@ -359,8 +360,8 @@ admin.get('/dashboard', async (c) => {
       data: { stats, chart_week, chart_month, countries, recent_users, recent_lessons, top_lessons, system_alerts }
     })
   } catch (e: any) {
-    console.error('Admin dashboard error:', e)
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('admin/dashboard error', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar dashboard' }, 500)
   }
 })
 
@@ -395,11 +396,15 @@ admin.get('/users', async (c) => {
     if (search) query = query.ilike('full_name', `%${search}%`)
 
     const { data, count, error } = await query
-    if (error) return c.json({ success: false, error: error.message }, 500)
+    if (error) {
+      logger.error('admin/users GET: listar utilizadores', error)
+      return c.json({ success: false, error: 'Erro ao carregar utilizadores' }, 500)
+    }
 
     return c.json({ success: true, data: data || [], pagination: { page, limit, total: count||0, totalPages: Math.ceil((count||0)/limit) } })
   } catch (e: any) {
-    return c.json({ success: false, error: e.message }, 500)
+    logger.error('admin/users GET error', e)
+    return c.json({ success: false, error: 'Erro ao carregar utilizadores' }, 500)
   }
 })
 
@@ -457,8 +462,8 @@ admin.post('/users', async (c) => {
 
     return c.json({ success: true, data, message: `Conta de ${roleLabelPt(role)} criada para ${full_name}` }, 201)
   } catch (e: any) {
-    console.error('Admin create user error:', e)
-    return c.json({ success: false, error: e.message }, 500)
+    logger.error('admin/users POST error', e)
+    return c.json({ success: false, error: 'Erro ao criar conta' }, 500)
   }
 })
 
@@ -496,7 +501,10 @@ admin.patch('/users/:id', async (c) => {
       .eq('id', id)
       .select('id, email, full_name, role, phone, country_id, country_code, avatar_url, is_active, is_verified, created_at, updated_at')
       .single()
-    if (error) return c.json({ success: false, error: error.message }, 500)
+    if (error) {
+      logger.error('admin/users PATCH: actualizar utilizador', error)
+      return c.json({ success: false, error: 'Erro ao actualizar utilizador' }, 500)
+    }
 
     // Revogar todos os refresh tokens do utilizador quando o role é alterado,
     // para que a nova role seja forçada no próximo login.
@@ -506,7 +514,8 @@ admin.patch('/users/:id', async (c) => {
 
     return c.json({ success: true, data })
   } catch (e: any) {
-    return c.json({ success: false, error: e.message }, 500)
+    logger.error('admin/users PATCH error', e)
+    return c.json({ success: false, error: 'Erro ao actualizar utilizador' }, 500)
   }
 })
 
@@ -525,7 +534,8 @@ admin.get('/content', async (c) => {
     const flattened = await fetchLessonsWithDetails(supabase, { orderBy: 'created_at', ascending: false, limit: 50 })
     return c.json({ success: true, data: flattened })
   } catch (e: any) {
-    return c.json({ success: false, error: e.message }, 500)
+    logger.error('admin/content GET error', e)
+    return c.json({ success: false, error: 'Erro ao carregar conteúdo' }, 500)
   }
 })
 
@@ -555,11 +565,15 @@ admin.patch('/content/:id', async (c) => {
     }
 
     const { data, error } = await supabase.from('lessons').update({ status, updated_at: new Date().toISOString() }).eq('id', id).select().single()
-    if (error) return c.json({ success: false, error: error.message }, 500)
+    if (error) {
+      logger.error('admin/content PATCH: actualizar lição', error)
+      return c.json({ success: false, error: 'Erro ao actualizar lição' }, 500)
+    }
 
     return c.json({ success: true, data })
   } catch (e: any) {
-    return c.json({ success: false, error: e.message }, 500)
+    logger.error('admin/content PATCH error', e)
+    return c.json({ success: false, error: 'Erro ao actualizar lição' }, 500)
   }
 })
 
@@ -579,7 +593,10 @@ admin.get('/curriculum', async (c) => {
       supabase.from('grade_subjects').select('id, grade_id, subject_id, is_mandatory, workload_hours'),
     ])
 
-    if (subjectsRes.error) return c.json<ApiResponse>({ success: false, error: subjectsRes.error.message }, 500)
+    if (subjectsRes.error) {
+      logger.error('admin/curriculum GET: carregar disciplinas', subjectsRes.error)
+      return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar currículo' }, 500)
+    }
 
     return c.json<ApiResponse>({
       success: true,
@@ -590,7 +607,8 @@ admin.get('/curriculum', async (c) => {
       },
     })
   } catch (e: any) {
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('admin/curriculum GET error', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar currículo' }, 500)
   }
 })
 
@@ -616,10 +634,14 @@ admin.post('/curriculum/subjects', async (c) => {
       .select()
       .single()
 
-    if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+    if (error) {
+      logger.error('admin/curriculum/subjects POST: criar disciplina', error)
+      return c.json<ApiResponse>({ success: false, error: 'Erro ao criar disciplina' }, 500)
+    }
     return c.json<ApiResponse>({ success: true, data })
   } catch (e: any) {
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('admin/curriculum/subjects POST error', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao criar disciplina' }, 500)
   }
 })
 
@@ -639,10 +661,14 @@ admin.patch('/curriculum/subjects/:id', async (c) => {
     if (body.icon_url !== undefined)    updates.icon_url    = body.icon_url || null
 
     const { data, error } = await supabase.from('subjects').update(updates).eq('id', id).select().single()
-    if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+    if (error) {
+      logger.error('admin/curriculum/subjects PATCH: actualizar disciplina', error)
+      return c.json<ApiResponse>({ success: false, error: 'Erro ao actualizar disciplina' }, 500)
+    }
     return c.json<ApiResponse>({ success: true, data })
   } catch (e: any) {
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('admin/curriculum/subjects PATCH error', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao actualizar disciplina' }, 500)
   }
 })
 
@@ -654,10 +680,14 @@ admin.delete('/curriculum/subjects/:id', async (c) => {
     if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB não configurada' }, 503)
 
     const { error } = await supabase.from('subjects').delete().eq('id', id)
-    if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+    if (error) {
+      logger.error('admin/curriculum/subjects DELETE: apagar disciplina', error)
+      return c.json<ApiResponse>({ success: false, error: 'Erro ao apagar disciplina' }, 500)
+    }
     return c.json<ApiResponse>({ success: true })
   } catch (e: any) {
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('admin/curriculum/subjects DELETE error', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao apagar disciplina' }, 500)
   }
 })
 
@@ -683,10 +713,14 @@ admin.post('/curriculum/grade-subjects', async (c) => {
       .select()
       .single()
 
-    if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+    if (error) {
+      logger.error('admin/curriculum/grade-subjects POST: vincular disciplina', error)
+      return c.json<ApiResponse>({ success: false, error: 'Erro ao vincular disciplina' }, 500)
+    }
     return c.json<ApiResponse>({ success: true, data })
   } catch (e: any) {
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('admin/curriculum/grade-subjects POST error', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao vincular disciplina' }, 500)
   }
 })
 
@@ -698,10 +732,14 @@ admin.delete('/curriculum/grade-subjects/:id', async (c) => {
     if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB não configurada' }, 503)
 
     const { error } = await supabase.from('grade_subjects').delete().eq('id', id)
-    if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+    if (error) {
+      logger.error('admin/curriculum/grade-subjects DELETE: desvincular disciplina', error)
+      return c.json<ApiResponse>({ success: false, error: 'Erro ao desvincular disciplina' }, 500)
+    }
     return c.json<ApiResponse>({ success: true })
   } catch (e: any) {
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('admin/curriculum/grade-subjects DELETE error', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao desvincular disciplina' }, 500)
   }
 })
 
@@ -728,7 +766,8 @@ admin.get('/stats/overview', async (c) => {
     const stats = buildStats(usersRes.data || [], lessonsRes.data || [], submissionsRes.data || [], countriesRes.data || [])
     return c.json({ success: true, data: stats })
   } catch (e: any) {
-    return c.json({ success: false, error: e.message }, 500)
+    logger.error('admin/stats/overview error', e)
+    return c.json({ success: false, error: 'Erro ao carregar estatísticas' }, 500)
   }
 })
 
@@ -823,7 +862,10 @@ admin.post('/library/upload', async (c) => {
     .from('vclass-library')
     .upload(path, buffer, { contentType: file.type || 'application/pdf', upsert: false })
 
-  if (upErr) return c.json<ApiResponse>({ success: false, error: upErr.message }, 500)
+  if (upErr) {
+    logger.error('admin/library/upload: enviar ficheiro para storage', upErr)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao enviar ficheiro' }, 500)
+  }
 
   const { data: urlData } = supabase.storage.from('vclass-library').getPublicUrl(path)
 
@@ -860,7 +902,10 @@ admin.get('/library', async (c) => {
   if (category) query = query.eq('category', category)
 
   const { data, error, count } = await query
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('admin/library GET: listar itens', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar biblioteca' }, 500)
+  }
 
   return c.json<ApiResponse>({
     success: true,
@@ -882,7 +927,10 @@ admin.get('/library/queue', async (c) => {
     .eq('status', 'pending_review')
     .order('created_at', { ascending: true })
 
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('admin/library/queue: listar fila de revisão', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar fila de revisão' }, 500)
+  }
 
   return c.json<ApiResponse>({ success: true, data: data || [] })
 })
@@ -930,7 +978,10 @@ admin.post('/library', async (c) => {
     .select(ADMIN_LIB_SELECT)
     .single()
 
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('admin/library POST: criar material', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao criar material' }, 500)
+  }
 
   return c.json<ApiResponse>({ success: true, data }, 201)
 })
@@ -966,7 +1017,10 @@ admin.put('/library/:id', async (c) => {
     .select(ADMIN_LIB_SELECT)
     .single()
 
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('admin/library PUT: actualizar material', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao actualizar material' }, 500)
+  }
 
   return c.json<ApiResponse>({ success: true, data })
 })
@@ -994,7 +1048,10 @@ admin.delete('/library/:id', async (c) => {
     .single()
 
   const { error } = await supabase.from('library_items').delete().eq('id', id)
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('admin/library DELETE: apagar material', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao apagar material' }, 500)
+  }
 
   // Limpeza do storage é best-effort — a remoção do registo é o que importa para o utilizador
   const paths = [libraryStoragePath(item?.file_url), libraryStoragePath(item?.cover_url)]
@@ -1027,7 +1084,10 @@ admin.patch('/library/:id/feature', async (c) => {
     .select('id, is_featured')
     .single()
 
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('admin/library/feature PATCH: actualizar destaque', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao actualizar destaque' }, 500)
+  }
 
   return c.json<ApiResponse>({ success: true, data })
 })
@@ -1062,7 +1122,10 @@ admin.post('/library/:id/approve', async (c) => {
     .select(ADMIN_LIB_SELECT)
     .single()
 
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('admin/library/approve POST: aprovar material', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao aprovar material' }, 500)
+  }
 
   return c.json<ApiResponse>({ success: true, data })
 })
@@ -1100,7 +1163,10 @@ admin.post('/library/:id/reject', async (c) => {
     .select(ADMIN_LIB_SELECT)
     .single()
 
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('admin/library/reject POST: rejeitar material', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao rejeitar material' }, 500)
+  }
 
   return c.json<ApiResponse>({ success: true, data })
 })

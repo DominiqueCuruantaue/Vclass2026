@@ -5,6 +5,7 @@ import { Hono } from 'hono'
 import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware } from '../middleware/auth'
 import { getSupabase } from '../config/supabase'
+import { logger } from '../utils/logger'
 
 const sessions = new Hono<{ Bindings: CloudflareBindings }>()
 sessions.use('*', authMiddleware)
@@ -75,7 +76,8 @@ sessions.patch('/:id/read', async (c) => {
     if (error) throw error
     return c.json({ success: true })
   } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
+    logger.error('sessions/:id/read PATCH error', error)
+    return c.json({ success: false, error: 'Erro ao marcar sessão como vista' }, 500)
   }
 })
 

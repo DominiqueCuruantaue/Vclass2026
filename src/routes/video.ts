@@ -205,10 +205,17 @@ video.get('/hls/:lessonId/:rest{.+\\.m3u8$}', async (c) => {
     const expires = Math.floor(payload.expiresAt / 1000)
     const sig     = await signBunnyPath(key, bunnyPath, expires)
 
-    // Buscar o m3u8 ao Bunny já assinado
+    // Buscar o m3u8 ao Bunny já assinado.
+    // User-Agent explícito: o Worker corre na rede da Cloudflare, e o
+    // fetch() da Cloudflare para origens de terceiros não garante que o
+    // Referer definido aqui chegue ao Bunny intacto — sem um UA de browser
+    // real, o pedido pode ser tratado como tráfego de datacenter e rejeitado.
     const bunnyUrl = `https://${cdn}${bunnyPath}?token=${sig}&expires=${expires}`
     const upstream = await fetch(bunnyUrl, {
-      headers: { Referer: `https://${cdn}/` }
+      headers: {
+        Referer: `https://${cdn}/`,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
     })
     if (!upstream.ok) {
       return c.text(`Bunny ${upstream.status}`, upstream.status as any)
@@ -344,17 +351,74 @@ video.post('/:lessonId/progress', async (c) => {
       return c.json<ApiResponse>({ success: false, error: 'position obrigatório' }, 400)
     }
 
-    // Em produção: guardar na DB (Supabase/D1)
-    // Por agora retorna sucesso (será persistido no localStorage do cliente)
+    const clampedPercent = Math.min(100, Math.max(0, Math.round(percent || 0)))
+    const roundedPosition = Math.round(position)
+    const now = new Date()
+
+    const supabase = getSupabase(c.env)
+    if (!supabase) {
+      return c.json<ApiResponse>({ success: false, error: 'Database configuration missing' }, 500)
+    }
+
+    // Marca "em progresso" mesmo com poucos segundos vistos — é o que
+    // alimenta "Continuar a estudar" no dashboard do aluno. Sem isto, o
+    // endpoint era um stub que nunca persistia nada (ver histórico).
+    const { data: existing } = await supabase
+      .from('student_progress')
+      .select('time_spent, status, updated_at')
+      .eq('student_id', user.id)
+      .eq('lesson_id', lessonId)
+      .maybeSingle()
+
+    const secondsSinceLastSave = existing?.updated_at
+      ? Math.round((now.getTime() - new Date(existing.updated_at).getTime()) / 1000)
+      : 15
+    const timeSpentIncrement = Math.min(Math.max(secondsSinceLastSave, 1), 40)
+    const newTimeSpent = (existing?.time_spent || 0) + timeSpentIncrement
+
+    const isCompleted = clampedPercent >= 95 || existing?.status === 'completed'
+    const status = isCompleted ? 'completed' : (roundedPosition > 0 ? 'in_progress' : 'not_started')
+
+    const { error: upsertError } = await supabase
+      .from('student_progress')
+      .upsert({
+        student_id: user.id,
+        lesson_id: lessonId,
+        status,
+        progress_percent: clampedPercent,
+        last_position: roundedPosition,
+        time_spent: newTimeSpent,
+        completed_at: isCompleted ? (existing?.status === 'completed' ? undefined : now.toISOString()) : null,
+        updated_at: now.toISOString()
+      }, { onConflict: 'student_id,lesson_id' })
+
+    if (upsertError) {
+      console.error('progress upsert error:', upsertError)
+      return c.json<ApiResponse>({ success: false, error: 'Erro ao guardar progresso' }, 500)
+    }
+
+    // Tempo de estudo por dia (gráfico "Actividade Semanal"). O dia é o dia
+    // local do aluno: o cliente envia tz = Date#getTimezoneOffset() em minutos.
+    // Falha aqui não deve impedir a gravação do progresso — só regista o erro.
+    const tz = Math.min(840, Math.max(-840, Number(body.tz) || 0))
+    const localDay = new Date(now.getTime() - tz * 60000).toISOString().slice(0, 10)
+    const { error: studyError } = await supabase.rpc('fn_add_study_seconds', {
+      p_student_id: user.id,
+      p_day: localDay,
+      p_seconds: timeSpentIncrement
+    })
+    if (studyError) console.error('daily study increment error:', studyError)
+
     return c.json<ApiResponse>({
       success: true,
       data: {
         lessonId,
         userId: user.id,
-        position: Math.round(position),
+        position: roundedPosition,
         duration: duration || 0,
-        percent:  Math.min(100, Math.max(0, Math.round(percent || 0))),
-        savedAt:  new Date().toISOString()
+        percent: clampedPercent,
+        status,
+        savedAt: now.toISOString()
       },
       message: 'Progresso guardado'
     })

@@ -7,10 +7,12 @@ import { getSupabase, type SupaClient } from '../config/supabase'
 import { loadPlans, isDatabaseConfigured, FALLBACK_PLANS_DATA } from '../utils/plans'
 import { COUNTRIES } from '../data/curriculum'
 import { estimateTeacherEarnings, writeEstimatedLedgerEntries } from '../services/earningsAggregation'
-import { calculateReferralCommission, checkAttributionWindow } from '../services/referralEngine'
+import { calculateReferralCommission, checkAttributionWindow, isSelfReferral } from '../services/referralEngine'
 import { determinePayout } from '../services/payoutEngine'
 import { runEstimatePhase, runValidatePhase, runApprovePhase, previousMonthPeriodMaputo } from '../services/settlementEngine'
 import { logEarningsAudit } from '../services/earningsAudit'
+import { mznToMicros, microsToDecimalString } from '../utils/money'
+import { logger } from '../utils/logger'
 import type { ApiResponse } from '../types'
 
 const finance = new Hono<{ Bindings: CloudflareBindings }>()
@@ -159,8 +161,8 @@ finance.get('/stats', async (c) => {
       }
     })
   } catch (e: any) {
-    console.error('Finance stats error:', e)
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('finance/stats: carregar estatísticas', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar estatísticas financeiras' }, 500)
   }
 })
 
@@ -176,7 +178,8 @@ finance.get('/subscriptions', async (c) => {
     if (plan   && plan   !== 'all') subs = subs.filter((s: any) => s.plan   === plan)
     return c.json<ApiResponse>({ success: true, data: { subscriptions: subs, total: subs.length, is_fictitious: isFictitious } })
   } catch (e: any) {
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('finance/subscriptions: listar subscrições', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar subscrições' }, 500)
   }
 })
 
@@ -191,7 +194,10 @@ finance.post('/subscriptions/:id/cancel', async (c) => {
   if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
 
   const { error } = await supabase.from('subscriptions').update({ status: 'cancelled' }).eq('id', id)
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('finance/subscriptions/cancel: cancelar subscrição', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao cancelar subscrição' }, 500)
+  }
 
   return c.json<ApiResponse>({ success: true, message: 'Subscrição cancelada', data: { id, status: 'cancelled' } })
 })
@@ -215,12 +221,18 @@ finance.post('/subscriptions/:id/refund', async (c) => {
   if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
 
   const { data: subscription, error: findErr } = await supabase.from('subscriptions').select('id, student_id, status').eq('id', id).maybeSingle()
-  if (findErr) return c.json<ApiResponse>({ success: false, error: findErr.message }, 500)
+  if (findErr) {
+    logger.error('finance/subscriptions/refund: procurar subscrição', findErr)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao procurar subscrição' }, 500)
+  }
   if (!subscription) return c.json<ApiResponse>({ success: false, error: 'Subscrição não encontrada' }, 404)
   if (subscription.status === 'refunded') return c.json<ApiResponse>({ success: false, error: 'Subscrição já marcada como reembolsada' }, 409)
 
   const { error: updateErr } = await supabase.from('subscriptions').update({ status: 'refunded' }).eq('id', id)
-  if (updateErr) return c.json<ApiResponse>({ success: false, error: updateErr.message }, 500)
+  if (updateErr) {
+    logger.error('finance/subscriptions/refund: marcar como reembolsada', updateErr)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao reembolsar subscrição' }, 500)
+  }
 
   const user = c.get('user') as any
   await logEarningsAudit(supabase, {
@@ -251,7 +263,7 @@ finance.post('/subscriptions/:id/refund', async (c) => {
         .maybeSingle()
 
       if (!origErr && originalEntry) {
-        const reversalAmount = (-Number(originalEntry.gross_amount)).toFixed(2)
+        const reversalAmount = microsToDecimalString(-mznToMicros(Number(originalEntry.gross_amount)))
         const { data: reversalRow, error: reversalErr } = await supabase
           .from('teacher_earnings_ledger')
           .insert({
@@ -321,7 +333,10 @@ finance.post('/subscriptions', async (c) => {
   }
 
   const { data: student, error: studentErr } = await supabase.from('users').select('id, role').eq('id', studentId).maybeSingle()
-  if (studentErr) return c.json<ApiResponse>({ success: false, error: studentErr.message }, 500)
+  if (studentErr) {
+    logger.error('finance/subscriptions: procurar estudante', studentErr)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao procurar estudante' }, 500)
+  }
   if (!student || student.role !== 'student') return c.json<ApiResponse>({ success: false, error: 'studentId não corresponde a um estudante' }, 400)
 
   const user = c.get('user') as any
@@ -340,7 +355,10 @@ finance.post('/subscriptions', async (c) => {
     })
     .select('*')
     .single()
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('finance/subscriptions: criar subscrição', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao criar subscrição' }, 500)
+  }
 
   await logEarningsAudit(supabase, {
     actorId: user?.id, action: 'CREATE_SUBSCRIPTION', entityType: 'subscriptions', entityId: inserted?.id,
@@ -391,7 +409,10 @@ finance.patch('/subscriptions/:id', async (c) => {
   }
 
   const { error } = await supabase.from('subscriptions').update(updates).eq('id', id)
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('finance/subscriptions PATCH: actualizar subscrição', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao actualizar subscrição' }, 500)
+  }
 
   const user = c.get('user') as any
   await logEarningsAudit(supabase, {
@@ -421,7 +442,8 @@ finance.get('/payments', async (c) => {
     if (status && status !== 'all') payments = payments.filter((p: any) => p.status === status)
     return c.json<ApiResponse>({ success: true, data: { payments, total: payments.length, is_fictitious: isFictitious } })
   } catch (e: any) {
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('finance/payments: listar pagamentos', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar pagamentos' }, 500)
   }
 })
 
@@ -441,7 +463,10 @@ finance.get('/checkout-requests', async (c) => {
     .select('id, user_id, plan_id, billing, currency, amount, payment_method, reference, created_at, users(full_name, email)')
     .order('created_at', { ascending: false })
     .limit(200)
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('finance/checkout-requests: listar pedidos', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar pedidos de checkout' }, 500)
+  }
 
   const references = (requests ?? []).map((r: any) => r.reference)
   const { data: matchedSubs } = references.length
@@ -466,7 +491,8 @@ finance.get('/revenue', async (c) => {
     const peak = monthly.reduce((best, m) => (m.revenue > best.revenue ? m : best), monthly[0])
     return c.json<ApiResponse>({ success: true, data: { monthly, total_year: totalYear, peak_month: peak.revenue > 0 ? peak.month : null, peak_revenue: peak.revenue, is_fictitious: isFictitious } })
   } catch (e: any) {
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('finance/revenue: calcular receita', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao calcular receita' }, 500)
   }
 })
 
@@ -508,7 +534,10 @@ finance.patch('/plans/:id', async (c) => {
   updates.updated_at = new Date().toISOString()
 
   const { error } = await supabase.from('plans').update(updates).eq('id', id)
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('finance/plans PATCH: actualizar plano', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao actualizar plano' }, 500)
+  }
 
   const plansData = await getPlansData(c.env)
   const updated = plansData.find(p => p.id === id)
@@ -538,16 +567,25 @@ finance.put('/plans/:id/features', async (c) => {
   if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
 
   const { data: plan, error: findErr } = await supabase.from('plans').select('id').eq('id', id).maybeSingle()
-  if (findErr) return c.json<ApiResponse>({ success: false, error: findErr.message }, 500)
+  if (findErr) {
+    logger.error('finance/plans/features: procurar plano', findErr)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao procurar plano' }, 500)
+  }
   if (!plan) return c.json<ApiResponse>({ success: false, error: 'Plano não encontrado' }, 404)
 
   const { error: deleteErr } = await supabase.from('plan_features').delete().eq('plan_id', id)
-  if (deleteErr) return c.json<ApiResponse>({ success: false, error: deleteErr.message }, 500)
+  if (deleteErr) {
+    logger.error('finance/plans/features: remover funcionalidades antigas', deleteErr)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao actualizar funcionalidades' }, 500)
+  }
 
   if (features.length > 0) {
     const rows = features.map((f, i) => ({ plan_id: id, text: f.text.trim(), included: !!f.included, display_order: i + 1 }))
     const { error: insertErr } = await supabase.from('plan_features').insert(rows)
-    if (insertErr) return c.json<ApiResponse>({ success: false, error: insertErr.message }, 500)
+    if (insertErr) {
+      logger.error('finance/plans/features: inserir novas funcionalidades', insertErr)
+      return c.json<ApiResponse>({ success: false, error: 'Erro ao actualizar funcionalidades' }, 500)
+    }
   }
 
   return c.json<ApiResponse>({ success: true, message: 'Funcionalidades actualizadas com sucesso', data: { id, features } })
@@ -592,8 +630,8 @@ finance.get('/earnings', async (c) => {
 
     return c.json<ApiResponse>({ success: true, data: { entries: data || [], total: count || 0 } })
   } catch (e: any) {
-    console.error('finance/earnings list error:', e)
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('finance/earnings list error', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar lançamentos' }, 500)
   }
 })
 
@@ -616,8 +654,8 @@ finance.post('/earnings/estimate', async (c) => {
     await writeEstimatedLedgerEntries(supabase, estimate)
     return c.json<ApiResponse>({ success: true, data: estimate, message: 'Estimativa calculada e gravada' })
   } catch (e: any) {
-    console.error('finance/earnings/estimate error:', e)
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('finance/earnings/estimate error', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao calcular estimativa' }, 500)
   }
 })
 
@@ -647,8 +685,8 @@ finance.post('/earnings/close-period/:phase', async (c) => {
 
     return c.json<ApiResponse>({ success: true, data: result })
   } catch (e: any) {
-    console.error(`finance/earnings/close-period/${phase} error:`, e)
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error(`finance/earnings/close-period/${phase} error`, e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao fechar período' }, 500)
   }
 })
 
@@ -660,7 +698,10 @@ finance.post('/earnings/:id/approve', async (c) => {
   if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
 
   const { data: row, error: findErr } = await supabase.from('teacher_earnings_ledger').select('id, status').eq('id', id).maybeSingle()
-  if (findErr) return c.json<ApiResponse>({ success: false, error: findErr.message }, 500)
+  if (findErr) {
+    logger.error('finance/earnings/:id/approve: procurar lançamento', findErr)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao procurar lançamento' }, 500)
+  }
   if (!row) return c.json<ApiResponse>({ success: false, error: 'Lançamento não encontrado' }, 404)
   if (row.status === 'PAID') return c.json<ApiResponse>({ success: false, error: 'Lançamento já pago, não pode ser reaprovado' }, 409)
 
@@ -668,7 +709,10 @@ finance.post('/earnings/:id/approve', async (c) => {
     .from('teacher_earnings_ledger')
     .update({ status: 'APPROVED', approved_at: new Date().toISOString() })
     .eq('id', id)
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('finance/earnings/:id/approve: aprovar lançamento', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao aprovar lançamento' }, 500)
+  }
 
   const user = c.get('user') as any
   await logEarningsAudit(supabase, {
@@ -696,7 +740,10 @@ finance.get('/fraud-flags', async (c) => {
     .eq('action', 'FRAUD_FLAG')
     .order('created_at', { ascending: false })
     .limit(200)
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('finance/fraud-flags: listar sinalizações', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar sinalizações' }, 500)
+  }
 
   // entity_id em earnings_audit_log é genérico (não tem FK declarada para
   // users, serve vários tipos de entidade), por isso o nome do professor tem
@@ -743,7 +790,8 @@ finance.get('/earnings/payable', async (c) => {
 
     return c.json<ApiResponse>({ success: true, data: decision })
   } catch (e: any) {
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('finance/earnings/payable: calcular saldo pagável', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao calcular saldo pagável' }, 500)
   }
 })
 
@@ -793,9 +841,16 @@ finance.post('/payouts', async (c) => {
       message: 'Pagamento registado'
     })
   } catch (e: any) {
-    console.error('finance/payouts error:', e)
+    // fn_record_teacher_payout (migration 033) levanta uma mensagem de negócio
+    // deliberada quando o saldo aprovado está abaixo do mínimo — essa mensagem
+    // é para o utilizador ver, mantém-se tal-e-qual. Qualquer outra falha
+    // (erro de BD inesperado, etc.) não deve expor detalhe do Postgres.
     const belowMinimum = /abaixo do mínimo/.test(e.message || '')
-    return c.json<ApiResponse>({ success: false, error: e.message }, belowMinimum ? 409 : 500)
+    if (belowMinimum) {
+      return c.json<ApiResponse>({ success: false, error: e.message }, 409)
+    }
+    logger.error('finance/payouts error', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao registar pagamento' }, 500)
   }
 })
 
@@ -821,7 +876,8 @@ finance.get('/payouts', async (c) => {
     if (error) throw new Error(error.message)
     return c.json<ApiResponse>({ success: true, data: { payouts: data || [], total: count || 0 } })
   } catch (e: any) {
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('finance/payouts GET: listar pagamentos', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar pagamentos' }, 500)
   }
 })
 
@@ -842,7 +898,10 @@ finance.get('/payout-requests', async (c) => {
     .eq('action', 'PAYOUT_REQUESTED')
     .order('created_at', { ascending: false })
     .limit(200)
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('finance/payout-requests: listar pedidos', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar pedidos de levantamento' }, 500)
+  }
 
   const teacherIds = Array.from(new Set((requests ?? []).map((r: any) => r.actor_id).filter(Boolean)))
   const { data: teachers } = teacherIds.length
@@ -881,7 +940,10 @@ finance.post('/earnings/adjustment', async (c) => {
     approved_at: new Date().toISOString(),
     calculation_metadata: { reason: body.reason.trim(), createdByAdminId: user?.id }
   }).select('id').single()
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('finance/earnings/adjustment: criar lançamento', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao criar lançamento de ajuste' }, 500)
+  }
 
   await logEarningsAudit(supabase, {
     actorId: user?.id, action: body.reversalOfId ? 'CREATE_REVERSAL' : 'CREATE_ADJUSTMENT',
@@ -917,8 +979,14 @@ async function attemptReferralConversion(
   if (!attribution) return { converted: false, reason: 'NO_ATTRIBUTION' }
   if (attribution.converted_at) return { converted: false, reason: 'ALREADY_CONVERTED' }
 
+  // Guard explícito (achado de auditoria 2026-09-22: o ternário anterior nunca
+  // disparava SELF_REFERRAL porque checkAttributionWindow só devolve EXPIRED).
+  if (isSelfReferral(attribution.teacher_id, opts.studentId)) {
+    return { converted: false, reason: 'SELF_REFERRAL' }
+  }
+
   const windowCheck = checkAttributionWindow(new Date(attribution.attributed_at), new Date())
-  if (!windowCheck.eligible) return { converted: false, reason: windowCheck.reason === 'EXPIRED' ? 'WINDOW_EXPIRED' : 'SELF_REFERRAL' }
+  if (!windowCheck.eligible) return { converted: false, reason: 'WINDOW_EXPIRED' }
 
   const commissionMzn = calculateReferralCommission(opts.netEligibleRevenueMzn)
 
@@ -966,7 +1034,8 @@ finance.get('/referrals', async (c) => {
     if (error) throw new Error(error.message)
     return c.json<ApiResponse>({ success: true, data: { attributions: data || [] } })
   } catch (e: any) {
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('finance/referrals: listar atribuições', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar atribuições' }, 500)
   }
 })
 
@@ -995,7 +1064,8 @@ finance.post('/referrals/:studentId/convert', async (c) => {
       studentId, subscriptionId: body.subscriptionId, netEligibleRevenueMzn: body.netEligibleRevenueMzn, actorId: user?.id
     })
   } catch (e: any) {
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('finance/referrals/:studentId/convert: converter comissão', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao converter comissão de referência' }, 500)
   }
 
   if (!result.converted) {
@@ -1017,8 +1087,11 @@ finance.get('/ambassador-fees', async (c) => {
   if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
   const supabase = getSupabase(c.env)
   if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
-  const { data, error } = await supabase.from('ambassador_fee_contracts').select('*').order('created_at', { ascending: false })
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  const { data, error } = await supabase.from('ambassador_fee_contracts').select('*, teacher:users!ambassador_fee_contracts_teacher_id_fkey(id, full_name, email)').order('created_at', { ascending: false })
+  if (error) {
+    logger.error('finance/ambassador-fees GET: listar contratos', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar contratos' }, 500)
+  }
   return c.json<ApiResponse>({ success: true, data: { contracts: data || [] } })
 })
 
@@ -1040,7 +1113,10 @@ finance.post('/ambassador-fees', async (c) => {
     notes: body.notes || null,
     created_by: user?.id
   }).select('*').single()
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('finance/ambassador-fees POST: criar contrato', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao criar contrato' }, 500)
+  }
   return c.json<ApiResponse>({ success: true, message: 'Contrato de embaixador criado', data })
 })
 
@@ -1059,11 +1135,17 @@ finance.patch('/ambassador-fees/:id', async (c) => {
   }
 
   const { data: contract, error: findErr } = await supabase.from('ambassador_fee_contracts').select('*').eq('id', id).maybeSingle()
-  if (findErr) return c.json<ApiResponse>({ success: false, error: findErr.message }, 500)
+  if (findErr) {
+    logger.error('finance/ambassador-fees PATCH: procurar contrato', findErr)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao procurar contrato' }, 500)
+  }
   if (!contract) return c.json<ApiResponse>({ success: false, error: 'Contrato não encontrado' }, 404)
 
   const { error } = await supabase.from('ambassador_fee_contracts').update({ status: body.status }).eq('id', id)
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('finance/ambassador-fees PATCH: actualizar estado', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao actualizar contrato' }, 500)
+  }
 
   const user = c.get('user') as any
   if (body.status === 'COMPLETED') {
@@ -1102,8 +1184,11 @@ finance.get('/special-content', async (c) => {
   if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
   const supabase = getSupabase(c.env)
   if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
-  const { data, error } = await supabase.from('special_content_contracts').select('*').order('created_at', { ascending: false })
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  const { data, error } = await supabase.from('special_content_contracts').select('*, teacher:users!special_content_contracts_teacher_id_fkey(id, full_name, email)').order('created_at', { ascending: false })
+  if (error) {
+    logger.error('finance/special-content GET: listar contratos', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar contratos' }, 500)
+  }
   return c.json<ApiResponse>({ success: true, data: { contracts: data || [] } })
 })
 
@@ -1126,7 +1211,10 @@ finance.post('/special-content', async (c) => {
     notes: body.notes || null,
     created_by: user?.id
   }).select('*').single()
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('finance/special-content POST: criar contrato', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao criar contrato' }, 500)
+  }
   return c.json<ApiResponse>({ success: true, message: 'Contrato de conteúdo especial criado', data })
 })
 
@@ -1143,11 +1231,17 @@ finance.patch('/special-content/:id', async (c) => {
   }
 
   const { data: contract, error: findErr } = await supabase.from('special_content_contracts').select('*').eq('id', id).maybeSingle()
-  if (findErr) return c.json<ApiResponse>({ success: false, error: findErr.message }, 500)
+  if (findErr) {
+    logger.error('finance/special-content PATCH: procurar contrato', findErr)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao procurar contrato' }, 500)
+  }
   if (!contract) return c.json<ApiResponse>({ success: false, error: 'Contrato não encontrado' }, 404)
 
   const { error } = await supabase.from('special_content_contracts').update({ status: body.status }).eq('id', id)
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('finance/special-content PATCH: actualizar estado', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao actualizar contrato' }, 500)
+  }
 
   const user = c.get('user') as any
   if (body.status === 'DELIVERED') {
@@ -1195,7 +1289,10 @@ finance.get('/vq-b-campaigns', async (c) => {
     .from('vq_b_campaigns')
     .select('*, vq_b_campaign_lessons(lesson_id)')
     .order('created_at', { ascending: false })
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('finance/vq-b-campaigns GET: listar campanhas', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar campanhas' }, 500)
+  }
 
   const data = (campaigns ?? []).map((camp: any) => ({
     ...camp,
@@ -1246,7 +1343,10 @@ finance.post('/vq-b-campaigns', async (c) => {
   const { error: lessonsErr } = await supabase
     .from('vq_b_campaign_lessons')
     .insert(body.lessonIds.map(lessonId => ({ campaign_id: campaign.id, lesson_id: lessonId })))
-  if (lessonsErr) return c.json<ApiResponse>({ success: false, error: lessonsErr.message }, 500)
+  if (lessonsErr) {
+    logger.error('finance/vq-b-campaigns POST: associar lições', lessonsErr)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao associar lições à campanha' }, 500)
+  }
 
   await logEarningsAudit(supabase, {
     actorId: user?.id, action: 'CREATE_VQ_B_CAMPAIGN', entityType: 'vq_b_campaigns', entityId: campaign.id,
@@ -1271,11 +1371,17 @@ finance.patch('/vq-b-campaigns/:id', async (c) => {
   if (Object.keys(updates).length === 0) return c.json<ApiResponse>({ success: false, error: 'Nada para actualizar' }, 400)
 
   const { data: campaign, error: findErr } = await supabase.from('vq_b_campaigns').select('*').eq('id', id).maybeSingle()
-  if (findErr) return c.json<ApiResponse>({ success: false, error: findErr.message }, 500)
+  if (findErr) {
+    logger.error('finance/vq-b-campaigns PATCH: procurar campanha', findErr)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao procurar campanha' }, 500)
+  }
   if (!campaign) return c.json<ApiResponse>({ success: false, error: 'Campanha não encontrada' }, 404)
 
   const { error } = await supabase.from('vq_b_campaigns').update(updates).eq('id', id)
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('finance/vq-b-campaigns PATCH: actualizar campanha', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao actualizar campanha' }, 500)
+  }
 
   const user = c.get('user') as any
   await logEarningsAudit(supabase, {

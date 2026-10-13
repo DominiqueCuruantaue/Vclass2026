@@ -113,6 +113,19 @@ async function mergeDbChaptersIntoTree(env: any, tree: any[]) {
       .order('display_order', { ascending: true })
     if (error || !Array.isArray(dbChapters) || !dbChapters.length) return tree
 
+    // Contagem de lições publicadas por capítulo — sem isto, todo capítulo
+    // vindo da BD aparece na UI com "0 lições" mesmo tendo vídeos reais,
+    // porque a árvore nunca embute as lições em si (só metadados do capítulo).
+    const lessonCountByChapter: Record<string, number> = {}
+    const { data: lessonRows } = await supabase
+      .from('lessons')
+      .select('chapter_id')
+      .eq('status', 'published')
+    for (const row of (lessonRows || [])) {
+      if (!row.chapter_id) continue
+      lessonCountByChapter[row.chapter_id] = (lessonCountByChapter[row.chapter_id] || 0) + 1
+    }
+
     // Achatar disciplinas e indexar por nome
     const allSubjects: any[] = []
     const subjectsByName: Record<string, any[]> = {}
@@ -147,6 +160,7 @@ async function mergeDbChaptersIntoTree(env: any, tree: any[]) {
         term: ch.trimester ?? null,
         trimester: ch.trimester ?? null,
         fromDb: true,
+        lesson_count: lessonCountByChapter[ch.id] || 0,
       }
 
       for (const target of targets) {

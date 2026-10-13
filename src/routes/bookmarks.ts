@@ -10,6 +10,7 @@ import { Hono } from 'hono'
 import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware } from '../middleware/auth'
 import { getSupabase } from '../config/supabase'
+import { logger } from '../utils/logger'
 import type { ApiResponse } from '../types'
 
 const bookmarks = new Hono<{ Bindings: CloudflareBindings }>()
@@ -42,7 +43,10 @@ bookmarks.get('/', async (c) => {
   if (lessonId) query = query.eq('lesson_id', lessonId)
 
   const { data, error } = await query
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('bookmarks GET: listar marcadores', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar marcadores' }, 500)
+  }
 
   return c.json<ApiResponse>({ success: true, data: data || [] })
 })
@@ -70,7 +74,10 @@ bookmarks.post('/', async (c) => {
     .select('id, lesson_id, time_seconds, title, created_at')
     .single()
 
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('bookmarks POST: criar marcador', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao criar marcador' }, 500)
+  }
 
   return c.json<ApiResponse>({ success: true, data })
 })
@@ -88,7 +95,10 @@ bookmarks.delete('/:id', async (c) => {
     .eq('id', id)
     .eq('student_id', user.id)
 
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('bookmarks DELETE: remover marcador', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao remover marcador' }, 500)
+  }
 
   return c.json<ApiResponse>({ success: true, data: null })
 })

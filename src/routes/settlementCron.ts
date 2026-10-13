@@ -9,6 +9,7 @@ import { Hono } from 'hono'
 import type { CloudflareBindings } from '../types/bindings'
 import { getSupabase } from '../config/supabase'
 import { runEstimatePhase, runValidatePhase, runApprovePhase, previousMonthPeriodMaputo } from '../services/settlementEngine'
+import { logger } from '../utils/logger'
 import type { ApiResponse } from '../types'
 
 const settlementCron = new Hono<{ Bindings: CloudflareBindings }>()
@@ -47,8 +48,8 @@ settlementCron.post('/:phase', async (c) => {
     const result = await run(supabase, periodStart, periodEnd)
     return c.json<ApiResponse>({ success: true, data: result })
   } catch (e: any) {
-    console.error(`settlement cron (${phase}) error:`, e)
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error(`settlement cron (${phase}) error`, e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao executar fase de settlement' }, 500)
   }
 })
 

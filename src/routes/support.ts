@@ -7,6 +7,7 @@ import { hashPassword } from '../utils/password'
 import { revokeAllUserTokens } from '../utils/refreshTokens'
 import { mockUsers } from '../middleware/database'
 import { COUNTRIES, GRADES } from '../data/curriculum'
+import { logger } from '../utils/logger'
 import type { ApiResponse } from '../types'
 
 const support = new Hono<{ Bindings: CloudflareBindings }>()
@@ -208,8 +209,8 @@ support.get('/stats', async (c) => {
       }
     })
   } catch (e: any) {
-    console.error('Support stats error:', e)
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('support/stats error', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar estatísticas de suporte' }, 500)
   }
 })
 
@@ -257,8 +258,8 @@ support.get('/tickets', async (c) => {
 
     return c.json<ApiResponse>({ success: true, data: { tickets, total: totalAll, stats, is_fictitious: isFictitious } })
   } catch (e: any) {
-    console.error('Support tickets list error:', e)
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('support/tickets list error', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar tickets' }, 500)
   }
 })
 
@@ -298,8 +299,8 @@ support.get('/tickets/:id', async (c) => {
 
     return c.json<ApiResponse>({ success: true, data: { ...ticket, thread, is_fictitious: false } })
   } catch (e: any) {
-    console.error('Support ticket detail error:', e)
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('support/tickets/:id detail error', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar ticket' }, 500)
   }
 })
 
@@ -318,7 +319,10 @@ support.patch('/tickets/:id', async (c) => {
     }
 
     const { data: existing, error: fetchErr } = await supabase.from('support_tickets').select('*').eq('id', id).maybeSingle()
-    if (fetchErr) return c.json<ApiResponse>({ success: false, error: fetchErr.message }, 500)
+    if (fetchErr) {
+      logger.error('support/tickets/:id PATCH: procurar ticket', fetchErr)
+      return c.json<ApiResponse>({ success: false, error: 'Erro ao procurar ticket' }, 500)
+    }
     if (!existing) {
       // Ids fictícios (TKT-001, ...) nunca existem na BD real — modo demo, não persiste.
       if (mockTicketRows().some(t => t.id === id)) {
@@ -338,7 +342,10 @@ support.patch('/tickets/:id', async (c) => {
     updates.resolved_at = newStatus === 'resolved' ? new Date().toISOString() : null
 
     const { error: updateErr } = await supabase.from('support_tickets').update(updates).eq('id', id)
-    if (updateErr) return c.json<ApiResponse>({ success: false, error: updateErr.message }, 500)
+    if (updateErr) {
+      logger.error('support/tickets/:id PATCH: actualizar ticket', updateErr)
+      return c.json<ApiResponse>({ success: false, error: 'Erro ao actualizar ticket' }, 500)
+    }
 
     if (body.response?.trim()) {
       const { error: replyErr } = await supabase.from('ticket_responses').insert({
@@ -353,8 +360,8 @@ support.patch('/tickets/:id', async (c) => {
 
     return c.json<ApiResponse>({ success: true, data: { id, ...updates }, message: 'Ticket actualizado com sucesso' })
   } catch (e: any) {
-    console.error('Support ticket update error:', e)
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('support/tickets/:id PATCH error', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao actualizar ticket' }, 500)
   }
 })
 
@@ -384,7 +391,10 @@ support.get('/users', async (c) => {
     if (search) query = query.ilike('full_name', `%${search}%`)
 
     const { data: rows, error } = await query
-    if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+    if (error) {
+      logger.error('support/users GET: listar utilizadores', error)
+      return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar utilizadores' }, 500)
+    }
 
     let users = (rows || []).map((u: any) => ({
       id: u.id,
@@ -409,8 +419,8 @@ support.get('/users', async (c) => {
 
     return c.json<ApiResponse>({ success: true, data: { users, total: users.length, stats } })
   } catch (e: any) {
-    console.error('Support users list error:', e)
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('support/users GET error', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar utilizadores' }, 500)
   }
 })
 
@@ -423,7 +433,10 @@ support.post('/users/:id/block', async (c) => {
   if (!supabase) return c.json<ApiResponse>({ success: true, data: { id, status: 'blocked' }, message: 'Utilizador bloqueado (modo demo)' })
 
   const { error } = await supabase.from('users').update({ is_active: false, updated_at: new Date().toISOString() }).eq('id', id)
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('support/users/:id/block: bloquear utilizador', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao bloquear utilizador' }, 500)
+  }
   await revokeAllUserTokens(supabase, id)
 
   return c.json<ApiResponse>({ success: true, data: { id, status: 'blocked' }, message: 'Utilizador bloqueado' })
@@ -438,7 +451,10 @@ support.post('/users/:id/unblock', async (c) => {
   if (!supabase) return c.json<ApiResponse>({ success: true, data: { id, status: 'active' }, message: 'Utilizador desbloqueado (modo demo)' })
 
   const { error } = await supabase.from('users').update({ is_active: true, updated_at: new Date().toISOString() }).eq('id', id)
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('support/users/:id/unblock: desbloquear utilizador', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao desbloquear utilizador' }, 500)
+  }
 
   return c.json<ApiResponse>({ success: true, data: { id, status: 'active' }, message: 'Utilizador desbloqueado' })
 })
@@ -454,7 +470,10 @@ support.post('/users/:id/reset-password', async (c) => {
   const tempPassword = genTempPassword()
   const password_hash = await hashPassword(tempPassword)
   const { error } = await supabase.from('users').update({ password_hash, updated_at: new Date().toISOString() }).eq('id', id)
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('support/users/:id/reset-password: repor senha', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao repor senha' }, 500)
+  }
   await revokeAllUserTokens(supabase, id)
 
   return c.json<ApiResponse>({ success: true, data: { id, temp_password: tempPassword }, message: 'Senha temporária gerada' })

@@ -7,6 +7,7 @@ import { getSupabase } from '../config/supabase'
 import { z } from 'zod'
 import type { ApiResponse } from '../types'
 import { isLessonVideoReady } from '../utils/bunny'
+import { logger } from '../utils/logger'
 
 const notifications = new Hono<{ Bindings: CloudflareBindings }>()
 notifications.use('*', authMiddleware)
@@ -249,7 +250,8 @@ notifications.get('/', async (c) => {
 
     return c.json<ApiResponse>({ success: true, data })
   } catch (e: any) {
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('notifications GET error', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar notificações' }, 500)
   }
 })
 
@@ -275,7 +277,8 @@ notifications.get('/unread-count', async (c) => {
     const count = data.filter((n: any) => !n.read).length
     return c.json<ApiResponse>({ success: true, data: { count } })
   } catch (e: any) {
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('notifications/unread-count GET error', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao contar notificações' }, 500)
   }
 })
 

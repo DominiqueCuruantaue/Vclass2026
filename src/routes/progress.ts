@@ -404,4 +404,96 @@ progress.get('/activity', async (c) => {
   }
 })
 
+/**
+ * GET /api/progress/weekly?tz=<getTimezoneOffset>
+ * Gráfico "Actividade Semanal" do dashboard — semana actual (Seg→Dom) no
+ * fuso do aluno, só com dados reais:
+ *   - lessons:   lições concluídas nesse dia (student_progress.completed_at)
+ *   - minutes:   minutos de vídeo vistos nesse dia (student_daily_study)
+ *   - exercises: exercícios submetidos nesse dia (exercise_submissions)
+ * Conta nova → tudo a zero, e vai enchendo à medida que o aluno estuda.
+ */
+progress.get('/weekly', async (c) => {
+  try {
+    const user = c.get('user')
+    const supabase = getSupabase(c.env)
+    if (!supabase) {
+      return c.json<ApiResponse>({ success: false, error: 'Database configuration missing' }, 500)
+    }
+
+    const tz = Math.min(840, Math.max(-840, Number(c.req.query('tz')) || 0))
+    const toLocal = (ms: number) => new Date(ms - tz * 60000)
+    // Timestamps sem fuso vindos do Postgres (TIMESTAMP) estão em UTC
+    const parseUtc = (s: string) => Date.parse(/[zZ]|[+-]\d\d:?\d\d$/.test(s) ? s : s + 'Z')
+    const localDay = (iso: string) => toLocal(parseUtc(iso)).toISOString().slice(0, 10)
+
+    // Segunda-feira da semana actual, em hora local do aluno
+    const todayLocal = toLocal(Date.now())
+    const mondayOffset = (todayLocal.getUTCDay() + 6) % 7
+    const mondayLocal = new Date(Date.UTC(todayLocal.getUTCFullYear(), todayLocal.getUTCMonth(), todayLocal.getUTCDate() - mondayOffset))
+    const days: string[] = []
+    for (let i = 0; i < 7; i++) {
+      days.push(new Date(mondayLocal.getTime() + i * 86400000).toISOString().slice(0, 10))
+    }
+    // Início da semana convertido de volta para UTC, para filtrar na BD
+    const sinceUtc = new Date(mondayLocal.getTime() + tz * 60000).toISOString()
+
+    const [lessonsRes, submissionsRes, studyRes] = await Promise.all([
+      supabase
+        .from('student_progress')
+        .select('completed_at')
+        .eq('student_id', user.id)
+        .eq('status', 'completed')
+        .gte('completed_at', sinceUtc),
+      supabase
+        .from('exercise_submissions')
+        .select('submitted_at')
+        .eq('student_id', user.id)
+        .gte('submitted_at', sinceUtc),
+      supabase
+        .from('student_daily_study')
+        .select('day, seconds')
+        .eq('student_id', user.id)
+        .gte('day', days[0])
+        .lte('day', days[6])
+    ])
+
+    if (studyRes.error) console.error('weekly study read error:', studyRes.error)
+
+    const index = new Map(days.map((d, i) => [d, i]))
+    const lessons = new Array(7).fill(0)
+    const exercises = new Array(7).fill(0)
+    const seconds = new Array(7).fill(0)
+
+    ;(lessonsRes.data || []).forEach((r: any) => {
+      const i = r.completed_at ? index.get(localDay(r.completed_at)) : undefined
+      if (i !== undefined) lessons[i]++
+    })
+    ;(submissionsRes.data || []).forEach((r: any) => {
+      const i = r.submitted_at ? index.get(localDay(r.submitted_at)) : undefined
+      if (i !== undefined) exercises[i]++
+    })
+    ;(studyRes.data || []).forEach((r: any) => {
+      const i = index.get(String(r.day).slice(0, 10))
+      if (i !== undefined) seconds[i] += r.seconds || 0
+    })
+
+    return c.json<ApiResponse>({
+      success: true,
+      data: {
+        days,
+        lessons,
+        minutes: seconds.map(s => Math.round(s / 60)),
+        exercises
+      }
+    })
+  } catch (error) {
+    console.error('Get weekly activity error:', error)
+    return c.json<ApiResponse>({
+      success: false,
+      error: 'Internal server error'
+    }, 500)
+  }
+})
+
 export default progress

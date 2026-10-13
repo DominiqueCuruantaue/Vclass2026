@@ -6,6 +6,7 @@ import { authMiddleware, requireCountryManagerOrAdmin } from '../middleware/auth
 import { getSupabase } from '../config/supabase'
 import { mockUsers } from '../middleware/database'
 import { EDUCATION_LEVELS, GRADES, SUBJECTS } from '../data/curriculum'
+import { logger } from '../utils/logger'
 import type { ApiResponse } from '../types'
 
 const country = new Hono<{ Bindings: CloudflareBindings }>()
@@ -379,7 +380,10 @@ country.get('/:id/teachers', async (c) => {
     .select('id, full_name, email, is_active, last_login_at')
     .eq('country_code', id)
     .eq('role', 'teacher')
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('country/:id/teachers GET: listar professores', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar professores' }, 500)
+  }
 
   if (!teacherUsers || teacherUsers.length === 0) {
     const teachers = MOCK_TEACHERS[id] || []
@@ -443,7 +447,10 @@ country.get('/:id/users', async (c) => {
     .eq('country_code', id)
     .in('role', ['student', 'teacher'])
     .order('created_at', { ascending: false })
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('country/:id/users GET: listar utilizadores', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar utilizadores' }, 500)
+  }
 
   if (!rows || rows.length === 0) {
     const users = MOCK_USERS_COUNTRY[id] || []
@@ -499,7 +506,10 @@ country.patch('/:id/teachers/:tid', async (c) => {
   }
 
   const { error } = await supabase.from('users').update({ is_active: body.status !== 'inactive', updated_at: new Date().toISOString() }).eq('id', tid)
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('country/:id/teachers/:tid PATCH: actualizar professor', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao actualizar professor' }, 500)
+  }
 
   return c.json<ApiResponse>({ success: true, data: { id: tid, ...body }, message: 'Professor actualizado' })
 })

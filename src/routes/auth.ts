@@ -10,6 +10,7 @@ import { storeRefreshToken, isRefreshTokenActive, revokeRefreshToken, revokeAllU
 import { mockUsers, DEMO_PASSWORD, isDemoModeAllowed } from '../middleware/database'
 import { authMiddleware, rateLimitMiddleware } from '../middleware/auth'
 import { COUNTRIES, GRADES, EDUCATION_LEVELS } from '../data/curriculum'
+import { logger } from '../utils/logger'
 
 const REFRESH_COOKIE = 'vclass_rt'
 const REFRESH_MAX_AGE = 30 * 24 * 3600 // 30 dias em segundos — usado apenas como validade absoluta do JWT/registo em BD
@@ -605,11 +606,14 @@ auth.patch('/profile', authMiddleware, async (c) => {
       .select('id, email, full_name, role, country_id, phone, avatar_url, is_verified, created_at')
       .single()
 
-    if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+    if (error) {
+      logger.error('auth/profile PATCH: actualizar perfil', error)
+      return c.json<ApiResponse>({ success: false, error: 'Erro ao actualizar perfil' }, 500)
+    }
 
     return c.json<ApiResponse>({ success: true, data: { ...data, name: data.full_name } })
   } catch (e: any) {
-    console.error('Update profile error:', e)
+    logger.error('auth/profile PATCH error', e)
     return c.json<ApiResponse>({ success: false, error: 'Internal server error' }, 500)
   }
 })
@@ -707,7 +711,10 @@ auth.post('/class-switch', authMiddleware, async (c) => {
     .update({ country_code, grade_id, updated_at: new Date().toISOString() })
     .eq('id', authUser.id)
 
-  if (updateError) return c.json<ApiResponse>({ success: false, error: updateError.message }, 500)
+  if (updateError) {
+    logger.error('auth/class-switch POST: actualizar classe', updateError)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao trocar de classe' }, 500)
+  }
 
   if (!isFirstTimeSet) {
     await supabase.from('class_switch_log').insert({
@@ -778,7 +785,10 @@ auth.post('/change-password', authMiddleware, async (c) => {
       .update({ password_hash: new_hash, updated_at: new Date().toISOString() })
       .eq('id', user.id)
 
-    if (updateErr) return c.json<ApiResponse>({ success: false, error: updateErr.message }, 500)
+    if (updateErr) {
+      logger.error('auth/change-password POST: actualizar senha', updateErr)
+      return c.json<ApiResponse>({ success: false, error: 'Erro ao alterar senha' }, 500)
+    }
 
     // Após mudar password: invalidar todas as sessões existentes (forçar re-login noutros devices)
     await revokeAllUserTokens(supabase, user.id)

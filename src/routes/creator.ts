@@ -4,6 +4,7 @@ import { authMiddleware } from '../middleware/auth'
 import { getSupabase } from '../config/supabase'
 import { createBunnyVideo, buildBunnyTusCredentials, getBunnyVideoStatus } from '../utils/bunny'
 import { extractPageCount, isValidPdfSignature } from '../utils/documentMeta'
+import { logger } from '../utils/logger'
 
 function isDatabaseConfigured(env?: any): boolean {
   const hasUrl = !!(env?.SUPABASE_URL || process.env.SUPABASE_URL)
@@ -168,7 +169,8 @@ creator.get('/dashboard', async (c) => {
       }
     })
   } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
+    logger.error('creator/dashboard error', error)
+    return c.json({ success: false, error: 'Erro ao carregar dashboard' }, 500)
   }
 })
 
@@ -266,8 +268,8 @@ creator.get('/lesson/:id', async (c) => {
 
     return c.json({ success: true, data: { ...data, exercises } })
   } catch (error: any) {
-    console.error('Get lesson error:', error)
-    return c.json({ success: false, error: error.message }, 500)
+    logger.error('creator/lesson GET error', error)
+    return c.json({ success: false, error: 'Erro ao carregar lição' }, 500)
   }
 })
 
@@ -469,8 +471,8 @@ creator.post('/lesson', async (c) => {
     if (error) throw error
     return c.json({ success: true, data, message: 'Lição criada' }, 201)
   } catch (error: any) {
-    console.error('Create lesson error:', error)
-    return c.json({ success: false, error: error.message }, 500)
+    logger.error('creator/lesson POST error', error)
+    return c.json({ success: false, error: 'Erro ao criar lição' }, 500)
   }
 })
 
@@ -534,8 +536,8 @@ creator.put('/lesson/:id', async (c) => {
     if (error) throw error
     return c.json({ success: true, data, message: 'Lição atualizada' })
   } catch (error: any) {
-    console.error('Update lesson error:', error)
-    return c.json({ success: false, error: error.message }, 500)
+    logger.error('creator/lesson PUT error', error)
+    return c.json({ success: false, error: 'Erro ao actualizar lição' }, 500)
   }
 })
 
@@ -557,7 +559,8 @@ creator.delete('/lesson/:id', async (c) => {
     if (error) throw error
     return c.json({ success: true, message: 'Lição excluída permanentemente.' })
   } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
+    logger.error('creator/lesson DELETE error', error)
+    return c.json({ success: false, error: 'Erro ao eliminar lição' }, 500)
   }
 })
 
@@ -632,7 +635,8 @@ creator.post('/lesson/:id/exercises', async (c) => {
 
     return c.json({ success: true, data: insertedEx, message: `${exercises.length} exercícios guardados com sucesso!` })
   } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
+    logger.error('creator/lesson/exercises POST error', error)
+    return c.json({ success: false, error: 'Erro ao guardar exercícios' }, 500)
   }
 })
 
@@ -794,7 +798,8 @@ creator.get('/students', async (c) => {
 
     return c.json({ success: true, data, total: count ?? data.length, page, limit })
   } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
+    logger.error('creator/students GET error', error)
+    return c.json({ success: false, error: 'Erro ao carregar alunos' }, 500)
   }
 })
 
@@ -879,8 +884,8 @@ creator.post('/session', async (c) => {
         : 'Sessão marcada. Ainda não há alunos com progresso registado neste capítulo para notificar.'
     }, 201)
   } catch (error: any) {
-    console.error('Create session error:', error)
-    return c.json({ success: false, error: error.message }, 500)
+    logger.error('creator/session POST error', error)
+    return c.json({ success: false, error: 'Erro ao marcar sessão' }, 500)
   }
 })
 
@@ -944,7 +949,8 @@ creator.delete('/session/:id', async (c) => {
     if (!data) return c.json({ success: false, error: 'Sessão não encontrada' }, 404)
     return c.json({ success: true, message: 'Sessão cancelada' })
   } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
+    logger.error('creator/session DELETE error', error)
+    return c.json({ success: false, error: 'Erro ao cancelar sessão' }, 500)
   }
 })
 
@@ -995,7 +1001,8 @@ creator.post('/chapter', async (c) => {
     if (error) throw error
     return c.json({ success: true, data, message: 'Capítulo criado com sucesso!' }, 201)
   } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
+    logger.error('creator/chapter POST error', error)
+    return c.json({ success: false, error: 'Erro ao criar capítulo' }, 500)
   }
 })
 
@@ -1043,7 +1050,8 @@ creator.put('/chapter/:id', async (c) => {
     if (!data) return c.json({ success: false, error: 'Capítulo não encontrado' }, 404)
     return c.json({ success: true, data, message: 'Capítulo atualizado' })
   } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
+    logger.error('creator/chapter PUT error', error)
+    return c.json({ success: false, error: 'Erro ao actualizar capítulo' }, 500)
   }
 })
 
@@ -1068,7 +1076,8 @@ creator.delete('/chapter/:id', async (c) => {
     if (error) throw error
     return c.json({ success: true, message: 'Capítulo eliminado' })
   } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
+    logger.error('creator/chapter DELETE error', error)
+    return c.json({ success: false, error: 'Erro ao eliminar capítulo' }, 500)
   }
 })
 
@@ -1214,7 +1223,8 @@ creator.get('/video/:videoId/status', async (c) => {
       }
     })
   } catch (err: any) {
-    return c.json({ success: false, error: err.message }, 500)
+    logger.error('creator/video/status GET error', err)
+    return c.json({ success: false, error: 'Erro ao verificar estado do vídeo' }, 500)
   }
 })
 
@@ -1264,7 +1274,10 @@ creator.get('/library', async (c) => {
   if (category) query = query.eq('category', category)
 
   const { data, error, count } = await query
-  if (error) return c.json({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('creator/library GET: listar materiais', error)
+    return c.json({ success: false, error: 'Erro ao carregar materiais' }, 500)
+  }
 
   return c.json({
     success: true,
@@ -1308,7 +1321,10 @@ creator.post('/library', async (c) => {
     .select(LIBRARY_SELECT)
     .single()
 
-  if (error) return c.json({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('creator/library POST: criar rascunho', error)
+    return c.json({ success: false, error: 'Erro ao criar material' }, 500)
+  }
 
   return c.json({ success: true, data }, 201)
 })
@@ -1366,7 +1382,10 @@ creator.put('/library/:id', async (c) => {
     .select(LIBRARY_SELECT)
     .single()
 
-  if (error) return c.json({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('creator/library PUT: actualizar material', error)
+    return c.json({ success: false, error: 'Erro ao actualizar material' }, 500)
+  }
 
   return c.json({ success: true, data })
 })
@@ -1393,7 +1412,10 @@ creator.delete('/library/:id', async (c) => {
     .delete()
     .eq('id', id)
 
-  if (error) return c.json({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('creator/library DELETE: eliminar material', error)
+    return c.json({ success: false, error: 'Erro ao eliminar material' }, 500)
+  }
 
   return c.json({ success: true, data: null })
 })
@@ -1445,7 +1467,10 @@ creator.post('/library/upload', async (c) => {
     .from('vclass-library')
     .upload(path, buffer, { contentType: file.type || 'application/pdf', upsert: false })
 
-  if (upErr) return c.json({ success: false, error: upErr.message }, 500)
+  if (upErr) {
+    logger.error('creator/library/upload: enviar ficheiro para storage', upErr)
+    return c.json({ success: false, error: 'Erro ao enviar ficheiro' }, 500)
+  }
 
   const { data: urlData } = supabase.storage.from('vclass-library').getPublicUrl(path)
 
@@ -1505,7 +1530,10 @@ creator.post('/library/:id/submit', async (c) => {
     .select(LIBRARY_SELECT)
     .single()
 
-  if (error) return c.json({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('creator/library/submit POST: submeter material', error)
+    return c.json({ success: false, error: 'Erro ao submeter material' }, 500)
+  }
 
   return c.json({ success: true, data })
 })

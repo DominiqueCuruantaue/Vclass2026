@@ -15,6 +15,7 @@ import { Hono } from 'hono'
 import type { CloudflareBindings } from '../types/bindings'
 import { authMiddleware } from '../middleware/auth'
 import { getSupabase } from '../config/supabase'
+import { logger } from '../utils/logger'
 import type { ApiResponse } from '../types'
 
 const library = new Hono<{ Bindings: CloudflareBindings }>()
@@ -68,7 +69,10 @@ library.get('/', async (c) => {
   query = buildFilters(query, { category, subject_id, grade_id, search })
 
   const { data, error, count } = await query
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('library GET: listar materiais', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar materiais' }, 500)
+  }
 
   const total      = count ?? 0
   const totalPages = Math.ceil(total / limit)
@@ -95,7 +99,10 @@ library.get('/featured', async (c) => {
     .order('downloads_count', { ascending: false })
     .limit(6)
 
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('library/featured GET: listar destaques', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar destaques' }, 500)
+  }
 
   return c.json<ApiResponse>({ success: true, data: data || [] })
 })
@@ -110,7 +117,10 @@ library.get('/stats', async (c) => {
     .select('category, downloads_count')
     .eq('status', 'published')
 
-  if (error) return c.json<ApiResponse>({ success: false, error: error.message }, 500)
+  if (error) {
+    logger.error('library/stats GET: calcular estatísticas', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar estatísticas' }, 500)
+  }
 
   const items = data || []
   const stats = {

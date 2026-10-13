@@ -40,6 +40,7 @@ app.use('/support-dashboard.html', privilegedGuard)
 app.use('/editor-dashboard.html', privilegedGuard)
 app.use('/country-dashboard.html', privilegedGuard)
 app.use('/finance-dashboard.html', privilegedGuard)
+app.use('/admin-earnings.html', privilegedGuard)
 app.use('/moderator-dashboard.html', privilegedGuard)
 app.use('/teacher-verification.html', privilegedGuard)
 
@@ -85,6 +86,7 @@ import plansHtml from '../pages/plans.html?raw'
 import bookmarksHtml from '../pages/bookmarks.html?raw'
 import transfersHtml from '../pages/transfers.html?raw'
 import creatorEarningsHtml from '../pages/creator-earnings.html?raw'
+import adminEarningsHtml from '../pages/admin-earnings.html?raw'
 
 // Serve HTML pages
 app.get('/', (c) => c.html(homeHtml))
@@ -137,5 +139,8 @@ app.get('/plans.html', (c) => c.html(plansHtml))
 
 // Creator Earnings
 app.get('/creator-earnings.html', (c) => c.html(creatorEarningsHtml))
+
+// Admin: gestão de ganhos de professores (campanhas VQ-B, fraude, levantamentos, ledger)
+app.get('/admin-earnings.html', (c) => c.html(adminEarningsHtml))
 
 export default app

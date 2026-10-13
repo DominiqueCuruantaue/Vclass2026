@@ -6,6 +6,7 @@ import { Hono } from 'hono'
 import type { CloudflareBindings } from '../types/bindings'
 import { getSupabase } from '../config/supabase'
 import { optionalAuth } from '../middleware/auth'
+import { logger } from '../utils/logger'
 import type { ApiResponse } from '../types'
 
 const tickets = new Hono<{ Bindings: CloudflareBindings }>()
@@ -72,8 +73,8 @@ tickets.post('/', optionalAuth, async (c) => {
 
     return c.json<ApiResponse>({ success: true, data: { id: data.id }, message: 'Ticket enviado com sucesso!' }, 201)
   } catch (e: any) {
-    console.error('Create ticket error:', e)
-    return c.json<ApiResponse>({ success: false, error: e.message }, 500)
+    logger.error('tickets POST error', e)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao enviar ticket' }, 500)
   }
 })
 
