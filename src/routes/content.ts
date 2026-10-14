@@ -363,9 +363,12 @@ content.get('/lesson/:lesson_id', async (c) => {
     return c.json<ApiResponse>({ success: false, error: 'Lição não encontrada' }, 404)
   }
 
-  // Incrementar visualizações (não bloqueia)
-  supabase!.from('lessons').update({ views_count: (lesson.views_count || 0) + 1 }).eq('id', lesson_id)
+  // Incrementar visualizações (não bloqueia a resposta). waitUntil: num Worker,
+  // uma promessa solta pode ser cancelada assim que a resposta sai, e o
+  // incremento perdia-se.
+  const viewsUpdate = supabase!.from('lessons').update({ views_count: (lesson.views_count || 0) + 1 }).eq('id', lesson_id)
     .then(({ error: e }: any) => { if (e) console.warn('views update failed:', e.message) })
+  try { c.executionCtx.waitUntil(viewsUpdate) } catch { /* fora de um Worker (dev/testes): a promessa corre na mesma */ }
 
   let attachments: any[] = []
   try {

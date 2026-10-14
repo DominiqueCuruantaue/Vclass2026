@@ -1305,9 +1305,11 @@
             document.getElementById('sticky-lesson-title').textContent = lessonData.title;
             document.getElementById('lesson-description').textContent = lessonData.description || 'Sem descrição disponível';
             document.getElementById('lesson-duration').textContent = VClass.formatDuration(lessonData.duration);
-            document.getElementById('lesson-views').textContent = lessonData.views || '0';
+            // A coluna na BD é views_count (lessons.views não existe)
+            const viewsCount = String(lessonData.views_count ?? lessonData.views ?? 0);
+            document.getElementById('lesson-views').textContent = viewsCount;
             const toolbarViews = document.getElementById('toolbar-views-count');
-            if (toolbarViews) toolbarViews.textContent = lessonData.views || '0';
+            if (toolbarViews) toolbarViews.textContent = viewsCount;
             document.getElementById('lesson-date').textContent = VClass.formatDate(lessonData.created_at);
 
             // Acesso controlado por autenticação — sem distinção pública de plano
