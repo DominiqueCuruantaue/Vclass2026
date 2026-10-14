@@ -1135,7 +1135,12 @@
 
     <script src="/static/app.js"></script>
     <script>
-        if (!VClass.isAuthenticated()) {
+        // Vindo da aba Transferências (?offline=1) ou sem rede, a lição pode abrir
+        // sem sessão a partir da cópia guardada no dispositivo: a sessão não
+        // sobrevive a fechar a app, e sem dados móveis não há como voltar a
+        // entrar. loadLesson() manda para o login se não houver cópia local.
+        const offlineOnly = !VClass.isAuthenticated();
+        if (offlineOnly && new URLSearchParams(window.location.search).get('offline') !== '1' && navigator.onLine) {
             window.location.href = '/login.html';
         }
 
@@ -1197,6 +1202,11 @@
 
             if (!lessonId) {
                 showLessonError('Nenhuma lição foi selecionada. Escolha uma lição a partir do conteúdo.');
+                return;
+            }
+
+            if (offlineOnly) {
+                if (!(await loadLessonFromOfflineCache(vload))) window.location.href = '/login.html';
                 return;
             }
 

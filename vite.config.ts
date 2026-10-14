@@ -31,7 +31,8 @@ function removeStaticHtmlPlugin() {
         const routes = {
           version: 1,
           include: ['/*'],
-          exclude: ['/static/*', '/designs/*', '/favicon.svg']
+          // /sw.js tem de ser servido da raiz (scope "/") como ficheiro estático
+          exclude: ['/static/*', '/designs/*', '/favicon.svg', '/sw.js']
         }
         writeFileSync(routesPath, JSON.stringify(routes))
         console.log('[remove-static-html] _routes.json reescrito para encaminhar HTMLs para o worker')

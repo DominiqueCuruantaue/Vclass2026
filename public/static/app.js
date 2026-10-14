@@ -332,6 +332,14 @@ window.addEventListener('online', hideOfflineBanner);
 window.addEventListener('offline', showOfflineBanner);
 document.addEventListener('DOMContentLoaded', () => { if (!navigator.onLine) showOfflineBanner(); });
 
+// Service Worker: guarda a aba Transferências e o leitor de lições para
+// abrirem sem dados móveis (ver /sw.js). Basta uma visita com ligação.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => console.warn('[VClass] SW não registado:', err));
+  });
+}
+
 // ─── Global Navbar ────────────────────────────────────────────────────────────
 function getNavbarHTML(activePage = '') {
   // Professor/admin vêem o menu do Painel do Criador em qualquer página partilhada

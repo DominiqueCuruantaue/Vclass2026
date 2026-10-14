@@ -14,6 +14,8 @@
         }
         .transfer-card { animation: fadeInUp 0.4s ease forwards; opacity: 0; }
         #empty-state { display: none; }
+        #reader-modal { display: none; }
+        #reader-modal.open { display: flex; }
     </style>
   <script src="/static/safe-dom.js"></script>
 </head>
@@ -76,6 +78,17 @@
                 <i class="fas fa-book-open mr-1.5"></i>Ir para a Biblioteca
             </a>
         </div>
+    </div>
+
+    <!-- Leitor de livros offline -->
+    <div id="reader-modal" class="fixed inset-0 z-[70] bg-black/80 flex-col">
+        <div class="flex items-center justify-between gap-3 px-4 py-3 bg-white border-b border-gray-100 flex-shrink-0">
+            <h3 id="reader-title" class="text-sm font-bold text-gray-900 truncate">Leitor</h3>
+            <button onclick="closeReader()" class="text-gray-500 hover:text-gray-800 p-1.5" title="Fechar">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div id="reader-body" class="flex-1 overflow-auto bg-gray-200 px-2"></div>
     </div>
 
     <script src="/static/app.js"></script>
@@ -171,9 +184,133 @@
             document.getElementById('videos-empty').classList.toggle('hidden', videos.length > 0);
         }
 
+        // ── Leitor offline ────────────────────────────────────────────────
+        // A WebView do Android (app) não tem leitor de PDF e a CSP não deixa
+        // abrir blobs em iframe/nova aba — o PDF é desenhado aqui com pdf.js
+        // (guardado em cache pelo /sw.js, funciona sem rede).
+        const PDFJS_BASE = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/';
+        let pdfjsReady = null;
+        let readerToken = 0;      // invalida renderizações de um livro já fechado
+        let readerObserver = null;
+
+        function loadPdfJs() {
+            if (pdfjsReady) return pdfjsReady;
+            pdfjsReady = (async () => {
+                await new Promise((resolve, reject) => {
+                    const s = document.createElement('script');
+                    s.src = PDFJS_BASE + 'pdf.min.js';
+                    s.onload = resolve;
+                    s.onerror = () => reject(new Error('Leitor de PDF indisponível'));
+                    document.head.appendChild(s);
+                });
+                // Worker a partir de um blob: um Worker não pode vir de outro
+                // domínio, e assim o código vem da mesma resposta em cache.
+                const res = await fetch(PDFJS_BASE + 'pdf.worker.min.js');
+                if (!res.ok) throw new Error('Leitor de PDF indisponível');
+                const workerUrl = URL.createObjectURL(await res.blob());
+                window.pdfjsLib.GlobalWorkerOptions.workerPort = new Worker(workerUrl);
+                return window.pdfjsLib;
+            })();
+            pdfjsReady.catch(() => { pdfjsReady = null; });
+            return pdfjsReady;
+        }
+
+        async function isPdfBlob(blob) {
+            if (/pdf/i.test(blob.type)) return true;
+            const head = new Uint8Array(await blob.slice(0, 5).arrayBuffer());
+            return String.fromCharCode(...head) === '%PDF-';
+        }
+
+        function readerMessage(text) {
+            const p = document.createElement('p');
+            p.className = 'text-sm text-gray-500 text-center py-16 px-6';
+            p.textContent = text;
+            return p;
+        }
+
         async function openTransfer(id) {
-            const url = await VClassOffline.getBlobUrl(id);
-            if (url) window.open(url, '_blank', 'noopener');
+            const item = await VClassOffline.getItem(id);
+            if (!item || !item.blob) { VClass.showNotification('Ficheiro não encontrado neste dispositivo', 'error'); return; }
+
+            const token = ++readerToken;
+            const body = document.getElementById('reader-body');
+            document.getElementById('reader-title').textContent = item.title || 'Leitor';
+            body.replaceChildren(readerMessage('A abrir…'));
+            document.getElementById('reader-modal').classList.add('open');
+            document.body.style.overflow = 'hidden';
+
+            try {
+                if (/^image\//i.test(item.blob.type)) {
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(item.blob);
+                    img.className = 'max-w-full mx-auto my-4 rounded-lg shadow';
+                    body.replaceChildren(img);
+                    return;
+                }
+                if (!(await isPdfBlob(item.blob))) {
+                    body.replaceChildren(readerMessage('Este formato não pode ser aberto dentro da aplicação. Só PDFs e imagens podem ser lidos offline.'));
+                    return;
+                }
+
+                const pdfjsLib = await loadPdfJs();
+                const pdf = await pdfjsLib.getDocument({ data: await item.blob.arrayBuffer() }).promise;
+                if (token !== readerToken) return;
+
+                const first = await pdf.getPage(1);
+                const ratio = first.getViewport({ scale: 1 }).height / first.getViewport({ scale: 1 }).width;
+                const width = Math.min(body.clientWidth - 16, 900);
+
+                body.replaceChildren();
+                const pages = [];
+                for (let n = 1; n <= pdf.numPages; n++) {
+                    const holder = document.createElement('div');
+                    holder.className = 'bg-white shadow mx-auto my-2';
+                    holder.style.width = width + 'px';
+                    holder.style.minHeight = Math.round(width * ratio) + 'px';
+                    holder.dataset.page = n;
+                    body.appendChild(holder);
+                    pages.push(holder);
+                }
+
+                // Desenha só as páginas perto do ecrã — livros com centenas de
+                // páginas esgotariam a memória do telemóvel se fossem todas de uma vez.
+                readerObserver?.disconnect();
+                readerObserver = new IntersectionObserver((entries) => {
+                    entries.forEach(async (entry) => {
+                        const holder = entry.target;
+                        if (!entry.isIntersecting || holder.dataset.rendered) return;
+                        holder.dataset.rendered = '1';
+                        const page = await pdf.getPage(Number(holder.dataset.page));
+                        if (token !== readerToken) return;
+                        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                        const viewport = page.getViewport({ scale: (width / page.getViewport({ scale: 1 }).width) * dpr });
+                        const canvas = document.createElement('canvas');
+                        canvas.width = viewport.width;
+                        canvas.height = viewport.height;
+                        canvas.style.width = '100%';
+                        canvas.style.display = 'block';
+                        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+                        if (token !== readerToken) return;
+                        holder.style.minHeight = '';
+                        holder.replaceChildren(canvas);
+                    });
+                }, { root: body, rootMargin: '600px 0px' });
+                pages.forEach(p => readerObserver.observe(p));
+            } catch (err) {
+                console.error('Leitor offline falhou:', err);
+                if (token === readerToken) {
+                    body.replaceChildren(readerMessage('Não foi possível abrir este ficheiro. Se é a primeira vez que usas o leitor, abre esta página uma vez com internet.'));
+                }
+            }
+        }
+
+        function closeReader() {
+            readerToken++;
+            readerObserver?.disconnect();
+            readerObserver = null;
+            document.getElementById('reader-modal').classList.remove('open');
+            document.getElementById('reader-body').replaceChildren();
+            document.body.style.overflow = '';
         }
 
         async function removeTransfer(id, kind) {
