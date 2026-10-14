@@ -1083,6 +1083,20 @@ finance.post('/referrals/:studentId/convert', async (c) => {
 })
 
 // ── Fee de Embaixador (FEA, Art. 25) ─────────────────────────────────────────
+// Lista de professores para os selectores da UI de admin (admin-earnings.html),
+// em vez de obrigar a colar o UUID à mão.
+finance.get('/teachers', async (c) => {
+  if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
+  const supabase = getSupabase(c.env)
+  if (!supabase) return c.json<ApiResponse>({ success: false, error: 'DB error' }, 500)
+  const { data, error } = await supabase.from('users').select('id, full_name, email').eq('role', 'teacher').order('full_name', { ascending: true })
+  if (error) {
+    logger.error('finance/teachers GET: listar professores', error)
+    return c.json<ApiResponse>({ success: false, error: 'Erro ao carregar professores' }, 500)
+  }
+  return c.json<ApiResponse>({ success: true, data: { teachers: data || [] } })
+})
+
 finance.get('/ambassador-fees', async (c) => {
   if (!isDatabaseConfigured(c.env)) return c.json<ApiResponse>({ success: false, error: 'Base de dados não configurada' }, 503)
   const supabase = getSupabase(c.env)

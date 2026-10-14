@@ -38,3 +38,6 @@ lerna-debug.log*
 # Claude Code (local)
 .claude/
 .mcp.json
+
+# Dumps locais de config do Bunny (contêm ZoneSecurityKey)
+bunny_pullzone*.json

@@ -193,7 +193,7 @@
   <!-- ── Extracto do ledger ────────────────────────────────────────────── -->
   <section id="tab-content-ledger" class="p-6 bg-white mx-6 rounded-b-2xl shadow-sm" style="display:none">
     <div class="flex flex-wrap gap-3 mb-4">
-      <input id="ledger-teacher-filter" placeholder="ID do professor…" class="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-300 w-64">
+      <select id="ledger-teacher-filter" data-teacher-select="all" class="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-300 w-64"><option value="">Todos os professores</option></select>
       <select id="ledger-status-filter" class="text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-300">
         <option value="">Todos os estados</option>
         <option value="ESTIMATED">ESTIMATED</option>
@@ -236,8 +236,8 @@
     <p class="text-sm text-gray-500 mb-4 max-w-xl">Cria sempre um lançamento novo (ADJUSTMENT ou REVERSAL) — nunca apaga/edita um lançamento existente. Usar com cautela: fica registado no audit log com o teu utilizador.</p>
     <form id="adjustment-form" class="max-w-md space-y-4" onsubmit="submitAdjustment(event)">
       <div>
-        <label class="text-xs text-gray-600 font-semibold">ID do professor</label>
-        <input required id="adj-teacher-id" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1">
+        <label class="text-xs text-gray-600 font-semibold">Professor</label>
+        <select required id="adj-teacher-id" data-teacher-select class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1 bg-white"><option value="">Escolher professor…</option></select>
       </div>
       <div>
         <label class="text-xs text-gray-600 font-semibold">Valor (MZN — negativo para reverter)</label>
@@ -278,6 +278,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const initials = (user.full_name || user.name || 'FI').split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()
   document.getElementById('avatar-circle').textContent = initials
   showTab('requests')
+  fillTeacherSelects()
 })
 
 async function financeApi(path, opts = {}) {
@@ -593,9 +594,35 @@ function openContractModal(title, bodyHtml, submitFn) {
 }
 const fieldVal = id => document.getElementById(id).value.trim()
 
+// ── Selector de professor ────────────────────────────────────────────────
+// Carregado uma vez; os formulários usam <select> em vez de pedir o UUID.
+let teachersCache = null
+async function loadTeachers() {
+  if (teachersCache) return teachersCache
+  const r = await financeApi('/api/finance/teachers')
+  teachersCache = r.success ? (r.data.teachers || []) : []
+  if (!r.success) showToast(r.error || 'Erro ao carregar professores')
+  return teachersCache
+}
+function teacherOptions(placeholder, selected = '') {
+  return `<option value="">${placeholder}</option>` + (teachersCache || []).map(t =>
+    `<option value="${escapeHtml(t.id)}"${t.id === selected ? ' selected' : ''}>${escapeHtml(t.full_name || '—')} — ${escapeHtml(t.email || '')}</option>`).join('')
+}
+async function fillTeacherSelects() {
+  await loadTeachers()
+  document.querySelectorAll('select[data-teacher-select]').forEach(sel => {
+    const all = sel.dataset.teacherSelect === 'all'
+    sel.innerHTML = teacherOptions(all ? 'Todos os professores' : 'Escolher professor…', sel.value)
+  })
+}
+function teacherField(id) {
+  return `<div><label class="text-xs text-gray-600 font-semibold">Professor</label>
+    <select id="${id}" data-teacher-select class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mt-1 bg-white">${teacherOptions('Escolher professor…')}</select></div>`
+}
+
 function openAmbassadorForm() {
   openContractModal('Novo Contrato de Embaixador', `
-    ${contractField('amb-teacher-id', 'ID do professor')}
+    ${teacherField('amb-teacher-id')}
     ${contractField('amb-amount', 'Valor (MZN)', 'number', 'step="0.01" min="0"')}
     <div class="grid grid-cols-2 gap-3">
       ${contractField('amb-start', 'Início', 'date')}
@@ -623,7 +650,7 @@ async function submitAmbassador() {
 
 function openSpecialForm() {
   openContractModal('Novo Contrato de Conteúdo Especial', `
-    ${contractField('sp-teacher-id', 'ID do professor')}
+    ${teacherField('sp-teacher-id')}
     ${contractField('sp-content', 'Conteúdo encomendado')}
     ${contractField('sp-amount', 'Valor (MZN)', 'number', 'step="0.01" min="0"')}
     <div class="grid grid-cols-2 gap-3">
