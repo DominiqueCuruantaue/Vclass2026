@@ -310,6 +310,17 @@
             .right-sidebar {
                 order: 3;
             }
+            /* Mobile/tablet: antes do vídeo só o botão "Próxima"; título,
+               meta e toolbar vêm a seguir ao vídeo. A fonte do vídeo
+               ("Vídeo produzido pelo canal… Fonte original: …") não aparece. */
+            .main-content { display: flex; flex-direction: column; }
+            .lesson-mobile-next { order: -2; }
+            .lesson-video-block { order: -1; }
+            #btn-next-lesson { display: none; }
+            #lesson-description.is-attribution { display: none; }
+        }
+        @media (min-width: 1025px) {
+            .lesson-mobile-next { display: none; }
         }
         
         /* ── Player Protegido VClass ──────────────────────────── */
@@ -653,6 +664,14 @@
             <!-- CENTER: Video Player & Info -->
             <div class="main-content">
 
+                <!-- ── Próxima lição (só mobile/tablet, acima do vídeo) ── -->
+                <div class="lesson-mobile-next flex justify-end mb-3">
+                    <button onclick="nextLesson()"
+                        class="flex items-center gap-1 px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition">
+                        Próxima <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+
                 <!-- ── Lesson Header ── -->
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-4">
                     <!-- Subject chip -->
@@ -660,7 +679,7 @@
                         <span id="lesson-subject-chip" class="text-xs font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-700">Matemática</span>
                     </div>
                     <h1 id="lesson-title" class="text-2xl font-bold text-gray-900 mb-2 leading-tight">Carregando...</h1>
-                    <p id="lesson-description" class="text-gray-500 text-sm mb-4 leading-relaxed">Carregando descrição...</p>
+                    <p id="lesson-description" class="is-attribution text-gray-500 text-sm mb-4 leading-relaxed">Carregando descrição...</p>
                     <!-- Meta row -->
                     <div class="flex flex-wrap items-center gap-4 text-xs text-gray-500 border-t border-gray-100 pt-3">
                         <span class="flex items-center gap-1"><i class="fas fa-clock text-blue-400"></i><span id="lesson-duration">--</span></span>
@@ -682,7 +701,7 @@
                 </div>
 
                 <!-- ── Video Player ── -->
-                <div class="bg-black rounded-2xl overflow-hidden shadow-lg mb-4">
+                <div class="lesson-video-block bg-black rounded-2xl overflow-hidden shadow-lg mb-4">
                     <div id="video-container">
                         <!-- ── Player Protegido VClass ── -->
                         <div id="vclass-player-wrap">
@@ -1192,7 +1211,10 @@
             const titleEl = document.getElementById('lesson-title');
             const descEl  = document.getElementById('lesson-description');
             if (titleEl) titleEl.textContent = 'Lição não encontrada';
-            if (descEl)  descEl.textContent  = msg || 'Não foi possível carregar esta lição.';
+            if (descEl) {
+                descEl.textContent = msg || 'Não foi possível carregar esta lição.';
+                descEl.classList.remove('is-attribution');
+            }
 
             // Optionally redirect back
             if (showBrowse) {
@@ -1311,7 +1333,12 @@
         function displayLessonInfo() {
             document.getElementById('lesson-title').textContent = lessonData.title;
             document.getElementById('sticky-lesson-title').textContent = lessonData.title;
-            document.getElementById('lesson-description').textContent = lessonData.description || 'Sem descrição disponível';
+            const lessonDescEl = document.getElementById('lesson-description');
+            lessonDescEl.textContent = lessonData.description || 'Sem descrição disponível';
+            // Descrições que são só a atribuição do vídeo importado (canal +
+            // URL de origem) ficam escondidas no mobile — ver CSS .is-attribution.
+            lessonDescEl.classList.toggle('is-attribution',
+                !lessonData.description || /fonte original|produzid[oa] pel[oa]|youtube\.com|youtu\.be/i.test(lessonData.description));
             document.getElementById('lesson-duration').textContent = VClass.formatDuration(lessonData.duration);
             // A coluna na BD é views_count (lessons.views não existe)
             const viewsCount = String(lessonData.views_count ?? lessonData.views ?? 0);
