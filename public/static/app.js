@@ -772,11 +772,11 @@ function initMobileAppShell() {
     html.vc-native body { padding-bottom: calc(64px + env(safe-area-inset-bottom)) !important; }
     html.vc-native.vc-has-appbar body { padding-top: calc(52px + env(safe-area-inset-top)) !important; }
     html.vc-native.vc-native-no-appbar body > header { padding-top: env(safe-area-inset-top) !important; }
-    .vc-app-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 60; height: calc(52px + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); background: #fff; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 12px; padding-left: 16px; padding-right: 16px; box-sizing: border-box; }
+    .vc-app-bar { position: fixed; top: 0; left: 0; right: 0; max-width: 100vw; z-index: 60; height: calc(52px + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); background: #fff; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 12px; padding-left: 16px; padding-right: 16px; box-sizing: border-box; }
     .vc-app-bar-avatar { width: 32px; height: 32px; border-radius: 50%; background: #7c3aed; color: #fff; display: flex; align-items: center; justify-content: center; font-size: .72rem; font-weight: 700; flex-shrink: 0; border: none; cursor: pointer; }
     .vc-app-bar-title { flex: 1; min-width: 0; font-weight: 700; font-size: .95rem; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .vc-app-bar-bell { color: #64748b; font-size: 1.05rem; flex-shrink: 0; }
-    .vc-tab-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 60; display: flex; background: #fff; border-top: 1px solid #f1f5f9; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 12px rgba(0,0,0,.06); }
+    .vc-tab-bar { position: fixed; bottom: 0; left: 0; right: 0; max-width: 100vw; z-index: 60; display: flex; background: #fff; border-top: 1px solid #f1f5f9; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 12px rgba(0,0,0,.06); }
     .vc-tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 8px 0 6px; color: #94a3b8; text-decoration: none; font-size: .65rem; font-weight: 600; }
     .vc-tab i { font-size: 1.15rem; }
     .vc-tab.active { color: #7c3aed; }
