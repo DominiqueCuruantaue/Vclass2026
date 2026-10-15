@@ -769,7 +769,6 @@ function initMobileAppShell() {
   style.id = 'vc-app-shell-style';
   style.textContent = `
     html.vc-native body > nav:not(.vc-tab-bar) { display: none !important; }
-    html.vc-native body { overflow-x: clip; max-width: 100vw; }
     html.vc-native body { padding-bottom: calc(64px + env(safe-area-inset-bottom)) !important; }
     html.vc-native.vc-has-appbar body { padding-top: calc(52px + env(safe-area-inset-top)) !important; }
     html.vc-native.vc-native-no-appbar body > header { padding-top: env(safe-area-inset-top) !important; }
@@ -839,6 +838,22 @@ function initMobileAppShell() {
 }
 
 document.addEventListener('DOMContentLoaded', initMobileAppShell);
+
+// Em qualquer ecrã (telemóvel, tablet, PC, app nativa) a página fica presa à
+// largura do dispositivo: só scroll vertical. html usa hidden (bloqueia o pan
+// lateral do viewport); body usa clip, que não cria contentor de scroll e
+// por isso não parte position: sticky.
+(function lockHorizontalScroll() {
+  if (document.getElementById('vc-no-hscroll-style')) return;
+  const style = document.createElement('style');
+  style.id = 'vc-no-hscroll-style';
+  style.textContent = `
+    html { overflow-x: hidden; max-width: 100%; }
+    body { overflow-x: hidden; overflow-x: clip; max-width: 100%; overscroll-behavior-x: none; }
+    img, video, iframe, embed, object { max-width: 100%; }
+  `;
+  document.head.appendChild(style);
+})();
 
 // ─── Export ───────────────────────────────────────────────────────────────────
 window.VClass = {

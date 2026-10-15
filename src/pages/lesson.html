@@ -268,6 +268,14 @@
             line-height: 1.5;
         }
         
+        /* O bloqueio do scroll horizontal da página vem do app.js; aqui só
+           se garante que o HTML da lição não ultrapassa a largura. */
+        .content-text img, .content-text video, .content-text iframe,
+        .content-text table, .content-text pre { max-width: 100%; }
+        .content-text img, .content-text video { height: auto; }
+        .content-text pre, .content-text table { display: block; overflow-x: auto; }
+        .content-text { overflow-wrap: anywhere; }
+
         /* 3-Column Layout */
         .lesson-container > * { min-width: 0; }
         #lesson-title, #lesson-description { overflow-wrap: anywhere; }
@@ -564,14 +572,14 @@
         <div class="h-1 bg-gray-200">
             <div id="sticky-progress-fill" class="h-1 bg-blue-500 transition-all duration-300" style="width:0%"></div>
         </div>
-        <div class="bg-white border-b shadow-sm px-6 py-2 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <a href="/browse.html" class="text-blue-600 hover:text-blue-800 text-sm"><i class="fas fa-arrow-left mr-1"></i>Voltar</a>
-                <span class="text-gray-400">|</span>
-                <span id="sticky-lesson-title" class="text-sm font-semibold text-gray-800 truncate max-w-xs"></span>
+        <div class="bg-white border-b shadow-sm px-4 sm:px-6 py-2 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+                <a href="/browse.html" class="text-blue-600 hover:text-blue-800 text-sm flex-shrink-0"><i class="fas fa-arrow-left mr-1"></i>Voltar</a>
+                <span class="text-gray-400 hidden sm:inline">|</span>
+                <span id="sticky-lesson-title" class="text-sm font-semibold text-gray-800 truncate max-w-xs hidden sm:block"></span>
             </div>
-            <div class="flex items-center gap-4 text-xs text-gray-500">
-                <span><i class="fas fa-chart-pie text-blue-500 mr-1"></i><span id="sticky-progress-pct">0</span>% assistido</span>
+            <div class="flex items-center gap-4 text-xs text-gray-500 flex-shrink-0">
+                <span class="whitespace-nowrap"><i class="fas fa-chart-pie text-blue-500 mr-1"></i><span id="sticky-progress-pct">0</span>% assistido</span>
                 <button onclick="markComplete()" class="px-3 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 transition text-xs font-semibold">
                     <i class="fas fa-check mr-1"></i>Concluir
                 </button>

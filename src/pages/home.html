@@ -48,6 +48,9 @@
     #mobile-menu.open { display: block; }
     #testimonial-track::-webkit-scrollbar { display: none; }
     #testimonial-track { scrollbar-width: none; }
+    /* Página presa à largura do ecrã: só scroll vertical (igual ao app.js) */
+    html { overflow-x: hidden; max-width: 100%; }
+    body { overflow-x: hidden; overflow-x: clip; max-width: 100%; overscroll-behavior-x: none; }
   </style>
   <script src="/static/safe-dom.js"></script>
 </head>
