@@ -13,7 +13,7 @@
  * Sem rede, qualquer outra página redirecciona para /transfers.html.
  * Pedidos /api/* nunca passam pela cache.
  */
-const CACHE = 'vclass-offline-v1';
+const CACHE = 'vclass-offline-v2';
 
 // Páginas que funcionam sem rede. Chave da cache sem query string
 // (/lesson.html?id=... usa sempre a mesma entrada).
@@ -24,6 +24,7 @@ const SAME_ORIGIN_ASSETS = [
   '/static/offline.js',
   '/static/safe-dom.js',
   '/static/styles.css',
+  '/static/tailwind.css',
   '/favicon.svg'
 ];
 
@@ -38,10 +39,7 @@ const CDN_CORS_ASSETS = [
   'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',
   'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
 ];
-// Sem cabeçalhos CORS — guardado como resposta opaca (serve para <script>).
-const CDN_NO_CORS_ASSETS = ['https://cdn.tailwindcss.com'];
-
-const CDN_HOSTS = ['cdn.jsdelivr.net', 'cdn.tailwindcss.com'];
+const CDN_HOSTS = ['cdn.jsdelivr.net'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
@@ -51,11 +49,7 @@ self.addEventListener('install', (event) => {
     const jobs = [
       ...OFFLINE_PAGES.map(u => cache.add(new Request(u, { credentials: 'same-origin' }))),
       ...SAME_ORIGIN_ASSETS.map(u => cache.add(u)),
-      ...CDN_CORS_ASSETS.map(u => cache.add(new Request(u, { mode: 'cors' }))),
-      ...CDN_NO_CORS_ASSETS.map(async u => {
-        const res = await fetch(new Request(u, { mode: 'no-cors' }));
-        await cache.put(u, res);
-      })
+      ...CDN_CORS_ASSETS.map(u => cache.add(new Request(u, { mode: 'cors' })))
     ];
     await Promise.allSettled(jobs);
     await self.skipWaiting();

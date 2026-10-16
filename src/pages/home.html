@@ -7,31 +7,6 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>VClass — O teu futuro começa com o conhecimento</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            navy: {
-              950: '#0a1628',
-              900: '#0d1e33',
-              800: '#122a44',
-            },
-            brand: {
-              50: '#f0fdf4',
-              500: '#22c55e',
-              600: '#16a34a',
-              700: '#15803d',
-            }
-          },
-          fontFamily: {
-            sans: ['Inter', 'system-ui', 'sans-serif'],
-          }
-        }
-      }
-    }
-  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/css/flag-icons.min.css">
@@ -53,6 +28,9 @@
     body { overflow-x: hidden; overflow-x: clip; max-width: 100%; overscroll-behavior-x: none; }
   </style>
   <script src="/static/safe-dom.js"></script>
+  <link rel="stylesheet" href="/static/tailwind.css">
+  <!-- Só a landing usa Inter (antes era fontFamily.sans no tailwind.config inline). -->
+  <style>html, .font-sans { font-family: 'Inter', system-ui, sans-serif; }</style>
 </head>
 <body class="bg-white text-slate-800">
 

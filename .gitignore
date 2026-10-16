@@ -41,3 +41,6 @@ lerna-debug.log*
 
 # Dumps locais de config do Bunny (contêm ZoneSecurityKey)
 bunny_pullzone*.json
+
+# Tailwind gerado (npm run css:build, corre antes de build/dev)
+public/static/tailwind.css

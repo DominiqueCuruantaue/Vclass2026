@@ -53,7 +53,7 @@ app.use('*', async (c, next) => {
     'Content-Security-Policy',
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://unpkg.com",
+      "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com",
       "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com",
       "font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com",
       "img-src 'self' data: blob: https:",
@@ -143,8 +143,8 @@ app.notFound((c) => {
   return c.html(`<!DOCTYPE html>
 <html lang="pt"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Página não encontrada - VClass</title>
-<script src="https://cdn.tailwindcss.com"></script>
 <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="/static/tailwind.css">
 </head><body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
 <div class="text-center max-w-md">
   <div class="text-8xl mb-6">🎓</div>
