@@ -236,6 +236,7 @@ function formatTime(seconds) {
 // ─── Notification System ──────────────────────────────────────────────────────
 let _notifCount = 0;
 function showNotification(message, type = 'info', duration = 4000) {
+  if (_isNativeApp()) return _showSnackbar(message, type, duration);
   _notifCount++;
   const id = `notif-${_notifCount}`;
   const colors = {
@@ -777,12 +778,15 @@ function initMobileAppShell() {
     .vc-app-bar-title { flex: 1; min-width: 0; font-weight: 700; font-size: .95rem; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .vc-app-bar-bell { color: #64748b; font-size: 1.05rem; flex-shrink: 0; }
     .vc-tab-bar { position: fixed; bottom: 0; left: 0; right: 0; max-width: 100vw; z-index: 60; display: flex; background: #fff; border-top: 1px solid #f1f5f9; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 12px rgba(0,0,0,.06); }
-    .vc-tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 8px 0 6px; color: #94a3b8; text-decoration: none; font-size: .65rem; font-weight: 600; }
-    .vc-tab i { font-size: 1.15rem; }
-    .vc-tab.active { color: #7c3aed; }
-    .vc-sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 70; display: none; }
-    .vc-sheet-overlay.open { display: block; }
-    .vc-sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 71; background: #fff; border-radius: 18px 18px 0 0; padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); transform: translateY(100%); transition: transform .25s ease; }
+    .vc-tab { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px 0 8px; color: #64748b; text-decoration: none; font-size: .68rem; font-weight: 600; }
+    .vc-tab-icon { width: 56px; max-width: 100%; height: 30px; border-radius: 15px; display: flex; align-items: center; justify-content: center; transition: background-color .2s ease; }
+    .vc-tab i { font-size: 1.1rem; }
+    .vc-tab.active { color: #5b21b6; }
+    .vc-tab.active .vc-tab-icon { background: #ede9fe; }
+    .vc-sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 70; visibility: hidden; opacity: 0; transition: opacity .25s ease, visibility 0s linear .25s; }
+    .vc-sheet-overlay.open { visibility: visible; opacity: 1; transition: opacity .25s ease; }
+    .vc-sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 71; background: #fff; border-radius: 28px 28px 0 0; padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); transform: translateY(100%); transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+    .vc-sheet::before { content: ''; display: block; width: 32px; height: 4px; border-radius: 2px; background: #cbd5e1; margin: 6px auto 10px; }
     .vc-sheet-overlay.open .vc-sheet { transform: translateY(0); }
     .vc-sheet-item { display: flex; align-items: center; gap: 12px; padding: 14px 20px; font-size: .9rem; font-weight: 600; color: #1e293b; text-decoration: none; cursor: pointer; }
     .vc-sheet-item i { width: 20px; text-align: center; color: #7c3aed; }
@@ -811,7 +815,7 @@ function initMobileAppShell() {
   tabBar.className = 'vc-tab-bar';
   tabBar.innerHTML = tabs.map(t => `
     <a href="${t.href}" class="vc-tab ${t.href === activeHref ? 'active' : ''}">
-      <i class="fas ${t.icon}"></i><span>${t.label}</span>
+      <span class="vc-tab-icon"><i class="fas ${t.icon}"></i></span><span>${t.label}</span>
     </a>`).join('');
   document.body.appendChild(tabBar);
 
@@ -838,6 +842,352 @@ function initMobileAppShell() {
 }
 
 document.addEventListener('DOMContentLoaded', initMobileAppShell);
+
+// ─── Experiência nativa (só dentro do APK Capacitor) ───────────────────────────
+// O shell acima troca a navegação de site pela de app. Isto trata do resto do
+// "toque" Android em TODAS as páginas (login e painéis de staff incluídos):
+// splash até a página estar pintada, botão voltar do sistema, ripple Material,
+// vibração, barra de progresso ao navegar, puxar para actualizar, snackbars,
+// aviso de rede e teclado. Na web não corre nada disto.
+const _ROLE_HOME = {
+  admin: '/admin-dashboard.html', teacher: '/creator-dashboard.html',
+  support: '/support-dashboard.html', editor: '/editor-dashboard.html',
+  country_manager: '/country-dashboard.html', finance: '/finance-dashboard.html',
+  moderator: '/moderator-dashboard.html'
+};
+// Ecrãs com gestos próprios (vídeo, chat, editor) ou formulários que um
+// recarregar apagaria — sem puxar para actualizar.
+const _NO_PULL_REFRESH = ['/lesson.html', '/chat.html', '/creator-lesson-editor.html', '/login.html', '/register.html', '/register-teacher.html'];
+const _RIPPLE_TARGETS = 'button, a[href], [role="button"], [onclick], label[for], summary, select, .vc-tab, .vc-sheet-item';
+
+function _nativePlugin(name) { return window.Capacitor?.Plugins?.[name]; }
+
+function _haptic(style = 'LIGHT') {
+  try { _nativePlugin('Haptics')?.impact({ style })?.catch?.(() => {}); } catch (e) {}
+}
+
+function _homePath() {
+  const user = getCurrentUser();
+  if (!isAuthenticated() || !user) return '/login.html';
+  return _ROLE_HOME[user.role] || '/dashboard.html';
+}
+
+function _isShown(el) {
+  const cs = getComputedStyle(el);
+  return cs.display !== 'none' && cs.visibility !== 'hidden' && cs.opacity !== '0' &&
+    cs.pointerEvents !== 'none' && el.getClientRects().length > 0;
+}
+
+// Modais das páginas: overlays `fixed inset-0` mostrados/escondidos com `hidden`.
+function _openOverlays() {
+  return [...document.querySelectorAll('.fixed.inset-0, [role="dialog"], [aria-modal="true"]')]
+    .filter(el => !el.closest('.vc-tab-bar, .vc-app-bar, #vc-mobile-sheet') && _isShown(el) &&
+      (el.matches('[role="dialog"], [aria-modal="true"]') || (parseInt(getComputedStyle(el).zIndex, 10) || 0) >= 20));
+}
+
+function _closeTopOverlay() {
+  const sheet = document.getElementById('vc-mobile-sheet');
+  if (sheet?.classList.contains('open')) { closeMobileSheet(); return true; }
+  // Páginas com UI própria podem tratar o voltar: window.addEventListener('vc:back', e => { …; e.preventDefault(); })
+  if (!window.dispatchEvent(new CustomEvent('vc:back', { cancelable: true }))) return true;
+  if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); return true; }
+
+  const overlays = _openOverlays();
+  if (!overlays.length) return false;
+  const top = overlays.reduce((a, b) =>
+    (parseInt(getComputedStyle(b).zIndex, 10) || 0) >= (parseInt(getComputedStyle(a).zIndex, 10) || 0) ? b : a);
+  const closeBtn = top.querySelector('[data-close], [aria-label*="echar" i], [aria-label*="close" i], button[onclick*="close" i], button[onclick*="fechar" i]') ||
+    top.querySelector('button .fa-times, button .fa-xmark')?.closest('button');
+  if (closeBtn && _isShown(closeBtn)) closeBtn.click();
+  else top.classList.add('hidden');
+  return true;
+}
+
+function _navigate(url, replace = false) {
+  _showNavProgress();
+  if (replace) window.location.replace(url); else window.location.href = url;
+}
+
+// Botão/gesto voltar do Android: fecha o que estiver aberto, depois recua.
+// Num separador vai para o separador inicial; no inicial minimiza a app
+// (como qualquer app Android), em vez de voltar ao login ou fechar a WebView.
+function _onBackButton({ canGoBack }) {
+  if (_closeTopOverlay()) return;
+  const path = window.location.pathname;
+  const home = _homePath();
+  if (path === home || path === '/login.html' || path === '/') {
+    _nativePlugin('App')?.minimizeApp();
+    return;
+  }
+  const tabs = [...document.querySelectorAll('.vc-tab-bar .vc-tab')].map(a => new URL(a.href).pathname);
+  if (tabs.includes(path)) return _navigate(home, true);
+  if (canGoBack) window.history.back();
+  else _navigate(home, true);
+}
+
+let _navProgressTimer = null;
+function _showNavProgress() {
+  const bar = document.getElementById('vc-nav-progress');
+  if (!bar) return;
+  bar.classList.add('on');
+  clearTimeout(_navProgressTimer);
+  // Navegações canceladas (download, ficheiro externo) não deixam a barra presa.
+  _navProgressTimer = setTimeout(() => bar.classList.remove('on'), 12000);
+}
+function _hideNavProgress() {
+  clearTimeout(_navProgressTimer);
+  document.getElementById('vc-nav-progress')?.classList.remove('on');
+}
+
+function _isDarkSurface(el) {
+  for (let node = el; node && node !== document.documentElement; node = node.parentElement) {
+    const cs = getComputedStyle(node);
+    if (cs.backgroundImage.includes('gradient')) return true;
+    const m = cs.backgroundColor.match(/rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)(?:,\s*([\d.]+))?/);
+    if (m && (m[4] === undefined || parseFloat(m[4]) > 0.5)) {
+      return (0.299 * m[1] + 0.587 * m[2] + 0.114 * m[3]) < 140;
+    }
+  }
+  return false;
+}
+
+// Ripple Material desenhado numa camada fixa por cima do elemento — não mexe
+// no position/overflow do elemento, por isso não pode partir layouts.
+function _ripple(el, x, y) {
+  const r = el.getBoundingClientRect();
+  if (!r.width || !r.height || r.width * r.height > window.innerWidth * window.innerHeight * 0.6) return;
+  const host = document.createElement('span');
+  host.className = 'vc-ripple-host';
+  host.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;border-radius:${getComputedStyle(el).borderRadius};`;
+  const d = 2 * Math.hypot(Math.max(x - r.left, r.right - x), Math.max(y - r.top, r.bottom - y));
+  const dot = document.createElement('span');
+  dot.className = 'vc-ripple' + (_isDarkSurface(el) ? ' on-dark' : '');
+  dot.style.cssText = `width:${d}px;height:${d}px;left:${x - r.left - d / 2}px;top:${y - r.top - d / 2}px;`;
+  host.appendChild(dot);
+  document.body.appendChild(host);
+  setTimeout(() => host.remove(), 600);
+}
+
+function _initRipple() {
+  let pending = null;
+  const fire = () => { if (pending) { clearTimeout(pending.t); _ripple(pending.el, pending.x, pending.y); pending = null; } };
+  const cancel = () => { if (pending) { clearTimeout(pending.t); pending = null; } };
+  document.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    const el = e.target.closest(_RIPPLE_TARGETS);
+    if (!el || el.disabled || el.closest('[data-no-ripple]')) return;
+    cancel();
+    // Pequeno atraso: se o dedo começar a fazer scroll, não há ripple (como no Android).
+    pending = { el, x: e.clientX, y: e.clientY, t: setTimeout(fire, 80) };
+  }, { passive: true });
+  document.addEventListener('pointerup', fire, { passive: true });
+  document.addEventListener('pointercancel', cancel, { passive: true });
+  window.addEventListener('scroll', cancel, { passive: true, capture: true });
+}
+
+function _initNavFeedback() {
+  document.addEventListener('click', (e) => {
+    if (e.defaultPrevented || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    const a = e.target.closest('a[href]');
+    if (!a || (a.target && a.target !== '_self') || a.hasAttribute('download')) return;
+    const raw = a.getAttribute('href');
+    if (!raw || raw.startsWith('#') || raw.startsWith('javascript:')) return;
+    const url = new URL(a.href, window.location.href);
+    if (url.origin !== window.location.origin) return;
+
+    if (a.classList.contains('vc-tab')) {
+      // Tocar no separador já activo sobe ao topo, como nas apps.
+      if (a.classList.contains('active') && url.pathname === window.location.pathname) {
+        e.preventDefault();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      _haptic();
+      document.querySelectorAll('.vc-tab.active').forEach(t => t.classList.remove('active'));
+      a.classList.add('active');
+    }
+    if (url.pathname === window.location.pathname && url.search === window.location.search && url.hash) return;
+    _showNavProgress();
+  });
+  document.addEventListener('submit', (e) => {
+    if (!e.defaultPrevented && e.target.method?.toLowerCase() !== 'dialog' && !e.target.hasAttribute('onsubmit')) _showNavProgress();
+  });
+  // Regressar via "voltar" (bfcache) não deixa a barra/separador do ecrã anterior.
+  window.addEventListener('pageshow', (e) => { if (e.persisted) { _hideNavProgress(); } });
+}
+
+function _initPullToRefresh() {
+  if (_NO_PULL_REFRESH.includes(window.location.pathname)) return;
+  document.documentElement.classList.add('vc-ptr-page');
+  const ind = document.createElement('div');
+  ind.className = 'vc-ptr';
+  ind.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#7c3aed" stroke-width="2.4" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>';
+  document.body.appendChild(ind);
+
+  const TRIGGER = 72, MAX = 110;
+  let startX = 0, startY = null, dist = 0, armed = false;
+  const inScrolledArea = (node) => {
+    for (; node && node !== document.body; node = node.parentElement) {
+      if (node.scrollTop > 0 && /(auto|scroll)/.test(getComputedStyle(node).overflowY)) return true;
+    }
+    return false;
+  };
+  const reset = () => {
+    ind.style.transition = 'transform .2s ease, opacity .2s ease';
+    ind.style.transform = 'translate(-50%, 0) rotate(0deg)';
+    ind.style.opacity = '0';
+    startY = null; dist = 0; armed = false;
+  };
+
+  document.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1 || window.scrollY > 0 || ind.classList.contains('spinning') ||
+        document.documentElement.classList.contains('vc-kb-open') ||
+        inScrolledArea(e.target) || _openOverlays().length || document.getElementById('vc-mobile-sheet')?.classList.contains('open')) return;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    ind.style.transition = 'none';
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (e) => {
+    if (startY === null) return;
+    const dy = e.touches[0].clientY - startY;
+    const dx = Math.abs(e.touches[0].clientX - startX);
+    if (dy <= 0 || window.scrollY > 0 || (dist === 0 && dx > dy)) { if (dist) reset(); else startY = null; return; }
+    dist = Math.min(MAX, dy * 0.5);
+    ind.style.transform = `translate(-50%, ${dist}px) rotate(${dist * 3}deg)`;
+    ind.style.opacity = String(Math.min(1, dist / TRIGGER));
+    if (!armed && dist >= TRIGGER) { armed = true; _haptic('MEDIUM'); }
+    else if (armed && dist < TRIGGER) armed = false;
+  }, { passive: true });
+
+  const end = () => {
+    if (startY === null) return;
+    if (!armed) return reset();
+    ind.style.transition = 'transform .2s ease';
+    ind.style.transform = `translate(-50%, ${TRIGGER}px)`;
+    ind.classList.add('spinning');
+    startY = null;
+    window.location.reload();
+  };
+  document.addEventListener('touchend', end, { passive: true });
+  document.addEventListener('touchcancel', reset, { passive: true });
+}
+
+// Teclado aberto: a barra inferior sai do caminho, como nas apps.
+function _initKeyboardAwareness() {
+  const isTextField = (el) => el && (el.isContentEditable || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' ||
+    (el.tagName === 'INPUT' && !['checkbox', 'radio', 'button', 'submit', 'reset', 'file', 'range', 'color'].includes(el.type)));
+  document.addEventListener('focusin', (e) => {
+    if (isTextField(e.target)) document.documentElement.classList.add('vc-kb-open');
+  });
+  document.addEventListener('focusout', () => {
+    setTimeout(() => {
+      if (!isTextField(document.activeElement)) document.documentElement.classList.remove('vc-kb-open');
+    }, 50);
+  });
+}
+
+let _snackTimer = null;
+function _showSnackbar(message, type = 'info', duration = 4000) {
+  let el = document.getElementById('vc-snackbar');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'vc-snackbar';
+    el.setAttribute('role', 'status');
+    el.innerHTML = '<span class="vc-snack-dot"></span><span class="vc-snack-text"></span>';
+    el.addEventListener('click', () => el.classList.remove('show'));
+    (document.body || document.documentElement).appendChild(el);
+  }
+  el.dataset.type = type;
+  el.querySelector('.vc-snack-text').textContent = String(message ?? '');
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+  if (type === 'error') _haptic('MEDIUM');
+  clearTimeout(_snackTimer);
+  if (duration > 0) _snackTimer = setTimeout(() => el.classList.remove('show'), duration);
+}
+
+function _hideSplash() {
+  // O login com sessão válida redirecciona logo — o splash fica até ao dashboard.
+  if (window.location.pathname === '/login.html' && isAuthenticated()) return;
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    try { _nativePlugin('SplashScreen')?.hide()?.catch?.(() => {}); } catch (e) {}
+  }));
+}
+
+function _injectNativeStyles() {
+  if (document.getElementById('vc-native-style')) return;
+  const style = document.createElement('style');
+  style.id = 'vc-native-style';
+  style.textContent = `
+    html.vc-app { -webkit-tap-highlight-color: transparent; background: #fff; }
+    html.vc-app body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+    html.vc-app :is(input, textarea, select, [contenteditable="true"], .vc-selectable, .vc-selectable *) { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+    html.vc-app :is(a, button, [role="button"], [onclick], label, summary, select) { touch-action: manipulation; }
+    html.vc-app img { -webkit-user-drag: none; }
+    html.vc-app :focus:not(:focus-visible) { outline: none; }
+    html.vc-app ::-webkit-scrollbar { width: 0; height: 0; }
+    html.vc-app.vc-ptr-page { overscroll-behavior-y: none; }
+    html.vc-app.vc-kb-open .vc-tab-bar { display: none; }
+    html.vc-app.vc-kb-open body { padding-bottom: 0 !important; }
+
+    .vc-ripple-host { position: fixed; overflow: hidden; pointer-events: none; z-index: 9998; }
+    .vc-ripple { position: absolute; border-radius: 50%; background: rgba(15,23,42,.12); transform: scale(0); animation: vc-ripple .5s cubic-bezier(.2,.6,.3,1) forwards; }
+    .vc-ripple.on-dark { background: rgba(255,255,255,.3); }
+    @keyframes vc-ripple { 70% { transform: scale(1); opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
+
+    #vc-nav-progress { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 10000; pointer-events: none; overflow: hidden; opacity: 0; transition: opacity .15s ease; }
+    #vc-nav-progress.on { opacity: 1; transition-delay: .08s; }
+    #vc-nav-progress::before { content: ''; position: absolute; top: 0; bottom: 0; left: -45%; width: 45%; background: #7c3aed; border-radius: 3px; animation: vc-progress 1.1s cubic-bezier(.4,0,.2,1) infinite; }
+    @keyframes vc-progress { to { left: 100%; } }
+
+    .vc-ptr { position: fixed; top: -44px; left: 50%; z-index: 65; width: 40px; height: 40px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.18); display: flex; align-items: center; justify-content: center; opacity: 0; transform: translate(-50%, 0); pointer-events: none; }
+    html.vc-has-appbar .vc-ptr { top: 8px; }
+    .vc-ptr.spinning svg { animation: vc-spin .7s linear infinite; }
+    @keyframes vc-spin { to { transform: rotate(360deg); } }
+
+    #vc-snackbar { position: fixed; left: 12px; right: 12px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 10001; display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 12px 16px; border-radius: 8px; background: #1e293b; color: #f1f5f9; font: 500 .875rem/1.35 system-ui, Roboto, sans-serif; box-shadow: 0 4px 16px rgba(0,0,0,.25); transform: translateY(calc(100% + 24px)); opacity: 0; transition: transform .25s cubic-bezier(.2,.8,.2,1), opacity .2s ease; }
+    html.vc-native:not(.vc-kb-open) #vc-snackbar { bottom: calc(76px + env(safe-area-inset-bottom)); }
+    #vc-snackbar.show { transform: translateY(0); opacity: 1; }
+    .vc-snack-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #60a5fa; }
+    #vc-snackbar[data-type="success"] .vc-snack-dot { background: #4ade80; }
+    #vc-snackbar[data-type="error"] .vc-snack-dot { background: #f87171; }
+    #vc-snackbar[data-type="warning"] .vc-snack-dot { background: #fbbf24; }
+  `;
+  document.head.appendChild(style);
+}
+
+function initNativeExperience() {
+  if (!_isNativeApp() || document.documentElement.classList.contains('vc-app')) return;
+  document.documentElement.classList.add('vc-app');
+  _injectNativeStyles();
+
+  try { _nativePlugin('App')?.addListener('backButton', _onBackButton); } catch (e) {}
+
+  document.addEventListener('contextmenu', (e) => {
+    if (!e.target.closest?.('input, textarea, [contenteditable="true"], .vc-selectable')) e.preventDefault();
+  });
+
+  window.addEventListener('offline', () => _showSnackbar('Sem ligação à internet', 'warning', 0));
+  window.addEventListener('online', () => _showSnackbar('Ligação restabelecida', 'success', 2500));
+
+  const onReady = () => {
+    const bar = document.createElement('div');
+    bar.id = 'vc-nav-progress';
+    document.body.appendChild(bar);
+    _initRipple();
+    _initNavFeedback();
+    _initPullToRefresh();
+    _initKeyboardAwareness();
+    _hideSplash();
+    if (!navigator.onLine) _showSnackbar('Sem ligação à internet', 'warning', 0);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', onReady);
+  else onReady();
+}
+
+initNativeExperience();
 
 // Em qualquer ecrã (telemóvel, tablet, PC, app nativa) a página fica presa à
 // largura do dispositivo: só scroll vertical. html usa hidden (bloqueia o pan

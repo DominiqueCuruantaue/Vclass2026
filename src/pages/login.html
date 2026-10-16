@@ -227,7 +227,8 @@
               finance: '/finance-dashboard.html',
               moderator: '/moderator-dashboard.html'
             };
-            window.location.href = roleRedirects[u?.role] || '/dashboard.html';
+            // replace: o "voltar" no dashboard não regressa ao login.
+            window.location.replace(roleRedirects[u?.role] || '/dashboard.html');
         }
 
         function togglePwd() {
@@ -308,7 +309,7 @@
                           finance: '/finance-dashboard.html',
                           moderator: '/moderator-dashboard.html'
                         };
-                        window.location.href = roleRedirects[role] || '/dashboard.html';
+                        window.location.replace(roleRedirects[role] || '/dashboard.html');
                     }, 1000);
                 } else {
                     showAlert(result.error || 'Credenciais inválidas. Tente novamente.', 'error');

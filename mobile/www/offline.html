@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>VClass</title>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 32px 24px; background: #fff; color: #0f172a; text-align: center;
+      font-family: system-ui, -apple-system, Roboto, sans-serif;
+      -webkit-user-select: none; user-select: none;
+    }
+    .icon {
+      width: 88px; height: 88px; border-radius: 50%; background: #f3e8ff;
+      display: flex; align-items: center; justify-content: center; margin-bottom: 24px;
+    }
+    h1 { font-size: 1.25rem; margin: 0 0 8px; }
+    p { margin: 0 0 28px; color: #64748b; font-size: .95rem; line-height: 1.5; max-width: 300px; }
+    button {
+      border: 0; border-radius: 999px; padding: 14px 32px; min-width: 200px;
+      background: #7c3aed; color: #fff; font-size: .95rem; font-weight: 600;
+      transition: transform .12s, opacity .12s;
+    }
+    button:active { transform: scale(.96); opacity: .85; }
+    .secondary { background: transparent; color: #7c3aed; margin-top: 8px; }
+    .spin { display: none; width: 22px; height: 22px; border: 3px solid #e9d5ff; border-top-color: #7c3aed; border-radius: 50%; animation: s .8s linear infinite; margin: 0 auto 28px; }
+    .loading .spin { display: block; }
+    .loading button { opacity: .5; pointer-events: none; }
+    @keyframes s { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <!--
+    Ecrã da app quando https://vclass.co.mz não carrega (sem rede, servidor
+    em baixo). Ver capacitor.config.ts -> server.errorPath.
+  -->
+  <div class="icon">
+    <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="2" x2="22" y2="22"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 4.17-2.65"/><path d="M10.66 5c4.01-.36 8.14.9 11.34 3.76"/><path d="M16.85 11.25a10 10 0 0 1 2.22 1.68"/><path d="M5 13a10 10 0 0 1 5.24-2.76"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+  </div>
+  <h1 id="title">Sem ligação à internet</h1>
+  <p id="msg">Verifique os dados móveis ou o Wi-Fi e tente novamente. Os conteúdos transferidos continuam disponíveis.</p>
+  <div class="spin"></div>
+  <button id="retry">Tentar novamente</button>
+  <button id="transfers" class="secondary">Abrir Transferências</button>
+
+  <script>
+    var BASE = 'https://vclass.co.mz';
+    function hideSplash() {
+      try { window.Capacitor.Plugins.SplashScreen.hide(); } catch (e) {}
+    }
+    function go(path) {
+      document.body.classList.add('loading');
+      try { window.Capacitor.Plugins.Haptics.impact({ style: 'LIGHT' }); } catch (e) {}
+      window.location.replace(BASE + path);
+      setTimeout(function () { document.body.classList.remove('loading'); }, 8000);
+    }
+    document.getElementById('retry').onclick = function () { go('/login.html'); };
+    // As Transferências abrem pela cache do service worker, mesmo sem rede.
+    document.getElementById('transfers').onclick = function () { go('/transfers.html'); };
+    window.addEventListener('online', function () { go('/login.html'); });
+    // O errorPath também abre em erros HTTP (servidor em baixo, 404…).
+    if (navigator.onLine) {
+      document.getElementById('title').textContent = 'Não foi possível abrir a página';
+      document.getElementById('msg').textContent = 'O servidor da VClass não respondeu. Tente novamente dentro de instantes.';
+    }
+    hideSplash();
+  </script>
+</body>
+</html>
