@@ -1331,6 +1331,7 @@
         };
 
         function displayLessonInfo() {
+            if (!document.hidden) startTimer();
             document.getElementById('lesson-title').textContent = lessonData.title;
             document.getElementById('sticky-lesson-title').textContent = lessonData.title;
             const lessonDescEl = document.getElementById('lesson-description');
@@ -1635,6 +1636,7 @@
             vclass_video.addEventListener('timeupdate', vcUpdateUI);
             vclass_video.addEventListener('play', () => {
                 document.getElementById('vc-play-icon').className = 'fas fa-pause';
+                startTimer();
             });
             vclass_video.addEventListener('pause', () => {
                 document.getElementById('vc-play-icon').className = 'fas fa-play';
@@ -1984,6 +1986,7 @@
                 vclass_video.addEventListener('timeupdate', vcUpdateUI);
                 vclass_video.addEventListener('play', () => {
                     document.getElementById('vc-play-icon').className = 'fas fa-pause';
+                    startTimer();
                     vcOnPlay();
                 });
                 vclass_video.addEventListener('pause', () => {
@@ -2683,6 +2686,21 @@
             timerSeconds = 0;
             updateTimerDisplay();
         }
+
+        // O tempo de estudo conta sozinho desde que a lição abre (ver
+        // displayLessonInfo) e ao dar play no vídeo. Com a app/separador em
+        // segundo plano pausa e retoma ao voltar — mas só se tiver sido esta
+        // pausa automática, não se o estudante carregou em Pausar.
+        let timerAutoPaused = false;
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && timerRunning) {
+                timerAutoPaused = true;
+                pauseTimer();
+            } else if (!document.hidden && timerAutoPaused) {
+                timerAutoPaused = false;
+                startTimer();
+            }
+        });
 
         // ─────────────────────────────────────────
         //  LEFT SIDEBAR — Sumário & Conceitos-Chave
