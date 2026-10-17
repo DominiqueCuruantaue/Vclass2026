@@ -94,7 +94,41 @@
     <script src="/static/app.js"></script>
     <script src="/static/offline.js"></script>
     <script>
-        VClass.initNavbar('transfers');
+        // Cada conta só vê o que transferiu. Sem sessão (nem normal nem a
+        // "offline" do login sem internet) volta ao login.
+        const transfersUser = VClass.getTransfersUser();
+        const offlineSession = !VClass.isAuthenticated() && !!transfersUser;
+        if (!transfersUser) {
+            window.location.replace('/login.html');
+        } else if (offlineSession) {
+            // Sem rede o menu do site não leva a lado nenhum — só a conta e Sair.
+            const bar = document.createElement('div');
+            bar.className = 'bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3';
+            bar.innerHTML = `
+                <div class="w-9 h-9 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0" id="offline-avatar"></div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-bold text-gray-900 truncate" id="offline-name"></p>
+                    <p class="text-xs text-amber-600 flex items-center gap-1"><i class="fas fa-wifi"></i> Modo offline</p>
+                </div>
+                <button id="offline-online-btn" class="hidden px-3 py-1.5 bg-purple-600 text-white text-xs font-semibold rounded-lg">Entrar com internet</button>
+                <button id="offline-logout-btn" class="px-3 py-1.5 text-gray-600 text-xs font-semibold rounded-lg border border-gray-200"><i class="fas fa-sign-out-alt mr-1"></i>Sair</button>`;
+            document.getElementById('navbar-placeholder').replaceWith(bar);
+            const name = transfersUser.full_name || transfersUser.email || 'Conta';
+            document.getElementById('offline-name').textContent = name;
+            document.getElementById('offline-avatar').textContent = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+            const toLogin = () => { VClass.endOfflineSession(); window.location.replace('/login.html'); };
+            document.getElementById('offline-logout-btn').onclick = toLogin;
+            const onlineBtn = document.getElementById('offline-online-btn');
+            onlineBtn.onclick = toLogin;
+            const syncOnline = () => onlineBtn.classList.toggle('hidden', !navigator.onLine);
+            window.addEventListener('online', syncOnline);
+            window.addEventListener('offline', syncOnline);
+            syncOnline();
+            // Sem conta online não há Biblioteca para onde ir.
+            document.querySelector('#empty-state a')?.classList.add('hidden');
+        } else {
+            VClass.initNavbar('transfers');
+        }
 
         function formatBytes(kb) {
             if (kb >= 1024) return `${(kb / 1024).toFixed(1)} MB`;
@@ -323,7 +357,7 @@
             loadTransfers();
         }
 
-        loadTransfers();
+        if (transfersUser) loadTransfers();
     </script>
 </body>
 </html>

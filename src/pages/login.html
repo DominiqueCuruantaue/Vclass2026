@@ -121,6 +121,12 @@
                 <!-- Alert -->
                 <div id="alert-box" class="hidden mb-4"></div>
 
+                <!-- Sem internet: o login abre só as transferências desta conta -->
+                <div id="offline-note" class="hidden mb-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-3 text-sm flex items-start gap-2">
+                    <i class="fas fa-wifi mt-0.5 flex-shrink-0"></i>
+                    <span>Sem internet. Entre com a sua conta para ver os vídeos e livros que transferiu neste dispositivo.</span>
+                </div>
+
                 <form id="login-form" class="space-y-5" novalidate autocomplete="off">
                     <!-- Email -->
                     <div>
@@ -215,8 +221,16 @@
 
         setInterval(cycleTestimonial, 5000);
 
-        // Redirect if already logged in
-        if (VClass.isAuthenticated()) {
+        const offlineNote = document.getElementById('offline-note');
+        const syncOfflineNote = () => offlineNote.classList.toggle('hidden', navigator.onLine);
+        window.addEventListener('online', syncOfflineNote);
+        window.addEventListener('offline', syncOfflineNote);
+        syncOfflineNote();
+
+        // Redirect if already logged in (sem rede, o dashboard não abre — vai às transferências)
+        if (VClass.isAuthenticated() && !navigator.onLine) {
+            window.location.replace('/transfers.html');
+        } else if (VClass.isAuthenticated()) {
             const u = VClass.getCurrentUser();
             const roleRedirects = {
               admin: '/admin-dashboard.html',
@@ -293,12 +307,43 @@
             btn.disabled = true;
             btn.innerHTML = '<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div><span>Entrando...</span>';
 
+            const resetBtn = () => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sign-in-alt"></i><span>Entrar</span>';
+            };
+
+            // Sem rede: valida a senha no dispositivo e abre as transferências da conta.
+            async function loginOffline() {
+                const r = await VClass.offlineLogin(email, password);
+                if (r.success) {
+                    showAlert('Sem internet — a abrir as suas transferências...', 'success');
+                    setTimeout(() => window.location.replace('/transfers.html'), 400);
+                    return;
+                }
+                showAlert(r.reason === 'password'
+                    ? 'Senha incorrecta. Tente novamente.'
+                    : 'Sem internet. Para entrar sem rede, esta conta tem de ter entrado pelo menos uma vez com internet neste dispositivo.', 'error');
+                resetBtn();
+                document.getElementById('login-form').classList.add('shake');
+                setTimeout(() => document.getElementById('login-form').classList.remove('shake'), 400);
+            }
+
+            if (!navigator.onLine) return loginOffline();
+
             try {
-                const result = await VClass.api.auth.login(email, password);
+                // Rede sem resposta (saldo esgotado) pode pendurar o pedido — passado o
+                // limite, trata-se como sem internet.
+                const result = await Promise.race([
+                    VClass.api.auth.login(email, password),
+                    new Promise(resolve => setTimeout(() => resolve({ success: false, networkError: true }), 15000))
+                ]);
                 if (result.success) {
                     VClass.saveAuth(result.data);
+                    // Prepara a entrada sem internet para esta conta (termina antes de sair da página).
+                    const offlineReady = VClass.rememberOfflineLogin(email, password, result.data.user);
                     showAlert('✅ Login realizado com sucesso! Redirecionando...', 'success');
-                    setTimeout(() => {
+                    setTimeout(async () => {
+                        await offlineReady;
                         const role = result.data.user.role;
                         const roleRedirects = {
                           admin: '/admin-dashboard.html',
@@ -311,17 +356,17 @@
                         };
                         window.location.replace(roleRedirects[role] || '/dashboard.html');
                     }, 1000);
+                } else if (result.networkError) {
+                    // "Com rede" mas o servidor não responde (sem saldo, sinal fraco).
+                    await loginOffline();
                 } else {
                     showAlert(result.error || 'Credenciais inválidas. Tente novamente.', 'error');
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i><span>Entrar</span>';
+                    resetBtn();
                     document.getElementById('login-form').classList.add('shake');
                     setTimeout(() => document.getElementById('login-form').classList.remove('shake'), 400);
                 }
             } catch (err) {
-                showAlert('Erro de conexão. Verifique sua internet.', 'error');
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-sign-in-alt"></i><span>Entrar</span>';
+                await loginOffline();
             }
         });
     </script>

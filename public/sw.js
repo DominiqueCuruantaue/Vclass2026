@@ -7,17 +7,20 @@
  * servidor, por isso sem rede nem /transfers.html chegava a abrir.
  *
  * Este SW guarda em cache só o necessário para ver o conteúdo transferido:
+ *   - /login.html (sem rede, valida a senha no dispositivo e abre as
+ *     transferências dessa conta — ver offlineLogin() em app.js);
  *   - /transfers.html e /lesson.html (o leitor de vídeo, que já reconstrói a
  *     lição a partir da cópia offline quando a API falha);
  *   - os scripts/estilos de que essas páginas dependem (próprios e de CDN).
- * Sem rede, qualquer outra página redirecciona para /transfers.html.
+ * Sem rede, qualquer outra página redirecciona para /transfers.html (que
+ * pede login se não houver sessão).
  * Pedidos /api/* nunca passam pela cache.
  */
-const CACHE = 'vclass-offline-v2';
+const CACHE = 'vclass-offline-v3';
 
 // Páginas que funcionam sem rede. Chave da cache sem query string
 // (/lesson.html?id=... usa sempre a mesma entrada).
-const OFFLINE_PAGES = ['/transfers.html', '/lesson.html'];
+const OFFLINE_PAGES = ['/login.html', '/transfers.html', '/lesson.html'];
 
 const SAME_ORIGIN_ASSETS = [
   '/static/app.js',

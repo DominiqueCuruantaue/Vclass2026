@@ -41,10 +41,10 @@
     <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="2" x2="22" y2="22"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 4.17-2.65"/><path d="M10.66 5c4.01-.36 8.14.9 11.34 3.76"/><path d="M16.85 11.25a10 10 0 0 1 2.22 1.68"/><path d="M5 13a10 10 0 0 1 5.24-2.76"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
   </div>
   <h1 id="title">Sem ligação à internet</h1>
-  <p id="msg">Verifique os dados móveis ou o Wi-Fi e tente novamente. Os conteúdos transferidos continuam disponíveis.</p>
+  <p id="msg">Verifique os dados móveis ou o Wi-Fi e tente novamente. Pode entrar sem internet para ver os vídeos e livros que transferiu.</p>
   <div class="spin"></div>
   <button id="retry">Tentar novamente</button>
-  <button id="transfers" class="secondary">Abrir Transferências</button>
+  <button id="offline-login" class="secondary">Entrar sem internet</button>
 
   <script>
     var BASE = 'https://vclass.co.mz';
@@ -58,8 +58,9 @@
       setTimeout(function () { document.body.classList.remove('loading'); }, 8000);
     }
     document.getElementById('retry').onclick = function () { go('/login.html'); };
-    // As Transferências abrem pela cache do service worker, mesmo sem rede.
-    document.getElementById('transfers').onclick = function () { go('/transfers.html'); };
+    // O login abre pela cache do service worker e, sem rede, leva às
+    // transferências da conta (ver offlineLogin() em /static/app.js).
+    document.getElementById('offline-login').onclick = function () { go('/login.html'); };
     window.addEventListener('online', function () { go('/login.html'); });
     // O errorPath também abre em erros HTTP (servidor em baixo, 404…).
     if (navigator.onLine) {

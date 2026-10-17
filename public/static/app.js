@@ -111,7 +111,7 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
     return result;
   } catch (error) {
     console.error('API request failed:', error);
-    return { success: false, error: 'Network error. Check your connection.' };
+    return { success: false, networkError: true, error: 'Network error. Check your connection.' };
   }
 }
 
@@ -149,6 +149,7 @@ function saveAuth(authData) {
   localStorage.setItem('user', JSON.stringify(authData.user));
   localStorage.setItem('authTime', Date.now().toString());
   _armBrowserSessionMarker();
+  endOfflineSession();
 }
 
 function _doLogout() {
@@ -160,6 +161,7 @@ function _doLogout() {
 function logout() {
   // 1. Limpar dados locais IMEDIATAMENTE (não depender do fetch)
   _clearAuthStorage();
+  endOfflineSession();
   window.name = '';
 
   // 2. Notificar o servidor em background (fire-and-forget) — credentials:'include'
@@ -195,6 +197,70 @@ function getCurrentUser() {
     const u = localStorage.getItem('user');
     return u ? JSON.parse(u) : null;
   } catch { return null; }
+}
+
+// ─── Entrada sem internet (só para as Transferências) ─────────────────────────
+// Sem rede o servidor não pode validar a senha. Em cada login com internet
+// guardamos neste dispositivo um verificador da senha (PBKDF2-SHA256 com sal
+// aleatório — nunca a senha) e os dados básicos da conta. Sem rede, o login
+// compara a senha com esse verificador e abre uma "sessão offline" que só dá
+// acesso ao que essa conta transferiu (não há token: a API continua fechada).
+// A sessão offline vive em sessionStorage — acaba quando a app é fechada.
+const OFFLINE_ACCOUNTS_KEY = 'vclass_offline_accounts';
+const OFFLINE_SESSION_KEY  = 'vclass_offline_session';
+const OFFLINE_KDF_ITERATIONS = 150000;
+
+function _toB64(buf) { return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+function _fromB64(s) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
+
+async function _deriveOfflineVerifier(password, salt, iterations) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
+  return crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations }, key, 256);
+}
+
+function _readOfflineAccounts() {
+  try { return JSON.parse(localStorage.getItem(OFFLINE_ACCOUNTS_KEY)) || {}; } catch { return {}; }
+}
+
+async function rememberOfflineLogin(email, password, user) {
+  if (!email || !password || !user?.id || !window.crypto?.subtle) return;
+  try {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const verifier = await _deriveOfflineVerifier(password, salt, OFFLINE_KDF_ITERATIONS);
+    const accounts = _readOfflineAccounts();
+    accounts[email.trim().toLowerCase()] = {
+      salt: _toB64(salt), verifier: _toB64(verifier), iterations: OFFLINE_KDF_ITERATIONS,
+      user: { id: user.id, full_name: user.full_name, email: user.email, role: user.role },
+      saved_at: Date.now()
+    };
+    localStorage.setItem(OFFLINE_ACCOUNTS_KEY, JSON.stringify(accounts));
+  } catch (e) {
+    console.warn('[VClass] Não foi possível preparar a entrada sem internet:', e);
+  }
+}
+
+// → { success: true, user } | { success: false, reason: 'unknown' | 'password' | 'unsupported' }
+async function offlineLogin(email, password) {
+  if (!window.crypto?.subtle) return { success: false, reason: 'unsupported' };
+  const account = _readOfflineAccounts()[(email || '').trim().toLowerCase()];
+  if (!account) return { success: false, reason: 'unknown' };
+  const verifier = await _deriveOfflineVerifier(password, _fromB64(account.salt), account.iterations);
+  if (_toB64(verifier) !== account.verifier) return { success: false, reason: 'password' };
+  sessionStorage.setItem(OFFLINE_SESSION_KEY, JSON.stringify(account.user));
+  return { success: true, user: account.user };
+}
+
+function getOfflineSessionUser() {
+  try { return JSON.parse(sessionStorage.getItem(OFFLINE_SESSION_KEY)) || null; } catch { return null; }
+}
+
+function endOfflineSession() {
+  try { sessionStorage.removeItem(OFFLINE_SESSION_KEY); } catch (e) {}
+}
+
+// Conta dona das transferências: a sessão normal ou, sem rede, a sessão offline.
+function getTransfersUser() {
+  return (isAuthenticated() && getCurrentUser()) || getOfflineSessionUser();
 }
 
 // ─── Utility Functions ────────────────────────────────────────────────────────
@@ -868,7 +934,7 @@ function _haptic(style = 'LIGHT') {
 
 function _homePath() {
   const user = getCurrentUser();
-  if (!isAuthenticated() || !user) return '/login.html';
+  if (!isAuthenticated() || !user) return getOfflineSessionUser() ? '/transfers.html' : '/login.html';
   return _ROLE_HOME[user.role] || '/dashboard.html';
 }
 
@@ -1213,7 +1279,8 @@ window.VClass = {
   debounce, storage, analytics,
   initNavbar, toggleNavDropdown, toggleMobileMenu,
   openClassSwitcher, closeClassSwitcher, confirmClassSwitch, _switchLoadGrades,
-  openMobileSheet, closeMobileSheet
+  openMobileSheet, closeMobileSheet,
+  rememberOfflineLogin, offlineLogin, getOfflineSessionUser, endOfflineSession, getTransfersUser
 };
 
 console.log('VClass API client v2.0 loaded');

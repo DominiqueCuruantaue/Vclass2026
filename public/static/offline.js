@@ -58,6 +58,72 @@
     });
   }
 
+  function getRecord(id, storeName) {
+    return withStore('readonly', (store) => new Promise((resolve, reject) => {
+      const req = store.get(id);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror   = () => reject(req.error);
+    }), storeName);
+  }
+
+  function getAllRecords(storeName) {
+    return withStore('readonly', (store) => new Promise((resolve, reject) => {
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror   = () => reject(req.error);
+    }), storeName);
+  }
+
+  function putRecord(record, storeName) {
+    return withStore('readwrite', (store) => store.put(record), storeName);
+  }
+
+  // ── Dono das transferências ──────────────────────────────────────────
+  // Cada livro/vídeo guarda as contas que o transferiram (`owners`) e cada
+  // conta só vê os seus — no mesmo telemóvel podem entrar vários alunos.
+  // O ficheiro é guardado uma só vez mesmo que duas contas o transfiram.
+  // Registos antigos (anteriores a `owners`) ficam para a primeira conta que
+  // os listar neste dispositivo.
+  function currentOwnerId() {
+    const user = global.VClass && global.VClass.getTransfersUser && global.VClass.getTransfersUser();
+    return user && user.id != null ? String(user.id) : null;
+  }
+
+  function isOwnedBy(record, uid) {
+    if (!record || !uid) return false;
+    return !Array.isArray(record.owners) || record.owners.includes(uid);
+  }
+
+  function withOwner(record, uid) {
+    const owners = Array.isArray(record.owners) ? record.owners : [];
+    return { ...record, owners: uid && !owners.includes(uid) ? [...owners, uid] : owners };
+  }
+
+  async function listOwned(storeName) {
+    const uid = currentOwnerId();
+    if (!uid) return [];
+    const all = await getAllRecords(storeName);
+    const mine = all.filter(r => isOwnedBy(r, uid));
+    const legacy = mine.filter(r => !Array.isArray(r.owners));
+    for (const r of legacy) {
+      r.owners = [uid];
+      await putRecord(r, storeName);
+    }
+    return mine;
+  }
+
+  // Tira a conta actual dos donos. Devolve true se mais nenhuma conta usa o
+  // registo (e por isso os dados podem ser apagados do dispositivo).
+  async function releaseOwnership(record, storeName) {
+    const uid = currentOwnerId();
+    if (!record) return true;
+    if (!Array.isArray(record.owners)) return true;
+    const owners = record.owners.filter(o => o !== uid);
+    if (owners.length === 0) return true;
+    await putRecord({ ...record, owners }, storeName);
+    return false;
+  }
+
   // ── Livros / PDFs ────────────────────────────────────────────────────
 
   /**
@@ -65,45 +131,42 @@
    * item: { id, type, title, cover_url, file_url, file_size_kb }
    */
   async function saveItem(item) {
+    const uid = currentOwnerId();
+    const existing = await getRecord(item.id, STORE);
+    if (existing && existing.blob) {
+      // Já está no dispositivo (outra conta transferiu) — só junta esta conta.
+      return putRecord(withOwner(existing, uid), STORE);
+    }
+
     const res = await fetch(item.file_url);
     if (!res.ok) throw new Error('Falha ao descarregar o ficheiro');
     const blob = await res.blob();
 
-    return withStore('readwrite', (store) => {
-      store.put({
-        id: item.id,
-        type: item.type || 'book',
-        title: item.title,
-        cover_url: item.cover_url || null,
-        file_size_kb: item.file_size_kb || Math.round(blob.size / 1024),
-        blob,
-        saved_at: new Date().toISOString()
-      });
-    });
+    return putRecord(withOwner({
+      id: item.id,
+      type: item.type || 'book',
+      title: item.title,
+      cover_url: item.cover_url || null,
+      file_size_kb: item.file_size_kb || Math.round(blob.size / 1024),
+      blob,
+      saved_at: new Date().toISOString()
+    }, uid), STORE);
   }
 
   async function listItems() {
-    return withStore('readonly', (store) => {
-      return new Promise((resolve, reject) => {
-        const req = store.getAll();
-        req.onsuccess = () => resolve(req.result || []);
-        req.onerror   = () => reject(req.error);
-      });
-    });
+    return listOwned(STORE);
   }
 
   async function removeItem(id) {
-    return withStore('readwrite', (store) => store.delete(id));
+    const record = await getRecord(id, STORE);
+    if (await releaseOwnership(record, STORE)) {
+      await withStore('readwrite', (store) => store.delete(id));
+    }
   }
 
   async function getItem(id) {
-    return withStore('readonly', (store) => {
-      return new Promise((resolve, reject) => {
-        const req = store.get(id);
-        req.onsuccess = () => resolve(req.result || null);
-        req.onerror   = () => reject(req.error);
-      });
-    });
+    const record = await getRecord(id, STORE);
+    return isOwnedBy(record, currentOwnerId()) ? record : null;
   }
 
   async function isSaved(id) {
@@ -178,6 +241,15 @@
    * onProgress(done, total) — chamado a cada segmento descarregado.
    */
   async function saveVideoItem(item, onProgress) {
+    const uid = currentOwnerId();
+    const existing = await getRecord(item.id, VIDEO_META_STORE);
+    if (existing) {
+      // Vídeo já guardado por outra conta neste dispositivo — só junta esta conta.
+      const meta = withOwner(existing, uid);
+      await putRecord(meta, VIDEO_META_STORE);
+      onProgress && onProgress(1, 1);
+      return meta;
+    }
     try {
       const masterRes = await fetch(item.masterUrl);
       if (!masterRes.ok) throw new Error('Falha ao obter o vídeo');
@@ -248,29 +320,23 @@
         };
       }
 
-      await withStore('readwrite', (store) => store.put(meta), VIDEO_META_STORE);
-      return meta;
+      const owned = withOwner(meta, uid);
+      await putRecord(owned, VIDEO_META_STORE);
+      return owned;
     } catch (err) {
       // Limpar segmentos parciais para não deixar lixo órfão no IndexedDB
-      await removeVideoItem(item.id).catch(() => {});
+      await deleteVideoData(item.id).catch(() => {});
       throw err;
     }
   }
 
   async function listVideoItems() {
-    return withStore('readonly', (store) => new Promise((resolve, reject) => {
-      const req = store.getAll();
-      req.onsuccess = () => resolve(req.result || []);
-      req.onerror   = () => reject(req.error);
-    }), VIDEO_META_STORE);
+    return listOwned(VIDEO_META_STORE);
   }
 
   async function getVideoMeta(id) {
-    return withStore('readonly', (store) => new Promise((resolve, reject) => {
-      const req = store.get(id);
-      req.onsuccess = () => resolve(req.result || null);
-      req.onerror   = () => reject(req.error);
-    }), VIDEO_META_STORE);
+    const meta = await getRecord(id, VIDEO_META_STORE);
+    return isOwnedBy(meta, currentOwnerId()) ? meta : null;
   }
 
   async function isVideoSaved(id) {
@@ -292,7 +358,12 @@
   }
 
   async function removeVideoItem(id) {
-    const meta = await getVideoMeta(id);
+    const meta = await getRecord(id, VIDEO_META_STORE);
+    if (await releaseOwnership(meta, VIDEO_META_STORE)) await deleteVideoData(id);
+    return meta;
+  }
+
+  async function deleteVideoData(id) {
     await withStore('readwrite', (store) => store.delete(id), VIDEO_META_STORE);
     await withStore('readwrite', (store) => new Promise((resolve, reject) => {
       const range = IDBKeyRange.bound(`${id}::`, `${id}::￿`);
@@ -304,7 +375,6 @@
       };
       req.onerror = () => reject(req.error);
     }), VIDEO_SEG_STORE);
-    return meta;
   }
 
   /**
