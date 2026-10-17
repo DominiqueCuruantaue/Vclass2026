@@ -5,6 +5,8 @@ import { getSupabase } from '../config/supabase'
 import { authMiddleware, requireStudent } from '../middleware/auth'
 import { getMockDashboard } from '../middleware/database'
 import type { ApiResponse } from '../types'
+import { SUBJECTS, GRADES } from '../data/curriculum'
+import { computeSubjectProgress } from '../utils/subjectProgress'
 
 const progress = new Hono<{ Bindings: CloudflareBindings }>()
 
@@ -46,17 +48,6 @@ progress.get('/dashboard', requireStudent, async (c) => {
       }, 500)
     }
     
-    // Get dashboard data from view
-    const { data: dashboard, error } = await supabase
-      .from('student_dashboard')
-      .select('*')
-      .eq('student_id', user.id)
-      .single()
-    
-    if (error) {
-      console.error('Get dashboard error:', error)
-    }
-    
     // Get recent activity
     const { data: recentLessons } = await supabase
       .from('student_progress')
@@ -75,23 +66,44 @@ progress.get('/dashboard', requireStudent, async (c) => {
       .order('updated_at', { ascending: false })
       .limit(5)
     
-    // Get subject progress
-    const { data: subjectProgress } = await supabase
-      .from('subject_progress_view')
-      .select('*')
-      .eq('student_id', user.id)
-    
+    // Progresso por disciplina + resumo, calculados a partir das lições reais
+    // ligadas ao currículo da classe do aluno (ver utils/subjectProgress.ts —
+    // substitui as views student_dashboard/subject_progress_view, que davam
+    // sempre 0 lições e 0%).
+    const [userRes, chaptersRes, lessonsRes, progressRes, submissionsRes] = await Promise.all([
+      supabase.from('users').select('grade_id').eq('id', user.id).maybeSingle(),
+      supabase.from('chapters').select('id, slug'),
+      supabase.from('lessons').select('id, chapter_id').eq('status', 'published'),
+      supabase.from('student_progress').select('lesson_id, status, progress_percent, time_spent').eq('student_id', user.id),
+      supabase.from('exercise_submissions').select('exercise_id, is_correct, exercise:exercises(lesson_id)').eq('student_id', user.id)
+    ])
+    for (const r of [userRes, chaptersRes, lessonsRes, progressRes, submissionsRes]) {
+      if (r.error) console.error('Get dashboard error:', r.error)
+    }
+
+    const { subjects: subjectProgress, summary } = computeSubjectProgress({
+      gradeId: (userRes.data as any)?.grade_id ?? null,
+      subjects: SUBJECTS,
+      gradeNames: Object.fromEntries(GRADES.map(g => [g.id, g.name])),
+      chapters: chaptersRes.data || [],
+      lessons: lessonsRes.data || [],
+      progress: progressRes.data || [],
+      submissions: (submissionsRes.data || []).map((s: any) => ({
+        exercise_id: s.exercise_id,
+        is_correct: s.is_correct,
+        lesson_id: s.exercise?.lesson_id ?? null
+      }))
+    })
+
     return c.json<ApiResponse>({
       success: true,
       data: {
-        stats: dashboard || {
-          totalLessons: 0,
-          completedLessons: 0,
-          totalExercises: 0,
-          averageScore: 0
-        },
+        // `summary` é o que o dashboard e a página Progresso lêem; `stats`
+        // fica pelo formato antigo da resposta.
+        summary,
+        stats: summary,
         recentActivity: recentLessons || [],
-        subjectProgress: subjectProgress || []
+        subjectProgress
       }
     })
     

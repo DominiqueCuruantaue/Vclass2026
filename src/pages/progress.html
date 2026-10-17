@@ -321,7 +321,8 @@
         // Stats
         function renderStats(summary) {
             const completed = summary.lessons_completed || summary.completedLessons || 0;
-            const total = summary.total_lessons || summary.totalLessons || 120;
+            const total = summary.total_lessons || summary.totalLessons || 0;
+            const completedPct = total ? Math.min(100, Math.round((completed / total) * 100)) : 0;
             const exercises = summary.exercises_completed || summary.totalExercises || 0;
             const score = Math.round(summary.avg_score || summary.averageScore || 0);
             const time = Math.floor((summary.total_time_spent_seconds || 0) / 3600);
@@ -340,10 +341,10 @@
                     <div class="mt-3">
                         <div class="flex justify-between text-xs text-gray-500 mb-1">
                             <span>${completed} de ${total}</span>
-                            <span>${Math.round((completed/total)*100)}%</span>
+                            <span>${completedPct}%</span>
                         </div>
                         <div class="h-1.5 bg-gray-100 rounded-full">
-                            <div class="h-1.5 bg-purple-600 rounded-full progress-fill" style="width:${Math.round((completed/total)*100)}%"></div>
+                            <div class="h-1.5 bg-purple-600 rounded-full progress-fill" style="width:${completedPct}%"></div>
                         </div>
                     </div>
                 </div>
@@ -420,19 +421,13 @@
         function renderSubjects(subjects) {
             const container = document.getElementById('subjects-container');
             if (!subjects || subjects.length === 0) {
-                // Mock data
-                subjects = [
-                    { subject_name:'Matemática', completed_lessons:12, total_lessons:20, average_score:85, total_watch_time:3600, subject_color:'#7c3aed' },
-                    { subject_name:'Física', completed_lessons:8, total_lessons:15, average_score:72, total_watch_time:2400, subject_color:'#2563eb' },
-                    { subject_name:'Química', completed_lessons:5, total_lessons:18, average_score:68, total_watch_time:1800, subject_color:'#16a34a' },
-                    { subject_name:'Biologia', completed_lessons:10, total_lessons:16, average_score:90, total_watch_time:3000, subject_color:'#d97706' },
-                    { subject_name:'Português', completed_lessons:6, total_lessons:14, average_score:78, total_watch_time:2100, subject_color:'#dc2626' },
-                    { subject_name:'História', completed_lessons:3, total_lessons:12, average_score:60, total_watch_time:900, subject_color:'#0891b2' },
-                ];
+                container.innerHTML = '<p class="col-span-full text-center text-gray-400 text-sm py-10">Ainda não há lições publicadas para a sua classe. Assim que começar a ver aulas, o progresso aparece aqui.</p>';
+                return;
             }
 
             container.innerHTML = subjects.map((s, i) => {
                 const pct = s.progress_percent || Math.round(((s.completed_lessons||0)/(s.total_lessons||1))*100);
+                const hasScore = s.average_score != null;
                 const score = Math.round(s.average_score || 0);
                 const color = s.subject_color || '#7c3aed';
                 const mins = Math.floor((s.total_watch_time||0)/60);
@@ -466,7 +461,7 @@
                             <div class="w-px h-8 bg-gray-200"></div>
                             <div class="text-center">
                                 <p class="text-xs text-gray-500">Nota</p>
-                                <span class="score-pill ${scoreClass}">${score}%</span>
+                                <span class="score-pill ${hasScore ? scoreClass : 'bg-gray-100 text-gray-500'}">${hasScore ? score + '%' : '—'}</span>
                             </div>
                         </div>
                         <a href="/browse.html?subject=${encodeURIComponent(s.subject_name)}" class="text-xs font-medium text-purple-600 hover:text-purple-700">
